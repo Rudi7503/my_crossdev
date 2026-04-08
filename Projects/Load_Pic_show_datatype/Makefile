@@ -48,7 +48,8 @@ C_INCL_NDK  = $(PREFIX)/$(TARGET)/ndk32-include/Include_H
 # C_INCL_MUI	= $(PREFIX)/$(TARGET)/include/MUI
 C_INC_I2C	= $(PREFIX)/$(TARGET)/i2c-include
 THIRD_PARTY_CJSON_DIR = $(PROJECT_DIR)/ThirdParty/cJSON
-C_INCL_ALL 	= -I. -I$(C_INCL_CLB) -I$(C_INCL) -I$(C_INCL_SYS) -I$(C_INCL_NDK) -I$(C_INC_I2C) -I$(THIRD_PARTY_CJSON_DIR)
+VAMPUP_LIB_INC = $(PROJECT_DIR)/vampup_lib/include
+C_INCL_ALL 	= -I. -I$(C_INCL_CLB) -I$(C_INCL) -I$(C_INCL_SYS) -I$(C_INCL_NDK) -I$(C_INC_I2C) -I$(THIRD_PARTY_CJSON_DIR) -I$(VAMPUP_LIB_INC)
 
 # Define C Options
 C_OPTIONS 	= -O2 -m68080 -m68881 -ffast-math -fomit-frame-pointer -DREGPARM=4
@@ -77,6 +78,8 @@ S_FILES = $(wildcard $(PROJECT_DIR)/*.s) $(wildcard $(PROJECT_DIR)/asm/*.s)
 O_FILES = $(patsubst %.c,%.o,$(C_FILES)) $(patsubst %.s,%.o,$(S_FILES))
 
 EXE		= $(PROJECT_DIR)/$(PROJECT_NAME)
+VAMPUP_LIBRARY	= $(PROJECT_DIR)/vampup_lib/vampup.library
+
 DATA_DIR	= $(PROJECT_DIR)/Data
 
 # Make Project (Init -> Build -> Clean -> Exit)
@@ -152,6 +155,7 @@ upload:
 	}; \
 	retry_upload "$(EXE)"; \
 	retry_upload "$(GDB)"; \
+	retry_upload "$(VAMPUP_LIBRARY)"; \
 	if [ -d "$(DATA_DIR)" ]; then \
 		retry_upload -r "$(DATA_DIR)"; \
 	fi; \

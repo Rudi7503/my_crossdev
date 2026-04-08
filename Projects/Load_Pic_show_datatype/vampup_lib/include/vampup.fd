@@ -1,0 +1,66 @@
+##base _vup_Base
+##bias 30
+##public
+
+* ==============================================
+* SECTION 1: Graphics Engine (LVO -30 to -174)
+* ==============================================
+vup_OpenDisplay(width,height,bpp)(d0,d1,d2)
+vup_FlipDisplay(context)(a0)
+vup_CloseDisplay(context)(a0)
+vup_DrawChunky(src,dest,width,height,srcpitch,dstpitch,bytesperpixel)(a0,a1,d0,d1,d2,d3,d4)
+vup_DrawChunkyMask(src,dest,width,height,srcpitch,dstpitch,bytesperpixel,colorkey)(a0,a1,d0,d1,d2,d3,d4,d5)
+vup_FillChunkyRect(dest,width,height,dstpitch,bytesperpixel,color)(a0,d0,d1,d2,d3,d4)
+vup_FastScroll(src,dest,width,height,srcpitch,dstpitch,bytesperpixel)(a0,a1,d0,d1,d2,d3,d4)
+vup_GetChunkyPos(base,x,y,pitch,bytesperpixel)(a0,d0,d1,d2,d3)
+vup_Convert32To16(src,dest,pixels)(a0,a1,d0)
+vup_ScaleImage(src,dest,src_w,src_h,dest_w,dest_h,src_p,dst_p,bpp)(a0,a1,d0,d1,d2,d3,d4,d5,d6)
+vup_ScaleImageA(scaleArgStruct)(a0)
+##bias 180
+
+* ==============================================
+* SECTION 2: BOB Engine (LVO -180 to -324)
+* ==============================================
+vup_CreateBOB(pixelData,width,height,maxFrames,depth)(a0,d0,d1,d2,d3)
+vup_FreeBOB(bob)(a0)
+vup_FreeBOBList(startingBob)(a0)
+vup_AddBOB(parentBob,newBob)(a0,a1)
+vup_RemoveBOB(bob)(a0)
+vup_UpdateBOB(bob)(a0)
+vup_UpdateBOBList(startingBob)(a0)
+vup_CheckBOBCollision(bobA,bobB)(a0,a1)
+vup_CheckBOBListCollision(sourceBob,targetList)(a0,a1)
+vup_DrawBOB(bob,displayContext)(a0,a1)
+vup_DrawBOBList(startingBob,displayContext)(a0,a1)
+vup_DrawMap(mapImage,displayContext)(a0,a1)
+##bias 330
+
+* ==============================================
+* SECTION 3: Utility & Memory (LVO -330 to -474)
+* ==============================================
+vup_AllocMem32(byteSize,requirements)(d0,d1)
+vup_FreeMem32(memoryBlock)(a1)
+vup_FastMemCopy()()
+vup_FastMemClear()()
+vup_AlphaBlend()()
+vup_ChunkyToPlanar()()
+vup_PlanarToChunky()()
+vup_MatrixMul3D()()
+vup_GetHardwareInfo()()
+vup_LoadImage(filename,context)(a0,a1)
+vup_FreeImage(image)(a0)
+vup_LoadDataFile(filename)(a0)
+vup_OpenEasyWindow()()
+##bias 480
+
+* ==============================================
+* SECTION 4: Audio Engine (LVO -480 to -624)
+* ==============================================
+vup_InitArneTracker()()
+vup_ArneAllocChannel()()
+vup_ArneFreeChannel()()
+vup_ArnePlaySample()()
+vup_ArneSetVolumePan()()
+vup_AudioResample()()
+
+##end
