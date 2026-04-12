@@ -1,173 +1,166 @@
 {
-    "version": "2.0.0",
-    "options": {
-    "env": { "APOLLO_V4_HOST": "${env:AMIGAHOST}:Ram Disk/" }
+  "version": "2.0.0",
+  "options": {
+    "env": {
+      "APOLLO_V4_HOST": "${env:AMIGAHOST}:Ram Disk/"
+    }
+  },
+  "tasks": [
+    {
+      "label": "Build ApolloCoreDisplay",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "Projects/ApolloCoreDisplay"
+      },
+      "problemMatcher": ["$gcc"]
     },
-    "tasks": [
-        {
-            "label": "Build ApolloCoreDisplay",
-            "type": "shell",
-            "command": "make",
-            "group": {
-                "kind": "build",
-                "isDefault": false,
-            },
-            "options": {
-                "cwd": "Projects/ApolloCoreDisplay"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },
-        {
-            "label": "Build ApolloDemo",
-            "type": "shell",
-            "command": "make",
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "options": {
-                "cwd": "Projects/ApolloDemo"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },
-        {
-            "label": "Build DebugTest",
-            "type": "shell",
-            "command": "make",
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "options": {
-                "cwd": "Projects/DebugTest"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },
-        {
-            "label": "Build Hello-Amiga",
-            "type": "shell",
-            "command": "make"
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "options": {
-                "cwd": "Projects/Hello-Amiga"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },
-        {
-            "label": "Build Hello-C",
-            "type": "shell",
-            "command": "make"
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "options": {
-                "cwd": "Projects/Hello-C"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },      
-        {
-            "label": "Build Hello-Intuition",
-            "type": "shell",
-            "command": "make"
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "options": {
-                "cwd": "Projects/Hello-Intuition"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },          
-        {
-            "label": "Build Hello-MUI",
-            "type": "shell",
-            "command": "make"
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "options": {
-                "cwd": "Projects/Hello-MUI"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },
-        {
-            "label": "Build MUI-Examples",
-            "type": "shell",
-            "command": "make"
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "options": {
-                "cwd": "Projects/MUI-Examples"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },     
-        {
-            "label": "Build Mul-by-Ten",
-            "type": "shell",
-            "command": "make"
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "options": {
-                "cwd": "Projects/Mul-by-Ten"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },  
-        {
-            "label": "Build OpenScreen",
-            "type": "shell",
-            "command": "make"
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "options": {
-                "cwd": "Projects/OpenScreen"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        }, 
-        {
-            "label": "Build SAGAModes",
-            "type": "shell",
-            "command": "make"
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "options": {
-                "cwd": "Projects/SAGAModes"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        }, 
-    ]
+    {
+      "label": "Build ApolloDemo",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "Projects/ApolloDemo"
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build DebugTest",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "Projects/DebugTest"
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build Hello-Amiga",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "Projects/Hello-Amiga"
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build Hello-C",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "Projects/Hello-C"
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build Hello-Intuition",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "Projects/Hello-Intuition"
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build Hello-MUI",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "Projects/Hello-MUI"
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build MUI-Examples",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "Projects/MUI-Examples"
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build Mul-by-Ten",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "Projects/Mul-by-Ten"
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build OpenScreen",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "Projects/OpenScreen"
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build SAGAModes",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "Projects/SAGAModes"
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "Build Load_Pic_show_datatype",
+      "type": "shell",
+      "command": "make",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/Projects/Load_Pic_show_datatype"
+      },
+      "problemMatcher": ["$gcc"]
+    }
+  ]
 }
