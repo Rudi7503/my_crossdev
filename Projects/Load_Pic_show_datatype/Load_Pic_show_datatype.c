@@ -11,6 +11,7 @@
 
 #include <exec/types.h>
 #include <exec/libraries.h>
+#include <exec/memory.h>
 #include <intuition/intuition.h>
 
 #include <proto/exec.h>
@@ -36,6 +37,60 @@ static char **gTiles        = NULL;
 static char  *gTileStorage  = NULL;
 static int    gTileCount    = 0;
 static size_t gTileEntryLen = 0;
+
+struct TileMeta
+{
+    ULONG tm_Offset;
+    ULONG tm_Size;
+    ULONG tm_Width;
+    ULONG tm_Height;
+    ULONG tm_Pitch;
+    ULONG tm_Bpp;
+};
+
+static struct TileMeta *gTileMeta = NULL;
+static int gTileMetaCount = 0;
+static APTR gTileBlob = NULL;
+static ULONG gTileBlobSize = 0;
+
+static APTR AllocMemAligned32(ULONG size)
+{
+    ULONG allocSize;
+    UBYTE *raw;
+    UBYTE *aligned;
+
+    if (size == 0)
+    {
+        return NULL;
+    }
+
+    allocSize = size + 31 + sizeof(APTR);
+    raw = (UBYTE *)AllocMem(allocSize, MEMF_ANY);
+    if (!raw)
+    {
+        return NULL;
+    }
+
+    aligned = (UBYTE *)((((ULONG)(raw + sizeof(APTR))) + 31UL) & ~31UL);
+    *((APTR *)(aligned - sizeof(APTR))) = (APTR)raw;
+    return (APTR)aligned;
+}
+
+static void FreeMemAligned32(APTR aligned, ULONG size)
+{
+    APTR raw;
+
+    if (!aligned || size == 0)
+    {
+        return;
+    }
+
+    raw = *((APTR *)((UBYTE *)aligned - sizeof(APTR)));
+    if (raw)
+    {
+        FreeMem(raw, size + 31 + sizeof(APTR));
+    }
+}
 
 static void TrimLine(char *line)
 {
@@ -179,6 +234,134 @@ static void FreeMemoryArray(void)
     gTileEntryLen = 0;
 }
 
+static void FreeTileStorageBlob(void)
+{
+    if (gTileBlob)
+    {
+        FreeMemAligned32(gTileBlob, gTileBlobSize);
+        gTileBlob = NULL;
+        gTileBlobSize = 0;
+    }
+
+    free(gTileMeta);
+    gTileMeta = NULL;
+    gTileMetaCount = 0;
+}
+
+static int LoadAllTilesToOwnMemory(struct Library *base, ULONG targetBpp)
+{
+    int i;
+    struct vup_Image **loaded = NULL;
+    ULONG totalSize = 0;
+    ULONG runningOffset = 0;
+
+    FreeTileStorageBlob();
+
+    if (!base || gTileCount <= 0)
+    {
+        return 0;
+    }
+
+    gTileMeta = (struct TileMeta *)calloc((size_t)gTileCount, sizeof(struct TileMeta));
+    if (!gTileMeta)
+    {
+        printf("[ERROR] Kein Speicher fuer Tile-Metadaten\n");
+        return 0;
+    }
+
+    loaded = (struct vup_Image **)calloc((size_t)gTileCount, sizeof(struct vup_Image *));
+    if (!loaded)
+    {
+        printf("[ERROR] Kein Speicher fuer temporaere Tile-Images\n");
+        FreeTileStorageBlob();
+        return 0;
+    }
+
+    for (i = 0; i < gTileCount; i++)
+    {
+        struct vup_Image *img = VUP_LoadImage(base, (STRPTR)gTiles[i], targetBpp);
+        ULONG copySize;
+
+        if (!img)
+        {
+            printf("[ERROR] Tile %d konnte nicht geladen werden: %s\n", i, gTiles[i]);
+            goto fail;
+        }
+
+        copySize = img->vi_Pitch * img->vi_Height;
+        if (copySize == 0)
+        {
+            printf("[ERROR] Tile %d hat ungueltige Groesse\n", i);
+            VUP_FreeImage(base, img);
+            goto fail;
+        }
+
+        loaded[i] = img;
+        gTileMeta[i].tm_Offset = totalSize;
+        gTileMeta[i].tm_Size = copySize;
+        gTileMeta[i].tm_Width = img->vi_Width;
+        gTileMeta[i].tm_Height = img->vi_Height;
+        gTileMeta[i].tm_Pitch = img->vi_Pitch;
+        gTileMeta[i].tm_Bpp = img->vi_BPP;
+
+        totalSize += copySize;
+    }
+
+    gTileBlob = AllocMemAligned32(totalSize);
+    if (!gTileBlob)
+    {
+        printf("[ERROR] Kein 32-byte align Speicher fuer Tile-Blob (%lu bytes)\n", totalSize);
+        goto fail;
+    }
+
+    gTileBlobSize = totalSize;
+
+    for (i = 0; i < gTileCount; i++)
+    {
+        UBYTE *dst = (UBYTE *)gTileBlob + runningOffset;
+        ULONG copySize = gTileMeta[i].tm_Size;
+
+        CopyMem(loaded[i]->vi_PixelData, dst, copySize);
+        runningOffset += copySize;
+
+        VUP_FreeImage(base, loaded[i]);
+        loaded[i] = NULL;
+    }
+
+    free(loaded);
+    gTileMetaCount = gTileCount;
+    printf("[OK]   Alle %d Tiles hintereinander in einen 32-byte align Speicher kopiert (%lu bytes)\n",
+           gTileMetaCount,
+           gTileBlobSize);
+    return gTileMetaCount;
+
+fail:
+    if (loaded)
+    {
+        for (i = 0; i < gTileCount; i++)
+        {
+            if (loaded[i])
+            {
+                VUP_FreeImage(base, loaded[i]);
+            }
+        }
+        free(loaded);
+    }
+
+    FreeTileStorageBlob();
+    return 0;
+}
+
+static APTR GetTilePixels(int index)
+{
+    if (!gTileBlob || !gTileMeta || index < 0 || index >= gTileMetaCount)
+    {
+        return NULL;
+    }
+
+    return (APTR)((UBYTE *)gTileBlob + gTileMeta[index].tm_Offset);
+}
+
 static struct vup_DisplayContext *TryOpenDisplay(struct Library *base,
                                                  ULONG *outWidth,
                                                  ULONG *outHeight,
@@ -229,13 +412,18 @@ static struct vup_DisplayContext *TryOpenDisplay(struct Library *base,
 int main(void)
 {
     struct vup_DisplayContext *ctx    = NULL;
-    struct vup_Image          *img    = NULL;
-    struct vup_BOB            *bob    = NULL;
+    struct vup_BOB          **bobs    = NULL;
     struct Window             *win    = NULL;
     ULONG activeWidth = 0;
     ULONG activeHeight = 0;
     ULONG activeBpp = 0;
     ULONG frameCount = 0;
+    ULONG maxTileW = 0;
+    ULONG maxTileH = 0;
+    ULONG cellW = 0;
+    ULONG cellH = 0;
+    ULONG cols = 0;
+    int bobCount = 0;
     int    running = 1;
     int    i;
 
@@ -283,43 +471,86 @@ int main(void)
             printf("Aktiver Modus: %lu x %lu @ %lu BPP\n",
                 activeWidth, activeHeight, activeBpp);
 
-            printf("[STEP] 3/7: VUP_LoadImage(%s, %lu)\n", gTiles[0], activeBpp);
+    printf("[STEP] 3/7: Alle Tiles laden + in 32-byte align Speicher kopieren\n");
 
-    /* --- Erstes Tile als 16-Bit Bild laden --------------------------- */
-            img = VUP_LoadImage(VampupBase, (STRPTR)gTiles[0], activeBpp);
-    if (!img)
+    if (!LoadAllTilesToOwnMemory(VampupBase, activeBpp))
     {
-        printf("[FEHLER] Kann Bild nicht laden: %s\n", gTiles[0]);
+        printf("[FEHLER] Konnte Tiles nicht in eigenen Speicher kopieren\n");
         VUP_CloseDisplay(VampupBase, ctx);
         CloseLibrary(VampupBase);
         FreeMemoryArray();
         return 1;
     }
-    printf("[OK]   3/7: Image @ %p\n", (void *)img);
-    printf("Bild geladen: %lux%lu @ %lu BPP\n",
-           img->vi_Width, img->vi_Height, img->vi_BPP);
+    printf("[OK]   3/7: Tile-Speicher bereit (count=%d)\n", gTileMetaCount);
 
-    printf("[STEP] 4/7: VUP_CreateBOB()\n");
+    printf("[STEP] 4/7: VUP_CreateBOB() fuer alle Tiles\n");
 
-    /* --- BOB aus Bild erstellen -------------------------------------- */
-    bob = VUP_CreateBOB(VampupBase,
-                        img->vi_PixelData,
-                        img->vi_Width,
-                        img->vi_Height,
-                        1,            /* maxFrames */
-                        img->vi_BPP); /* bytes per pixel */
-    if (!bob)
+    bobs = (struct vup_BOB **)calloc((size_t)gTileMetaCount, sizeof(struct vup_BOB *));
+    if (!bobs)
     {
-        printf("[FEHLER] Kann BOB nicht erstellen!\n");
-        VUP_FreeImage(VampupBase, img);
+        printf("[FEHLER] Kein Speicher fuer BOB-Liste\n");
+        FreeTileStorageBlob();
         VUP_CloseDisplay(VampupBase, ctx);
         CloseLibrary(VampupBase);
         FreeMemoryArray();
         return 1;
     }
-    printf("[OK]   4/7: BOB @ %p\n", (void *)bob);
-    printf("BOB erstellt: %lux%lu @ %lu BPP\n",
-            bob->vb_Width, bob->vb_Height, activeBpp);
+
+    for (i = 0; i < gTileMetaCount; i++)
+    {
+        APTR tilePixels = GetTilePixels(i);
+        if (!tilePixels)
+        {
+            printf("[FEHLER] Tile-Pixel fehlen fuer Index %d\n", i);
+            break;
+        }
+
+        bobs[i] = VUP_CreateBOB(VampupBase,
+                                tilePixels,
+                                gTileMeta[i].tm_Width,
+                                gTileMeta[i].tm_Height,
+                                1,
+                                gTileMeta[i].tm_Bpp);
+        if (!bobs[i])
+        {
+            printf("[FEHLER] Kann BOB %d nicht erstellen!\n", i);
+            break;
+        }
+
+        if (gTileMeta[i].tm_Width > maxTileW)
+            maxTileW = gTileMeta[i].tm_Width;
+        if (gTileMeta[i].tm_Height > maxTileH)
+            maxTileH = gTileMeta[i].tm_Height;
+
+        bobCount++;
+    }
+
+    if (bobCount <= 0)
+    {
+        printf("[FEHLER] Keine BOBs erstellt\n");
+        free(bobs);
+        FreeTileStorageBlob();
+        VUP_CloseDisplay(VampupBase, ctx);
+        CloseLibrary(VampupBase);
+        FreeMemoryArray();
+        return 1;
+    }
+
+    if (bobCount < gTileMetaCount)
+    {
+        printf("[WARN]  Nur %d/%d BOBs erstellt\n", bobCount, gTileMetaCount);
+    }
+
+    cellW = maxTileW + 4;
+    cellH = maxTileH + 4;
+    if (cellW == 0)
+        cellW = 1;
+    cols = activeWidth / cellW;
+    if (cols == 0)
+        cols = 1;
+
+    printf("[OK]   4/7: %d BOBs erstellt, Grid: cols=%lu cell=%lux%lu\n",
+           bobCount, cols, cellW, cellH);
 
     /* --- Tastatureingaben auf dem Display-Fenster aktivieren ---------- */
     win = (struct Window *)ctx->vdc_Window;
@@ -342,8 +573,18 @@ int main(void)
         /* Backbuffer leeren */
         VUP_FastMemClear(VampupBase, ctx->vdc_BufferBackPtr, bufSize);
 
-        /* BOB in Backbuffer zeichnen */
-        VUP_DrawBOB(VampupBase, bob, ctx);
+        /* Alle BOBs in Backbuffer zeichnen */
+        for (i = 0; i < bobCount; i++)
+        {
+            ULONG col = (ULONG)i % cols;
+            ULONG row = (ULONG)i / cols;
+            LONG x = (LONG)(col * cellW);
+            LONG y = (LONG)(row * cellH);
+
+            bobs[i]->vb_WorldX = x;
+            bobs[i]->vb_WorldY = y;
+            VUP_DrawBOB(VampupBase, bobs[i], ctx);
+        }
 
         /* Display flippen (wartet auf VSync) */
         VUP_FlipDisplay(VampupBase, ctx);
@@ -372,8 +613,19 @@ int main(void)
 
     /* --- Aufraeumen --------------------------------------------------- */
     printf("[STEP] 7/7: Aufraeumen\n");
-    VUP_FreeBOB(VampupBase, bob);
-    VUP_FreeImage(VampupBase, img);
+    if (bobs)
+    {
+        for (i = 0; i < bobCount; i++)
+        {
+            if (bobs[i])
+            {
+                VUP_FreeBOB(VampupBase, bobs[i]);
+            }
+        }
+        free(bobs);
+        bobs = NULL;
+    }
+    FreeTileStorageBlob();
     VUP_CloseDisplay(VampupBase, ctx);
     CloseLibrary(VampupBase);
     FreeMemoryArray();
