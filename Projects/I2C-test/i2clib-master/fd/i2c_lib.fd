@@ -1,0 +1,17 @@
+##base _I2C_Base
+##bias 30
+##public
+*--- functions in v37.0 or higher ---
+AllocI2C(delaytype,name)(D0,A1)
+FreeI2C()()
+SetI2CDelay(ticks)(D0)
+InitI2C()()
+SendI2C(addr,number,data)(D0,D1,A1)
+ReceiveI2C(addr,number,data)(D0,D1,A1)
+*--- functions in v38.0 or higher ---
+GetI2COpponent()()
+*--- functions in v39.0 or higher ---
+I2CErrText(errnum)(D0)
+ShutDownI2C()()
+BringBackI2C()()
+##end

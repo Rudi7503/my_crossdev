@@ -1,0 +1,276 @@
+TABLE OF CONTENTS
+
+i2c.library/SetI2CDelay
+i2c.library/SendI2C
+i2c.library/ReceiveI2C
+i2c.library/I2CErrText
+i2c.library/GetI2COpponent
+i2c.library/ShutDownI2C
+i2c.library/BringBackI2C
+
+This file describes the recommended use of i2c.library V39+ only.
+Some functions have been added since V38, but more important, some functions
+have become obsolete and are not recommended anymore. So, for your own
+convenience, follow these guidelines and make your programs insist on V39.
+
+i2c.library/SetI2CDelay                               i2c.library/SetI2CDelay
+
+   NAME
+        SetI2CDelay -- Set the delay for I²C-bus clock-rate
+
+   SYNOPSIS
+        oldval = SetI2CDelay(ticks);
+          D0                  D0
+
+        ULONG SetI2CDelay(ULONG);
+
+   FUNCTION
+        Set the delay for the I²C-bus clock, which must not exceed a
+        frequency of 100 KHz (or maybe less, with unfavourable hardware
+        configurations).
+
+   INPUTS
+        ticks - Number of idle reads from a CIA register, which will be
+                added to every HI and LO SCL pulse.  This is a slow
+                operation (about 1.5 µs with OCS/ECS, slightly less with
+                AA chipset), regardless of CPU speed. Small values (0, 1,
+                2, 3, ...) will normally do.
+                A magic value I2CDELAY_READONLY will not change anything,
+                should you only want to read the old delay.
+
+   RESULTS
+        oldval - The old delay value, just in case you are curious.  You
+                don't have to restore it, you need not even look at it.
+
+   NOTES
+        Starting with i2c.library V40, the default delay value may be set
+        globally by an environment variable (I2CDELAY).  So for most programs
+        it's now reasonably safe to assume that the delay value has already
+        been set correctly, and they need not call SetI2CDelay at all.
+        Otherwise remember that the delay value affects all clients of the
+        library in the same way, not only the calling program.  And if you
+        do change it, never set it to a hardcoded value, but one that is
+        somehow adjustable by the end user.
+
+   SEE ALSO
+
+   BUGS
+
+i2c.library/SendI2C                                       i2c.library/SendI2C
+
+   NAME
+        SendI2C -- Transmit bytes on the I²C-bus
+
+   SYNOPSIS
+        error = SendI2C(addr, number, data);
+          D0             D0    D1      A1
+
+        ULONG SendI2C(UBYTE, UWORD, UBYTE []);
+
+   FUNCTION
+        Send data to a device connected to the I²C-bus hardware.
+
+   INPUTS
+        addr - Address of device to receive the transmitted data.
+        number - Number of bytes to transmit from the array specified
+                by data.
+        data - Array, where the data to be transmitted is placed in.
+
+   RESULTS
+        error - may be considered as three UBYTE's: 0x00AABBCC, with
+                CC: Zero, if an error occurred.
+                BB: I/O error number (see i2c_library.h)
+                AA: Allocation error number (see i2c_library.h)
+
+   NOTES
+        The LSB in the addr byte will always be cleared to make a valid
+        I²C-bus write address.  You can take advantage of this and address
+        a chip for both read and write using the same symbolic constant.
+
+   SEE ALSO
+        ReceiveI2C
+        I2CErrText
+
+   BUGS
+
+i2c.library/ReceiveI2C                                 i2c.library/ReceiveI2C
+
+   NAME
+        ReceiveI2C -- Receive bytes from the I²C-bus
+
+   SYNOPSIS
+        error = ReceiveI2C(addr, number, data);
+          D0                D0    D1      A1
+
+        ULONG ReceiveI2C(UBYTE, UWORD, UBYTE []);
+
+   FUNCTION
+        Receive data from a device connected to the I²C-bus hardware.
+
+   INPUTS
+        addr - Address of device to receive data from.
+        number - Number of bytes to receive from the specified device.
+        data - Array, where to put the received data.
+
+   RESULTS
+        error - may be considered as three UBYTE's: 0x00AABBCC, with
+                CC: Zero, if an error occurred.
+                BB: I/O error number (see i2c_library.h)
+                AA: Allocation error number (see i2c_library.h)
+
+   NOTES
+        Be sure that the size of the data-array is the same or larger than
+        the requested number of bytes to receive.
+        The LSB in the addr byte will always be set to make a valid I²C-bus
+        read address.
+
+   SEE ALSO
+        SendI2C
+        I2CErrText
+
+   BUGS
+
+i2c.library/I2CErrText                                 i2c.library/I2CErrText
+
+   NAME
+        I2CErrText -- give a plaintext translation of an error code
+
+   SYNOPSIS
+        errtext = I2CErrText(errnum);
+          D0                   D0
+
+        STRPTR I2CErrText(ULONG);
+
+   FUNCTION
+        Gives a plaintext translation of an I²C-bus I/O error, nice
+        information for the user.
+
+   INPUTS
+        errnum - the error code as reported by SendI2C or ReceiveI2C
+
+   RESULTS
+        errtext - STRPTR to a brief description (up to 20 chars) of the
+                supplied error code.
+
+   NOTES
+        Supplying random (i. e. illegal) error codes is safe and will only
+        return a "???" string.
+        If you want to report only error codes that are really errors, not
+        "OK", look at their low-order byte: it's zero with "real errors".
+
+   SEE ALSO
+        SendI2C
+        ReceiveI2C
+
+   BUGS
+
+i2c.library/GetI2COpponent                         i2c.library/GetI2COpponent
+
+   NAME
+        GetI2COpponent -- Get name of task using our hardware
+
+   SYNOPSIS
+        name = GetI2COpponent();
+         D0
+
+        STRPTR GetI2COpponent(void);
+
+   FUNCTION
+        When hardware allocation via misc.resource fails, a STRPTR
+        description of the current resource owner is returned.  i2c.library
+        stores this name and lets you look at it with this function.
+
+   RESULTS
+        name - STRPTR to someone using the hardware that is needed
+                for the I²C-bus interface (e.g. "serial.device"), or
+                NULL, if there is no name to return.
+
+   NOTES
+        This function is best used to provide additional user information
+        in situations where an error code returned by SendI2C/ReceiveI2C
+        indicates a resource conflict. (Check for ((err >> 8) & 0xff) ==
+        I2C_HARDW_BUSY.)
+        Note that even then, you might still receive a NULL pointer!  Check
+        for this before you try to process the string!
+
+   SEE ALSO
+
+   BUGS
+
+i2c.library/ShutDownI2C                               i2c.library/ShutDownI2C
+
+   NAME
+        ShutDownI2C -- Release all allocated hardware immediately
+
+   SYNOPSIS
+        ShutDownI2C();
+
+        void ShutDownI2C(void);
+
+   FUNCTION
+        Returns the allocated hardware to the system, no matter how many
+        clients have the library open, and all subsequent I/O calls will
+        fail.  Not even AllocI2C (called implicitly when a new client opens
+        the library) will work, only BringBackI2C will return things to
+        normal.
+
+   INPUTS
+
+   RESULTS
+
+   NOTES
+        You should only call this function in direct response to a user
+        command.  Using it silently might cause major confusion.
+        DON'T misunderstand this function as a cleanup routine.  All you
+        have to do is close the library before you quit, and if you
+        were the last client, the allocated hardware will be returned
+        automatically.
+        DON'T call this function "just to be nice".  If your program
+        typically runs for a long time but only needs the I²C-bus every now
+        and then, system-friendly behaviour would be:  Open the library
+        every time you need it, call the functions you need, and then close
+        it again.
+        Note that there are now many different implementations of
+        i2c.library, using a wide variety of hardware resources, so you
+        don't know what resources this call will return.  It might even
+        affect resources that aren't really needed elsewhere in the system
+        (zorro board or floppy disk unit for example).
+
+   SEE ALSO
+        BringBackI2C
+
+   BUGS
+
+i2c.library/BringBackI2C                             i2c.library/BringBackI2C
+
+   NAME
+        BringBackI2C -- Undo the effect of ShutDownI2C
+
+   SYNOPSIS
+        err = BringBackI2C();
+         D0
+
+        BYTE BringBackI2C(void);
+
+   FUNCTION
+        Removes the lock set up by ShutDownI2C and then tries to allocate
+        the needed hardware again.
+
+   INPUTS
+
+   RESULTS
+        err - an error, if hardware allocation failed, zero if OK.
+                You need not look at this return value, because even if
+                BringBackI2C "fails", you don't have to call it again.
+                The lock will have been removed in any case, and that's
+                all that matters.
+
+   NOTES
+        You can translate the return value to plaintext using I2CErrText,
+        but you have to shift it first: call I2CErrText(err<<16).
+
+   SEE ALSO
+        ShutDownI2C
+
+   BUGS
+
