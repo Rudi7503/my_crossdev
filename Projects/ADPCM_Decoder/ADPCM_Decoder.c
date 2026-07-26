@@ -207,6 +207,8 @@ int main(int argc, char *argv[]) {
     printf("Sample Rate: %u Hz\n", sample_rate);
     printf("Channels: %u\n", channels);
     printf("%s%u Bit %s%u Bit\n", use_ms ? "Mid:" : "Left:", bpsL, use_ms ? "Side" : "Right", bpsR);
+    printf("Samples: %u length in seconds: %.2f\n", total_smpl, (float)total_smpl / sample_rate);
+    printf("Compressed File Size: %u bytes compression ratio: %.2f %% of uncompressed\n", file_size, (float)(file_size * 100) / (total_smpl * channels * sizeof(int16_t)));
     printf(">>> Pre-Fill: Fuelle erste Hälfte...\n");
     uint32_t smpl_0 = (total_smpl < half_smpl) ? total_smpl : half_smpl;
     decode_chunk(&bs, buf_half[0], smpl_0, channels, bpsL, bpsR, use_ms, &chL, &chR);
