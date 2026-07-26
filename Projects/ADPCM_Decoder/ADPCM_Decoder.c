@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <exec/types.h>
 #include <exec/memory.h>
@@ -38,13 +39,14 @@ void audio_isr(void)
     // 2. Unserem schlafenden Haupt-Programm das Aufwach-Signal senden
     Signal(main_task, audio_sig_mask);
 }
+
 static inline int32_t clamp(int32_t val, int32_t min, int32_t max) {
     if (val > max) return max; if (val < min) return min; return val;
 }
+
 // ==============================================================================
-// FIR POST-FILTER
+// FIR & IIR POST-FILTER
 // ==============================================================================
-// Dummy-Struktur für zukünftigen Status
 typedef struct {
     int16_t actual;
     int16_t prev1;
@@ -53,17 +55,30 @@ typedef struct {
     int16_t prev4;
     int16_t prev5;
     int16_t prev6;
+    float y_prev1; // WICHTIG: float für stabile IIR Rückkopplung!
+    float y_prev2; // WICHTIG: float für stabile IIR Rückkopplung!
 } PostFilterState;
 
-PostFilterState filter_state[2] = { {0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0} };
+PostFilterState filter_state[2] = { 
+    {0, 0, 0, 0, 0, 0, 0, 0.0f, 0.0f}, 
+    {0, 0, 0, 0, 0, 0, 0, 0.0f, 0.0f} 
+};
+
+// Vorberechnete Float-Koeffizienten (Werte / 32768.0) für IIR (Index 10-19)
+static const float iir_coeffs_f[10][5] = {
+    {7583.0f/32768.0f, 0.0f, -7583.0f/32768.0f, -44000.0f/32768.0f, 17600.0f/32768.0f},       // 10
+    {5784.0f/32768.0f, 0.0f, -5784.0f/32768.0f, -46747.0f/32768.0f, 21201.0f/32768.0f},       // 11
+    {1622.0f/32768.0f, 3244.0f/32768.0f, 1622.0f/32768.0f, -41929.0f/32768.0f, 15650.0f/32768.0f},     // 12
+    {659.0f/32768.0f, 1317.0f/32768.0f, 659.0f/32768.0f, -51152.0f/32768.0f, 21018.0f/32768.0f},       // 13
+    {1622.0f/32768.0f, 3244.0f/32768.0f, 1622.0f/32768.0f, -41929.0f/32768.0f, 15650.0f/32768.0f},     // 14
+    {659.0f/32768.0f, 1317.0f/32768.0f, 659.0f/32768.0f, -51152.0f/32768.0f, 21018.0f/32768.0f},       // 15
+    {31406.0f/32768.0f, -62813.0f/32768.0f, 31406.0f/32768.0f, -62762.0f/32768.0f, 30060.0f/32768.0f}, // 16
+    {28180.0f/32768.0f, -56360.0f/32768.0f, 28180.0f/32768.0f, -55426.0f/32768.0f, 23478.0f/32768.0f}, // 17
+    {26214.0f/32768.0f, 0.0f, -26214.0f/32768.0f, -49152.0f/32768.0f, 16384.0f/32768.0f},     // 18
+    {32767.0f/32768.0f, -32767.0f/32768.0f, 0.0f, -32767.0f/32768.0f, 0.0f}          // 19
+};
 
 
-/*Nr.	b₀	b₁	DC‑Gain (0 Hz)	Gain bei fs/2	Klangcharakter
-0	1/8	5/8	–1,2 dB	–8,5 dB	Sanft fallend, etwas leiser
-1	1/8	6/8	0 dB	–6,0 dB	Transparent, leichte Höhendämpfung
-2	1/8	7/8	+1,0 dB	–4,1 dB	Leichter Bass‑Boost, kaum Höhenabfall
-3	2/8	4/8	0 dB	–∞ (Nullstelle)	Starker Tiefpass, dumpf, rauschfrei
-4	2/8	5/8	+1,0 dB	–18,1 dB	Bass‑Boost + sehr steiler Höhenabfall*/
 static inline void apply_postfilter(int16_t *pcm, uint32_t count, uint8_t channels, int filter_index, PostFilterState *state) {
     if (channels == 2) {
         for (uint32_t i = 0; i < count; i++) {
@@ -74,6 +89,7 @@ static inline void apply_postfilter(int16_t *pcm, uint32_t count, uint8_t channe
             state[0].prev2 = state[0].prev1;
             state[0].prev1 = state[0].actual;
             state[0].actual = pcm[i*2]; // Left
+            
             state[1].prev6 = state[1].prev5;
             state[1].prev5 = state[1].prev4;
             state[1].prev4 = state[1].prev3;
@@ -81,50 +97,68 @@ static inline void apply_postfilter(int16_t *pcm, uint32_t count, uint8_t channe
             state[1].prev2 = state[1].prev1;
             state[1].prev1 = state[1].actual;
             state[1].actual = pcm[i*2 + 1]; // Right    
-            if (filter_index < 0 || filter_index > 9) {
+            
+            if (filter_index < 0 || filter_index > 19) {
                 pcm[i*2]     = state[0].actual; // Bypass Left
                 pcm[i*2 + 1] = state[1].actual; // Bypass Right
             } 
-            else {
+            else if (filter_index <= 9) {
+                // --- FIR FILTER LOGIK ---
                 if (filter_index == 0) {
-                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.625), -32768, 32767); // Filter 0 
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.625), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev2)*0.125+state[1].prev1*0.625), -32768, 32767);
                 } else if (filter_index == 1) {
-                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.75), -32768, 32767); // Filter 1
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.75), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev2)*0.125+state[1].prev1*0.75), -32768, 32767);
                 } else if (filter_index == 2) {
-                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.875), -32768, 32767); // Filter 2
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.875), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev2)*0.125+state[1].prev1*0.875), -32768, 32767);
-                }
-                else if (filter_index == 3) {
-                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.5), -32768, 32767); // Filter 3
+                } else if (filter_index == 3) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.5), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev2)*0.25+state[1].prev1*0.5), -32768, 32767);
-                }
-                else if (filter_index == 4) {
-                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.625), -32768, 32767); // Filter 4
+                } else if (filter_index == 4) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.625), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev2)*0.25+state[1].prev1*0.625), -32768, 32767);
-                }
-                else if (filter_index == 5) {
-                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.0625+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.1875+state[0].prev3*0.250), -32768, 32767); // Filter 5
+                } else if (filter_index == 5) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.0625+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.1875+state[0].prev3*0.250), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev6)*0.0625+(state[1].prev1+state[1].prev5)*0.125+(state[1].prev2+state[1].prev4)*0.1875+state[1].prev3*0.250), -32768, 32767);
-                }
-                else if (filter_index == 6) {
-                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.125+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.125+state[0].prev3*0.250), -32768, 32767); // Filter 6
+                } else if (filter_index == 6) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.125+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.125+state[0].prev3*0.250), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev6)*0.125+(state[1].prev1+state[1].prev5)*0.125+(state[1].prev2+state[1].prev4)*0.125+state[1].prev3*0.250), -32768, 32767);
-                }
-                else if (filter_index == 7) {
-                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.1875+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0625+state[0].prev3*0.25), -32768, 32767); // Filter 7
+                } else if (filter_index == 7) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.1875+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0625+state[0].prev3*0.25), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev6)*0.1875+(state[1].prev1+state[1].prev5)*0.125+(state[1].prev2+state[1].prev4)*0.0625+state[1].prev3*0.25), -32768, 32767);
-                }
-                else if (filter_index == 8) {
-                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.2500+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767); // Filter 8
+                } else if (filter_index == 8) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.2500+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev6)*0.2500+(state[1].prev1+state[1].prev5)*0.125+(state[1].prev2+state[1].prev4)*0.0+(state[1].prev3*0.25)), -32768, 32767);
-                }
-                else if (filter_index == 9) {
-                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.3125+(state[0].prev1+state[0].prev5)*0.625+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767); // Filter 9
+                } else if (filter_index == 9) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.3125+(state[0].prev1+state[0].prev5)*0.625+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev6)*0.3125+(state[1].prev1+state[1].prev5)*0.625+(state[1].prev2+state[1].prev4)*0.0+(state[1].prev3*0.25)), -32768, 32767);
                 }
-               
+            }
+            else if (filter_index >= 10 && filter_index <= 19) {
+                // --- IIR BIQUAD LOGIK ---
+                int idx = filter_index - 10;
+                float b0 = iir_coeffs_f[idx][0], b1 = iir_coeffs_f[idx][1], b2 = iir_coeffs_f[idx][2];
+                float a1 = iir_coeffs_f[idx][3], a2 = iir_coeffs_f[idx][4];
+
+                // Left
+                float xL = (float)state[0].actual;
+                float xL1 = (float)state[0].prev1;
+                float xL2 = (float)state[0].prev2;
+                float yL = b0 * xL + b1 * xL1 + b2 * xL2 - a1 * state[0].y_prev1 - a2 * state[0].y_prev2;
+                state[0].y_prev2 = state[0].y_prev1;
+                state[0].y_prev1 = yL;
+                pcm[i*2] = (int16_t)clamp((int32_t)yL, -32768, 32767);
+
+                // Right
+                float xR = (float)state[1].actual;
+                float xR1 = (float)state[1].prev1;
+                float xR2 = (float)state[1].prev2;
+                float yR = b0 * xR + b1 * xR1 + b2 * xR2 - a1 * state[1].y_prev1 - a2 * state[1].y_prev2;
+                state[1].y_prev2 = state[1].y_prev1;
+                state[1].y_prev1 = yR;
+                pcm[i*2 + 1] = (int16_t)clamp((int32_t)yR, -32768, 32767);
             }
         }
     } else if (channels == 1) {
@@ -136,42 +170,86 @@ static inline void apply_postfilter(int16_t *pcm, uint32_t count, uint8_t channe
             state[0].prev2 = state[0].prev1;
             state[0].prev1 = state[0].actual;
             state[0].actual = pcm[i]; // Mono
-            if (filter_index < 0 || filter_index > 9) {
+            
+            if (filter_index < 0 || filter_index > 19) {
                 pcm[i] = state[0].actual; // Bypass Mono
             } 
-            else {
+            else if (filter_index <= 9) {
+                // --- FIR FILTER LOGIK ---
                 if (filter_index == 0) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.625), -32768, 32767); // Filter 0 
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.625), -32768, 32767);
                 } else if (filter_index == 1) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.75), -32768, 32767); // Filter 1
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.75), -32768, 32767);
                 } else if (filter_index == 2) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.875), -32768, 32767); // Filter 2
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.875), -32768, 32767);
                 }
                 else if (filter_index == 3) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.5), -32768, 32767); // Filter 3
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.5), -32768, 32767);
                 }
                 else if (filter_index == 4) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.625), -32768, 32767); // Filter 4
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.625), -32768, 32767);
                 }
                 else if (filter_index == 5) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.0625+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.1875+state[0].prev3*0.250), -32768, 32767); // Filter 5
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.0625+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.1875+state[0].prev3*0.250), -32768, 32767);
                 }
                 else if (filter_index == 6) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.125+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.125+state[0].prev3*0.250), -32768, 32767); // Filter 6
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.125+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.125+state[0].prev3*0.250), -32768, 32767);
                 }
                 else if (filter_index == 7) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.1875+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0625+state[0].prev3*0.25), -32768, 32767); // Filter 7
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.1875+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0625+state[0].prev3*0.25), -32768, 32767);
                 }
                 else if (filter_index == 8) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.2500+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767); // Filter 8
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.2500+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767);
                 }
                 else if (filter_index == 9) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.3125+(state[0].prev1+state[0].prev5)*0.625+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767); // Filter 9
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.3125+(state[0].prev1+state[0].prev5)*0.625+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767);
                 }
+            }
+            else if (filter_index >= 10 && filter_index <= 19) {
+                // --- IIR BIQUAD LOGIK ---
+                int idx = filter_index - 10;
+                float b0 = iir_coeffs_f[idx][0], b1 = iir_coeffs_f[idx][1], b2 = iir_coeffs_f[idx][2];
+                float a1 = iir_coeffs_f[idx][3], a2 = iir_coeffs_f[idx][4];
+
+                float xM = (float)state[0].actual;
+                float xM1 = (float)state[0].prev1;
+                float xM2 = (float)state[0].prev2;
+                float yM = b0 * xM + b1 * xM1 + b2 * xM2 - a1 * state[0].y_prev1 - a2 * state[0].y_prev2;
+                
+                state[0].y_prev2 = state[0].y_prev1;
+                state[0].y_prev1 = yM;
+                pcm[i] = (int16_t)clamp((int32_t)yM, -32768, 32767);
             }
         }
     }
-    return;
+}
+
+// ==============================================================================
+// NAME-HELPER FÜR DIE KONSOLE
+// ==============================================================================
+const char* get_filter_name(int idx) {
+    if (idx == -1) return "Bypass";
+    if (idx == 0) return "FIR: 1/8,3/4,1/8";
+    if (idx == 1) return "FIR: 1/8,6/8,1/8";
+    if (idx == 2) return "FIR: 1/8,7/8,1/8";
+    if (idx == 3) return "FIR: 2/8,4/8,2/8";
+    if (idx == 4) return "FIR: 2/8,5/8,1/8";
+    if (idx == 5) return "FIR: 1/16,3/16,3/16,1/4,3/16,3/16,1/16";
+    if (idx == 6) return "FIR: 1/8,1/8,1/8,1/4,1/8,1/8,1/8";
+    if (idx == 7) return "FIR: 3/16,2/16,1/16,1/4,1/16,2/16,3/16";
+    if (idx == 8) return "FIR: 1/4,1/8,0,1/4,0,1/8,1/4";
+    if (idx == 9) return "FIR: 5/16,5/16,0,1/4,0,-5/16,-5/16";
+    if (idx == 10) return "IIR: Sprache Bandpass mild";
+    if (idx == 11) return "IIR: Sprache Bandpass stark";
+    if (idx == 12) return "IIR: Sprache Tiefpass mild";
+    if (idx == 13) return "IIR: Sprache Tiefpass stark";
+    if (idx == 14) return "IIR: Musik Tiefpass sanft";
+    if (idx == 15) return "IIR: Musik Tiefpass moderat";
+    if (idx == 16) return "IIR: Musik Bandpass Subsonic";
+    if (idx == 17) return "IIR: Musik Hoehen sanft";
+    if (idx == 18) return "IIR: Musik Praesenz";
+    if (idx == 19) return "IIR: Musik Bass-Boost";
+    return "Unknown";
 }
 
 // ==============================================================================
@@ -215,8 +293,6 @@ static const int index_table_4[8] = {-1, -1, -1, -1, 2, 4, 6, 8};
 static const int index_table_5[16] = {-1, -1, -1, -1, -1, -1, -1, -1, 1, 2, 4, 6, 8, 10, 13, 16};
 
 typedef struct { int32_t pcm; int16_t index; } ADPCM_Channel;
-
-
 
 static inline int16_t decode_nibble(ADPCM_Channel *chan, uint8_t nibble, uint8_t bps) {
     int32_t step = step_table[chan->index];
@@ -290,7 +366,7 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
             FIR_filter = atoi(argv[++i]);
-            if (FIR_filter > 9) FIR_filter = 9;
+            if (FIR_filter > 19) FIR_filter = 19;
             if (FIR_filter < -1) FIR_filter = -1;
         } else {
              f = fopen( argv[i],"rb");
@@ -298,7 +374,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (!f) {
-        printf("Nutzung: %s [-f 0..3] datei.adpx\n", argv[0] ? argv[0] : "ADPCM_Decoder");
+        printf("Nutzung: %s [-f 0..19] datei.adpx\n", argv[0] ? argv[0] : "ADPCM_Decoder");
         fflush(stdout);
         return 1;
     }
@@ -359,7 +435,7 @@ int main(int argc, char *argv[]) {
     printf("%s%u Bit %s%u Bit\n", use_ms ? "Mid:" : "Left:", bpsL, use_ms ? "Side" : "Right:", bpsR);
     printf("Samples: %u length in seconds: %.2f\n", total_smpl, duration);
     printf("Compressed File Size: %u bytes compression ratio: %.2f %% of uncompressed (%.2f kbps)\n", file_size, comp_ratio, kbps);
-    printf("FIR Post-Filter: %d  %s\n",FIR_filter, FIR_filter == -1 ? "Bypass" : (FIR_filter == 0 ? "1/8,3/4,1/8" : (FIR_filter == 1 ? "1/8,6/8,1/8" : (FIR_filter == 2 ? "1/8,7/8,1/8" : (FIR_filter == 3 ? "2/8,4/8,2/8" : (FIR_filter == 4 ? "2/8,5/8,1/8" : (FIR_filter == 5 ? "1/16,3/16,3/16,1/4,3/16,3/16,1/16" : (FIR_filter == 6 ? "1/8,1/8,1/8,1/4,1/8,1/8,1/8" : (FIR_filter == 7 ? "3/16,2/16,1/16,1/4,1/16,2/16,3/16" : (FIR_filter == 8 ? "1/4,1/8,0,1/4,0,1/8,1/4" : (FIR_filter == 9 ? "5/16,5/16,0,1/4,0,-5/16,-5/16" : "Unknown")))))))))));
+    printf("Post-Filter: [%d] %s\n", FIR_filter, get_filter_name(FIR_filter));
     printf("Active Audio Channel: %u\n", active_ch);
     printf(">>> Pre-Fill: Fuelle erste Hälfte...\n");
     fflush(stdout);
@@ -367,7 +443,6 @@ int main(int argc, char *argv[]) {
     uint32_t smpl_0 = (total_smpl < half_smpl) ? total_smpl : half_smpl;
     decode_chunk(&bs, buf_half[0], smpl_0, channels, bpsL, bpsR, use_ms, &chL, &chR);
     
-   
     // Filter anwenden
     apply_postfilter(buf_half[0], smpl_0, channels, FIR_filter, filter_state);
    
@@ -421,7 +496,6 @@ int main(int argc, char *argv[]) {
 
     // --- DIE PING-PONG SCHLEIFE ---
     while (total_smpl > 0) {
-        // SCHRITT 1: Direkt per OS-Funktion prüfen, ob Ctrl-C gedrückt wurde
         if (SetSignal(0, 0) & SIGBREAKF_CTRL_C) {
             printf("\n>>> Abbruch durch Benutzer (Ctrl-C)! <<<\n");
             fflush(stdout);
@@ -429,10 +503,8 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        // SCHRITT 2: Auf Audiopuffer-Interrupt warten
         Wait(audio_sig_mask);
 
-        // SCHRITT 3: Nach dem Aufwachen nochmals Ctrl-C prüfen (zur Sicherheit)
         if (SetSignal(0, 0) & SIGBREAKF_CTRL_C) {
             printf("\n>>> Abbruch durch Benutzer (Ctrl-C)! <<<\n");
             fflush(stdout);
@@ -440,11 +512,10 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        // DEKODIEREN in den freien Puffer
         uint32_t smpl_chunk = (total_smpl < half_smpl) ? total_smpl : half_smpl;
         decode_chunk(&bs, buf_half[free_half], smpl_chunk, channels, bpsL, bpsR, use_ms, &chL, &chR);
         
-        // DUMMY-AUFRUF
+        // Filter anwenden
         apply_postfilter(buf_half[free_half], smpl_chunk, channels, FIR_filter, filter_state);
         
         if (smpl_chunk < half_smpl) {
