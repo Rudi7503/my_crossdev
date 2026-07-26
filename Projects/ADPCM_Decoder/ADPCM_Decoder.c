@@ -202,14 +202,19 @@ int main(int argc, char *argv[]) {
 
     MemBitStream bs = { .data = raw_file_buf, .pos = 21, .max_pos = file_size, .pool = 0, .bits_left = 0 };
 
-    // --- PRE-FILL: NUR Puffer 0 wird berechnet ---
+     // --- INFOS BERECHNEN UND AUSGEBEN ---
+    float duration = (float)total_smpl / (float)sample_rate;
+    float kbps = ((float)sample_rate * (float)(bpsL + (channels == 2 ? bpsR : 0))) / 1000.0f;
+    float comp_ratio = (float)(file_size * 100) / (float)(total_smpl * channels * sizeof(int16_t));
+
     printf(">>> ADPCM Decoder <<<\n");
     printf("Sample Rate: %u Hz\n", sample_rate);
     printf("Channels: %u\n", channels);
     printf("%s%u Bit %s%u Bit\n", use_ms ? "Mid:" : "Left:", bpsL, use_ms ? "Side" : "Right", bpsR);
-    printf("Samples: %u length in seconds: %.2f\n", total_smpl, (float)total_smpl / sample_rate);
-    printf("Compressed File Size: %u bytes compression ratio: %.2f %% of uncompressed\n", file_size, (float)(file_size * 100) / (total_smpl * channels * sizeof(int16_t)));
+    printf("Samples: %u length in seconds: %.2f\n", total_smpl, duration);
+    printf("Compressed File Size: %u bytes compression ratio: %.2f %% of uncompressed (%.2f kbps)\n", file_size, comp_ratio, kbps);
     printf(">>> Pre-Fill: Fuelle erste Hälfte...\n");
+    fflush(stdout);
     uint32_t smpl_0 = (total_smpl < half_smpl) ? total_smpl : half_smpl;
     decode_chunk(&bs, buf_half[0], smpl_0, channels, bpsL, bpsR, use_ms, &chL, &chR);
     total_smpl -= smpl_0;
