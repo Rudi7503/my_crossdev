@@ -38,6 +38,141 @@ void audio_isr(void)
     // 2. Unserem schlafenden Haupt-Programm das Aufwach-Signal senden
     Signal(main_task, audio_sig_mask);
 }
+static inline int32_t clamp(int32_t val, int32_t min, int32_t max) {
+    if (val > max) return max; if (val < min) return min; return val;
+}
+// ==============================================================================
+// FIR POST-FILTER
+// ==============================================================================
+// Dummy-Struktur für zukünftigen Status
+typedef struct {
+    int16_t actual;
+    int16_t prev1;
+    int16_t prev2;
+    int16_t prev3;
+    int16_t prev4;
+    int16_t prev5;
+    int16_t prev6;
+} PostFilterState;
+
+PostFilterState filter_state[2] = { {0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0} };
+
+
+/*Nr.	b₀	b₁	DC‑Gain (0 Hz)	Gain bei fs/2	Klangcharakter
+0	1/8	5/8	–1,2 dB	–8,5 dB	Sanft fallend, etwas leiser
+1	1/8	6/8	0 dB	–6,0 dB	Transparent, leichte Höhendämpfung
+2	1/8	7/8	+1,0 dB	–4,1 dB	Leichter Bass‑Boost, kaum Höhenabfall
+3	2/8	4/8	0 dB	–∞ (Nullstelle)	Starker Tiefpass, dumpf, rauschfrei
+4	2/8	5/8	+1,0 dB	–18,1 dB	Bass‑Boost + sehr steiler Höhenabfall*/
+static inline void apply_postfilter(int16_t *pcm, uint32_t count, uint8_t channels, int filter_index, PostFilterState *state) {
+    if (channels == 2) {
+        for (uint32_t i = 0; i < count; i++) {
+            state[0].prev6 = state[0].prev5;
+            state[0].prev5 = state[0].prev4;
+            state[0].prev4 = state[0].prev3;
+            state[0].prev3 = state[0].prev2;
+            state[0].prev2 = state[0].prev1;
+            state[0].prev1 = state[0].actual;
+            state[0].actual = pcm[i*2]; // Left
+            state[1].prev6 = state[1].prev5;
+            state[1].prev5 = state[1].prev4;
+            state[1].prev4 = state[1].prev3;
+            state[1].prev3 = state[1].prev2;
+            state[1].prev2 = state[1].prev1;
+            state[1].prev1 = state[1].actual;
+            state[1].actual = pcm[i*2 + 1]; // Right    
+            if (filter_index < 0 || filter_index > 9) {
+                pcm[i*2]     = state[0].actual; // Bypass Left
+                pcm[i*2 + 1] = state[1].actual; // Bypass Right
+            } 
+            else {
+                if (filter_index == 0) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.625), -32768, 32767); // Filter 0 
+                    pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev2)*0.125+state[1].prev1*0.625), -32768, 32767);
+                } else if (filter_index == 1) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.75), -32768, 32767); // Filter 1
+                    pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev2)*0.125+state[1].prev1*0.75), -32768, 32767);
+                } else if (filter_index == 2) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.875), -32768, 32767); // Filter 2
+                    pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev2)*0.125+state[1].prev1*0.875), -32768, 32767);
+                }
+                else if (filter_index == 3) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.5), -32768, 32767); // Filter 3
+                    pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev2)*0.25+state[1].prev1*0.5), -32768, 32767);
+                }
+                else if (filter_index == 4) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.625), -32768, 32767); // Filter 4
+                    pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev2)*0.25+state[1].prev1*0.625), -32768, 32767);
+                }
+                else if (filter_index == 5) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.0625+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.1875+state[0].prev3*0.250), -32768, 32767); // Filter 5
+                    pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev6)*0.0625+(state[1].prev1+state[1].prev5)*0.125+(state[1].prev2+state[1].prev4)*0.1875+state[1].prev3*0.250), -32768, 32767);
+                }
+                else if (filter_index == 6) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.125+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.125+state[0].prev3*0.250), -32768, 32767); // Filter 6
+                    pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev6)*0.125+(state[1].prev1+state[1].prev5)*0.125+(state[1].prev2+state[1].prev4)*0.125+state[1].prev3*0.250), -32768, 32767);
+                }
+                else if (filter_index == 7) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.1875+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0625+state[0].prev3*0.25), -32768, 32767); // Filter 7
+                    pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev6)*0.1875+(state[1].prev1+state[1].prev5)*0.125+(state[1].prev2+state[1].prev4)*0.0625+state[1].prev3*0.25), -32768, 32767);
+                }
+                else if (filter_index == 8) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.2500+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767); // Filter 8
+                    pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev6)*0.2500+(state[1].prev1+state[1].prev5)*0.125+(state[1].prev2+state[1].prev4)*0.0+(state[1].prev3*0.25)), -32768, 32767);
+                }
+                else if (filter_index == 9) {
+                    pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.3125+(state[0].prev1+state[0].prev5)*0.625+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767); // Filter 9
+                    pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev6)*0.3125+(state[1].prev1+state[1].prev5)*0.625+(state[1].prev2+state[1].prev4)*0.0+(state[1].prev3*0.25)), -32768, 32767);
+                }
+               
+            }
+        }
+    } else if (channels == 1) {
+        for (uint32_t i = 0; i < count; i++) {
+            state[0].prev6 = state[0].prev5;
+            state[0].prev5 = state[0].prev4;
+            state[0].prev4 = state[0].prev3;
+            state[0].prev3 = state[0].prev2;
+            state[0].prev2 = state[0].prev1;
+            state[0].prev1 = state[0].actual;
+            state[0].actual = pcm[i]; // Mono
+            if (filter_index < 0 || filter_index > 9) {
+                pcm[i] = state[0].actual; // Bypass Mono
+            } 
+            else {
+                if (filter_index == 0) {
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.625), -32768, 32767); // Filter 0 
+                } else if (filter_index == 1) {
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.75), -32768, 32767); // Filter 1
+                } else if (filter_index == 2) {
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.875), -32768, 32767); // Filter 2
+                }
+                else if (filter_index == 3) {
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.5), -32768, 32767); // Filter 3
+                }
+                else if (filter_index == 4) {
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.625), -32768, 32767); // Filter 4
+                }
+                else if (filter_index == 5) {
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.0625+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.1875+state[0].prev3*0.250), -32768, 32767); // Filter 5
+                }
+                else if (filter_index == 6) {
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.125+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.125+state[0].prev3*0.250), -32768, 32767); // Filter 6
+                }
+                else if (filter_index == 7) {
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.1875+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0625+state[0].prev3*0.25), -32768, 32767); // Filter 7
+                }
+                else if (filter_index == 8) {
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.2500+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767); // Filter 8
+                }
+                else if (filter_index == 9) {
+                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.3125+(state[0].prev1+state[0].prev5)*0.625+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767); // Filter 9
+                }
+            }
+        }
+    }
+    return;
+}
 
 // ==============================================================================
 // HIGH-SPEED MEMORY BITSTREAM READER
@@ -81,9 +216,7 @@ static const int index_table_5[16] = {-1, -1, -1, -1, -1, -1, -1, -1, 1, 2, 4, 6
 
 typedef struct { int32_t pcm; int16_t index; } ADPCM_Channel;
 
-static inline int32_t clamp(int32_t val, int32_t min, int32_t max) {
-    if (val > max) return max; if (val < min) return min; return val;
-}
+
 
 static inline int16_t decode_nibble(ADPCM_Channel *chan, uint8_t nibble, uint8_t bps) {
     int32_t step = step_table[chan->index];
@@ -150,9 +283,25 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, SIG_IGN); 
     SetSignal(0, SIGBREAKF_CTRL_C);
 
-    if (argc < 2) return 1;
-    FILE *f = fopen(argv[1], "rb");
-    if (!f) return 1;
+   // --- ARGUMENTEN-PARSING & USAGE PRÜFUNG ---
+    int FIR_filter = -1; // -1 = Standard Bypass
+    FILE *f = NULL;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
+            FIR_filter = atoi(argv[++i]);
+            if (FIR_filter > 9) FIR_filter = 9;
+            if (FIR_filter < -1) FIR_filter = -1;
+        } else {
+             f = fopen( argv[i],"rb");
+        }
+    }
+
+    if (!f) {
+        printf("Nutzung: %s [-f 0..3] datei.adpx\n", argv[0] ? argv[0] : "ADPCM_Decoder");
+        fflush(stdout);
+        return 1;
+    }
 
     fseek(f, 0, SEEK_END);
     uint32_t file_size = ftell(f);
@@ -173,9 +322,6 @@ int main(int argc, char *argv[]) {
     ADPCM_Channel chR = { (int16_t)(raw_file_buf[18] | (raw_file_buf[19]<<8)), raw_file_buf[20] };
     uint8_t bpsL = bps, bpsR = bps;
     if (bps == 53 && channels == 2) { bpsL = 5; bpsR = 3; use_ms = 1; }
-
-    
-    
 
     // Kanal suchen
     uint8_t active_ch = 0xFF;
@@ -210,13 +356,21 @@ int main(int argc, char *argv[]) {
     printf(">>> ADPCM Decoder <<<\n");
     printf("Sample Rate: %u Hz\n", sample_rate);
     printf("Channels: %u\n", channels);
-    printf("%s%u Bit %s%u Bit\n", use_ms ? "Mid:" : "Left:", bpsL, use_ms ? "Side" : "Right", bpsR);
+    printf("%s%u Bit %s%u Bit\n", use_ms ? "Mid:" : "Left:", bpsL, use_ms ? "Side" : "Right:", bpsR);
     printf("Samples: %u length in seconds: %.2f\n", total_smpl, duration);
     printf("Compressed File Size: %u bytes compression ratio: %.2f %% of uncompressed (%.2f kbps)\n", file_size, comp_ratio, kbps);
+    printf("FIR Post-Filter: %d  %s\n",FIR_filter, FIR_filter == -1 ? "Bypass" : (FIR_filter == 0 ? "1/8,3/4,1/8" : (FIR_filter == 1 ? "1/8,6/8,1/8" : (FIR_filter == 2 ? "1/8,7/8,1/8" : (FIR_filter == 3 ? "2/8,4/8,2/8" : (FIR_filter == 4 ? "2/8,5/8,1/8" : (FIR_filter == 5 ? "1/16,3/16,3/16,1/4,3/16,3/16,1/16" : (FIR_filter == 6 ? "1/8,1/8,1/8,1/4,1/8,1/8,1/8" : (FIR_filter == 7 ? "3/16,2/16,1/16,1/4,1/16,2/16,3/16" : (FIR_filter == 8 ? "1/4,1/8,0,1/4,0,1/8,1/4" : (FIR_filter == 9 ? "5/16,5/16,0,1/4,0,-5/16,-5/16" : "Unknown")))))))))));
+    printf("Active Audio Channel: %u\n", active_ch);
     printf(">>> Pre-Fill: Fuelle erste Hälfte...\n");
     fflush(stdout);
+    
     uint32_t smpl_0 = (total_smpl < half_smpl) ? total_smpl : half_smpl;
     decode_chunk(&bs, buf_half[0], smpl_0, channels, bpsL, bpsR, use_ms, &chL, &chR);
+    
+   
+    // Filter anwenden
+    apply_postfilter(buf_half[0], smpl_0, channels, FIR_filter, filter_state);
+   
     total_smpl -= smpl_0;
 
     int free_half = 1; 
@@ -263,12 +417,14 @@ int main(int argc, char *argv[]) {
 
     bool aborted = false;
     printf(">>> START: Wiedergabe via OS-Interrupts (0%% CPU Last im Wait) <<<\n");
+    fflush(stdout);
 
     // --- DIE PING-PONG SCHLEIFE ---
     while (total_smpl > 0) {
         // SCHRITT 1: Direkt per OS-Funktion prüfen, ob Ctrl-C gedrückt wurde
         if (SetSignal(0, 0) & SIGBREAKF_CTRL_C) {
             printf("\n>>> Abbruch durch Benutzer (Ctrl-C)! <<<\n");
+            fflush(stdout);
             aborted = true;
             break;
         }
@@ -279,6 +435,7 @@ int main(int argc, char *argv[]) {
         // SCHRITT 3: Nach dem Aufwachen nochmals Ctrl-C prüfen (zur Sicherheit)
         if (SetSignal(0, 0) & SIGBREAKF_CTRL_C) {
             printf("\n>>> Abbruch durch Benutzer (Ctrl-C)! <<<\n");
+            fflush(stdout);
             aborted = true;
             break;
         }
@@ -286,6 +443,9 @@ int main(int argc, char *argv[]) {
         // DEKODIEREN in den freien Puffer
         uint32_t smpl_chunk = (total_smpl < half_smpl) ? total_smpl : half_smpl;
         decode_chunk(&bs, buf_half[free_half], smpl_chunk, channels, bpsL, bpsR, use_ms, &chL, &chR);
+        
+        // DUMMY-AUFRUF
+        apply_postfilter(buf_half[free_half], smpl_chunk, channels, FIR_filter, filter_state);
         
         if (smpl_chunk < half_smpl) {
             uint32_t bytes_to_clear = (half_smpl - smpl_chunk) * channels * sizeof(int16_t);
@@ -304,6 +464,7 @@ int main(int argc, char *argv[]) {
     // --- ENDPHASE ---
     if (!aborted) {
         printf(">>> ENDE: Lied komplett, warte auf Ausklingen...\n");
+        fflush(stdout);
         Wait(audio_sig_mask); 
         Wait(audio_sig_mask); 
     }
@@ -316,6 +477,8 @@ int main(int argc, char *argv[]) {
     FreeSignal(sig_bit);                                
 
     printf("\nWiedergabe beendet.\n");
+    fflush(stdout);
+    
     FreeVec(ring_buffer);
     FreeVec(raw_file_buf);
     SetSignal(0, SIGBREAKF_CTRL_C); 
