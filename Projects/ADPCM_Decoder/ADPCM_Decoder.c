@@ -173,7 +173,10 @@ int main(int argc, char *argv[]) {
     ADPCM_Channel chR = { (int16_t)(raw_file_buf[18] | (raw_file_buf[19]<<8)), raw_file_buf[20] };
     uint8_t bpsL = bps, bpsR = bps;
     if (bps == 53 && channels == 2) { bpsL = 5; bpsR = 3; use_ms = 1; }
+
     
+    
+
     // Kanal suchen
     uint8_t active_ch = 0xFF;
     for (uint8_t c = 0; c < 4; c++) {
@@ -200,6 +203,10 @@ int main(int argc, char *argv[]) {
     MemBitStream bs = { .data = raw_file_buf, .pos = 21, .max_pos = file_size, .pool = 0, .bits_left = 0 };
 
     // --- PRE-FILL: NUR Puffer 0 wird berechnet ---
+    printf(">>> ADPCM Decoder <<<\n");
+    printf("Sample Rate: %u Hz\n", sample_rate);
+    printf("Channels: %u\n", channels);
+    printf("%s%u Bit %s%u Bit\n", use_ms ? "Mid:" : "Left:", bpsL, use_ms ? "Side" : "Right", bpsR);
     printf(">>> Pre-Fill: Fuelle erste Hälfte...\n");
     uint32_t smpl_0 = (total_smpl < half_smpl) ? total_smpl : half_smpl;
     decode_chunk(&bs, buf_half[0], smpl_0, channels, bpsL, bpsR, use_ms, &chL, &chR);
