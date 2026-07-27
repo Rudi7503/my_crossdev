@@ -14,6 +14,7 @@
 #include <signal.h>
 
 #define BUFFER_SECONDS 1
+#define STREAM_BUF_SIZE 2048 // 2 KB Lese-Puffer für die Festplatte
 
 // ==============================================================================
 // ISR (INTERRUPT SERVICE ROUTINE) VARIABLEN
@@ -55,8 +56,8 @@ typedef struct {
     int16_t prev4;
     int16_t prev5;
     int16_t prev6;
-    float y_prev1; // WICHTIG: float für stabile IIR Rückkopplung!
-    float y_prev2; // WICHTIG: float für stabile IIR Rückkopplung!
+    float y_prev1; 
+    float y_prev2; 
 } PostFilterState;
 
 PostFilterState filter_state[2] = { 
@@ -64,46 +65,28 @@ PostFilterState filter_state[2] = {
     {0, 0, 0, 0, 0, 0, 0, 0.0f, 0.0f} 
 };
 
-// Vorberechnete Float-Koeffizienten (Werte / 32768.0) für IIR (Index 10-19)
 static const float iir_coeffs_f[10][5] = {
-    {7583.0f/32768.0f, 0.0f, -7583.0f/32768.0f, -44000.0f/32768.0f, 17600.0f/32768.0f},       // 10
-    {5784.0f/32768.0f, 0.0f, -5784.0f/32768.0f, -46747.0f/32768.0f, 21201.0f/32768.0f},       // 11
-    {1622.0f/32768.0f, 3244.0f/32768.0f, 1622.0f/32768.0f, -41929.0f/32768.0f, 15650.0f/32768.0f},     // 12
-    {659.0f/32768.0f, 1317.0f/32768.0f, 659.0f/32768.0f, -51152.0f/32768.0f, 21018.0f/32768.0f},       // 13
-    {1622.0f/32768.0f, 3244.0f/32768.0f, 1622.0f/32768.0f, -41929.0f/32768.0f, 15650.0f/32768.0f},     // 14
-    {659.0f/32768.0f, 1317.0f/32768.0f, 659.0f/32768.0f, -51152.0f/32768.0f, 21018.0f/32768.0f},       // 15
-    {31406.0f/32768.0f, -62813.0f/32768.0f, 31406.0f/32768.0f, -62762.0f/32768.0f, 30060.0f/32768.0f}, // 16
-    {28180.0f/32768.0f, -56360.0f/32768.0f, 28180.0f/32768.0f, -55426.0f/32768.0f, 23478.0f/32768.0f}, // 17
-    {26214.0f/32768.0f, 0.0f, -26214.0f/32768.0f, -49152.0f/32768.0f, 16384.0f/32768.0f},     // 18
-    {32767.0f/32768.0f, -32767.0f/32768.0f, 0.0f, -32767.0f/32768.0f, 0.0f}          // 19
+    {7583.0f/32768.0f, 0.0f, -7583.0f/32768.0f, -44000.0f/32768.0f, 17600.0f/32768.0f},       
+    {5784.0f/32768.0f, 0.0f, -5784.0f/32768.0f, -46747.0f/32768.0f, 21201.0f/32768.0f},       
+    {1622.0f/32768.0f, 3244.0f/32768.0f, 1622.0f/32768.0f, -41929.0f/32768.0f, 15650.0f/32768.0f},     
+    {659.0f/32768.0f, 1317.0f/32768.0f, 659.0f/32768.0f, -51152.0f/32768.0f, 21018.0f/32768.0f},       
+    {1622.0f/32768.0f, 3244.0f/32768.0f, 1622.0f/32768.0f, -41929.0f/32768.0f, 15650.0f/32768.0f},     
+    {659.0f/32768.0f, 1317.0f/32768.0f, 659.0f/32768.0f, -51152.0f/32768.0f, 21018.0f/32768.0f},       
+    {31406.0f/32768.0f, -62813.0f/32768.0f, 31406.0f/32768.0f, -62762.0f/32768.0f, 30060.0f/32768.0f}, 
+    {28180.0f/32768.0f, -56360.0f/32768.0f, 28180.0f/32768.0f, -55426.0f/32768.0f, 23478.0f/32768.0f}, 
+    {26214.0f/32768.0f, 0.0f, -26214.0f/32768.0f, -49152.0f/32768.0f, 16384.0f/32768.0f},     
+    {32767.0f/32768.0f, -32767.0f/32768.0f, 0.0f, -32767.0f/32768.0f, 0.0f}          
 };
-
 
 static inline void apply_postfilter(int16_t *pcm, uint32_t count, uint8_t channels, int filter_index, PostFilterState *state) {
     if (channels == 2) {
         for (uint32_t i = 0; i < count; i++) {
-            state[0].prev6 = state[0].prev5;
-            state[0].prev5 = state[0].prev4;
-            state[0].prev4 = state[0].prev3;
-            state[0].prev3 = state[0].prev2;
-            state[0].prev2 = state[0].prev1;
-            state[0].prev1 = state[0].actual;
-            state[0].actual = pcm[i*2]; // Left
-            
-            state[1].prev6 = state[1].prev5;
-            state[1].prev5 = state[1].prev4;
-            state[1].prev4 = state[1].prev3;
-            state[1].prev3 = state[1].prev2;
-            state[1].prev2 = state[1].prev1;
-            state[1].prev1 = state[1].actual;
-            state[1].actual = pcm[i*2 + 1]; // Right    
+            state[0].prev6 = state[0].prev5; state[0].prev5 = state[0].prev4; state[0].prev4 = state[0].prev3; state[0].prev3 = state[0].prev2; state[0].prev2 = state[0].prev1; state[0].prev1 = state[0].actual; state[0].actual = pcm[i*2];
+            state[1].prev6 = state[1].prev5; state[1].prev5 = state[1].prev4; state[1].prev4 = state[1].prev3; state[1].prev3 = state[1].prev2; state[1].prev2 = state[1].prev1; state[1].prev1 = state[1].actual; state[1].actual = pcm[i*2 + 1];    
             
             if (filter_index < 0 || filter_index > 19) {
-                pcm[i*2]     = state[0].actual; // Bypass Left
-                pcm[i*2 + 1] = state[1].actual; // Bypass Right
-            } 
-            else if (filter_index <= 9) {
-                // --- FIR FILTER LOGIK ---
+                pcm[i*2] = state[0].actual; pcm[i*2 + 1] = state[1].actual;
+            } else if (filter_index <= 9) {
                 if (filter_index == 0) {
                     pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.625), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev2)*0.125+state[1].prev1*0.625), -32768, 32767);
@@ -135,146 +118,102 @@ static inline void apply_postfilter(int16_t *pcm, uint32_t count, uint8_t channe
                     pcm[i*2]     = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.3125+(state[0].prev1+state[0].prev5)*0.625+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767);
                     pcm[i*2 + 1] = (int16_t)clamp((int32_t)((state[1].actual+state[1].prev6)*0.3125+(state[1].prev1+state[1].prev5)*0.625+(state[1].prev2+state[1].prev4)*0.0+(state[1].prev3*0.25)), -32768, 32767);
                 }
-            }
-            else if (filter_index >= 10 && filter_index <= 19) {
-                // --- IIR BIQUAD LOGIK ---
+            } else {
                 int idx = filter_index - 10;
-                float b0 = iir_coeffs_f[idx][0], b1 = iir_coeffs_f[idx][1], b2 = iir_coeffs_f[idx][2];
-                float a1 = iir_coeffs_f[idx][3], a2 = iir_coeffs_f[idx][4];
-
-                // Left
-                float xL = (float)state[0].actual;
-                float xL1 = (float)state[0].prev1;
-                float xL2 = (float)state[0].prev2;
-                float yL = b0 * xL + b1 * xL1 + b2 * xL2 - a1 * state[0].y_prev1 - a2 * state[0].y_prev2;
-                state[0].y_prev2 = state[0].y_prev1;
-                state[0].y_prev1 = yL;
-                pcm[i*2] = (int16_t)clamp((int32_t)yL, -32768, 32767);
-
-                // Right
-                float xR = (float)state[1].actual;
-                float xR1 = (float)state[1].prev1;
-                float xR2 = (float)state[1].prev2;
-                float yR = b0 * xR + b1 * xR1 + b2 * xR2 - a1 * state[1].y_prev1 - a2 * state[1].y_prev2;
-                state[1].y_prev2 = state[1].y_prev1;
-                state[1].y_prev1 = yR;
-                pcm[i*2 + 1] = (int16_t)clamp((int32_t)yR, -32768, 32767);
+                float b0 = iir_coeffs_f[idx][0], b1 = iir_coeffs_f[idx][1], b2 = iir_coeffs_f[idx][2], a1 = iir_coeffs_f[idx][3], a2 = iir_coeffs_f[idx][4];
+                float xL = (float)state[0].actual, xL1 = (float)state[0].prev1, xL2 = (float)state[0].prev2, yL = b0 * xL + b1 * xL1 + b2 * xL2 - a1 * state[0].y_prev1 - a2 * state[0].y_prev2;
+                state[0].y_prev2 = state[0].y_prev1; state[0].y_prev1 = yL; pcm[i*2] = (int16_t)clamp((int32_t)yL, -32768, 32767);
+                float xR = (float)state[1].actual, xR1 = (float)state[1].prev1, xR2 = (float)state[1].prev2, yR = b0 * xR + b1 * xR1 + b2 * xR2 - a1 * state[1].y_prev1 - a2 * state[1].y_prev2;
+                state[1].y_prev2 = state[1].y_prev1; state[1].y_prev1 = yR; pcm[i*2 + 1] = (int16_t)clamp((int32_t)yR, -32768, 32767);
             }
         }
     } else if (channels == 1) {
         for (uint32_t i = 0; i < count; i++) {
-            state[0].prev6 = state[0].prev5;
-            state[0].prev5 = state[0].prev4;
-            state[0].prev4 = state[0].prev3;
-            state[0].prev3 = state[0].prev2;
-            state[0].prev2 = state[0].prev1;
-            state[0].prev1 = state[0].actual;
-            state[0].actual = pcm[i]; // Mono
+            state[0].prev6 = state[0].prev5; state[0].prev5 = state[0].prev4; state[0].prev4 = state[0].prev3; state[0].prev3 = state[0].prev2; state[0].prev2 = state[0].prev1; state[0].prev1 = state[0].actual; state[0].actual = pcm[i]; 
             
-            if (filter_index < 0 || filter_index > 19) {
-                pcm[i] = state[0].actual; // Bypass Mono
-            } 
+            if (filter_index < 0 || filter_index > 19) pcm[i] = state[0].actual;
             else if (filter_index <= 9) {
-                // --- FIR FILTER LOGIK ---
-                if (filter_index == 0) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.625), -32768, 32767);
-                } else if (filter_index == 1) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.75), -32768, 32767);
-                } else if (filter_index == 2) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.875), -32768, 32767);
-                }
-                else if (filter_index == 3) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.5), -32768, 32767);
-                }
-                else if (filter_index == 4) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.625), -32768, 32767);
-                }
-                else if (filter_index == 5) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.0625+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.1875+state[0].prev3*0.250), -32768, 32767);
-                }
-                else if (filter_index == 6) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.125+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.125+state[0].prev3*0.250), -32768, 32767);
-                }
-                else if (filter_index == 7) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.1875+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0625+state[0].prev3*0.25), -32768, 32767);
-                }
-                else if (filter_index == 8) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.2500+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767);
-                }
-                else if (filter_index == 9) {
-                    pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.3125+(state[0].prev1+state[0].prev5)*0.625+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767);
-                }
-            }
-            else if (filter_index >= 10 && filter_index <= 19) {
-                // --- IIR BIQUAD LOGIK ---
+                if (filter_index == 0) pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.625), -32768, 32767);
+                else if (filter_index == 1) pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.75), -32768, 32767);
+                else if (filter_index == 2) pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.125+state[0].prev1*0.875), -32768, 32767);
+                else if (filter_index == 3) pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.5), -32768, 32767);
+                else if (filter_index == 4) pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev2)*0.25+state[0].prev1*0.625), -32768, 32767);
+                else if (filter_index == 5) pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.0625+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.1875+state[0].prev3*0.250), -32768, 32767);
+                else if (filter_index == 6) pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.125+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.125+state[0].prev3*0.250), -32768, 32767);
+                else if (filter_index == 7) pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.1875+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0625+state[0].prev3*0.25), -32768, 32767);
+                else if (filter_index == 8) pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.2500+(state[0].prev1+state[0].prev5)*0.125+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767);
+                else if (filter_index == 9) pcm[i] = (int16_t)clamp((int32_t)((state[0].actual+state[0].prev6)*0.3125+(state[0].prev1+state[0].prev5)*0.625+(state[0].prev2+state[0].prev4)*0.0+(state[0].prev3*0.25)), -32768, 32767);
+            } else {
                 int idx = filter_index - 10;
-                float b0 = iir_coeffs_f[idx][0], b1 = iir_coeffs_f[idx][1], b2 = iir_coeffs_f[idx][2];
-                float a1 = iir_coeffs_f[idx][3], a2 = iir_coeffs_f[idx][4];
-
-                float xM = (float)state[0].actual;
-                float xM1 = (float)state[0].prev1;
-                float xM2 = (float)state[0].prev2;
-                float yM = b0 * xM + b1 * xM1 + b2 * xM2 - a1 * state[0].y_prev1 - a2 * state[0].y_prev2;
-                
-                state[0].y_prev2 = state[0].y_prev1;
-                state[0].y_prev1 = yM;
-                pcm[i] = (int16_t)clamp((int32_t)yM, -32768, 32767);
+                float b0 = iir_coeffs_f[idx][0], b1 = iir_coeffs_f[idx][1], b2 = iir_coeffs_f[idx][2], a1 = iir_coeffs_f[idx][3], a2 = iir_coeffs_f[idx][4];
+                float xM = (float)state[0].actual, xM1 = (float)state[0].prev1, xM2 = (float)state[0].prev2, yM = b0 * xM + b1 * xM1 + b2 * xM2 - a1 * state[0].y_prev1 - a2 * state[0].y_prev2;
+                state[0].y_prev2 = state[0].y_prev1; state[0].y_prev1 = yM; pcm[i] = (int16_t)clamp((int32_t)yM, -32768, 32767);
             }
         }
     }
 }
 
-// ==============================================================================
-// NAME-HELPER FÜR DIE KONSOLE
-// ==============================================================================
 const char* get_filter_name(int idx) {
     if (idx == -1) return "Bypass";
-    if (idx == 0) return "FIR: 1/8,3/4,1/8";
-    if (idx == 1) return "FIR: 1/8,6/8,1/8";
-    if (idx == 2) return "FIR: 1/8,7/8,1/8";
-    if (idx == 3) return "FIR: 2/8,4/8,2/8";
-    if (idx == 4) return "FIR: 2/8,5/8,1/8";
-    if (idx == 5) return "FIR: 1/16,3/16,3/16,1/4,3/16,3/16,1/16";
-    if (idx == 6) return "FIR: 1/8,1/8,1/8,1/4,1/8,1/8,1/8";
-    if (idx == 7) return "FIR: 3/16,2/16,1/16,1/4,1/16,2/16,3/16";
-    if (idx == 8) return "FIR: 1/4,1/8,0,1/4,0,1/8,1/4";
-    if (idx == 9) return "FIR: 5/16,5/16,0,1/4,0,-5/16,-5/16";
-    if (idx == 10) return "IIR: Sprache Bandpass mild";
-    if (idx == 11) return "IIR: Sprache Bandpass stark";
-    if (idx == 12) return "IIR: Sprache Tiefpass mild";
-    if (idx == 13) return "IIR: Sprache Tiefpass stark";
-    if (idx == 14) return "IIR: Musik Tiefpass sanft";
-    if (idx == 15) return "IIR: Musik Tiefpass moderat";
-    if (idx == 16) return "IIR: Musik Bandpass Subsonic";
-    if (idx == 17) return "IIR: Musik Hoehen sanft";
-    if (idx == 18) return "IIR: Musik Praesenz";
-    if (idx == 19) return "IIR: Musik Bass-Boost";
+    if (idx == 0) return "FIR: 1/8,3/4,1/8"; if (idx == 1) return "FIR: 1/8,6/8,1/8"; if (idx == 2) return "FIR: 1/8,7/8,1/8";
+    if (idx == 3) return "FIR: 2/8,4/8,2/8"; if (idx == 4) return "FIR: 2/8,5/8,1/8"; if (idx == 5) return "FIR: 1/16,3/16,3/16,1/4,3/16,3/16,1/16";
+    if (idx == 6) return "FIR: 1/8,1/8,1/8,1/4,1/8,1/8,1/8"; if (idx == 7) return "FIR: 3/16,2/16,1/16,1/4,1/16,2/16,3/16";
+    if (idx == 8) return "FIR: 1/4,1/8,0,1/4,0,1/8,1/4"; if (idx == 9) return "FIR: 5/16,5/16,0,1/4,0,-5/16,-5/16";
+    if (idx == 10) return "IIR: Sprache Bandpass mild"; if (idx == 11) return "IIR: Sprache Bandpass stark";
+    if (idx == 12) return "IIR: Sprache Tiefpass mild"; if (idx == 13) return "IIR: Sprache Tiefpass stark";
+    if (idx == 14) return "IIR: Musik Tiefpass sanft"; if (idx == 15) return "IIR: Musik Tiefpass moderat";
+    if (idx == 16) return "IIR: Musik Bandpass Subsonic"; if (idx == 17) return "IIR: Musik Hoehen sanft";
+    if (idx == 18) return "IIR: Musik Praesenz"; if (idx == 19) return "IIR: Musik Bass-Boost";
     return "Unknown";
 }
 
 // ==============================================================================
-// HIGH-SPEED MEMORY BITSTREAM READER
+// STREAMING FILE BITSTREAM READER (DISK I/O CHUNKS)
 // ==============================================================================
 typedef struct {
-    uint8_t *data;
-    uint32_t pos;
-    uint32_t max_pos;
-    uint8_t pool;
-    int bits_left;
-} MemBitStream;
+    FILE *f;
+    uint8_t buffer[STREAM_BUF_SIZE];
+    uint32_t pos;           // Byte-Position innerhalb unseres 2KB-Puffers
+    uint32_t valid_bytes;   // Wie viele Bytes aktuell im Puffer gültig sind
+    uint32_t bit_pos;       // 0-7
+    bool eof;               // Festplatten-Ende erreicht
+} FileBitStream;
 
-static inline uint8_t read_bits_mem(MemBitStream *bs, int num_bits) {
-    uint8_t result = 0;
-    for (int i = 0; i < num_bits; i++) {
-        if (bs->bits_left == 0) {
-            if (bs->pos >= bs->max_pos) return result;
-            bs->pool = bs->data[bs->pos++];
-            bs->bits_left = 8;
+static inline uint32_t read_bits_file(FileBitStream *bs, int num_bits) {
+    uint32_t result = 0;
+    int bits_read = 0;
+
+    while (bits_read < num_bits) {
+        // Falls unser kleiner Chunk-Puffer leer ist, lade den nächsten Schwung von Platte
+        if (bs->pos >= bs->valid_bytes) {
+            if (bs->eof) break; 
+            bs->valid_bytes = fread(bs->buffer, 1, STREAM_BUF_SIZE, bs->f);
+            bs->pos = 0;
+            if (bs->valid_bytes == 0) {
+                bs->eof = true;
+                break;
+            }
         }
-        result |= ((bs->pool & 1) << i);
-        bs->pool >>= 1;
-        bs->bits_left--;
+
+        int bits_available = 8 - bs->bit_pos;
+        int bits_to_take = num_bits - bits_read;
+        if (bits_to_take > bits_available) bits_to_take = bits_available;
+
+        uint32_t byte_val = bs->buffer[bs->pos];
+        uint32_t mask = (1 << bits_to_take) - 1;
+        
+        uint32_t extracted = (byte_val >> bs->bit_pos) & mask;
+        result |= (extracted << bits_read);
+
+        bits_read += bits_to_take;
+        bs->bit_pos += bits_to_take;
+
+        if (bs->bit_pos >= 8) {
+            bs->bit_pos = 0;
+            bs->pos++;
+        }
     }
+    
     return result;
 }
 
@@ -321,15 +260,15 @@ static inline int16_t decode_nibble(ADPCM_Channel *chan, uint8_t nibble, uint8_t
     return (int16_t)chan->pcm;
 }
 
-void decode_chunk(MemBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl, uint8_t channels, uint8_t bpsL, uint8_t bpsR, bool use_ms, ADPCM_Channel *chL, ADPCM_Channel *chR) {
+void decode_chunk(FileBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl, uint8_t channels, uint8_t bpsL, uint8_t bpsR, bool use_ms, ADPCM_Channel *chL, ADPCM_Channel *chR) {
     for (uint32_t i = 0; i < chunk_smpl; i++) {
-        if (bs->pos >= bs->max_pos) break;
+        if (bs->eof) break;
 
-        uint8_t nibL = read_bits_mem(bs, bpsL);
+        uint8_t nibL = (uint8_t)read_bits_file(bs, bpsL); 
         int16_t valL = decode_nibble(chL, nibL, bpsL);
         
         if (channels == 2) {
-            uint8_t nibR = read_bits_mem(bs, bpsR);
+            uint8_t nibR = (uint8_t)read_bits_file(bs, bpsR);
             int16_t valR = decode_nibble(chR, nibR, bpsR);
             
             if (use_ms) {
@@ -345,9 +284,6 @@ void decode_chunk(MemBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl, uin
     }
 }
 
-// ==============================================================================
-// SAGA AUDIO STEUERUNG
-// ==============================================================================
 void stop_saga_sound(uint8_t channel) {
     *((volatile uint16_t*)0xDFF096) = (1 << channel); // DMA STOP
 }
@@ -359,7 +295,6 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, SIG_IGN); 
     SetSignal(0, SIGBREAKF_CTRL_C);
 
-   // --- ARGUMENTEN-PARSING & USAGE PRÜFUNG ---
     int FIR_filter = -1; // -1 = Standard Bypass
     FILE *f = NULL;
 
@@ -369,7 +304,7 @@ int main(int argc, char *argv[]) {
             if (FIR_filter > 19) FIR_filter = 19;
             if (FIR_filter < -1) FIR_filter = -1;
         } else {
-             f = fopen( argv[i],"rb");
+             f = fopen(argv[i],"rb");
         }
     }
 
@@ -383,53 +318,61 @@ int main(int argc, char *argv[]) {
     uint32_t file_size = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    uint8_t *raw_file_buf = (uint8_t *)AllocVec(file_size, MEMF_PUBLIC);
-    if (!raw_file_buf) { fclose(f); return 1; }
-    fread(raw_file_buf, 1, file_size, f);
-    fclose(f);
+    // Header auslesen (21 Bytes) ohne die Datei komplett ins RAM zu laden
+    uint8_t header[21];
+    if (fread(header, 1, 21, f) != 21) {
+        fclose(f);
+        return 1;
+    }
     
-    uint32_t sample_rate = raw_file_buf[4] | (raw_file_buf[5]<<8) | (raw_file_buf[6]<<16) | (raw_file_buf[7]<<24);
-    uint8_t channels     = raw_file_buf[8];
-    uint8_t bps          = raw_file_buf[9];
-    uint8_t use_ms       = raw_file_buf[10];
-    uint32_t total_smpl  = raw_file_buf[11] | (raw_file_buf[12]<<8) | (raw_file_buf[13]<<16) | (raw_file_buf[14]<<24);
+    uint32_t sample_rate = header[4] | (header[5]<<8) | (header[6]<<16) | (header[7]<<24);
+    uint8_t channels     = header[8];
+    uint8_t bps          = header[9];
+    uint8_t use_ms       = header[10];
+    uint32_t total_smpl  = header[11] | (header[12]<<8) | (header[13]<<16) | (header[14]<<24);
     
-    ADPCM_Channel chL = { (int16_t)(raw_file_buf[15] | (raw_file_buf[16]<<8)), raw_file_buf[17] };
-    ADPCM_Channel chR = { (int16_t)(raw_file_buf[18] | (raw_file_buf[19]<<8)), raw_file_buf[20] };
+    ADPCM_Channel chL = { (int16_t)(header[15] | (header[16]<<8)), header[17] };
+    ADPCM_Channel chR = { (int16_t)(header[18] | (header[19]<<8)), header[20] };
     uint8_t bpsL = bps, bpsR = bps;
     if (bps == 53 && channels == 2) { bpsL = 5; bpsR = 3; use_ms = 1; }
 
-    // Kanal suchen
     uint8_t active_ch = 0xFF;
     for (uint8_t c = 0; c < 4; c++) {
         if ((*((volatile uint16_t*)0xDFF002) & (1<<c)) == 0) { active_ch = c; break; }
     }
-    if (active_ch == 0xFF) { FreeVec(raw_file_buf); return 1; }
+    if (active_ch == 0xFF) { fclose(f); return 1; }
     
-    // Basis-Takt Amiga PAL (3.546.895 Hz)
     uint16_t saga_period = 3546895 / sample_rate; 
 
-    // --- DER RINGPUFFER ---
     uint32_t target_samples = sample_rate * BUFFER_SECONDS; 
     uint32_t half_smpl  = (target_samples + 7) & ~7; 
     uint32_t half_bytes = half_smpl * channels * sizeof(int16_t);
     uint32_t total_bytes = half_bytes * 2; 
     
     int16_t *ring_buffer = (int16_t *)AllocVec(total_bytes, MEMF_PUBLIC | MEMF_CLEAR);
-    if (!ring_buffer) { FreeVec(raw_file_buf); return 1; }
+    if (!ring_buffer) { fclose(f); return 1; }
     
     int16_t *buf_half[2];
     buf_half[0] = ring_buffer;
     buf_half[1] = (int16_t *)((uint8_t*)ring_buffer + half_bytes);
 
-    MemBitStream bs = { .data = raw_file_buf, .pos = 21, .max_pos = file_size, .pool = 0, .bits_left = 0 };
+    // ==============================================================================
+    // FESTPLATTEN-STREAM INITIALISIEREN
+    // (f steht durch das Lesen des Headers bereits automatisch an Byte 21!)
+    // ==============================================================================
+    FileBitStream bs = { 
+        .f = f, 
+        .pos = 0, 
+        .valid_bytes = 0, // 0 erzwingt sofort das Nachladen des ersten 2KB-Blocks!
+        .bit_pos = 0,
+        .eof = false 
+    };
 
-     // --- INFOS BERECHNEN UND AUSGEBEN ---
     float duration = (float)total_smpl / (float)sample_rate;
     float kbps = ((float)sample_rate * (float)(bpsL + (channels == 2 ? bpsR : 0))) / 1000.0f;
     float comp_ratio = (float)(file_size * 100) / (float)(total_smpl * channels * sizeof(int16_t));
 
-    printf(">>> ADPCM Decoder <<<\n");
+    printf(">>> ADPCM Decoder (Disk-Streaming, %d KB Buffer) <<<\n", STREAM_BUF_SIZE / 1024);
     printf("Sample Rate: %u Hz\n", sample_rate);
     printf("Channels: %u\n", channels);
     printf("%s%u Bit %s%u Bit\n", use_ms ? "Mid:" : "Left:", bpsL, use_ms ? "Side" : "Right:", bpsR);
@@ -442,17 +385,11 @@ int main(int argc, char *argv[]) {
     
     uint32_t smpl_0 = (total_smpl < half_smpl) ? total_smpl : half_smpl;
     decode_chunk(&bs, buf_half[0], smpl_0, channels, bpsL, bpsR, use_ms, &chL, &chR);
-    
-    // Filter anwenden
     apply_postfilter(buf_half[0], smpl_0, channels, FIR_filter, filter_state);
-   
     total_smpl -= smpl_0;
 
     int free_half = 1; 
 
-    // ==============================================================================
-    // SYSTEM INTERRUPT SETUP (Amiga Exec)
-    // ==============================================================================
     main_task = FindTask(NULL);
     int8_t sig_bit = AllocSignal(-1);
     audio_sig_mask = 1 << sig_bit;
@@ -467,9 +404,6 @@ int main(int argc, char *argv[]) {
 
     AddIntServer(INTB_AUD0 + active_ch, &audio_int_node);
 
-    // ==============================================================================
-    // SAGA PING-PONG START (DUMMY TRICK)
-    // ==============================================================================
     uint32_t base = 0xDFF400 + (active_ch * 0x10);
     uint32_t audlen_divisor = (channels == 2) ? 8 : 4;
     uint32_t hw_len = half_bytes / audlen_divisor;
@@ -494,7 +428,6 @@ int main(int argc, char *argv[]) {
     printf(">>> START: Wiedergabe via OS-Interrupts (0%% CPU Last im Wait) <<<\n");
     fflush(stdout);
 
-    // --- DIE PING-PONG SCHLEIFE ---
     while (total_smpl > 0) {
         if (SetSignal(0, 0) & SIGBREAKF_CTRL_C) {
             printf("\n>>> Abbruch durch Benutzer (Ctrl-C)! <<<\n");
@@ -514,8 +447,6 @@ int main(int argc, char *argv[]) {
 
         uint32_t smpl_chunk = (total_smpl < half_smpl) ? total_smpl : half_smpl;
         decode_chunk(&bs, buf_half[free_half], smpl_chunk, channels, bpsL, bpsR, use_ms, &chL, &chR);
-        
-        // Filter anwenden
         apply_postfilter(buf_half[free_half], smpl_chunk, channels, FIR_filter, filter_state);
         
         if (smpl_chunk < half_smpl) {
@@ -532,7 +463,6 @@ int main(int argc, char *argv[]) {
         free_half = 1 - free_half; 
     }
 
-    // --- ENDPHASE ---
     if (!aborted) {
         printf(">>> ENDE: Lied komplett, warte auf Ausklingen...\n");
         fflush(stdout);
@@ -540,7 +470,6 @@ int main(int argc, char *argv[]) {
         Wait(audio_sig_mask); 
     }
 
-    // --- CLEANUP ---
     *((volatile uint16_t*)0xDFF096) = (1 << active_ch); 
     *((volatile uint16_t*)0xDFF09A) = aud_int_bit;      
 
@@ -551,7 +480,7 @@ int main(int argc, char *argv[]) {
     fflush(stdout);
     
     FreeVec(ring_buffer);
-    FreeVec(raw_file_buf);
+    fclose(f); // Datei am Ende sauber schließen!
     SetSignal(0, SIGBREAKF_CTRL_C); 
     
     return 0;
