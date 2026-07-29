@@ -158,7 +158,7 @@ const char* get_filter_name(int idx) {
     if (idx == 0) return "FIR: 1/8,3/4,1/8"; if (idx == 1) return "FIR: 1/8,6/8,1/8"; if (idx == 2) return "FIR: 1/8,7/8,1/8";
     if (idx == 3) return "FIR: 2/8,4/8,2/8"; if (idx == 4) return "FIR: 2/8,5/8,1/8"; if (idx == 5) return "FIR: 1/16,3/16,3/16,1/4,3/16,3/16,1/16";
     if (idx == 6) return "FIR: 1/8,1/8,1/8,1/4,1/8,1/8,1/8"; if (idx == 7) return "FIR: 3/16,2/16,1/16,1/4,1/16,2/16,3/16";
-    if (idx == 8) return "FIR: 1/4,1/8,0,1/4,0,1/8,1/4"; if (idx == 9) return "FIR: 5/16,5/16,0,1/4,0,-5/16,-5/16";
+    if (idx == 8) return "FIR: 1/4,1/8,0,1/4,0,1/8,1/4"; if (idx == 9) return "FIR: 5/16,5/16,0,1/4,0,5/16,5/16";
     if (idx == 10) return "IIR: Sprache Bandpass mild"; if (idx == 11) return "IIR: Sprache Bandpass stark";
     if (idx == 12) return "IIR: Sprache Tiefpass mild"; if (idx == 13) return "IIR: Sprache Tiefpass stark";
     if (idx == 14) return "IIR: Musik Tiefpass sanft"; if (idx == 15) return "IIR: Musik Tiefpass moderat";
@@ -271,7 +271,60 @@ static inline int16_t decode_nibble(ADPCM_Channel *chan, uint8_t nibble, uint8_t
     return (int16_t)chan->pcm;
 }
 
+// ==============================================================================
+// TODO: HARDWARE OPTIMIERTE ASSEMBLER KERNEL (AMMX 68080)
+// ==============================================================================
+//
+// WARUM 15-BYTE BLÖCKE? (Die "Magie" der 120 Bits)
+// Ein 15-Byte-Block entspricht exakt 120 Bits. Die Zahl 120 ist ein ideales 
+// gemeinsames Vielfaches für all unsere krummen Bit-Tiefen. Das bedeutet, JEDES 
+// unserer Formate passt RESTLOS in diese 15 Bytes, ohne dass am Ende eines 
+// Blocks krumme Rest-Bits in den nächsten Block überlappen:
+//  - 3 Bit (Mono)      -> 120 / 3 = exakt 40 Samples
+//  - 4 Bit (Mono)      -> 120 / 4 = exakt 30 Samples
+//  - 5 Bit (Mono)      -> 120 / 5 = exakt 24 Samples
+//  - 6 Bit (Mono)      -> 120 / 6 = exakt 20 Samples
+//  - 8 Bit (5/3 M/S)   -> 120 / 8 = exakt 15 Stereo-Sample-Paare
+//  - 6 Bit (4/2 M/S)   -> 120 / 6 = exakt 20 Stereo-Sample-Paare
+//  - 5 Bit (3/2 M/S)   -> 120 / 5 = exakt 24 Stereo-Sample-Paare
+// 
+// Vorteil für AMMX: Der 68080 kann die 15 Bytes (z. B. als zwei 64-Bit Quadwords)
+// direkt in die Vektor-Register (e0, e1) laden, parallel via 'pand' und 'lsrq' 
+// die Bits extrahieren und exakt eine feste Anzahl an Samples ausspucken, ohne 
+// jemals bitweise über Speichergrenzen springen zu müssen.
+//
+// PARAMETER FÜR DIE ASSEMBLER-AUFRUFE:
+// 1. in_buffer  -> Pointer auf den Bitstream (Start des 15-Byte Blocks).
+// 2. out_buffer -> Pointer auf den Output (wo die decodierten PCM 16-Bit Samples landen).
+//                  Achtung: M/S Formate schreiben direkt L und R interleaved.
+// 3. chL / chR  -> Pointer auf das ADPCM_Channel Struct (zum Laden/Speichern von pcm & index).
+//                  Bei Stereo/MS werden beide Channel-Structs übergeben.
+// 4. block_cnt  -> Wie viele 15-Byte Blöcke in dieser Schleife am Stück verarbeitet werden.
+//
+/*
+extern void decode_3bit_ammx_asm(const uint8_t *in_buffer, int16_t *out_buffer, ADPCM_Channel *ch, uint32_t block_cnt);
+extern void decode_ms_53_ammx_asm(const uint8_t *in_buffer, int16_t *out_buffer, ADPCM_Channel *chL, ADPCM_Channel *chR, uint32_t block_cnt);
+// ... weitere Formate ...
+*/
+
+// DUMMY Rumpf-Funktion als Platzhalter
+void decode_block_asm_dummy(void) {
+    // TODO: Assembler Kern-Aufruf oder Inline-ASM für 15-Byte Blockverarbeitung
+    // Lade Daten in e0, maskiere (pand) in e1, schiebe (lsrq).
+}
+// ==============================================================================
+
 void decode_chunk(FileBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl, uint8_t channels, uint8_t bpsL, uint8_t bpsR, bool use_ms, ADPCM_Channel *chL, ADPCM_Channel *chR) {
+    
+    // ==========================================================================
+    // TODO: ASSEMBLER-BRANCH EINHÄNGEN
+    // ==========================================================================
+    // if (hardware_has_ammx && bpsL == 3 && channels == 1) {
+    //     decode_3bit_ammx_asm(bs->buffer, audio_buf, chL, chunk_smpl / 40); // 40 samples = 1 Block
+    //     return;
+    // }
+    // ==========================================================================
+
     for (uint32_t i = 0; i < chunk_smpl; i++) {
         if (bs->eof) break;
 
@@ -320,7 +373,11 @@ int main(int argc, char *argv[]) {
     }
 
     if (!f) {
-        printf("Nutzung: %s [-f 0..19] datei.adpx\n", argv[0] ? argv[0] : "ADPCM_Decoder");
+        printf("Nutzung: %s [-f -1..19] datei.adpx\n\n", argv[0] ? argv[0] : "ADPCM_Decoder");
+        printf("Verfuegbare Post-Filter:\n");
+        for (int i = -1; i <= 19; i++) {
+            printf(" [%2d] %s\n", i, get_filter_name(i));
+        }
         fflush(stdout);
         return 1;
     }
