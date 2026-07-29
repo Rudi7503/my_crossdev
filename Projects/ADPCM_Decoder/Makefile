@@ -33,7 +33,7 @@ APOLLOLIB = $(PWD)/../../Projects/ApolloLib
 
 # Define Additional Libraries - SDL, MUI and Mathemetics, remove/add # to enable/disable 
 # C_LIBS_SDL	= -lSDL -lSDL_ttf -lfreetype
-# C_LIBS_MUI	= -lmui
+# C_LIBS_MUI	= -lm
 C_LIBS_MATH	= -lm
 C_LIBS_ALL 	= $(C_LIBS_SDL) $(C_LIBS_MUI) $(C_LIBS_MATH) 
 
@@ -121,9 +121,14 @@ upload_all:
 	@cp $(ICONS)/ApolloIcon.info $(PROJECT_DIR)/$(PROJECT_NAME).info
 	@$(ACP) $(PROJECT_DIR)/$(PROJECT_NAME).info $(APOLLO_V4_HOST)
 	@echo "\e[37mUpload Test-Datei: \e[36mEncoded.adpx\e[0m"
-	@$(ACP) $(PROJECT_DIR)/Encoded.adpx $(APOLLO_V4_HOST)
-	@echo "\e[37mUpload Test-Datei: \e[36mEncoded.adpx\e[0m"
-	@$(ACP) $(PROJECT_DIR)/Encoded2.adpx $(APOLLO_V4_HOST)
+	@$(ACP) "$(PROJECT_DIR)/Encoded.adpx" $(APOLLO_V4_HOST)
+	@echo "\e[37mUpload Test-Datei: \e[36mEncoded2.adpx\e[0m"
+	@$(ACP) "$(PROJECT_DIR)/Encoded2.adpx" $(APOLLO_V4_HOST)
+	@echo "\e[37mUpload Kakaodateien...\e[0m"
+	@for f in "$(PROJECT_DIR)"/Kakao_*.adpx; do \
+		echo "   $$(basename "$$f")"; \
+		$(ACP) "$$f" $(APOLLO_V4_HOST); \
+	done
 
 upload_debug:
 	@echo "\e[37mStep #3 - \e[31mApollo\e[30mExplorer \e[37mUpload\e[30m"

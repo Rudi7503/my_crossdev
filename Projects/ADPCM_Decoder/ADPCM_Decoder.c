@@ -230,6 +230,8 @@ static const int step_table[89] = {
 static const int index_table_3[4] = {-1, -1, 1, 2};
 static const int index_table_4[8] = {-1, -1, -1, -1, 2, 4, 6, 8};
 static const int index_table_5[16] = {-1, -1, -1, -1, -1, -1, -1, -1, 1, 2, 4, 6, 8, 10, 13, 16};
+static const int index_table_6[32] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
+                                       1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 19, 22, 25, 28};
 
 typedef struct { int32_t pcm; int16_t index; } ADPCM_Channel;
 
@@ -253,6 +255,15 @@ static inline int16_t decode_nibble(ADPCM_Channel *chan, uint8_t nibble, uint8_t
         delta = step >> 4; if (nibble & 1) delta += (step >> 3); if (nibble & 2) delta += (step >> 2); if (nibble & 4) delta += (step >> 1); if (nibble & 8) delta += step;
         if (nibble & 16) chan->pcm -= delta; else chan->pcm += delta;
         chan->index += index_table_5[nibble & 15];
+    } else if (bps == 6) {
+        delta = step >> 5; 
+        if (nibble & 1) delta += (step >> 4);
+        if (nibble & 2) delta += (step >> 3);
+        if (nibble & 4) delta += (step >> 2);
+        if (nibble & 8) delta += (step >> 1);
+        if (nibble & 16) delta += step;
+        if (nibble & 32) chan->pcm -= delta; else chan->pcm += delta;
+        chan->index += index_table_6[nibble & 31];
     }
 
     chan->index = clamp(chan->index, 0, 88);
@@ -333,8 +344,13 @@ int main(int argc, char *argv[]) {
     
     ADPCM_Channel chL = { (int16_t)(header[15] | (header[16]<<8)), header[17] };
     ADPCM_Channel chR = { (int16_t)(header[18] | (header[19]<<8)), header[20] };
+    
     uint8_t bpsL = bps, bpsR = bps;
-    if (bps == 53 && channels == 2) { bpsL = 5; bpsR = 3; use_ms = 1; }
+    if (channels == 2) {
+        if (bps == 53) { bpsL = 5; bpsR = 3; use_ms = 1; }
+        else if (bps == 42) { bpsL = 4; bpsR = 2; use_ms = 1; }
+        else if (bps == 32) { bpsL = 3; bpsR = 2; use_ms = 1; }
+    }
 
     uint8_t active_ch = 0xFF;
     for (uint8_t c = 0; c < 4; c++) {
