@@ -510,7 +510,8 @@ int main(int argc, char *argv[]) {
         decode_time = get_ccc();
         // use_asm Flag an decode_chunk übergeben
         decode_chunk(&bs, buf_half[free_half], smpl_chunk, channels, bpsL, bpsR, use_ms, &chL, &chR, use_asm);
-        printf(">>> decode time: %d cycles\n", get_ccc() - decode_time);
+        decode_time = get_ccc() - decode_time;
+        printf(">>> decode time: %d cycles\n decode time per sample: %.d cycles\n", decode_time, decode_time / smpl_chunk);
         apply_postfilter(buf_half[free_half], smpl_chunk, channels, FIR_filter, filter_state);
         
         if (smpl_chunk < half_smpl) {
