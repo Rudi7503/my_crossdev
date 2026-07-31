@@ -16,6 +16,13 @@
 #define BUFFER_SECONDS 1
 #define STREAM_BUF_SIZE 2048 // 2 KB Lese-Puffer für die Festplatte
 
+extern uint32_t get_ccc(void);
+
+// ==============================================================================
+// ASSEMBLER KERNEL DEKLARATIONEN
+// ==============================================================================
+extern uint32_t decode_2bit_stereo_ammx_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+
 // ==============================================================================
 // ISR (INTERRUPT SERVICE ROUTINE) VARIABLEN
 // ==============================================================================
@@ -271,60 +278,35 @@ static inline int16_t decode_nibble(ADPCM_Channel *chan, uint8_t nibble, uint8_t
     return (int16_t)chan->pcm;
 }
 
-// ==============================================================================
-// TODO: HARDWARE OPTIMIERTE ASSEMBLER KERNEL (AMMX 68080)
-// ==============================================================================
-//
-// WARUM 15-BYTE BLÖCKE? (Die "Magie" der 120 Bits)
-// Ein 15-Byte-Block entspricht exakt 120 Bits. Die Zahl 120 ist ein ideales 
-// gemeinsames Vielfaches für all unsere krummen Bit-Tiefen. Das bedeutet, JEDES 
-// unserer Formate passt RESTLOS in diese 15 Bytes, ohne dass am Ende eines 
-// Blocks krumme Rest-Bits in den nächsten Block überlappen:
-//  - 3 Bit (Mono)      -> 120 / 3 = exakt 40 Samples
-//  - 4 Bit (Mono)      -> 120 / 4 = exakt 30 Samples
-//  - 5 Bit (Mono)      -> 120 / 5 = exakt 24 Samples
-//  - 6 Bit (Mono)      -> 120 / 6 = exakt 20 Samples
-//  - 8 Bit (5/3 M/S)   -> 120 / 8 = exakt 15 Stereo-Sample-Paare
-//  - 6 Bit (4/2 M/S)   -> 120 / 6 = exakt 20 Stereo-Sample-Paare
-//  - 5 Bit (3/2 M/S)   -> 120 / 5 = exakt 24 Stereo-Sample-Paare
-// 
-// Vorteil für AMMX: Der 68080 kann die 15 Bytes (z. B. als zwei 64-Bit Quadwords)
-// direkt in die Vektor-Register (e0, e1) laden, parallel via 'pand' und 'lsrq' 
-// die Bits extrahieren und exakt eine feste Anzahl an Samples ausspucken, ohne 
-// jemals bitweise über Speichergrenzen springen zu müssen.
-//
-// PARAMETER FÜR DIE ASSEMBLER-AUFRUFE:
-// 1. in_buffer  -> Pointer auf den Bitstream (Start des 15-Byte Blocks).
-// 2. out_buffer -> Pointer auf den Output (wo die decodierten PCM 16-Bit Samples landen).
-//                  Achtung: M/S Formate schreiben direkt L und R interleaved.
-// 3. chL / chR  -> Pointer auf das ADPCM_Channel Struct (zum Laden/Speichern von pcm & index).
-//                  Bei Stereo/MS werden beide Channel-Structs übergeben.
-// 4. block_cnt  -> Wie viele 15-Byte Blöcke in dieser Schleife am Stück verarbeitet werden.
-//
-/*
-extern void decode_3bit_ammx_asm(const uint8_t *in_buffer, int16_t *out_buffer, ADPCM_Channel *ch, uint32_t block_cnt);
-extern void decode_ms_53_ammx_asm(const uint8_t *in_buffer, int16_t *out_buffer, ADPCM_Channel *chL, ADPCM_Channel *chR, uint32_t block_cnt);
-// ... weitere Formate ...
-*/
-
-// DUMMY Rumpf-Funktion als Platzhalter
-void decode_block_asm_dummy(void) {
-    // TODO: Assembler Kern-Aufruf oder Inline-ASM für 15-Byte Blockverarbeitung
-    // Lade Daten in e0, maskiere (pand) in e1, schiebe (lsrq).
-}
-// ==============================================================================
-
-void decode_chunk(FileBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl, uint8_t channels, uint8_t bpsL, uint8_t bpsR, bool use_ms, ADPCM_Channel *chL, ADPCM_Channel *chR) {
+// Hier empfängt die decode_chunk das neue "use_asm" Flag
+void decode_chunk(FileBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl, uint8_t channels, uint8_t bpsL, uint8_t bpsR, bool use_ms, ADPCM_Channel *chL, ADPCM_Channel *chR, bool use_asm) {
     
     // ==========================================================================
-    // TODO: ASSEMBLER-BRANCH EINHÄNGEN
+    // ASSEMBLER-BRANCH FÜR 2-BIT STEREO
     // ==========================================================================
-    // if (hardware_has_ammx && bpsL == 3 && channels == 1) {
-    //     decode_3bit_ammx_asm(bs->buffer, audio_buf, chL, chunk_smpl / 40); // 40 samples = 1 Block
-    //     return;
-    // }
+    if (use_asm && bpsL == 2 && bpsR == 2 && channels == 2 && !use_ms) {
+        // Ein 15-Byte Block liefert exakt 30 Stereo-Samples (60 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 30; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 30 Samples * 2 Kanäle = 60 int16_t weiter.
+            decode_2bit_stereo_ammx_asm(block15, &audio_buf[b * 60], chL, chR, 1);
+        }
+        return; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
     // ==========================================================================
 
+    // Fallback: Klassischer C-Code
     for (uint32_t i = 0; i < chunk_smpl; i++) {
         if (bs->eof) break;
 
@@ -360,6 +342,7 @@ int main(int argc, char *argv[]) {
     SetSignal(0, SIGBREAKF_CTRL_C);
 
     int FIR_filter = -1; // -1 = Standard Bypass
+    bool use_asm = false; // Neuer Flag für den Assembler
     FILE *f = NULL;
 
     for (int i = 1; i < argc; i++) {
@@ -367,13 +350,15 @@ int main(int argc, char *argv[]) {
             FIR_filter = atoi(argv[++i]);
             if (FIR_filter > 19) FIR_filter = 19;
             if (FIR_filter < -1) FIR_filter = -1;
+        } else if (strcmp(argv[i], "-asm") == 0) {
+            use_asm = true;
         } else {
              f = fopen(argv[i],"rb");
         }
     }
 
     if (!f) {
-        printf("Nutzung: %s [-f -1..19] datei.adpx\n\n", argv[0] ? argv[0] : "ADPCM_Decoder");
+        printf("Nutzung: %s [-f -1..19] [-asm] datei.adpx\n\n", argv[0] ? argv[0] : "ADPCM_Decoder");
         printf("Verfuegbare Post-Filter:\n");
         for (int i = -1; i <= 19; i++) {
             printf(" [%2d] %s\n", i, get_filter_name(i));
@@ -446,6 +431,7 @@ int main(int argc, char *argv[]) {
     float comp_ratio = (float)(file_size * 100) / (float)(total_smpl * channels * sizeof(int16_t));
 
     printf(">>> ADPCM Decoder (Disk-Streaming, %d KB Buffer) <<<\n", STREAM_BUF_SIZE / 1024);
+    printf("Modus: %s\n", use_asm ? "Assembler" : "C-Referenz"); // Info über ASM-Einsatz
     printf("Sample Rate: %u Hz\n", sample_rate);
     printf("Channels: %u\n", channels);
     printf("%s%u Bit %s%u Bit\n", use_ms ? "Mid:" : "Left:", bpsL, use_ms ? "Side" : "Right:", bpsR);
@@ -457,7 +443,8 @@ int main(int argc, char *argv[]) {
     fflush(stdout);
     
     uint32_t smpl_0 = (total_smpl < half_smpl) ? total_smpl : half_smpl;
-    decode_chunk(&bs, buf_half[0], smpl_0, channels, bpsL, bpsR, use_ms, &chL, &chR);
+    // use_asm Flag an decode_chunk übergeben
+    decode_chunk(&bs, buf_half[0], smpl_0, channels, bpsL, bpsR, use_ms, &chL, &chR, use_asm);
     apply_postfilter(buf_half[0], smpl_0, channels, FIR_filter, filter_state);
     total_smpl -= smpl_0;
 
@@ -500,7 +487,8 @@ int main(int argc, char *argv[]) {
     bool aborted = false;
     printf(">>> START: Wiedergabe via OS-Interrupts (0%% CPU Last im Wait) <<<\n");
     fflush(stdout);
-
+    int decode_time = 0;
+    
     while (total_smpl > 0) {
         if (SetSignal(0, 0) & SIGBREAKF_CTRL_C) {
             printf("\n>>> Abbruch durch Benutzer (Ctrl-C)! <<<\n");
@@ -519,7 +507,10 @@ int main(int argc, char *argv[]) {
         }
 
         uint32_t smpl_chunk = (total_smpl < half_smpl) ? total_smpl : half_smpl;
-        decode_chunk(&bs, buf_half[free_half], smpl_chunk, channels, bpsL, bpsR, use_ms, &chL, &chR);
+        decode_time = get_ccc();
+        // use_asm Flag an decode_chunk übergeben
+        decode_chunk(&bs, buf_half[free_half], smpl_chunk, channels, bpsL, bpsR, use_ms, &chL, &chR, use_asm);
+        printf(">>> decode time: %d cycles\n", get_ccc() - decode_time);
         apply_postfilter(buf_half[free_half], smpl_chunk, channels, FIR_filter, filter_state);
         
         if (smpl_chunk < half_smpl) {
