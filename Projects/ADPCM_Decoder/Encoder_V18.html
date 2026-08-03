@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>ADPCM-XQ Studio v17 - Ultimate (Complete Hybrid Weights)</title>
+    <title>ADPCM-XQ Studio v18 - Ultimate (Clean Integer MSE & 15-Byte Blocks)</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #1e1e1e; color: #f0f0f0; margin: 0; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
         h1, h2, h3, h4 { margin: 0 0 10px 0; font-weight: 500; }
@@ -66,7 +66,7 @@
 </head>
 <body>
     <div class="panel">
-        <h2>1. ADPCM-XQ Studio v17 (Complete Hybrid Weights)</h2>
+        <h2>1. ADPCM-XQ Studio v18 (Integer MSE & 15-Byte Blocks)</h2>
         <div class="grid-2col">
             <div class="upload-area">
                 <label class="custom-file-upload"><input type="file" id="audio-upload" accept="audio/*"> WAV / MP3 laden... </label>
@@ -88,8 +88,8 @@
 
                 <div class="progress-bar-container" id="progress-container"><div class="progress-bar" id="progress-bar"></div></div>
                 <div class="metrics">
-                    <div class="metric-item"><span class="metric-label">MSE (Pre-Filter)</span><span id="metric-mse-pre" class="metric-val">0.00</span></div>
-                    <div class="metric-item"><span class="metric-label">MSE (Post-Filter)</span><span id="metric-mse-post" class="metric-val">0.00</span></div>
+                    <div class="metric-item"><span class="metric-label">MSE (Pre-Filter)</span><span id="metric-mse-pre" class="metric-val">0</span></div>
+                    <div class="metric-item"><span class="metric-label">MSE (Post-Filter)</span><span id="metric-mse-post" class="metric-val">0</span></div>
                     <div class="metric-item"><span class="metric-label">Max Err (Post)</span><span id="metric-maxerr" class="metric-val" style="color: #ff9800;">0</span></div>
                 </div>
                 <div style="margin-top: 15px; display:flex; gap:10px; flex-wrap:wrap;">
@@ -105,7 +105,11 @@
                     <option value="3">3-Bit</option>
                     <option value="4" selected>4-Bit (Standard)</option>
                     <option value="5">5-Bit (HQ)</option>
-                    <option value="53">5/3-Bit M/S Hybrid (1 Byte/Sample)</option>
+                    <option value="6">6-Bit (Ultra HQ)</option>
+                    <option disabled>─── Asymmetrisch (M/S) ───</option>
+                    <option value="53">5/3-Bit M/S Hybrid</option>
+                    <option value="42">4/2-Bit M/S Hybrid</option>
+                    <option value="32">3/2-Bit M/S Hybrid</option>
                 </select></div>
                 <div class="cfg-row"><div class="cfg-label">Noise Shaping:</div><select id="cfg-dns" class="mode-select" onchange="triggerReprocess()"><option value="1024">Psychoakustisch (FFT)</option><option value="512" selected>Dynamic (15-Tap)</option><option value="0">Off</option></select></div>
                 <div class="cfg-row"><div class="cfg-label">Lookahead Depth:</div><select id="cfg-lookahead" class="mode-select" onchange="triggerReprocess()"><option value="99" selected>Adaptive Smart (1-4)</option><option value="100">Adaptive Deep (1-8)</option><option value="3">3 Samples</option></select></div>
@@ -161,12 +165,15 @@
     
     <div class="panel">
         <h2>2. Historie & Export (Letzte 5 Läufe)</h2>
-        <table class="history-table" id="history-table"><thead><tr><th>ID / Settings</th><th>Lookahead</th><th>MSE (Pre)</th><th>MSE (Post)</th><th>Aktion</th></tr></thead><tbody></tbody></table>
+        <table class="history-table" id="history-table"><thead><tr><th>ID / Settings</th><th>Lookahead</th><th>MSE (Pre)</th><th>MSE (Post)</th><th>Max Err</th><th>Aktion</th></tr></thead><tbody></tbody></table>
     </div>
 
 <script id="worker-script" type="javascript/worker">
     const step_table = [ 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97, 107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449, 494, 544, 598, 658, 724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066, 2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899, 15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767 ];
-    const index_table_3 = [-1, -1, 1, 2]; const index_table_4 = [-1, -1, -1, -1, 2, 4, 6, 8]; const index_table_5 = [-1, -1, -1, -1, -1, -1, -1, -1, 1, 2, 4, 6, 8, 10, 13, 16]; 
+    const index_table_3 = [-1, -1, 1, 2]; 
+    const index_table_4 = [-1, -1, -1, -1, 2, 4, 6, 8]; 
+    const index_table_5 = [-1, -1, -1, -1, -1, -1, -1, -1, 1, 2, 4, 6, 8, 10, 13, 16]; 
+    const index_table_6 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 19, 22, 25, 28];
     
     const iir_coeffs_f = [
         [7583.0/32768.0, 0.0, -7583.0/32768.0, -44000.0/32768.0, 17600.0/32768.0],
@@ -277,7 +284,7 @@
         } 
         else {
             let best_nibble = 0, min_err = Number.MAX_SAFE_INTEGER, best_pcm = chan.pcmdata, best_idx = chan.index, best_fstate = null, best_out = 0;
-            let num_nibbles = (bps === 2) ? 4 : (bps === 3 ? 8 : 32);
+            let num_nibbles = (bps === 2) ? 4 : (bps === 3 ? 8 : (bps === 5 ? 32 : 64));
 
             for (let testnbl = 0; testnbl < num_nibbles; testnbl++) {
                 let tchan = { pcmdata: chan.pcmdata, index: chan.index, fstate: clone_fstate(chan.fstate) };
@@ -294,6 +301,15 @@
                     trial_delta = step >> 4; if (testnbl & 1) trial_delta += (step >> 3); if (testnbl & 2) trial_delta += (step >> 2); if (testnbl & 4) trial_delta += (step >> 1); if (testnbl & 8) trial_delta += step;
                     if (testnbl & 16) tchan.pcmdata -= trial_delta; else tchan.pcmdata += trial_delta;
                     tchan.index += index_table_5[testnbl & 15];
+                } else if (bps === 6) {
+                    trial_delta = step >> 5; 
+                    if (testnbl & 1) trial_delta += (step >> 4);
+                    if (testnbl & 2) trial_delta += (step >> 3);
+                    if (testnbl & 4) trial_delta += (step >> 2);
+                    if (testnbl & 8) trial_delta += (step >> 1);
+                    if (testnbl & 16) trial_delta += step;
+                    if (testnbl & 32) tchan.pcmdata -= trial_delta; else tchan.pcmdata += trial_delta;
+                    tchan.index += index_table_6[testnbl & 31];
                 }
                 tchan.pcmdata = CLIP(tchan.pcmdata, -32768, 32767); tchan.index = CLIP(tchan.index, 0, 88);
 
@@ -315,7 +331,13 @@
         let flags = dnsFlags | (lookDepth > 90 ? 0 : lookDepth);
         let workL = arrL.slice(); let workR = channels === 2 ? arrR.slice() : new Int16Array(0);
         
-        let bpsL = (bps === 53 && channels === 2) ? 5 : bps; let bpsR = (bps === 53 && channels === 2) ? 3 : bps;
+        let bpsL = bps, bpsR = bps;
+        if (channels === 2) {
+            if (bps === 53) { bpsL = 5; bpsR = 3; }
+            else if (bps === 42) { bpsL = 4; bpsR = 2; }
+            else if (bps === 32) { bpsL = 3; bpsR = 2; }
+        }
+        
         if (channels === 2 && useMS) { for(let i=0; i<count; i++) { let m = (arrL[i] + arrR[i]) >> 1; let s = (arrL[i] - arrR[i]) >> 1; workL[i] = m; workR[i] = s; } }
 
         let base_fstate = { actual:0, prev1:0, prev2:0, prev3:0, prev4:0, prev5:0, prev6:0, y_prev1:0.0, y_prev2:0.0 };
@@ -323,8 +345,8 @@
         let chanR = { pcmdata: channels === 2 ? workR[0] : 0, index: 0, error: 0, shaping_weight: 0, fstate: clone_fstate(base_fstate) };
         const filter_state_final = [ clone_fstate(base_fstate), clone_fstate(base_fstate) ];
 
-        let avgBps = (bps === 53 && channels === 2) ? 4 : bps;
-        let bitBuf = new Uint8Array(Math.ceil((count * channels * avgBps) / 8) + 128);
+        let avgBps = (bps > 10 && channels === 2) ? Math.ceil((bpsL+bpsR)/2) : bps;
+        let bitBuf = new Uint8Array(Math.ceil((count * channels * avgBps) / 8) + 256);
         let bytePos = 21; let bitPos = 0; let dv = new DataView(bitBuf.buffer);
         
         dv.setUint8(0, 65); dv.setUint8(1, 68); dv.setUint8(2, 80); dv.setUint8(3, 88); 
@@ -369,9 +391,20 @@
                 }
             } self.postMessage({ type: 'progress', percent: (end/count)*100 });
         }
-        let finalSize = bytePos + (bitPos > 0 ? 1 : 0);
+        
+        if (bitPos > 0) { bitPos = 0; bytePos++; }
+        let dataLen = bytePos - 21; 
+        let remainder = dataLen % 15;
+        if (remainder !== 0) {
+            let padBytes = 15 - remainder;
+            for (let i = 0; i < padBytes; i++) {
+                bitBuf[bytePos++] = 0;
+            }
+        }
+        
+        let finalSize = bytePos;
         let adpxFile = new Uint8Array(bitBuf.buffer.slice(0, finalSize));
-        self.postMessage({ type: 'done', fpgaL_raw, fpgaR_raw, metrics: { mseTotalPre, mseTotalPost, maxErr }, adpxFile }, [adpxFile.buffer]);
+        self.postMessage({ type: 'done', fpgaL_raw, fpgaR_raw, metrics: { mseTotalPre: Math.round(mseTotalPre/count), mseTotalPost: Math.round(mseTotalPost/count), maxErr }, adpxFile }, [adpxFile.buffer]);
     }
 </script>
 
@@ -622,7 +655,7 @@
         let weightPre = document.getElementById('cfg-weight').value;
         let useMS = channels === 1 ? false : document.getElementById('cfg-ms').checked;
         
-        if (bps === 53 && channels === 2) useMS = true;
+        if (bps > 10 && channels === 2) useMS = true;
         
         let count = originalL.length; let arrL = new Int16Array(count); let arrR = channels === 2 ? new Int16Array(count) : new Int16Array(0);
         for(let i=0; i<count; i++) { arrL[i] = Math.round(originalL[i]*32767); if(channels===2) arrR[i] = Math.round(originalR[i]*32767); }
@@ -635,14 +668,15 @@
                 fpgaL_raw = e.data.fpgaL_raw; fpgaR_raw = e.data.fpgaR_raw;
                 let { mseTotalPre, mseTotalPost, maxErr } = e.data.metrics;
                 
-                document.getElementById('metric-mse-pre').innerText = (mseTotalPre/count).toFixed(2); 
-                document.getElementById('metric-mse-post').innerText = (mseTotalPost/count).toFixed(2); 
-                document.getElementById('metric-maxerr').innerText = maxErr;
+                // Zahlen formatisieren mit 1000er-Trennzeichen (de-DE locale für Punkte)
+                document.getElementById('metric-mse-pre').innerText = mseTotalPre.toLocaleString('de-DE'); 
+                document.getElementById('metric-mse-post').innerText = mseTotalPost.toLocaleString('de-DE'); 
+                document.getElementById('metric-maxerr').innerText = maxErr.toLocaleString('de-DE');
                 btn.disabled = false; 
                 
-                let modeStr = (bps === 53) ? "5/3-Bit" : bps + "-Bit";
+                let modeStr = (bps > 10) ? Math.floor(bps/10) + "/" + (bps%10) + "-Bit" : bps + "-Bit";
                 let msStr = channels===1 ? "Mono" : (useMS ? "M/S" : "L/R");
-                addToHistory(encodeCounter++, `${modeStr}, ${msStr}`, lookDepth > 90 ? `Smart` : lookDepth, mseTotalPre/count, mseTotalPost/count, maxErr, fpgaL_raw, fpgaR_raw, e.data.adpxFile);
+                addToHistory(encodeCounter++, `${modeStr}, ${msStr}`, lookDepth > 90 ? `Smart` : lookDepth, mseTotalPre, mseTotalPost, maxErr, fpgaL_raw, fpgaR_raw, e.data.adpxFile);
                 
                 if (lastPlayedType) streamAudio(lastPlayedType, false);
             }
@@ -654,7 +688,7 @@
         let tbody = document.querySelector('#history-table tbody'); tbody.innerHTML = '';
         encodeHistory.forEach((h, idx) => {
             let tr = document.createElement('tr'); tr.className = 'history-row';
-            tr.innerHTML = `<td><b>Run #${h.id}</b><br><span style="color:#aaa; font-size:0.9em">${h.setStr}</span></td><td>${h.lookStr}</td><td style="color:#bbb; font-family:monospace">${h.msePre.toFixed(2)}</td><td style="color:#ffeb3b; font-family:monospace">${h.msePost.toFixed(2)}</td><td style="color:#ff9800; font-family:monospace">${h.maxErr}</td><td><button class="btn btn-play" onclick="playHistory(${idx}, 'raw')">▶ Raw</button> <button class="btn btn-play-filtered" onclick="playHistory(${idx}, 'filt')">▶ Filt</button> <button class="btn btn-save" onclick="saveHistory(${idx})">💾</button></td>`;
+            tr.innerHTML = `<td><b>Run #${h.id}</b><br><span style="color:#aaa; font-size:0.9em">${h.setStr}</span></td><td>${h.lookStr}</td><td style="color:#bbb; font-family:monospace">${h.msePre.toLocaleString('de-DE')}</td><td style="color:#ffeb3b; font-family:monospace">${h.msePost.toLocaleString('de-DE')}</td><td style="color:#ff9800; font-family:monospace">${h.maxErr.toLocaleString('de-DE')}</td><td><button class="btn btn-play" onclick="playHistory(${idx}, 'raw')">▶ Raw</button> <button class="btn btn-play-filtered" onclick="playHistory(${idx}, 'filt')">▶ Filt</button> <button class="btn btn-save" onclick="saveHistory(${idx})">💾</button></td>`;
             tbody.appendChild(tr);
         });
     }

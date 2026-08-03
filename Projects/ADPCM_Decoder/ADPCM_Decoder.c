@@ -21,7 +21,27 @@ extern uint32_t get_ccc(void);
 // ==============================================================================
 // ASSEMBLER KERNEL DEKLARATIONEN
 // ==============================================================================
-extern uint32_t decode_2bit_stereo_ammx_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t get_ccc(void);
+
+extern uint32_t decode_2bit_stereo_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_2bit_ms_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_2bit_mono_asm(const uint8_t *in, int16_t *out, void *chL, uint32_t block_cnt);
+
+extern uint32_t decode_3bit_stereo_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_3bit_ms_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_3bit_mono_asm(const uint8_t *in, int16_t *out, void *chL, uint32_t block_cnt);
+
+extern uint32_t decode_4bit_stereo_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_4bit_ms_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_4bit_mono_asm(const uint8_t *in, int16_t *out, void *chL, uint32_t block_cnt);
+
+extern uint32_t decode_5bit_stereo_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_5bit_ms_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_5bit_mono_asm(const uint8_t *in, int16_t *out, void *chL, uint32_t block_cnt);
+
+extern uint32_t decode_6bit_stereo_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_6bit_ms_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_6bit_mono_asm(const uint8_t *in, int16_t *out, void *chL, uint32_t block_cnt);
 
 // ==============================================================================
 // ISR (INTERRUPT SERVICE ROUTINE) VARIABLEN
@@ -279,11 +299,13 @@ static inline int16_t decode_nibble(ADPCM_Channel *chan, uint8_t nibble, uint8_t
 }
 
 // Hier empfängt die decode_chunk das neue "use_asm" Flag
-void decode_chunk(FileBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl, uint8_t channels, uint8_t bpsL, uint8_t bpsR, bool use_ms, ADPCM_Channel *chL, ADPCM_Channel *chR, bool use_asm) {
+uint32_t decode_chunk(FileBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl, uint8_t channels, uint8_t bpsL, uint8_t bpsR, bool use_ms, ADPCM_Channel *chL, ADPCM_Channel *chR, bool use_asm) {
     
+    uint32_t cycles = 0;
     // ==========================================================================
-    // ASSEMBLER-BRANCH FÜR 2-BIT STEREO
+    // ASSEMBLER-BRANCH FÜR 2-BIT 
     // ==========================================================================
+    
     if (use_asm && bpsL == 2 && bpsR == 2 && channels == 2 && !use_ms) {
         // Ein 15-Byte Block liefert exakt 30 Stereo-Samples (60 int16_t Werte für den Puffer)
         uint32_t blocks = chunk_smpl / 30; 
@@ -300,10 +322,307 @@ void decode_chunk(FileBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl, ui
             
             // Aufruf der Assembler-Routine:
             // &audio_buf[b * 60] springt im Zielpuffer jeweils 30 Samples * 2 Kanäle = 60 int16_t weiter.
-            decode_2bit_stereo_ammx_asm(block15, &audio_buf[b * 60], chL, chR, 1);
+            cycles += decode_2bit_stereo_asm(block15, &audio_buf[b * 60], chL, chR, 1);
         }
-        return; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
     }
+    if (use_asm && bpsL == 2 && bpsR == 2 && channels == 2 && use_ms) {
+        // Ein 15-Byte Block liefert exakt 30 Stereo-Samples (60 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 30; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 30 Samples * 2 Kanäle = 60 int16_t weiter.
+            cycles += decode_2bit_ms_asm(block15, &audio_buf[b * 60], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    if (use_asm && bpsL == 2 && bpsR == 2 && channels == 1 ) {
+        // Ein 15-Byte Block liefert exakt 60 Stereo-Samples (60 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 60; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 60 Samples * 1 Kanäle = 60 int16_t weiter.
+            cycles += decode_2bit_mono_asm(block15, &audio_buf[b * 60], chL, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    // ==========================================================================
+    // ASSEMBLER-BRANCH FÜR 3-BIT 
+    // ==========================================================================
+    
+    if (use_asm && bpsL == 3 && bpsR == 3 && channels == 2 && !use_ms) {
+        // Ein 15-Byte Block liefert exakt 20 Stereo-Samples (60 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 20; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 20 Samples * 2 Kanäle = 60 int16_t weiter.
+            cycles += decode_3bit_stereo_asm(block15, &audio_buf[b * 40], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    if (use_asm && bpsL == 3 && bpsR == 3 && channels == 2 && use_ms) {
+        // Ein 15-Byte Block liefert exakt 20 Stereo-Samples (60 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 20; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 20 Samples * 2 Kanäle = 60 int16_t weiter.
+            cycles += decode_3bit_ms_asm(block15, &audio_buf[b * 40], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    if (use_asm && bpsL == 3 && bpsR == 3 && channels == 1 ) {
+        // Ein 15-Byte Block liefert exakt 40 Mono-Samples (60 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 40; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 40 Samples * 1 Kanal = 60 int16_t weiter.
+            cycles += decode_3bit_mono_asm(block15, &audio_buf[b * 40], chL, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    // ==========================================================================
+    // ASSEMBLER-BRANCH FÜR 4-BIT 
+    // ==========================================================================
+    
+    if (use_asm && bpsL == 4 && bpsR == 4 && channels == 2 && !use_ms) {
+        // Ein 15-Byte Block liefert exakt 15 Stereo-Samples (30 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 15; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 15 Samples * 2 Kanäle = 30 int16_t weiter.
+            cycles += decode_4bit_stereo_asm(block15, &audio_buf[b * 30], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    if (use_asm && bpsL == 4 && bpsR == 4 && channels == 2 && use_ms) {
+        // Ein 15-Byte Block liefert exakt 15 Stereo-Samples (30 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 15; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 15 Samples * 2 Kanäle = 30 int16_t weiter.
+            cycles += decode_4bit_ms_asm(block15, &audio_buf[b * 30], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    if (use_asm && bpsL == 4 && bpsR == 4 && channels == 1 ) {
+        // Ein 15-Byte Block liefert exakt 30 Mono-Samples (60 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 30; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 30 Samples * 1 Kanal = 60 int16_t weiter.
+            cycles += decode_4bit_mono_asm(block15, &audio_buf[b * 30], chL, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    // ==========================================================================
+    // ASSEMBLER-BRANCH FÜR 5-BIT 
+    // ==========================================================================
+    
+    if (use_asm && bpsL == 5 && bpsR == 5 && channels == 2 && !use_ms) {
+        // Ein 15-Byte Block liefert exakt 12 Stereo-Samples (24 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 12; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 12 Samples * 2 Kanäle = 24 int16_t weiter.
+            cycles += decode_5bit_stereo_asm(block15, &audio_buf[b * 24], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    if (use_asm && bpsL == 5 && bpsR == 5 && channels == 2 && use_ms) {
+        // Ein 15-Byte Block liefert exakt 12 Stereo-Samples (24 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 12; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 12 Samples * 2 Kanäle = 24 int16_t weiter.
+            cycles += decode_5bit_ms_asm(block15, &audio_buf[b * 24], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    if (use_asm && bpsL == 5 && bpsR == 5 && channels == 1 ) {
+        // Ein 15-Byte Block liefert exakt 24 Mono-Samples (60 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 24; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 60] springt im Zielpuffer jeweils 24 Samples * 1 Kanal = 60 int16_t weiter.
+            cycles += decode_5bit_mono_asm(block15, &audio_buf[b * 24], chL, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+ // ==========================================================================
+    // ASSEMBLER-BRANCH FÜR 6-BIT 
+    // ==========================================================================
+    
+    if (use_asm && bpsL == 6 && bpsR == 6 && channels == 2 && !use_ms) {
+        // Ein 15-Byte Block liefert exakt 10 Stereo-Samples (20 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 10; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 20] springt im Zielpuffer jeweils 10 Samples * 2 Kanäle = 20 int16_t weiter.
+            cycles += decode_6bit_stereo_asm(block15, &audio_buf[b * 20], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    if (use_asm && bpsL == 6 && bpsR == 6 && channels == 2 && use_ms) {
+        // Ein 15-Byte Block liefert exakt 10 Stereo-Samples (20 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 10; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 20] springt im Zielpuffer jeweils 10 Samples * 2 Kanäle = 20 int16_t weiter.
+            cycles += decode_6bit_ms_asm(block15, &audio_buf[b * 20], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }
+    if (use_asm && bpsL == 6 && bpsR == 6 && channels == 1 ) {
+        // Ein 15-Byte Block liefert exakt 20 Mono-Samples (40 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 20; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 40] springt im Zielpuffer jeweils 0 Samples * 1 Kanal = 40 int16_t weiter.
+            cycles += decode_6bit_mono_asm(block15, &audio_buf[b * 20], chL, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }    
+    
     // ==========================================================================
 
     // Fallback: Klassischer C-Code
@@ -328,6 +647,7 @@ void decode_chunk(FileBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl, ui
             audio_buf[i] = valL;
         }
     }
+    return cycles;
 }
 
 void stop_saga_sound(uint8_t channel) {
@@ -509,9 +829,9 @@ int main(int argc, char *argv[]) {
         uint32_t smpl_chunk = (total_smpl < half_smpl) ? total_smpl : half_smpl;
         decode_time = get_ccc();
         // use_asm Flag an decode_chunk übergeben
-        decode_chunk(&bs, buf_half[free_half], smpl_chunk, channels, bpsL, bpsR, use_ms, &chL, &chR, use_asm);
+        int cycles_aus_rueckgabewert=decode_chunk(&bs, buf_half[free_half], smpl_chunk, channels, bpsL, bpsR, use_ms, &chL, &chR, use_asm);
         decode_time = get_ccc() - decode_time;
-        printf(">>> decode time: %d cycles\n decode time per sample: %.d cycles\n", decode_time, decode_time / smpl_chunk);
+        printf(">>> decode time: %d cycles    decode time per sample: %.d cycles,  Cycles aus Rückgabewert: %d , cycles / sample: %d\n", decode_time, decode_time / smpl_chunk, cycles_aus_rueckgabewert, cycles_aus_rueckgabewert / smpl_chunk);
         apply_postfilter(buf_half[free_half], smpl_chunk, channels, FIR_filter, filter_state);
         
         if (smpl_chunk < half_smpl) {
