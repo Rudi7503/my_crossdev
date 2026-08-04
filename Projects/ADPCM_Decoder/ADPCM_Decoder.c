@@ -745,11 +745,7 @@ int main(int argc, char *argv[]) {
             FIR_filter = atoi(argv[++i]);
             if (FIR_filter > 19) FIR_filter = 19;
             if (FIR_filter < -1) FIR_filter = -1;
-        } 
-        else if (strcmp(argv[i], "-asm") == 0) {
-            use_asm = true;
-        }
-        else if (strcmp(argv[i], "-no-asm") == 0) {
+        } else if (strcmp(argv[i], "-no_asm") == 0) {
             use_asm = false;
         } else {
              f = fopen(argv[i],"rb");
@@ -757,7 +753,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (!f) {
-        printf("Nutzung: %s [-f -1..19] [-asm] [-no-asm] datei.adpx\n\n", argv[0] ? argv[0] : "ADPCM_Decoder");
+        printf("Nutzung: %s [-f -1..19] [-no_asm] datei.adpx\n\n", argv[0] ? argv[0] : "ADPCM_Decoder");
         printf("Verfuegbare Post-Filter:\n");
         for (int i = -1; i <= 19; i++) {
             printf(" [%2d] %s\n", i, get_filter_name(i));
