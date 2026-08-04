@@ -43,6 +43,9 @@ extern uint32_t decode_6bit_stereo_asm(const uint8_t *in, int16_t *out, void *ch
 extern uint32_t decode_6bit_ms_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
 extern uint32_t decode_6bit_mono_asm(const uint8_t *in, int16_t *out, void *chL, uint32_t block_cnt);
 
+extern uint32_t decode_3_2bit_ms_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_4_2bit_ms_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
+extern uint32_t decode_5_3bit_ms_asm(const uint8_t *in, int16_t *out, void *chL, void *chR, uint32_t block_cnt);
 // ==============================================================================
 // ISR (INTERRUPT SERVICE ROUTINE) VARIABLEN
 // ==============================================================================
@@ -558,7 +561,7 @@ uint32_t decode_chunk(FileBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl
         }
         return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
     }
- // ==========================================================================
+    // ==========================================================================
     // ASSEMBLER-BRANCH FÜR 6-BIT 
     // ==========================================================================
     
@@ -621,6 +624,78 @@ uint32_t decode_chunk(FileBitStream *bs, int16_t *audio_buf, uint32_t chunk_smpl
             cycles += decode_6bit_mono_asm(block15, &audio_buf[b * 20], chL, 1);
         }
         return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }   
+    // ==========================================================================
+    // ASSEMBLER-BRANCH FÜR 3-2 BIT MS (Mid 3-BIT, Side 2-BIT) 
+    // ==========================================================================
+   
+     if (use_asm && bpsL == 3 && bpsR == 2 && channels == 2 && use_ms) {
+        // Ein 15-Byte Block liefert exakt 24 MS Samples (48 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 24; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 48] springt im Zielpuffer jeweils 24 Samples * 2 Kanäle = 48 int16_t weiter.
+            cycles += decode_3_2bit_ms_asm(block15, &audio_buf[b * 48], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }    
+    // ==========================================================================
+    // ASSEMBLER-BRANCH FÜR 4-2 BIT MS (Mid 4-BIT, Side 2-BIT) 
+    // ==========================================================================
+   
+     if (use_asm && bpsL == 4 && bpsR == 2 && channels == 2 && use_ms) {
+        // Ein 15-Byte Block liefert exakt 20 MS Samples (48 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 20; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 40] springt im Zielpuffer jeweils 20 Samples * 2 Kanäle = 40 int16_t weiter.
+            cycles += decode_4_2bit_ms_asm(block15, &audio_buf[b * 40], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
+    }    
+    // ==========================================================================
+    // ASSEMBLER-BRANCH FÜR 5-3 BIT MS (Mid 5-BIT, Side 3-BIT) 
+    // ==========================================================================
+   
+     if (use_asm && bpsL == 5 && bpsR == 3 && channels == 2 && use_ms) {
+        // Ein 15-Byte Block liefert exakt 15 MS Samples (30 int16_t Werte für den Puffer)
+        uint32_t blocks = chunk_smpl / 15; 
+        
+        for (uint32_t b = 0; b < blocks; b++) {
+            if (bs->eof) break;
+            
+            // Lese exakt 15 Bytes in den lokalen Puffer. 
+            // Durch read_bits_file mit "8" bleibt der C-Bit-State intakt und byte-aligned!
+            uint8_t block15[15];
+            for (int k = 0; k < 15; k++) {
+                block15[k] = (uint8_t)read_bits_file(bs, 8);
+            }
+            
+            // Aufruf der Assembler-Routine:
+            // &audio_buf[b * 30] springt im Zielpuffer jeweils 15 Samples * 2 Kanäle = 30 int16_t weiter.
+            cycles += decode_5_3bit_ms_asm(block15, &audio_buf[b * 30], chL, chR, 1);
+        }
+        return cycles; // Nach dem ASM-Pfad Funktion verlassen, damit der C-Loop unten nicht ausführt!
     }    
     
     // ==========================================================================
@@ -662,7 +737,7 @@ int main(int argc, char *argv[]) {
     SetSignal(0, SIGBREAKF_CTRL_C);
 
     int FIR_filter = -1; // -1 = Standard Bypass
-    bool use_asm = false; // Neuer Flag für den Assembler
+    bool use_asm = true; // Neuer Flag für den Assembler
     FILE *f = NULL;
 
     for (int i = 1; i < argc; i++) {
@@ -670,15 +745,19 @@ int main(int argc, char *argv[]) {
             FIR_filter = atoi(argv[++i]);
             if (FIR_filter > 19) FIR_filter = 19;
             if (FIR_filter < -1) FIR_filter = -1;
-        } else if (strcmp(argv[i], "-asm") == 0) {
+        } 
+        else if (strcmp(argv[i], "-asm") == 0) {
             use_asm = true;
+        }
+        else if (strcmp(argv[i], "-no-asm") == 0) {
+            use_asm = false;
         } else {
              f = fopen(argv[i],"rb");
         }
     }
 
     if (!f) {
-        printf("Nutzung: %s [-f -1..19] [-asm] datei.adpx\n\n", argv[0] ? argv[0] : "ADPCM_Decoder");
+        printf("Nutzung: %s [-f -1..19] [-asm] [-no-asm] datei.adpx\n\n", argv[0] ? argv[0] : "ADPCM_Decoder");
         printf("Verfuegbare Post-Filter:\n");
         for (int i = -1; i <= 19; i++) {
             printf(" [%2d] %s\n", i, get_filter_name(i));
