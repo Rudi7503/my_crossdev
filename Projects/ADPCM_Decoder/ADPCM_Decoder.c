@@ -17,7 +17,7 @@
 #define STREAM_BUF_SIZE 2048 // 2 KB Lese-Puffer für die Festplatte
 
 extern uint32_t get_ccc(void);
-
+// todo ori.w #$0800,sr zur sicherung der e register ergänzen
 // ==============================================================================
 // ASSEMBLER KERNEL DEKLARATIONEN
 // ==============================================================================
