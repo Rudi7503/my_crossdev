@@ -228,6 +228,8 @@ static void print_failure(const v4_master_t *m, const char *what, uint8_t rc)
     v4_msg("  Rahmen: tx=%lu rx=%lu retries=%lu unsicher=%lu busy=%lu "
            "badcrc=%lu\n", m->tx_frames, m->rx_frames, m->retries,
            m->unsafe_retries, m->busy_rounds, m->badcrc_rounds);
+    v4_msg("  t_wait=%lu us, Versuche je Transaktion=%u\n",
+           (unsigned long)m->t_wait_us, m->try_max);
     if (m->possible_handle_leaks > 0ul) {
         v4_msg("  Achtung: %lu moegliche Handle-Lecks auf der Slave-Seite.\n",
                m->possible_handle_leaks);
@@ -692,6 +694,7 @@ static void browse_files(v4_master_t *m)
     dir[0] = '\0';                         /* Wurzel */
     for (;;) {
         browse_list_t l;
+        int           auto_mount = 0;   /* begrenzte Selbstreparatur */
         unsigned     *view = NULL;      /* sortierte Gesamtansicht        */
         unsigned     *sel  = NULL;      /* gefilterte Ansicht (Anzeige)   */
         unsigned      shown = 0u;
@@ -713,15 +716,18 @@ static void browse_files(v4_master_t *m)
                 dir[0] = '\0';         /* nach einem Fehler in die Wurzel */
                 v4_msg("(zurueck in die Wurzel)\n");
             }
-            if (rc == V4P_ST_NO_HANDLE) {
+            if (rc == V4P_ST_NO_HANDLE && auto_mount < 3) {
                 /* Haeufigste Ursache im Feld: die Karte ist nicht eingerichtet,
                  * weil SD_MOUNT vorher am Framing gescheitert ist. Deshalb
-                 * hier nachholen statt zu fragen. */
+                 * nachholen statt zu fragen -- aber begrenzt, sonst dreht sich
+                 * das im Kreis (im Feld: 279 Versuche ohne eine einzige Liste). */
                 unsigned k;
 
+                auto_mount++;
                 for (k = 0u; k < 3u; k++) {
                     rc = v4_sd_mount_wait(m, 50u);
-                    v4_msg("SD_MOUNT (nachgeholt): %s\n", v4_strerror(rc));
+                    v4_msg("SD_MOUNT (nachgeholt, Versuch %d): %s\n",
+                           auto_mount, v4_strerror(rc));
                     if (rc == V4P_ST_OK) {
                         break;
                     }

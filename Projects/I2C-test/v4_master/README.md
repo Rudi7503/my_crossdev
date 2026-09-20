@@ -763,15 +763,24 @@ zurück, `DISCONNECT` räumt auf.
 
 Im Feld scheiterten einzelne Antworten am Framing (`falsche Magic`), während der
 Busfehler `0x000000FF` (OK) meldete — die Übertragung läuft, der Slave liefert
-nur gelegentlich einen unbrauchbaren Rahmen. Zwei Stellschrauben dagegen:
+nur gelegentlich einen unbrauchbaren Rahmen. **Der Grund ist die Wartezeit
+zwischen WRITE und READ:** die Spezifikation nennt 2000 µs, der ESP32 braucht
+im Feld aber spürbar mehr. Mit `-w 10000` lief eine Verzeichnisliste (74
+Transaktionen) auf Anhieb durch; mit der Vorgabe scheiterte sie, und weil eine
+Liste ein Dutzend Transaktionen braucht, reicht ein einziger schlechter Rahmen,
+um sie zu beenden. Zwei Stellschrauben dagegen:
 
 * **`-w <us>`** — länger vor dem Lesen warten (Vorgabe 2000 µs, R3 ist eine
   Untergrenze).
 * **`-r <n>`** — mehr Versuche je Transaktion (Vorgabe 4). Eine Verzeichnisliste
   ist ein Dutzend Transaktionen; ein einziger erschöpfter Versuch beendet sie.
-* **Automatisch:** liefert der Slave einen unbrauchbaren Rahmen, **verdoppelt
-  der Master die Wartezeit für den nächsten Versuch** (bis 100 ms) — genau das
-  half im Feld. Der erste Versuch bleibt bei `t_wait`, damit die Regel R3
+* **Automatisch und dauerhaft:** liefert der Slave einen unbrauchbaren Rahmen,
+  **verdoppelt der Master die Wartezeit für den nächsten Versuch** (bis 100 ms)
+  und **behält sie als neue Grundwartezeit**. Ohne dieses Lernen startet jede
+  Transaktion wieder bei `t_wait` und läuft in dieselben Fehler — im Feld war
+  genau das der Unterschied: mit `-w 10000` lief die Verzeichnisliste auf
+  Anhieb, mit der Vorgabe (2000 µs) scheiterten 279 Versuche hintereinander.
+  Die gelernte Wartezeit steht jetzt im Kurzbericht bei jedem Fehler. Der erste Versuch bleibt bei `t_wait`, damit die Regel R3
   eingehalten ist; die Tests nageln die Verdopplung fest
   (`test_master.c`, Fall „bei Framing-Wiederholungen wird jedes Mal gewartet").
 

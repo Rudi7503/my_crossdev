@@ -112,7 +112,7 @@ uint8_t v4_transact_n(v4_master_t *m, uint8_t cmd,
                     m->retries++;
                     v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, wrc, 0u,
                              NULL);
-                    V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
+                    V4_WAIT_BACKOFF(m, wait);   /* dem Slave mehr Zeit geben */
                     continue;
                 }
             }
@@ -136,7 +136,7 @@ uint8_t v4_transact_n(v4_master_t *m, uint8_t cmd,
                     m->unsafe_retries++;
                     v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, rrc, 0u,
                              NULL);
-                    V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
+                    V4_WAIT_BACKOFF(m, wait);   /* dem Slave mehr Zeit geben */
                     continue;
                 }
             }
@@ -153,7 +153,7 @@ uint8_t v4_transact_n(v4_master_t *m, uint8_t cmd,
                 m->retries++;
                 m->unsafe_retries++;
                 v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, rc, 0u, NULL);
-                V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
+                V4_WAIT_BACKOFF(m, wait);   /* dem Slave mehr Zeit geben */
                 continue;
             }
             got = 1;
@@ -264,7 +264,7 @@ uint8_t v4_transact_bulk(v4_master_t *m, uint8_t cmd,
                 if (wrc != 0) {
                     m->retries++;
                     v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, wrc, 0u, NULL);
-                    V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
+                    V4_WAIT_BACKOFF(m, wait);   /* dem Slave mehr Zeit geben */
                     continue;
                 }
             }
@@ -283,7 +283,7 @@ uint8_t v4_transact_bulk(v4_master_t *m, uint8_t cmd,
                     m->unsafe_retries++;
                     v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, rrc, 0u,
                              NULL);
-                    V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
+                    V4_WAIT_BACKOFF(m, wait);   /* dem Slave mehr Zeit geben */
                     continue;
                 }
             }
@@ -300,7 +300,7 @@ uint8_t v4_transact_bulk(v4_master_t *m, uint8_t cmd,
                 m->retries++;
                 m->unsafe_retries++;
                 v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, rc, 0u, NULL);
-                V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
+                V4_WAIT_BACKOFF(m, wait);   /* dem Slave mehr Zeit geben */
                 continue;
             }
             got = 1;

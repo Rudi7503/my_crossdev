@@ -32,13 +32,19 @@
  * erlaubt, und im Feld brauchte der ESP32 deutlich mehr als 2000 us. */
 #define V4_T_WAIT_RETRY_MAX_US 100000u
 
-/* Verdoppelt die Wartezeit bis zur Obergrenze (siehe oben). */
-#define V4_WAIT_BACKOFF(w)                                                   \
+/* Verdoppelt die Wartezeit bis zur Obergrenze (siehe oben) und merkt sie als
+ * neue Grundwartezeit. Im Feld brauchte der ESP32 dauerhaft mehr als 2000 us:
+ * ohne dieses Lernen startet jede Transaktion wieder bei t_wait und laeuft in
+ * dieselben Framing-Fehler. */
+#define V4_WAIT_BACKOFF(m, w)                                                \
     do {                                                                     \
         if ((w) < V4_T_WAIT_RETRY_MAX_US) {                                  \
             (w) *= 2u;                                                       \
             if ((w) > V4_T_WAIT_RETRY_MAX_US) {                              \
                 (w) = V4_T_WAIT_RETRY_MAX_US;                                \
+            }                                                                \
+            if ((w) > (m)->t_wait_us) {                                      \
+                (m)->t_wait_us = (w);        /* gelernt: naechste Mal sofort */\
             }                                                                \
         }                                                                    \
     } while (0)

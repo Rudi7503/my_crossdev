@@ -1219,6 +1219,8 @@ static void test_spec_pinning(void)
      * Zeit (V4_WAIT_BACKOFF, im Feld brauchte der ESP32 sie). */
     CHECK_EQ(v4_mock.delay_us - u0,
              1ul * V4_T_WAIT_US + 2ul * V4_T_WAIT_US);
+    /* ... und sie bleibt gelernt: die naechste Transaktion startet damit. */
+    CHECK_EQ(M.t_wait_us, 2ul * V4_T_WAIT_US);
 
     v4_test_case("R3/§1.4: BUSY-Runden kosten t_busy zusaetzlich");
     fresh();
