@@ -40,11 +40,14 @@ make probe      # Stufenprobe für die V4 (Start in 8 nummerierten Schritten)
 Das Programm auf der V4:
 
 ```sh
-ram:v4_console          # Trace an (Vorgabe)
-ram:v4_console -q       # still
-ram:v4_console -x       # zusaetzlich Hexdump der ersten 32 Antwortbytes
-ram:v4_console -s       # Ausgabe zusaetzlich auf seriell (ser: = 9600 8N1)
-ram:v4_console -o ser:  # dasselbe, aber mit ausdruecklichem Geraet
+Programs:test/v4_console          # Trace an, Logdatei an (Vorgabe)
+Programs:test/v4_console -q       # still
+Programs:test/v4_console -x       # zusaetzlich Hexdump der ersten 32 Antwortbytes
+Programs:test/v4_console -n       # keine Logdatei, nur Konsole
+Programs:test/v4_console -o ram:lauf.log   # anderer Logpfad
+
+# nach einem Absturz: Logdatei holen und ansehen
+make log
 ```
 
 Voraussetzungen: `gcc`, `make` für den Harness; die Apollo-Toolchain unter
@@ -72,7 +75,7 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
 | Derselbe Lauf unter AddressSanitizer + UndefinedBehaviorSanitizer | `make test-san` | grün, keine Befunde (inkl. Leck-Erkennung) |
 | Statische Analyse (`gcc -fanalyzer`) über alle Quellen | manuell | keine Befunde |
 | Smoketest des echten Konsolenprogramms gegen den Mock | `make smoke` | grün, 6 Durchläufe (inkl. PLAY_FILE/STOP_PLAY, Schalterfehler) |
-| Ausgabe-Spiegelung Konsole → serielle Schnittstelle | `make smoke` | grün, gespiegelte Datei per `cmp` **byte-gleich** zur Konsole |
+| Ausgabe-Spiegelung Konsole → Logdatei | `make smoke` | grün, Logdatei per `cmp` **byte-gleich** zur Konsole (bis auf die Marke vor dem Öffnen) |
 | Lint der Byte-Order-Regeln | `make lint` | grün, mit Selbsttest und Live-Positivkontrolle |
 | m68k-Objektcode greift nur byteweise auf Puffer zu | `make asm` | grün, Gate nachweislich nicht vakuant |
 | Amiga-Build (`-Wall -Wextra -Werror`, `m68080`) | `make amiga` | grün, erzeugt AmigaOS-Executable |
@@ -114,14 +117,13 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
 3. **Die Amiga-Plattformschicht ist übersetzt, aber nicht gelaufen.**
    `v4_amiga_i2c.c` kompiliert sauber für m68k-amigaos; auf echter Hardware
    wurden `SendI2C`/`ReceiveI2C` und insbesondere die Verzögerung nicht geprüft.
-   Dasselbe gilt für die **serielle Ausgabe**: die Haken sind auf dem Mock
-   getestet (byte-gleiche Spiegelung) und der m68k-Code ist geprüft (`Open`
-   −30, `Write` −48, `Close` −36 auf `_DOSBase`), aber ob auf der V4
-   `serial.device` Unit 0 frei ist und die angenommenen **9600 8N1** stimmen,
-   zeigt erst der Lauf mit `ram:v4_console -s` und einem Terminal auf der
-   Gegenseite. Das Programm setzt die Parameter nicht selbst
-   (`SDCMD_SETPARAMS` fehlt) und meldet ein belegtes Gerät nur als
-   „nicht verfügbar" — es stürzt dabei nicht ab.
+   Dasselbe gilt für die **Logdatei**: die Haken sind auf dem Mock getestet
+   (byte-gleiche Spiegelung) und der m68k-Code ist geprüft (`Open` −30,
+   `Write` −48, `Close` −36, `Flush` −360 auf `_DOSBase`), aber ob auf der V4
+   `Programs:test/` beschreibbar ist und ob `Flush()` dort wirklich jede Zeile
+   durchschreibt, zeigt erst ein echter Lauf mit anschließendem `make log`.
+   Geht die Datei nicht auf, meldet das Programm nur „nicht verfügbar" und
+   läuft weiter — es stürzt dabei nicht ab.
 
 4. **Die Verzögerung `t_wait` ist protokolltragend** (§1.3, Regel R3). Der Slave
    kann nicht clock-stretchen; ein zu früh gelesener Frame ist Müll. Auf der V4
@@ -388,9 +390,9 @@ wird sofort geflusht — bei einem Absturz bleibt nichts im Puffer, und die
 **letzte Zeile benennt den Schritt, in dem es passiert ist.**
 
 ```sh
-ram:v4_console          # Trace an (Vorgabe)
-ram:v4_console -x       # zusätzlich die ersten 32 Antwortbytes als Hexdump
-ram:v4_console -q       # still, nur die normalen Meldungen
+Programs:test/v4_console        # Trace an, Logdatei an (Vorgabe)
+Programs:test/v4_console -x     # zusätzlich die ersten 32 Antwortbytes als Hexdump
+Programs:test/v4_console -q     # still, nur die normalen Meldungen
 ```
 
 So sieht eine gesunde Transaktion aus:
@@ -430,70 +432,64 @@ Der Trace wird vom Master über einen Haken gerufen (`v4_master_t.trace`, siehe
 Ereignisse in der richtigen Reihenfolge und vollständig kommen — sonst würde das
 Instrument beim Hardwarefehler Falsches zeigen.
 
-### Dieselbe Ausgabe zusätzlich über die serielle Schnittstelle (V4 → PC)
+### Jede Zeile zusätzlich in eine Logdatei — die überlebt den Absturz
 
-Wenn der Absturz den Ausgabekanal mitnimmt, ist auch die letzte Zeile weg. Deshalb
-kann die komplette Ausgabe **zusätzlich auf die serielle Schnittstelle** gelegt
-werden: der UART puffert selbst, und was `serial.device` schon angenommen hat,
-geht auch dann noch raus, wenn die Task unmittelbar danach stirbt.
-
-```sh
-ram:v4_console -s                  # Standardgeraet: Amiga "ser:" = Unit 0
-ram:v4_console -s -q               # nur die Meldungen, ohne Trace
-ram:v4_console -o ser:             # ausdrueckliches Geraet (dasselbe)
-ram:v4_console -o ram:log.txt      # im Harness/Mock: alles in eine Datei
-```
-
-Am PC hängt das Terminal am Gegenstück:
-
-| V4 | PC |
-|---|---|
-| `ser:` (`serial.device` Unit 0) | COM6 |
-
-Mitlesen auf einem Linux-Rechner (COM6 entspricht dort üblicherweise
-`/dev/ttyS5`, `COM<n>` ↔ `ttyS<n-1>`; bei einem USB-Adapter `/dev/ttyUSB0`):
+Der Bildschirm ist nach einem Absturz weg. Deshalb schreibt das Programm seine
+**komplette Ausgabe zusätzlich in eine Datei**; die liegt auf der Platte der V4
+und ist danach mit `acp` abholbar. Die Logdatei ist **standardmäßig an**:
 
 ```sh
-stty -F /dev/ttyS5 9600 cs8 -cstopb -parenb raw -echo
-cat /dev/ttyS5
+Programs:test/v4_console            # Logdatei: Programs:test/v4_console.log
+Programs:test/v4_console -q         # nur die Meldungen, ohne Trace
+Programs:test/v4_console -o ram:anderes.log   # anderer Pfad
+Programs:test/v4_console -n         # keine Logdatei, nur Konsole
 ```
 
-Auf der V4 dann `ram:v4_console -s` starten. `acp` kann **kein** Programm
-starten — der Start erfolgt immer auf der V4 (Shell oder Ikone).
+Nach einem Absturz — in einer Shell hier im Repository:
 
-Einstellungen: **9600 Baud, 8 Datenbits, keine Parität, 1 Stopbit, kein
-Handshake** — die AmigaOS-Vorgabe für `ser:`. Das Programm setzt die Parameter
-absichtlich nicht selbst (`SDCMD_SETPARAMS`), die Baudrate ist also noch nicht
-umschaltbar; für die Trace-Zeilen reicht 9600.
+```sh
+make log            # holt Programs/test/v4_console.log und zeigt sie an
+```
 
-Alle Texte laufen über `v4_msg()` in `v4_console.c`: erst Konsole, dann — wenn
-eingeschaltet — dieselbe Zeile auf die serielle Seite. Der Smoketest vergleicht
-beide Ausgaben mit `cmp` und verlangt **Byte-Gleichheit**, damit auf der seriellen
-Seite garantiert keine Zeile fehlt.
+Das Ziel macht genau das:
 
-Die Spiegelung ist ein Plattformhaken (`v4_master.h`), genau wie
+```sh
+acp "192.168.178.50:Programs/test/v4_console.log" build/ && cat build/v4_console.log
+```
+
+Die letzten Zeilen sind die Diagnose: die letzte Zeile benennt den Schritt, in
+dem es geknallt hat (dieselbe Bedeutung wie beim Trace, siehe Tabelle oben).
+
+**Zwei Dinge, die hier zählen:**
+
+1. **`Flush()` nach jeder Zeile.** AmigaDOS puffert Schreibvorgänge im
+   FileHandle. Ohne `Flush()` stünde nach einem Absturz genau der Teil nicht in
+   der Datei, auf den es ankommt. Die Amiga-Schicht ruft es deshalb nach jedem
+   `Write()` (`v4_amiga_i2c.c`).
+2. **`MODE_NEWFILE`.** Jeder Lauf beginnt mit einer frischen Datei, damit im Log
+   nie Zeilen zweier Läufe vermischt sind.
+
+Die Ausgabe ist ein Plattformhaken (`v4_master.h`), genau wie
 `v4_plat_delay_us` — die Konsole kennt nur diese drei Funktionen:
 
 | Haken | Amiga (`v4_amiga_i2c.c`) | Linux-Harness / Mock |
 |---|---|---|
-| `v4_plat_serial_open(dev)` | `Open(dev, MODE_NEWFILE)`; `dev == NULL` → `"ser:"` | `fopen(dev, "a")`; ohne `dev` → `-1` (kein Standardgerät) |
-| `v4_plat_serial_write(s, len)` | `Write()` auf den Kanal; ohne offenen Kanal `0` | `fwrite()` + `fflush()`; ohne offenen Kanal `0` |
-| `v4_plat_serial_close()` | `Close()`; mehrfach aufrufbar | `fclose()`; mehrfach aufrufbar |
+| `v4_plat_log_open(pfad)` | `Open(pfad, MODE_NEWFILE)`; `pfad == NULL` → `V4_LOG_DEFAULT_AMIGA` | `fopen(pfad, "w")`; ohne Pfad → `-1` (kein Standardpfad) |
+| `v4_plat_log_write(s, len)` | `Write()` + `Flush()`; ohne offene Datei `0` | `fwrite()` + `fflush()`; ohne offene Datei `0` |
+| `v4_plat_log_close()` | `Close()`; mehrfach aufrufbar | `fclose()`; mehrfach aufrufbar |
 
-**Achtung, Laufzeit:** die Ausgabe auf `ser:` ist *synchron* — `Write()` kehrt
-erst zurück, wenn der UART die Zeichen angenommen hat. Bei 9600 Baud sind das
-rund 1 ms pro 10 Zeichen, und die Trace-Zeilen liegen **zwischen** Schreiben und
-Antwortlesen (`t_wait` bleibt davon unberührt, weil danach gewartet wird). Für die
-normalen Zeilen ist das unkritisch; `-x` schreibt pro Transaktion einen Hexdump
-von gut 100 Zeichen und schiebt damit ≈ 100 ms zwischen Befehl und Lesen. Wer
-`-s -x` kombiniert, sollte das wissen. Eine höhere Baudrate wäre über
-`SDCMD_SETPARAMS` möglich, ist aber noch nicht implementiert.
+Geht die Datei nicht auf (Drawer fehlt, Volume gesperrt), ist das **kein Fehler**:
+`v4_plat_log_open()` meldet nur
+`Logdatei nicht verfuegbar (Standardpfad) -- nur Konsole.` und das Programm läuft
+unverändert weiter. Das Schreiben ohne offene Datei ist ein No-op; ein Test prüft
+diesen Vertrag (`tests/test_master.c`, Fall „log hooks"), und `make smoke`
+vergleicht Konsole und Logdatei per `cmp` auf **Byte-Gleichheit** — bis auf die
+eine Marke, die vor dem Öffnen auf die Konsole geht.
 
-Ist kein Adapter angeschlossen oder das Gerät belegt, ist das **kein Fehler**:
-`v4_plat_serial_open()` meldet nur
-`Serielle Ausgabe nicht verfuegbar (...) -- nur Konsole.` und das Programm läuft
-unverändert weiter. Das Schreiben ohne offenen Kanal ist ein No-op; ein Test
-prüft diesen Vertrag (`tests/test_master.c`, Fall „serial hooks").
+**Serielle Ausgabe gibt es weiterhin, aber nicht mehr als Vorgabe:** der Pfad ist
+frei wählbar, `-o ser:` schreibt also nach wie vor auf `serial.device` Unit 0
+(AmigaOS-Vorgabe 9600 8N1). Nur der *Standardpfad* ist jetzt die Datei — COM6
+braucht damit keinen Adapter mehr und kann nichts blockieren.
 
 ## Stufenprobe auf der V4: `v4_probe`
 
@@ -518,10 +514,11 @@ ram:v4_probe -s       # zusaetzlich Schritt 3: ser: oeffnen, schreiben, schliess
 | 7/8 | `v4_open()` + `PING` mit knappem Trace | Busfehler 0x…0200 = kein Slave/falsche Adresse |
 | 8/8 | `v4_close()` und Programmende | |
 
-Schritt 3 ist **absichtlich nicht** im Standardlauf: läuft die Shell selbst auf
-dem seriellen Anschluss, kann ein zweites Öffnen von `ser:` der Shell die
-Konsole wegziehen. Wer in so einer Shell arbeitet, braucht `-s` auch im
-Hauptprogramm nicht — die Ausgabe ist dann ohnehin auf COM6 zu sehen.
+Schritt 3 ist **absichtlich nicht** im Standardlauf und das Hauptprogramm benutzt
+`ser:` überhaupt nicht mehr (Vorgabe ist die Logdatei). Er bleibt in der Probe,
+weil ein zweites Öffnen von `ser:` einer Shell, die selbst auf dem seriellen
+Anschluss läuft, die Konsole wegziehen kann — und weil man so prüfen kann, ob der
+serielle Weg grundsätzlich trägt, wenn man ihn doch einmal braucht.
 
 ## Feldbefund: die Konvention von `i2c.library` ist umgekehrt zu „0 = OK"
 
@@ -644,33 +641,33 @@ gestellt — identisch (`abd58775…`, 33 152 Byte), und die Trace-Strings sind 
 der Kopie auf der V4 nachweisbar. Diese Rücklese-Prüfung ist die verlässlichste
 Bestätigung und steht als Rezept unten.
 
-**Nach jedem Neustart der V4 muss neu hochgeladen werden** — `ram:` ist ein
-RAM-Disk, sein Inhalt ist nach einem Reset weg. Also einfach `make upload`.
+**Ziel ist `Programs:test/`** — dort liegt auch die Logdatei, und dieser Ordner
+überlebt einen Reset der V4 (anders als `ram:`, das nach jedem Neustart leer
+ist).
 
-Der erste Upload war so verifiziert worden:
-
-**Stand des ersten Uploads: hochgeladen und verifiziert.** `make upload` hat
-`v4_console` (29 856 Byte) und `v4_console.info` (6 852 Byte) nach
-`192.168.178.50:ram/` übertragen; `make acp-ls` zeigt beide Dateien auf
-der V4:
+**Stand des Uploads: hochgeladen und verifiziert.** `make upload` überträgt
+`v4_console`, `v4_console.info` und `v4_probe` nach
+`192.168.178.50:Programs/test/`; `make acp-ls` zeigt sie dort:
 
 ```
-ram:v4_console
-ram:v4_console.info
+Programs:test/v4_console
+Programs:test/v4_console.info
+Programs:test/v4_probe
 ```
 
 **Starten auf der V4:** aus einer Shell, nicht per Doppelklick — `make upload`
 legt zusätzlich `v4_probe` mit ab, die Stufenprobe aus dem Abschnitt oben —
 
 ```
-ram:v4_console
+Programs:test/v4_console
 ```
 
-Das Ziel ist über `V4_DIR` einstellbar (Vorgabe `ram/`, der Gerätename des
-RAM-Disk, ohne Leerzeichen). `Ram Disk/` ist derselbe Ort unter seinem
-Volume-Namen — so schreiben es die Vorlagen unter `Projects/`; beides
-funktioniert, `ram/` erspart nur das Quoten des Leerzeichens. Ein bloßes
-`ram:` ohne Schrägstrich lehnt `acp` als mehrdeutigen Hostnamen ab.
+Das Ziel ist über `V4_DIR` einstellbar (Vorgabe `Programs/test/`). **Schreibweise
+mit Schrägstrich, nicht mit Doppelpunkt:** `acp` zerlegt sein Argument am ersten
+Doppelpunkt in Host und Pfad — ein zweiter Doppelpunkt schneidet den Pfad ab, und
+`host:Programs:test/` landet im Wurzelverzeichnis von `Programs:`. AmigaOS selbst
+versteht beide Formen; im Programm steht deshalb die native Form
+`Programs:test/v4_console.log`. `ram/` geht weiterhin.
 
 Die hochgeladene `.info` ist die generische `ApolloIcon.info` aus
 `Projects/_icons`; sie enthält **keine Tooltypes** (kein `CLI`, kein
@@ -684,7 +681,7 @@ Schrägstrich** legen, dann vergleichen:
 
 ```sh
 mkdir -p /tmp/back
-acp "192.168.178.50:ram/v4_console" /tmp/back/
+acp "192.168.178.50:Programs/test/v4_console" /tmp/back/
 cmp build/v4_console /tmp/back/v4_console && echo identisch
 ```
 

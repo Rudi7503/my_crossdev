@@ -38,40 +38,41 @@ const char *v4_plat_error_text(void)
     return strerror((int)s_last_error);
 }
 
-/* Serielle Diagnoseausgabe: im Harness gibt es kein Standardgeraet, nur einen
- * ausdruecklichen Pfad (z.B. /dev/ttyUSB0). Jede Zeile wird sofort geflusht. */
-static FILE *s_ser = NULL;
+/* Logdatei: im Harness gibt es keinen Standardpfad, nur einen ausdruecklichen
+ * (eine Datei oder ein Geraet wie /dev/ttyUSB0). "w" entspricht MODE_NEWFILE
+ * auf der Amiga-Seite: eine frische Datei je Lauf. Jede Zeile wird geflusht. */
+static FILE *s_log = NULL;
 
-int v4_plat_serial_open(const char *dev)
+int v4_plat_log_open(const char *path)
 {
-    if (dev == NULL) {
+    if (path == NULL) {
         return -1;
     }
-    s_ser = fopen(dev, "a");
-    if (s_ser == NULL) {
+    s_log = fopen(path, "w");
+    if (s_log == NULL) {
         return -1;
     }
-    setvbuf(s_ser, NULL, _IONBF, 0);        /* ungepuffert: nichts haengen lassen */
+    setvbuf(s_log, NULL, _IONBF, 0);        /* ungepuffert: nichts haengen lassen */
     return 0;
 }
 
-long v4_plat_serial_write(const char *s, unsigned long len)
+long v4_plat_log_write(const char *s, unsigned long len)
 {
     size_t n;
 
-    if (s_ser == NULL || len == 0ul) {
+    if (s_log == NULL || len == 0ul) {
         return 0;
     }
-    n = fwrite(s, 1u, (size_t)len, s_ser);
-    fflush(s_ser);
+    n = fwrite(s, 1u, (size_t)len, s_log);
+    fflush(s_log);
     return (long)n;
 }
 
-void v4_plat_serial_close(void)
+void v4_plat_log_close(void)
 {
-    if (s_ser != NULL) {
-        fclose(s_ser);
-        s_ser = NULL;
+    if (s_log != NULL) {
+        fclose(s_log);
+        s_log = NULL;
     }
 }
 

@@ -20,18 +20,18 @@ static unsigned long g_blocks;
 static unsigned long g_bytes;
 
 /* ------------------------------------------------------------------ */
-/* Serielle Diagnoseausgabe                                            */
+/* Logdatei                                                           */
 /*                                                                     */
-/* Alle Texte gehen ueber v4_msg(): erst auf die Konsole, dann -- wenn  */
-/* mit -s oder -o eingeschaltet -- zusaetzlich auf die serielle         */
-/* Schnittstelle (V4 -> PC, z.B. COM6). Das ist beim Suchen eines       */
-/* Absturzes entscheidend: der UART sendet bereits gepufferte Zeichen   */
-/* auch dann noch, wenn die Task unmittelbar danach stirbt. Genau       */
-/* deshalb wird hier pro Zeile geflusht und sofort geschrieben.         */
+/* Alle Texte gehen ueber v4_msg(): erst auf die Konsole, dann in die   */
+/* Logdatei (Vorgabe: Programs:test/v4_console.log auf der V4, mit -o    */
+/* ein anderer Pfad, mit -n abgeschaltet). Das ist beim Suchen eines     */
+/* Absturzes entscheidend: das Fenster ist nach dem Absturz weg, die     */
+/* Datei nicht. Jede Zeile wird sofort geschrieben und geflusht.         */
 /* ------------------------------------------------------------------ */
 
-static int         g_use_serial = 0;   /* 0 aus, 1 Standard, 2 -o <dev> */
-static const char *g_ser_dev    = NULL;
+static int         g_use_log    = 1;   /* 1 Vorgabe: Logdatei an, 0 mit -n,
+                                        * 2 mit -o <pfad> */
+static const char *g_log_path   = NULL;
 
 static void v4_msg(const char *fmt, ...)
 {
@@ -51,8 +51,8 @@ static void v4_msg(const char *fmt, ...)
 
     fputs(buf, stdout);
     fflush(stdout);                     /* nichts darf im Puffer bleiben */
-    if (g_use_serial != 0) {
-        (void)v4_plat_serial_write(buf, (unsigned long)n);
+    if (g_use_log != 0) {
+        (void)v4_plat_log_write(buf, (unsigned long)n);
     }
 }
 
@@ -314,18 +314,19 @@ static int parse_args(int argc, char **argv, const char **dev_out)
                 g_trace = 0;                /* still */
             } else if (argv[i][1] == 'x') {
                 g_hex = 1;                  /* Antwortbytes zeigen */
-            } else if (argv[i][1] == 's') {
-                g_use_serial = 1;           /* Standardgeraet der Plattform */
+            } else if (argv[i][1] == 'n') {
+                g_use_log = 0;           /* keine Logdatei, nur Konsole */
             } else if (argv[i][1] == 'o') {
                 if (i + 1 >= argc) {
-                    v4_msg("-o braucht ein Geraet, z.B. -o /dev/ttyUSB0\n");
+                    v4_msg("-o braucht einen Pfad, z.B. "
+                           "-o Programs:test/v4_console.log\n");
                     return 5;
                 }
-                g_ser_dev    = argv[++i];
-                g_use_serial = 2;           /* ausdrueckliches Geraet */
+                g_log_path = argv[++i];
+                g_use_log  = 2;          /* ausdruecklicher Pfad */
             } else {
                 v4_msg("Unbekannter Schalter '%s' "
-                       "(erlaubt: -q -x -s -o <geraet>)\n", argv[i]);
+                       "(erlaubt: -q -x -n -o <pfad>)\n", argv[i]);
                 return 5;
             }
         } else if (dev == NULL) {
@@ -596,26 +597,27 @@ int v4_console_main(int argc, char **argv)
         return rc;
     }
 
-    if (g_use_serial != 0) {
+    if (g_use_log != 0) {
         /* Marke VOR dem Oeffnen: bleibt der Bildschirm danach stehen, sitzt der
-         * Absturz in Open() und nicht weiter unten. Der Kanal ist noch nicht
+         * Absturz in Open() und nicht weiter unten. Die Datei ist noch nicht
          * offen, die Zeile geht also nur auf die Konsole. */
-        v4_msg("Oeffne serielle Ausgabe ...\n");
-        if (v4_plat_serial_open(g_ser_dev) == 0) {
-            v4_msg("Serielle Ausgabe: %s\n",
-                   (g_ser_dev != NULL) ? g_ser_dev
-                                       : "Standardgeraet (Amiga ser:, 9600 8N1)");
+        v4_msg("Oeffne Logdatei ...\n");
+        if (v4_plat_log_open(g_log_path) == 0) {
+            v4_msg("Logdatei: %s\n", (g_log_path != NULL) ? g_log_path
+                                                         : "Standardpfad");
         } else {
-            v4_msg("Serielle Ausgabe nicht verfuegbar (%s) -- nur Konsole.\n",
-                   (g_ser_dev != NULL) ? g_ser_dev : "Standardgeraet");
+            v4_msg("Logdatei nicht verfuegbar (%s) -- nur Konsole.\n",
+                   (g_log_path != NULL) ? g_log_path : "Standardpfad");
         }
+    } else {
+        v4_msg("Logdatei: abgeschaltet (-n).\n");
     }
 
     rc = console_run(dev);
 
     /* Erst hier schliessen: so wird der Kanal auch auf jedem frueheren
      * return-Pfad sauber geschlossen. */
-    v4_plat_serial_close();
+    v4_plat_log_close();
     return rc;
 }
 

@@ -88,26 +88,33 @@ unsigned long v4_plat_last_error(void);
 const char *v4_plat_error_text(void);
 
 /* ------------------------------------------------------------------ */
-/* Optionale serielle Diagnoseausgabe                                  */
+/* Logdatei -- die Ausgabe ueberlebt den Absturz                       */
 /*                                                                     */
-/* Zweck: die Ausgaben zusaetzlich auf die serielle Schnittstelle      */
-/* legen, damit sie am PC mitgelesen werden koennen (V4 -> COMx).      */
-/* Beim Suchen eines Absturzes ist das dem Bildschirmfenster           */
-/* ueberlegen: was der UART bereits gepuffert hat, wird auch dann noch */
-/* gesendet, wenn die Task unmittelbar danach stirbt.                   */
+/* Das Konsolenprogramm schreibt jede Zeile ausserdem in eine Datei.    */
+/* Grund: beim Absturz ist das Fenster weg (oder die Task haengt), die  */
+/* Datei aber nicht. Danach holt man sie mit                         */
+/*     make log                                                        */
+/* von der V4 zurueck. Wenn das Programm crasht, steht dort in der      */
+/* letzten Zeile, welcher Schritt es war.                              */
 /*                                                                     */
-/*   v4_plat_serial_open(NULL) -> Standardgeraet der Plattform:        */
-/*        Amiga: "ser:" = serial.device Unit 0, AmigaOS-Vorgabe        */
-/*               9600 Baud, 8 Datenbits, keine Paritaet, 1 Stopbit     */
-/*        Linux/Mock: kein Standardgeraet, nur mit ausdruecklichem     */
-/*                Pfad (Geraet oder Datei)                             */
+/*   v4_plat_log_open(NULL) -> Standardpfad der Plattform:             */
+/*        Amiga: V4_LOG_DEFAULT_AMIGA ("Programs:test/v4_console.log"), */
+/*               mit MODE_NEWFILE, also eine frische Datei je Lauf      */
+/*        Linux/Mock: kein Standardpfad, nur mit ausdruecklichem Pfad   */
+/*               (im Harness eine Datei, sonst z.B. /dev/ttyUSB0)       */
 /*   Rueckgabe 0 = offen, -1 = nicht verfuegbar (KEIN Fehler -- die     */
 /*   Ausgabe geht dann nur auf die Konsole).                            */
+/*                                                                     */
+/* WICHTIG fuer den Absturzfall: AmigaDOS puffert Schreibvorgaenge im   */
+/* FileHandle. Darum ruft die Amiga-Schicht nach JEDER Zeile Flush().   */
+/* Ohne das fehlte im Log genau der Teil, auf den es ankommt.           */
 /* ------------------------------------------------------------------ */
 
-int  v4_plat_serial_open (const char *dev);
-long v4_plat_serial_write(const char *s, unsigned long len);
-void v4_plat_serial_close(void);
+#define V4_LOG_DEFAULT_AMIGA "Programs:test/v4_console.log"
+
+int  v4_plat_log_open (const char *path);
+long v4_plat_log_write(const char *s, unsigned long len);
+void v4_plat_log_close(void);
 
 /* ------------------------------------------------------------------ */
 /* Trace -- Debugausgabe im Transaktionskern                           */

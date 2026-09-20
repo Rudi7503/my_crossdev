@@ -1119,40 +1119,41 @@ const char *v4_plat_error_text(void)
     return "Mock";
 }
 
-/* Der Mock schreibt die serielle Ausgabe in eine Datei -- damit laesst sich
- * die Spiegelung im Smoketest pruefen (genau wie am echten UART). */
-static FILE *s_ser = NULL;
+/* Der Mock schreibt die Logdatei wie die Amiga-Seite: ein ausdruecklicher Pfad
+ * (kein Standardpfad), MODE_NEWFILE-aequivalent "w". Damit prueft der
+ * Smoketest dieselbe Spiegelung wie auf der V4. */
+static FILE *s_log = NULL;
 
-int v4_plat_serial_open(const char *dev)
+int v4_plat_log_open(const char *path)
 {
-    if (dev == NULL) {
-        return -1;              /* kein Standardgeraet im Mock */
+    if (path == NULL) {
+        return -1;              /* kein Standardpfad im Mock */
     }
-    s_ser = fopen(dev, "a");
-    if (s_ser == NULL) {
+    s_log = fopen(path, "w");
+    if (s_log == NULL) {
         return -1;
     }
-    setvbuf(s_ser, NULL, _IONBF, 0);
+    setvbuf(s_log, NULL, _IONBF, 0);
     return 0;
 }
 
-long v4_plat_serial_write(const char *s, unsigned long len)
+long v4_plat_log_write(const char *s, unsigned long len)
 {
     size_t n;
 
-    if (s_ser == NULL || len == 0ul) {
+    if (s_log == NULL || len == 0ul) {
         return 0;
     }
-    n = fwrite(s, 1u, (size_t)len, s_ser);
-    fflush(s_ser);
+    n = fwrite(s, 1u, (size_t)len, s_log);
+    fflush(s_log);
     return (long)n;
 }
 
-void v4_plat_serial_close(void)
+void v4_plat_log_close(void)
 {
-    if (s_ser != NULL) {
-        fclose(s_ser);
-        s_ser = NULL;
+    if (s_log != NULL) {
+        fclose(s_log);
+        s_log = NULL;
     }
 }
 

@@ -6,9 +6,10 @@
  * Bleibt die Ausgabe nach Schritt N stehen, sitzt der Absturz in Schritt N+1
  * -- ohne Debugger, ohne Raterei.
  *
- * Bewusst OHNE serielle Ausgabe im Standardlauf: ein zweites Oeffnen von
- * "ser:" kann einer Shell, die selbst auf dem seriellen Anschluss laeuft, die
- * Konsole wegziehen. Deshalb ist Schritt 3 nur mit `-s` dabei.
+ * Schritt 3 (serieller Anschluss) ist nur mit `-s` dabei: ein zweites Oeffnen
+ * von "ser:" kann einer Shell, die selbst auf dem seriellen Anschluss laeuft,
+ * die Konsole wegziehen. Das Hauptprogramm benutzt ser: nicht mehr -- seine
+ * Vorgabe ist die Logdatei Programs:test/v4_console.log.
  *
  * Aufruf auf der V4:
  *     ram:v4_probe          # Schritte 1,2,4..8 (kein ser:)
@@ -135,14 +136,14 @@ int main(int argc, char **argv)
 
         step("[probe] 3/8 oeffne ser: mit MODE_NEWFILE ...\n");
         SetIoErr(0);
-        rc = v4_plat_serial_open(NULL);
+        rc = v4_plat_log_open("ser:");   /* ausdruecklich, nicht die Vorgabe */
         step("[probe] 3/8 ser: MODE_NEWFILE -> %d (DOS-Fehler %ld)\n", rc,
              (long)IoErr());
         if (rc == 0) {
-            w = v4_plat_serial_write(msg, (unsigned long)(sizeof(msg) - 1u));
+            w = v4_plat_log_write(msg, (unsigned long)(sizeof(msg) - 1u));
             step("[probe] 3/8 ser: schreiben -> %ld (muss %lu sein)\n", w,
                  (unsigned long)(sizeof(msg) - 1u));
-            v4_plat_serial_close();
+            v4_plat_log_close();
             step("[probe] 3/8 ser: geschlossen\n");
         }
     } else {

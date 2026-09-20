@@ -63,36 +63,46 @@ unsigned long v4_plat_last_error(void)
 }
 
 /* ------------------------------------------------------------------ */
-/* Serielle Diagnoseausgabe -- "ser:" ist serial.device Unit 0 mit der  */
-/* AmigaOS-Vorgabe 9600 8N1. Der PC muss dieselben Einstellungen haben. */
+/* Logdatei -- Vorgabe V4_LOG_DEFAULT_AMIGA, also Programs:test/...     */
+/*                                                                     */
+/* MODE_NEWFILE: jeder Lauf beginnt mit einer frischen Datei, damit im   */
+/* Log nie Zeilen zweier Laeufe vermischt sind. Wenn der Pfad nicht      */
+/* existiert (Drawer fehlt, Volume gesperrt), liefert Open() NULL -- das  */
+/* Programm laeuft dann nur auf der Konsole weiter.                      */
 /* ------------------------------------------------------------------ */
 
-static BPTR s_ser = (BPTR)0;
+static BPTR s_log = (BPTR)0;
 
-int v4_plat_serial_open(const char *dev)
+int v4_plat_log_open(const char *path)
 {
-    if (dev == NULL) {
-        dev = "ser:";
+    if (path == NULL) {
+        path = V4_LOG_DEFAULT_AMIGA;
     }
-    s_ser = Open((CONST_STRPTR)dev, MODE_NEWFILE);
-    return (s_ser == (BPTR)0) ? -1 : 0;
+    s_log = Open((CONST_STRPTR)path, MODE_NEWFILE);
+    return (s_log == (BPTR)0) ? -1 : 0;
 }
 
-long v4_plat_serial_write(const char *s, unsigned long len)
+long v4_plat_log_write(const char *s, unsigned long len)
 {
-    if (s_ser == (BPTR)0 || len == 0ul) {
+    LONG n;
+
+    if (s_log == (BPTR)0 || len == 0ul) {
         return 0;
     }
-    /* Write() puffert im serial.device; die Ausgabe laeuft danach */
-    /* unabhaengig vom Programm weiter (wichtig beim Absturz).     */
-    return (long)Write(s_ser, (CONST_APTR)s, (LONG)len);
+    n = Write(s_log, (CONST_APTR)s, (LONG)len);
+
+    /* Das ist der Kern der Sache: AmigaDOS puffert im FileHandle. Ohne
+     * Flush() waere nach einem Absturz genau die letzte Zeile weg -- die,
+     * die den Schritt benennt. Deshalb nach JEDER Zeile schreiben. */
+    (void)Flush(s_log);
+    return (long)n;
 }
 
-void v4_plat_serial_close(void)
+void v4_plat_log_close(void)
 {
-    if (s_ser != (BPTR)0) {
-        Close(s_ser);
-        s_ser = (BPTR)0;
+    if (s_log != (BPTR)0) {
+        Close(s_log);
+        s_log = (BPTR)0;
     }
 }
 

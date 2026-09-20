@@ -1496,33 +1496,33 @@ static void test_review_regressions(void)
     CHECK_EQ(v4_dir_close(&M, h), V4P_ST_OK);
 }
 
-/* Der Vertrag der optionalen seriellen Ausgabe: im Mock gibt es kein
- * Standardgeraet, ein ausdruecklicher Pfad muss aber gehen, und ohne offenen
- * Kanal darf Schreiben niemals etwas tun. Dieselbe Semantik hat die
- * Amiga-Schicht mit "ser:". */
-static void test_serial_hooks(void)
+/* Der Vertrag der Logdatei: im Mock gibt es keinen Standardpfad, ein
+ * ausdruecklicher Pfad muss aber gehen, und ohne offene Datei darf Schreiben
+ * niemals etwas tun. Dieselbe Semantik hat die Amiga-Schicht mit
+ * V4_LOG_DEFAULT_AMIGA. */
+static void test_log_hooks(void)
 {
-    const char *path = "build/v4_serial_unit.txt";
+    const char *path = "build/v4_log_unit.txt";
     char        buf[64];
     FILE       *f;
     size_t      n;
 
-    v4_test_case("serial hooks");
+    v4_test_case("log hooks");
 
-    /* Kein Standardgeraet im Mock -> sauberes "nicht verfuegbar". */
-    CHECK_EQ(v4_plat_serial_open(NULL), -1);
-    /* Ohne offenen Kanal ist Schreiben ein No-op, kein Absturz. */
-    CHECK_EQ(v4_plat_serial_write("x", 1ul), 0);
-    /* Schliessen ohne offenen Kanal ist erlaubt. */
-    v4_plat_serial_close();
+    /* Kein Standardpfad im Mock -> sauberes "nicht verfuegbar". */
+    CHECK_EQ(v4_plat_log_open(NULL), -1);
+    /* Ohne offene Datei ist Schreiben ein No-op, kein Absturz. */
+    CHECK_EQ(v4_plat_log_write("x", 1ul), 0);
+    /* Schliessen ohne offene Datei ist erlaubt. */
+    v4_plat_log_close();
 
     remove(path);
-    CHECK_EQ(v4_plat_serial_open(path), 0);
-    CHECK_EQ(v4_plat_serial_write("Zeile 1\n", 8ul), 8);
-    CHECK_EQ(v4_plat_serial_write("egal", 0ul), 0);     /* len 0 -> nichts */
-    v4_plat_serial_close();
-    v4_plat_serial_close();                             /* idempotent */
-    CHECK_EQ(v4_plat_serial_write("nach dem Schliessen", 19ul), 0);
+    CHECK_EQ(v4_plat_log_open(path), 0);
+    CHECK_EQ(v4_plat_log_write("Zeile 1\n", 8ul), 8);
+    CHECK_EQ(v4_plat_log_write("egal", 0ul), 0);     /* len 0 -> nichts */
+    v4_plat_log_close();
+    v4_plat_log_close();                             /* idempotent */
+    CHECK_EQ(v4_plat_log_write("nach dem Schliessen", 19ul), 0);
 
     f = fopen(path, "rb");
     CHECK(f != NULL);
@@ -1535,8 +1535,8 @@ static void test_serial_hooks(void)
     }
 
     /* Ein unbrauchbarer Pfad wird gemeldet, nicht verschluckt. */
-    CHECK_EQ(v4_plat_serial_open("build/kein/verzeichnis/x.txt"), -1);
-    v4_plat_serial_close();
+    CHECK_EQ(v4_plat_log_open("build/kein/verzeichnis/x.txt"), -1);
+    v4_plat_log_close();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1563,7 +1563,7 @@ int test_master(void)
     test_playback();
     test_spec_pinning();
     test_review_regressions();
-    test_serial_hooks();
+    test_log_hooks();
 
     return v4_test_failures;
 }

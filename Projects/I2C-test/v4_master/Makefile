@@ -7,15 +7,17 @@
 #   make amiga        Bibliothek + Amiga-Plattform + Konsole fuer m68k-amigaos
 #   make demo         Konsolenprogramm fuer den Linux-Harness (i2c-dev)
 #
-# Das Konsolenprogramm kennt -q (still), -x (Hexdump), -s (Ausgabe zusaetzlich
-# auf das Standard-Seriellgeraet, auf dem Amiga "ser:" = 9600 8N1) und
-# -o <geraet> (Ausgabe zusaetzlich auf ein bestimmtes Geraet/eine Datei).
+# Das Konsolenprogramm schreibt seine Ausgabe zusaetzlich in eine Logdatei
+# (Vorgabe auf der V4: Programs:test/v4_console.log, mit "make log" abholbar).
+# Schalter: -q (still), -x (Hexdump), -n (keine Logdatei),
+# -o <pfad> (anderer Logpfad, im Harness z.B. eine Datei).
 #   make asm          m68k-Disassembly der Byte-Order-Helfer (Nachweis)
 #   make lint         nur der Portabilitaets-Lint
 #   make probe        Stufenprobe fuer die V4 (Start in 8 nummerierten Schritten)
 #   make upload       Programm + Ikone direkt auf die V4 (ApolloExplorer/acp)
 #   make upload-debug zusaetzlich bgdbserver und Debug-Startskript
 #   make acp-ls       Verzeichnis auf der V4 auflisten (nur lesend)
+#   make log          Logdatei von der V4 holen und anzeigen (nach einem Absturz)
 #   make clean
 #
 # Fuer die Upload-Ziele muss AMIGAHOST gesetzt sein (IP der V4) und auf der
@@ -64,20 +66,29 @@ QEMU_M68K ?= qemu-m68k
 # also ist ../../ bereits Projects/. Die Vorlagen unter Projects/ liegen eine
 # Ebene hoeher und schreiben dort ../../Projects/... -- das waere hier falsch.
 REPO_ROOT ?= $(PWD)/../..
-# Zielverzeichnis auf der V4. `ram/` ist der Geraetename des RAM-Disk und damit
-# ohne Leerzeichen; `Ram Disk/` ist derselbe Ort unter seinem Volume-Namen
-# (so schreiben es die Vorlagen unter Projects/). Beides funktioniert -- bei
-# Leerzeichen im Pfad muss der Aufrufer den Pfad quoten.
-V4_DIR    ?= ram/
+# Zielverzeichnis auf der V4: Programs:test/ ist der Arbeitsordner, dort liegt
+# auch die Logdatei des Programms (V4_LOG_DEFAULT_AMIGA).
+#
+# Schreibweise mit Schraegstrich, nicht mit Doppelpunkt: acp zerlegt den
+# Argumentstring am ersten Doppelpunkt in Host und Pfad und schneidet beim
+# zweiten ab -- "host:Programs:test/" landet im Wurzelverzeichnis von Programs:.
+# AmigaOS selbst versteht beide Formen, im Programm steht deshalb die
+# native Form "Programs:test/v4_console.log".
+#
+# `ram/` geht weiterhin (RAM-Disk, nach jedem Reset leer).
+V4_DIR    ?= Programs/test/
 APOLLO_V4_HOST ?= $(AMIGAHOST):$(V4_DIR)
 ACP    ?= $(REPO_ROOT)/ApolloExplorer/acp/acp
 GDB    ?= $(REPO_ROOT)/bgdbserver/bgdbserver
 ICONS  ?= $(REPO_ROOT)/_icons
 # Name, unter dem das Programm auf der V4 liegt (ohne Endung).
 AMIGA_NAME ?= v4_console
+# Name der Logdatei im Zielverzeichnis -- muss zu V4_LOG_DEFAULT_AMIGA passen.
+LOG_NAME   ?= v4_console.log
 
 .PHONY: all test lint test-m68k amiga probe demo asm clean selftest-lint verify \
-        smoke test-san upload upload-debug check-host check-upload acp-hosts acp-ls verify
+        smoke test-san upload upload-debug check-host check-upload acp-hosts acp-ls \
+        log verify
 
 all: test
 
@@ -201,32 +212,38 @@ smoke: $(BUILD)/v4_console_smoke
 	grep -q "PLAY_FILE: OK" $(BUILD)/smoke4.txt || { echo "  FEHLER: PLAY_FILE fehlt"; fail=1; }; \
 	grep -q "STOP_PLAY: OK" $(BUILD)/smoke4.txt || { echo "  FEHLER: STOP_PLAY fehlt"; fail=1; }; \
 	grep -q "SD-Wiedergabe" $(BUILD)/smoke4.txt || { echo "  FEHLER: audio_flags SD-Wiedergabe fehlt"; fail=1; }; \
-	echo "== Smoke 5: serielle Ausgabe spiegeln (-o schreibt mit), eine Marke bleibt Konsole =="; \
-	rm -f $(BUILD)/smoke5.txt $(BUILD)/smoke_serial.txt; \
-	printf '0\n\n' | ./$(BUILD)/v4_console_smoke -o $(BUILD)/smoke_serial.txt \
+	echo "== Smoke 5: Logdatei mitschreiben (-o), eine Marke bleibt Konsole =="; \
+	rm -f $(BUILD)/smoke5.txt $(BUILD)/smoke_log.txt; \
+	printf '0\n\n' | ./$(BUILD)/v4_console_smoke -o $(BUILD)/smoke_log.txt \
 	    > $(BUILD)/smoke5.txt 2>&1 || fail=1; \
-	test -s $(BUILD)/smoke_serial.txt || { echo "  FEHLER: serielle Datei leer"; fail=1; }; \
-	grep -q "PING ok: proto=3" $(BUILD)/smoke_serial.txt \
+	test -s $(BUILD)/smoke_log.txt || { echo "  FEHLER: serielle Datei leer"; fail=1; }; \
+	grep -q "PING ok: proto=3" $(BUILD)/smoke_log.txt \
 	    || { echo "  FEHLER: PING fehlt auf der seriellen Ausgabe"; fail=1; }; \
-	grep -q "DISCONNECT: OK" $(BUILD)/smoke_serial.txt \
+	grep -q "DISCONNECT: OK" $(BUILD)/smoke_log.txt \
 	    || { echo "  FEHLER: Ende fehlt auf der seriellen Ausgabe"; fail=1; }; \
-	grep -q "Oeffne serielle Ausgabe" $(BUILD)/smoke5.txt \
+	grep -q "Oeffne Logdatei" $(BUILD)/smoke5.txt \
 	    || { echo "  FEHLER: Konsolen-Marke vor dem Oeffnen fehlt"; fail=1; }; \
-	grep -v "Oeffne serielle Ausgabe" $(BUILD)/smoke5.txt > $(BUILD)/smoke5_konsole.txt; \
-	cmp -s $(BUILD)/smoke5_konsole.txt $(BUILD)/smoke_serial.txt \
-	    || { echo "  FEHLER: serielle Ausgabe weicht von der Konsole ab"; fail=1; }; \
+	grep -q "Logdatei: $(BUILD)/smoke_log.txt" $(BUILD)/smoke_log.txt \
+	    || { echo "  FEHLER: Logdatei nennt ihren eigenen Pfad nicht"; fail=1; }; \
+	grep -v "Oeffne Logdatei" $(BUILD)/smoke5.txt > $(BUILD)/smoke5_konsole.txt; \
+	cmp -s $(BUILD)/smoke5_konsole.txt $(BUILD)/smoke_log.txt \
+	    || { echo "  FEHLER: Logdatei weicht von der Konsole ab"; fail=1; }; \
 	echo "== Smoke 6: Schalterfehler werden gemeldet =="; \
-	printf 'q\n' | ./$(BUILD)/v4_console_smoke -s > $(BUILD)/smoke6.txt 2>&1 || fail=1; \
-	grep -q "Serielle Ausgabe nicht verfuegbar" $(BUILD)/smoke6.txt \
-	    || { echo "  FEHLER: Hinweis auf fehlendes Standardgeraet fehlt"; fail=1; }; \
+	printf 'q\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke6.txt 2>&1 || fail=1; \
+	grep -q "Logdatei nicht verfuegbar (Standardpfad)" $(BUILD)/smoke6.txt \
+	    || { echo "  FEHLER: Hinweis auf fehlenden Standardpfad fehlt"; fail=1; }; \
+	if ./$(BUILD)/v4_console_smoke -s > $(BUILD)/smoke9.txt 2>&1; then \
+	    echo "  FEHLER: der alte Seriell-Schalter -s wird noch akzeptiert"; fail=1; fi; \
+	grep -q "Unbekannter Schalter" $(BUILD)/smoke9.txt \
+	    || { echo "  FEHLER: -s wird nicht als unbekannt gemeldet"; fail=1; }; \
 	if ./$(BUILD)/v4_console_smoke -Z > $(BUILD)/smoke7.txt 2>&1; then \
 	    echo "  FEHLER: unbekannter Schalter wurde nicht abgelehnt"; fail=1; fi; \
 	grep -q "Unbekannter Schalter" $(BUILD)/smoke7.txt \
 	    || { echo "  FEHLER: Meldung zum unbekannten Schalter fehlt"; fail=1; }; \
 	if ./$(BUILD)/v4_console_smoke -o > $(BUILD)/smoke8.txt 2>&1; then \
 	    echo "  FEHLER: -o ohne Geraet wurde nicht abgelehnt"; fail=1; fi; \
-	grep -q -- "-o braucht ein Geraet" $(BUILD)/smoke8.txt \
-	    || { echo "  FEHLER: Meldung zu -o ohne Geraet fehlt"; fail=1; }; \
+	grep -q -- "-o braucht einen Pfad" $(BUILD)/smoke8.txt \
+	    || { echo "  FEHLER: Meldung zu -o ohne Pfad fehlt"; fail=1; }; \
 	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (6 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
 
 # Alles, was ohne Hardware pruefbar ist.
@@ -263,6 +280,7 @@ upload: amiga probe check-upload
 	$(ACP) "$(BUILD)/$(AMIGA_NAME).info" "$(APOLLO_V4_HOST)"
 	$(ACP) "$(BUILD)/v4_probe" "$(APOLLO_V4_HOST)"
 	@echo "Auf der V4: $(APOLLO_V4_HOST)$(AMIGA_NAME) und v4_probe"
+	@echo "Logdatei des Programms: $(V4_DIR)$(LOG_NAME)  (abholen: make log)"
 
 # Wie im Hausstil zusaetzlich der Debug-Stub und ein Startskript, das den
 # Debugger startet (dazu passt launch.json: ${AMIGAHOST}:2345).
@@ -276,6 +294,14 @@ upload-debug: amiga check-upload
 	$(ACP) "$(BUILD)/$(AMIGA_NAME)_Debug.info" "$(APOLLO_V4_HOST)"
 	$(ACP) "$(BUILD)/$(AMIGA_NAME)_Debug" "$(APOLLO_V4_HOST)"
 	$(ACP) "$(GDB)" "$(APOLLO_V4_HOST)"
+
+# Die Logdatei von der V4 holen und anzeigen -- der Weg nach einem Absturz.
+log: check-host
+	@test -x "$(ACP)" || { echo "FEHLER: acp nicht gefunden: $(ACP)"; exit 1; }
+	@mkdir -p $(BUILD)
+	$(ACP) "$(AMIGAHOST):$(V4_DIR)$(LOG_NAME)" $(BUILD)/
+	@echo "---- $(V4_DIR)$(LOG_NAME) ----"
+	@cat $(BUILD)/$(LOG_NAME)
 
 # Nur lesende Hilfen, um die Verbindung zu pruefen.
 acp-hosts:
