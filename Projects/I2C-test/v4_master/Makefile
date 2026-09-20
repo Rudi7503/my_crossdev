@@ -230,7 +230,10 @@ smoke: $(BUILD)/v4_console_smoke
 	grep -q "Geraete: 3" $(BUILD)/smoke1.txt || { echo "  FEHLER: Geraeteliste fehlt"; fail=1; }; \
 	grep -q "JBL Flip 5" $(BUILD)/smoke1.txt || { echo "  FEHLER: Geraetename fehlt"; fail=1; }; \
 	echo "== Smoke 2: verbinden, kein Dateileseauftrag =="; \
-	printf '0\n\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke2.txt 2>&1 || fail=1; \
+	printf '0\n\n' | ./$(BUILD)/v4_console_smoke -a > $(BUILD)/smoke2.txt 2>&1 || fail=1; \
+	grep -q "cmd=0x01 (PING" $(BUILD)/smoke2.txt || { echo "  FEHLER: Klartext hinter cmd= fehlt"; fail=1; }; \
+	grep -q "state=1 (SCANNING)\|state=3 (CONNECTED)" $(BUILD)/smoke2.txt || { echo "  FEHLER: Zustand ohne Klartext"; fail=1; }; \
+	grep -q "Verbunden mit Index 0 (CONNECTED)" $(BUILD)/smoke2.txt || { echo "  FEHLER: Verbindungspruefung fehlt"; fail=1; }; \
 	grep -q "Verbunden mit Index 0" $(BUILD)/smoke2.txt || { echo "  FEHLER: CONNECT fehlt"; fail=1; }; \
 	grep -q "SD_MOUNT: OK" $(BUILD)/smoke2.txt || { echo "  FEHLER: SD_MOUNT fehlt"; fail=1; }; \
 	grep -q "total=8000000 kB free=491520 kB" $(BUILD)/smoke2.txt || { echo "  FEHLER: SD_INFO fehlt"; fail=1; }; \
@@ -288,7 +291,17 @@ smoke: $(BUILD)/v4_console_smoke
 	grep -q "A.MP3" $(BUILD)/smoke10.txt || { echo "  FEHLER: Inhalt von MUSIC fehlt"; fail=1; }; \
 	grep -q "Kein Eintrag" $(BUILD)/smoke10.txt && { echo "  FEHLER: Navigation erzeugt Fehlermeldung"; fail=1; }; \
 	grep -q "EMPTY/" $(BUILD)/smoke10.txt || { echo "  FEHLER: u/r kommen nicht zurueck in die Wurzel"; fail=1; }; \
-	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (7 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
+	echo "== Smoke 8: CONNECT wird nie bestaetigt (Statuspruefung) =="; \
+	printf '0\n\n' | env V4_SMOKE_CONNECT_ROUNDS=100000 ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke11.txt 2>&1 || fail=1; \
+	grep -q "Verbindung NICHT bestaetigt: state=2 (CONNECTING)" $(BUILD)/smoke11.txt \
+	    || { echo "  FEHLER: ausbleibende Verbindung wird nicht gemeldet"; fail=1; }; \
+	echo "== Smoke 9: verbunden, aber kein A2DP-Stream (Headset aus) =="; \
+	printf '0\n\n' | env V4_SMOKE_NO_AUDIO=1 ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke12.txt 2>&1 || fail=1; \
+	grep -q "Verbunden mit Index 0 (CONNECTED)" $(BUILD)/smoke12.txt \
+	    || { echo "  FEHLER: Verbindung nicht gemeldet"; fail=1; }; \
+	grep -q "WARNUNG: verbunden, aber kein A2DP-Stream" $(BUILD)/smoke12.txt \
+	    || { echo "  FEHLER: fehlender A2DP-Stream wird nicht gewarnt"; fail=1; }; \
+	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (9 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
 
 # Alles, was ohne Hardware pruefbar ist.
 verify: lint selftest-lint test test-san smoke asm amiga check-no-moviw probe

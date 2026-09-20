@@ -67,8 +67,55 @@ static void v4_msg(const char *fmt, ...)
 /* Schritt, in dem es passiert ist.                                    */
 /* ------------------------------------------------------------------ */
 
-static int g_trace = 1;     /* mit -q abschaltbar */
+static int g_trace = 0;     /* Vorgabe: aus -- mit -a (Diagnose) an */
+static int g_diag  = 0;     /* -a: Trace + Warteschleifen + Zusatzinfos  */
 static int g_hex   = 0;     /* mit -x: Antwortbytes mit ausgeben */
+
+/* Klartext zum Befehlscode -- steht im Trace hinter cmd=0x.. in Klammern. */
+static const char *cmd_name(uint8_t cmd)
+{
+    switch (cmd) {
+    case V4P_CMD_PING:        return "PING";
+    case V4P_CMD_GET_STATUS:  return "GET_STATUS";
+    case V4P_CMD_GET_INFO:    return "GET_INFO";
+    case V4P_CMD_SCAN_START:  return "SCAN_START";
+    case V4P_CMD_SCAN_STOP:   return "SCAN_STOP";
+    case V4P_CMD_DEV_COUNT:   return "DEV_COUNT";
+    case V4P_CMD_DEV_GET:     return "DEV_GET";
+    case V4P_CMD_CONNECT:     return "CONNECT";
+    case V4P_CMD_CONNECT_BDA: return "CONNECT_BDA";
+    case V4P_CMD_DISCONNECT:  return "DISCONNECT";
+    case V4P_CMD_FORGET:      return "FORGET";
+    case V4P_CMD_SD_MOUNT:    return "SD_MOUNT";
+    case V4P_CMD_SD_INFO:     return "SD_INFO";
+    case V4P_CMD_SET_CHUNK:   return "SET_CHUNK";
+    case V4P_CMD_PATH_CLEAR:  return "PATH_CLEAR";
+    case V4P_CMD_PATH_APPEND: return "PATH_APPEND";
+    case V4P_CMD_DIR_OPEN:    return "DIR_OPEN";
+    case V4P_CMD_DIR_NEXT:    return "DIR_NEXT";
+    case V4P_CMD_DIR_CLOSE:   return "DIR_CLOSE";
+    case V4P_CMD_FILE_OPEN:   return "FILE_OPEN";
+    case V4P_CMD_FILE_READ:   return "FILE_READ";
+    case V4P_CMD_FILE_CLOSE:  return "FILE_CLOSE";
+    case V4P_CMD_PLAY_FILE:   return "PLAY_FILE";
+    case V4P_CMD_STOP_PLAY:   return "STOP_PLAY";
+    case V4P_CMD_RESET:       return "RESET";
+    default:                  return "?";
+    }
+}
+
+/* Klartext zum Zustand des Slaves. */
+static const char *state_name(uint8_t state)
+{
+    switch (state) {
+    case V4P_STATE_IDLE:       return "IDLE";
+    case V4P_STATE_SCANNING:   return "SCANNING";
+    case V4P_STATE_CONNECTING: return "CONNECTING";
+    case V4P_STATE_CONNECTED:  return "CONNECTED";
+    case V4P_STATE_SUSPENDED:  return "SUSPENDED";
+    default:                   return "?";
+    }
+}
 
 static const char *trace_name(uint8_t event)
 {
@@ -108,8 +155,8 @@ static void console_trace(const v4_trace_t *ev, void *ctx)
         return;
     }
 
-    v4_msg("[trace] %-12s cmd=0x%02X seq=%3u ", trace_name(ev->event),
-           (unsigned)ev->cmd, (unsigned)ev->seq);
+    v4_msg("[trace] %-12s cmd=0x%02X (%-11s) seq=%3u ", trace_name(ev->event),
+           (unsigned)ev->cmd, cmd_name(ev->cmd), (unsigned)ev->seq);
 
     switch (ev->event) {
     case V4_TR_TX_BEGIN:
@@ -172,9 +219,10 @@ static void print_bus_error(void)
  * der Wechsel in `audio_flags` sichtbar ist. */
 static void print_status(const v4p_status_t *st)
 {
-    v4_msg("state=%u conn_index=0x%02X dev_count=%u scan_active=%u\n",
-           (unsigned)st->state, (unsigned)st->conn_index,
-           (unsigned)st->dev_count, (unsigned)st->scan_active);
+    v4_msg("state=%u (%s) conn_index=0x%02X dev_count=%u scan_active=%u\n",
+           (unsigned)st->state, state_name(st->state),
+           (unsigned)st->conn_index, (unsigned)st->dev_count,
+           (unsigned)st->scan_active);
     v4_msg("sd: mounted=%u card_present=%u  audio_flags=0x%02X (%s%s)\n",
            (unsigned)st->sd_mounted, (unsigned)st->sd_card_present,
            (unsigned)st->audio_flags,
@@ -306,8 +354,11 @@ static int parse_args(int argc, char **argv, const char **dev_out)
 
     for (i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
-            if (argv[i][1] == 'q') {
-                g_trace = 0;                /* still */
+            if (argv[i][1] == 'a') {
+                g_diag  = 1;                /* Diagnose: alles an */
+                g_trace = 1;
+            } else if (argv[i][1] == 'q') {
+                g_trace = 0;                /* still (ist die Vorgabe) */
             } else if (argv[i][1] == 'x') {
                 g_hex = 1;                  /* Antwortbytes zeigen */
             } else if (argv[i][1] == 't') {
@@ -327,8 +378,8 @@ static int parse_args(int argc, char **argv, const char **dev_out)
                 g_log_path = argv[++i];
                 g_use_log  = 2;          /* ausdruecklicher Pfad */
             } else {
-                v4_msg("Unbekannter Schalter '%s' "
-                       "(erlaubt: -q -x -n -o <pfad> -t <ticks>)\n", argv[i]);
+                v4_msg("Unbekannter Schalter '%s' (erlaubt: -a -q -x -n "
+                       "-o <pfad> -t <ticks>)\n", argv[i]);
                 return 5;
             }
         } else if (dev == NULL) {
@@ -681,7 +732,8 @@ static int console_run(const char *dev)
         return 10;
     }
 
-    v4_msg("Trace: %s%s (mit -q abschaltbar)\n", g_trace ? "an" : "aus",
+    v4_msg("Trace: %s%s%s\n", g_trace ? "an" : "aus",
+           g_diag ? " (Diagnosemodus -a)" : " (mit -a einschaltbar)",
            g_hex ? ", Hexdump an" : "");
     v4_msg("[trace] oeffne I2C-Bus%s%s ...\n", dev ? ": " : "",
            dev ? dev : " (Standard)");
@@ -738,7 +790,8 @@ static int console_run(const char *dev)
     rc = v4_scan_start(&m, 8u, 1);
     if (rc != V4P_ST_OK) {
         v4_msg("SCAN_START: %s\n", v4_strerror(rc));
-    } else {
+    } else if (g_diag != 0) {
+        /* Nur im Diagnosemodus: die Warteschleife aus §13 vorfuehren. */
         uint16_t gen = st.scan_gen;
 
         v4_msg("Dauer-Scan laeuft, warte auf Aenderung der Geraeteliste");
@@ -757,6 +810,8 @@ static int console_run(const char *dev)
             fflush(stdout);
         }
         v4_msg("\n");
+    } else {
+        v4_msg("Dauer-Scan gestartet (Diagnoseschritte nur mit -a).\n");
     }
 
     rc = v4_dev_count(&m, &count);
@@ -810,47 +865,84 @@ static int console_run(const char *dev)
         v4_close();
         return 10;
     }
-    v4_msg("CONNECT gesendet, warte auf state == CONNECTED ");
-    fflush(stdout);
-    for (i = 0; i < 200; i++) {
-        rc = v4_get_status(&m, &st);
-        if (rc != V4P_ST_OK) {
-            v4_msg("\nGET_STATUS: %s\n", v4_strerror(rc));
-            break;
-        }
-        if (st.state == V4P_STATE_CONNECTED) {
-            break;
-        }
-        v4_plat_delay_us(50000u);
-        v4_msg(".");
+    {
+        int want = i;                   /* der eben gewaehlte Index */
+
+        v4_msg("CONNECT gesendet, warte auf state == CONNECTED ");
         fflush(stdout);
-    }
-    v4_msg("\n");
-    if (st.state == V4P_STATE_CONNECTED) {
-        v4_msg("Verbunden mit Index %u.\n", (unsigned)st.conn_index);
-    } else {
-        v4_msg("Verbindung nicht bestaetigt (state=%u).\n", (unsigned)st.state);
+        for (i = 0; i < 200; i++) {
+            rc = v4_get_status(&m, &st);
+            if (rc != V4P_ST_OK) {
+                v4_msg("\nGET_STATUS: %s\n", v4_strerror(rc));
+                break;
+            }
+            if (st.state == V4P_STATE_CONNECTED
+                || st.state == V4P_STATE_IDLE) {
+                break;                  /* fertig oder abgebrochen */
+            }
+            v4_plat_delay_us(50000u);
+            v4_msg(".");
+            fflush(stdout);
+        }
+        v4_msg("\n");
+
+        /* Der Zustand allein sagt noch nichts: er muss zum gewaehlten Index
+         * passen, und die Audio-Strecke muss stehen. Ein ausgeschaltetes
+         * Headset liefert keinen A2DP-Stream. */
+        if (st.state == V4P_STATE_CONNECTED && st.conn_index == (uint8_t)want) {
+            v4_msg("Verbunden mit Index %u (%s).\n", (unsigned)st.conn_index,
+                   state_name(st.state));
+        } else if (st.state == V4P_STATE_CONNECTED) {
+            v4_msg("WARNUNG: Slave meldet CONNECTED, aber mit Index %u statt "
+                   "%d.\n", (unsigned)st.conn_index, want);
+        } else {
+            v4_msg("Verbindung NICHT bestaetigt: state=%u (%s) nach %d "
+                   "Abfragen.\n", (unsigned)st.state, state_name(st.state),
+                   i + 1);
+        }
+
+        if (v4_get_status(&m, &st) == V4P_ST_OK) {
+            v4_msg("Status: state=%u (%s) conn_index=%u audio_flags=0x%02X "
+                   "(%s%s)\n", (unsigned)st.state, state_name(st.state),
+                   (unsigned)st.conn_index, (unsigned)st.audio_flags,
+                   ((st.audio_flags & V4P_AUDIO_A2DP_STREAMING) != 0u)
+                       ? "A2DP " : "kein A2DP",
+                   ((st.audio_flags & V4P_AUDIO_SD_PLAYBACK) != 0u)
+                       ? "SD-Wiedergabe" : "");
+            if (st.state == V4P_STATE_CONNECTED
+                && (st.audio_flags & V4P_AUDIO_A2DP_STREAMING) == 0u) {
+                v4_msg("WARNUNG: verbunden, aber kein A2DP-Stream -- ist das "
+                       "Headset eingeschaltet?\n");
+            }
+        }
     }
 
     v4_msg("\n-- SD-Karte --\n");
     rc = v4_sd_mount_wait(&m, 50u);
     v4_msg("SD_MOUNT: %s\n", v4_strerror(rc));
     if (rc == V4P_ST_OK) {
-        rc = v4_sd_info(&m, &si);
-        if (rc == V4P_ST_OK) {
-            v4_msg("total=%lu kB free=%lu kB sector=%u fat=%u\n",
-                   (unsigned long)si.total_kb, (unsigned long)si.free_kb,
-                   (unsigned)si.sector_size, (unsigned)si.fat_type);
-        } else {
-            v4_msg("SD_INFO: %s\n", v4_strerror(rc));
+        if (g_diag != 0) {
+            rc = v4_sd_info(&m, &si);
+            if (rc == V4P_ST_OK) {
+                v4_msg("total=%lu kB free=%lu kB sector=%u fat=%u\n",
+                       (unsigned long)si.total_kb, (unsigned long)si.free_kb,
+                       (unsigned)si.sector_size, (unsigned)si.fat_type);
+            } else {
+                v4_msg("SD_INFO: %s\n", v4_strerror(rc));
+            }
         }
 
         browse_files(&m);
     }
 
     v4_msg("\n-- Trennen --\n");
-    rc = v4_disconnect(&m);
-    v4_msg("DISCONNECT: %s\n", v4_strerror(rc));
+    if (v4_get_status(&m, &st) == V4P_ST_OK && st.state == V4P_STATE_CONNECTED) {
+        rc = v4_disconnect(&m);
+        v4_msg("DISCONNECT: %s\n", v4_strerror(rc));
+    } else {
+        v4_msg("Kein DISCONNECT noetig: state=%u (%s).\n", (unsigned)st.state,
+               state_name(st.state));
+    }
 
     v4_close();
     return 0;

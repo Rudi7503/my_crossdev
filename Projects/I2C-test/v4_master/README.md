@@ -40,8 +40,8 @@ make probe      # Stufenprobe für die V4 (Start in 8 nummerierten Schritten)
 Das Programm auf der V4:
 
 ```sh
-Programs:test/v4_console          # Trace an, Logdatei an (Vorgabe)
-Programs:test/v4_console -q       # still (schnell!)
+Programs:test/v4_console          # normal: kein Trace, schnelles Browsen
+Programs:test/v4_console -a       # Diagnose: Trace, Scan-Warteschleife, SD-Info
 Programs:test/v4_console -x       # zusaetzlich Hexdump der ersten 32 Antwortbytes
 Programs:test/v4_console -n       # keine Logdatei, nur Konsole
 Programs:test/v4_console -o ram:lauf.log   # anderer Logpfad
@@ -75,7 +75,7 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
 | Fuzzing der Parser (deterministisch, 160 000 Frames) | `make test` | grün, kein Zufallsframe akzeptiert |
 | Derselbe Lauf unter AddressSanitizer + UndefinedBehaviorSanitizer | `make test-san` | grün, keine Befunde (inkl. Leck-Erkennung) |
 | Statische Analyse (`gcc -fanalyzer`) über alle Quellen | manuell | keine Befunde |
-| Smoketest des echten Konsolenprogramms gegen den Mock | `make smoke` | grün, 7 Durchläufe (inkl. Browser-Auswahl, PLAY_FILE/STOP_PLAY, Schalterfehler) |
+| Smoketest des echten Konsolenprogramms gegen den Mock | `make smoke` | grün, 9 Durchläufe (inkl. Browser-Auswahl, PLAY_FILE/STOP_PLAY, Verbindungsprüfung, Schalterfehler) |
 | Ausgabe-Spiegelung Konsole → Logdatei | `make smoke` | grün, Logdatei per `cmp` **byte-gleich** zur Konsole (bis auf die Marke vor dem Öffnen) |
 | Lint der Byte-Order-Regeln | `make lint` | grün, mit Selbsttest und Live-Positivkontrolle |
 | m68k-Objektcode greift nur byteweise auf Puffer zu | `make asm` | grün, Gate nachweislich nicht vakuant |
@@ -398,9 +398,12 @@ sollte entsprechend entschärft werden.
 ## Debugausgabe: den Schritt sehen, in dem es knallt
 
 Weil auf der V4 kein Debugger zur Verfügung steht, protokolliert das Programm
-jeden Transaktionsschritt. **Die Ausgabe ist standardmäßig an** und jede Zeile
-wird sofort geflusht — bei einem Absturz bleibt nichts im Puffer, und die
-**letzte Zeile benennt den Schritt, in dem es passiert ist.**
+jeden Transaktionsschritt. **Der Trace ist standardmäßig aus** (er kostet je
+Transaktion rund sieben Logzeilen und macht das Browsen langsam) und wird mit
+`-a` eingeschaltet. Jede Zeile wird sofort geflusht — bei einem Absturz bleibt
+nichts im Puffer, und die **letzte Zeile benennt den Schritt, in dem es
+passiert ist.** Hinter `cmd=0x..` steht der Befehl im Klartext, Zustände werden
+als `state=1 (SCANNING)` ausgegeben.
 
 ```sh
 Programs:test/v4_console        # Trace an, Logdatei an (Vorgabe)
@@ -411,13 +414,13 @@ Programs:test/v4_console -q     # still, nur die normalen Meldungen
 So sieht eine gesunde Transaktion aus:
 
 ```
-[trace] TX-Beginn    cmd=0x01 seq=  0 schreibe 32 Byte
-[trace] TX-Ende      cmd=0x01 seq=  0 rc=0
-[trace] Warten       cmd=0x01 seq=  0 2000 us warten
-[trace] RX-Beginn    cmd=0x01 seq=  0 lese 128 Byte ...
-[trace] RX-Ende      cmd=0x01 seq=  0 rc=0
-[trace] Pruefung     cmd=0x01 seq=  0 ok (status=0x00 len=12)
-[trace] Ergebnis     cmd=0x01 seq=  0 OK (status=0x00 len=12)
+[trace] TX-Beginn    cmd=0x01 (PING       ) seq=  0 schreibe 32 Byte
+[trace] TX-Ende      cmd=0x01 (PING       ) seq=  0 rc=0
+[trace] Warten       cmd=0x01 (PING       ) seq=  0 2000 us warten
+[trace] RX-Beginn    cmd=0x01 (PING       ) seq=  0 lese 128 Byte ...
+[trace] RX-Ende      cmd=0x01 (PING       ) seq=  0 rc=0
+[trace] Pruefung     cmd=0x01 (PING       ) seq=  0 ok (status=0x00 len=12)
+[trace] Ergebnis     cmd=0x01 (PING       ) seq=  0 OK (status=0x00 len=12)
 ```
 
 Die Ereignisse und was sie bedeuten:
@@ -601,6 +604,32 @@ Größe und Ergebnis — so sieht man sofort, ob der Pfad trägt. Meldet der Sla
 und protokolliert beide Ergebnisse; damit fällt auf, welche Form der Slave
 erwartet. Bis zu 512 Einträge je Verzeichnis werden gehalten (danach meldet die
 Liste „abgeschnitten"); die Liste kommt aus dem Heap, nicht vom Stack.
+
+## Verbindung prüfen: Zustand allein reicht nicht
+
+Im Hardwarelauf war das Headset **ausgeschaltet**, und das Programm meldete
+trotzdem „Verbunden mit Index 1"; am Ende kam `DISCONNECT: BAD_STATE`. Deshalb
+prüft `v4_console` nach `CONNECT` genauer:
+
+1. Es pollt `GET_STATUS`, bis `CONNECTED` (oder `IDLE`) kommt, höchstens 200
+   Runden — und vergleicht **`conn_index` mit dem gewählten Index**.
+2. Danach liest es den Zustand erneut und zeigt ihn im Klartext samt
+   `audio_flags`:
+
+```
+Verbunden mit Index 0 (CONNECTED).
+Status: state=3 (CONNECTED) conn_index=0 audio_flags=0x00 (kein A2DP)
+WARNUNG: verbunden, aber kein A2DP-Stream -- ist das Headset eingeschaltet?
+```
+
+3. `DISCONNECT` wird nur noch gesendet, wenn der Zustand wirklich `CONNECTED`
+   ist; sonst steht dort `Kein DISCONNECT noetig: state=1 (SCANNING).` statt
+   eines irreführenden `BAD_STATE`.
+
+Beide Fehlerfälle sind als Smoketests festgenagelt (Szenario 8: Verbindung wird
+nie bestätigt; Szenario 9: verbunden ohne A2DP-Stream) — gesteuert über die
+Mock-Knöpfe `V4_SMOKE_CONNECT_ROUNDS` und `V4_SMOKE_NO_AUDIO` in
+`tests/smoke_console.c`.
 
 ## Feldnachweis: der erste durchgelaufene Lauf
 
