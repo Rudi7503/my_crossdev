@@ -89,6 +89,7 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
 | i2c.library direkt: `ReceiveI2C`/`SendI2C` an 0xA0 | `v4_probe` 6d/6e | grün, beide `0x000000FF` = OK |
 | `v4_plat_delay_us` (Träger von `t_wait`) auf Hardware | `v4_probe` 7a | grün, kein Hänger mehr |
 | **PING gegen den ESP32-Slave** | `v4_probe` 7 | **OK** |
+| **Wiedergabe von der SD-Karte zum Headset** | `v4_console` auf der V4 | **PLAY_FILE OK, `audio_flags=0x03` (A2DP + SD-Wiedergabe)**, Mitschnitt `tests/field-log-v4-console-play.txt` |
 | Slave-Angaben aus dem PING | `v4_probe` 7 | `proto=3 fw=2 write=32 read=128 chunk=128` — **passt zum 128-Byte-Format** |
 
 ### Was NICHT geprüft ist — bitte vor dem Hardwareeinsatz lesen
@@ -723,6 +724,41 @@ DIR: NO_HANDLE
 `m` setzt vorher `SD_MOUNT` neu auf; nach einem Fehler geht es in die Wurzel
 zurück, damit ein kaputter Unterordner nicht die ganze Sitzung blockiert.
 
+## Feldnachweis: Wiedergabe läuft
+
+Der Mitschnitt `tests/field-log-v4-console-play.txt` zeigt die erste
+vollständige Wiedergabe über die ganze Kette — Amiga → I²C → ESP32 → Bluetooth:
+
+```
+Bereits verbunden: Index unbekannt (CONNECTED), audio_flags=0x01 (A2DP)
+(w)eiter damit, (r) neu suchen, (t)rennen, (q)ende: t     ← getrennt und neu verbunden
+Geraete: 2
+  [ 1] G435 Bluetooth Gaming Headset    40:58:99:5E:EE:4F
+Verbunden mit Index 1 (CONNECTED).
+Status: state=3 (CONNECTED) conn_index=1 audio_flags=0x01 (A2DP )
+SD_MOUNT: OK
+
+-- Dateien --
+Pfad: /
+Seite 1/4 -- 72 von 72 Eintraegen
+  [  0] AUDIO     4630501  test.mp3
+  [  1] AUDIO       75531  test2.mp3
+  [  2] AUDIO      264644  test_tone_440.wav
+  [  3] <DIR>           0  Amiga Server/
+  ...
+Gewaehlt: test2.mp3 (75531 Byte laut Liste) -- abspielbar
+Oeffnen: OK, 75531 Byte
+PLAY_FILE: OK
+sd: mounted=1 card_present=1  audio_flags=0x03 (A2DP SD-Wiedergabe)
+Wiedergabe laeuft -- Enter zum Stoppen ...STOP_PLAY: OK
+DISCONNECT: OK
+```
+
+Damit ist die Kette vom Dateibrowser auf der V4 bis zum Ton im Headset belegt:
+Verzeichnis lesen, Datei öffnen, `PLAY_FILE`, `audio_flags` wechselt auf
+`0x03` (A2DP **und** SD-Wiedergabe), `STOP_PLAY` fällt auf `0x01` (nur A2DP)
+zurück, `DISCONNECT` räumt auf.
+
 ## Wenn die Antworten streuen: `-w` und `-r`
 
 Im Feld scheiterten einzelne Antworten am Framing (`falsche Magic`), während der
@@ -733,6 +769,11 @@ nur gelegentlich einen unbrauchbaren Rahmen. Zwei Stellschrauben dagegen:
   Untergrenze).
 * **`-r <n>`** — mehr Versuche je Transaktion (Vorgabe 4). Eine Verzeichnisliste
   ist ein Dutzend Transaktionen; ein einziger erschöpfter Versuch beendet sie.
+* **Automatisch:** liefert der Slave einen unbrauchbaren Rahmen, **verdoppelt
+  der Master die Wartezeit für den nächsten Versuch** (bis 100 ms) — genau das
+  half im Feld. Der erste Versuch bleibt bei `t_wait`, damit die Regel R3
+  eingehalten ist; die Tests nageln die Verdopplung fest
+  (`test_master.c`, Fall „bei Framing-Wiederholungen wird jedes Mal gewartet").
 
 Wichtig für die Deutung: bleibt `retries` im Kurzbericht über mehrere Fehler
 **gleich**, war das Framing in Ordnung und der Slave hat geantwortet — dann ist

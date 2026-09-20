@@ -1,0 +1,129 @@
+(K) Log: Open zurueck, rc=0
+Logdatei: Programs:test/v4_console.log
+(K) Log: erster Schreibvorgang ok
+I2C-Master fuer den ESP32-Slave (Proto v3)
+========================================
+Trace: aus (mit -a einschaltbar), t_wait=10000 us
+[trace] oeffne I2C-Bus (Standard) ...
+PING ok: proto=3 fw=2 write=32 read=128 bulk_max=1024 chunk=128
+
+-- Zustand --
+state=3 (CONNECTED) conn_index=0xFF dev_count=1 scan_active=1
+sd: mounted=1 card_present=1  audio_flags=0x01 (A2DP )
+scan_gen=2 free=58702602 kB chunk=128
+
+Bereits verbunden: Index unbekannt (CONNECTED), audio_flags=0x01 (A2DP)
+(w)eiter damit, (r) neu suchen, (t)rennen, (q)ende: DISCONNECT: OK
+
+-- Scan --
+Suche Bluetooth-Geraete 
+Geraete: 1
+  [ 0] SMA015d SN: 2110591443 SN2110591443 00:80:25:2D:DE:E4
+
+Geraeteindex zum Verbinden (0-0, 'r' = neu suchen, 'q' = Ende): Suche Bluetooth-Geraete 
+Geraete: 2
+  [ 0] SMA015d SN: 2110591443 SN2110591443 00:80:25:2D:DE:E4
+  [ 1] G435 Bluetooth Gaming Headset    40:58:99:5E:EE:4F
+
+Geraeteindex zum Verbinden (0-1, 'r' = neu suchen, 'q' = Ende): 
+-- Verbinden --
+CONNECT gesendet, warte auf CONNECTED (hoechstens 45 s) ...................
+Verbunden mit Index 1 (CONNECTED).
+Status: state=3 (CONNECTED) conn_index=1 audio_flags=0x01 (A2DP )
+
+-- SD-Karte --
+SD_MOUNT: OK
+
+-- Dateien --
+Pfad: /
+
+Seite 1/4 -- 72 von 72 Eintraegen
+  [  0] AUDIO     4630501  test.mp3
+  [  1] AUDIO       75531  test2.mp3
+  [  2] AUDIO      264644  test_tone_440.wav
+  [  3] <DIR>           0  Amiga Server/
+  [  4] <DIR>           0  Copy_of_Glubble/
+  [  5] <DIR>           0  FOUND.000/
+  [  6] <DIR>           0  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)/
+  [  7] <DIR>           0  Glubble/
+  [  8] <DIR>           0  Settlers2/
+  [  9] <DIR>           0  Settlers2_Digital_Version/
+  [ 10] <DIR>           0  System Volume Information/
+  [ 11] <DIR>           0  webroot/
+  [ 12] <DIR>           0  WHDLoad/
+  [ 13] Datei      576794  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2).zip
+  [ 14] Datei      901120  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)[a2].adf
+  [ 15] Datei      577367  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)[a2].zip
+  [ 16] Datei     1059705  GamesSummerEdition_v1.0.lha
+  [ 17] Datei      772778  GamesWinterEdition_v1.0.lha
+  [ 18] Datei          52  kick33180.A500.PAT
+  [ 19] Datei        3882  kick33180.A500.RTB
+Nummer = auswaehlen, n = weiter, p = zurueck, f = nur Abspielbares, u = hoch, r = Wurzel, Enter/q = Ende: 
+Gewaehlt: test.mp3 (4630501 Byte laut Liste) -- abspielbar
+Oeffnen: OK, 4630501 Byte
+(a)bsspielen, (l)esen/pruefen, (z)urueck, (q)ende: PLAY_FILE: LINK-Fehler (4 Versuche erfolglos)
+  letzte Pruefung: falsche Magic
+  Rahmen: tx=130 rx=130 retries=18 unsicher=18 busy=0 badcrc=0
+  Achtung: 1 moegliche Handle-Lecks auf der Slave-Seite.
+  Busfehler: 0x000000FF (OK)
+  Die ersten Bytes sind keine gueltige Magic: entweder eine
+  Firmware mit 64-Byte-READ-Frame (proto 2) oder ein um einige
+  Bytes verschobener Antwortstrom.
+
+Seite 1/4 -- 72 von 72 Eintraegen
+  [  0] AUDIO     4630501  test.mp3
+  [  1] AUDIO       75531  test2.mp3
+  [  2] AUDIO      264644  test_tone_440.wav
+  [  3] <DIR>           0  Amiga Server/
+  [  4] <DIR>           0  Copy_of_Glubble/
+  [  5] <DIR>           0  FOUND.000/
+  [  6] <DIR>           0  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)/
+  [  7] <DIR>           0  Glubble/
+  [  8] <DIR>           0  Settlers2/
+  [  9] <DIR>           0  Settlers2_Digital_Version/
+  [ 10] <DIR>           0  System Volume Information/
+  [ 11] <DIR>           0  webroot/
+  [ 12] <DIR>           0  WHDLoad/
+  [ 13] Datei      576794  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2).zip
+  [ 14] Datei      901120  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)[a2].adf
+  [ 15] Datei      577367  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)[a2].zip
+  [ 16] Datei     1059705  GamesSummerEdition_v1.0.lha
+  [ 17] Datei      772778  GamesWinterEdition_v1.0.lha
+  [ 18] Datei          52  kick33180.A500.PAT
+  [ 19] Datei        3882  kick33180.A500.RTB
+Nummer = auswaehlen, n = weiter, p = zurueck, f = nur Abspielbares, u = hoch, r = Wurzel, Enter/q = Ende: 
+Gewaehlt: test2.mp3 (75531 Byte laut Liste) -- abspielbar
+Oeffnen: OK, 75531 Byte
+(a)bsspielen, (l)esen/pruefen, (z)urueck, (q)ende: PLAY_FILE: OK
+state=3 (CONNECTED) conn_index=0x01 dev_count=2 scan_active=1
+sd: mounted=1 card_present=1  audio_flags=0x03 (A2DP SD-Wiedergabe)
+scan_gen=3 free=58702602 kB chunk=128
+Wiedergabe laeuft -- Enter zum Stoppen ...STOP_PLAY: OK
+state=3 (CONNECTED) conn_index=0x01 dev_count=2 scan_active=1
+sd: mounted=1 card_present=1  audio_flags=0x01 (A2DP )
+scan_gen=3 free=58702602 kB chunk=128
+
+Seite 1/4 -- 72 von 72 Eintraegen
+  [  0] AUDIO     4630501  test.mp3
+  [  1] AUDIO       75531  test2.mp3
+  [  2] AUDIO      264644  test_tone_440.wav
+  [  3] <DIR>           0  Amiga Server/
+  [  4] <DIR>           0  Copy_of_Glubble/
+  [  5] <DIR>           0  FOUND.000/
+  [  6] <DIR>           0  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)/
+  [  7] <DIR>           0  Glubble/
+  [  8] <DIR>           0  Settlers2/
+  [  9] <DIR>           0  Settlers2_Digital_Version/
+  [ 10] <DIR>           0  System Volume Information/
+  [ 11] <DIR>           0  webroot/
+  [ 12] <DIR>           0  WHDLoad/
+  [ 13] Datei      576794  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2).zip
+  [ 14] Datei      901120  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)[a2].adf
+  [ 15] Datei      577367  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)[a2].zip
+  [ 16] Datei     1059705  GamesSummerEdition_v1.0.lha
+  [ 17] Datei      772778  GamesWinterEdition_v1.0.lha
+  [ 18] Datei          52  kick33180.A500.PAT
+  [ 19] Datei        3882  kick33180.A500.RTB
+Nummer = auswaehlen, n = weiter, p = zurueck, f = nur Abspielbares, u = hoch, r = Wurzel, Enter/q = Ende: 
+-- Trennen --
+DISCONNECT: OK

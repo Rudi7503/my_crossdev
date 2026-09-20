@@ -26,6 +26,22 @@
 #define V4_T_WAIT_US        2000u   /* zwischen Schreiben und Lesen        */
 #define V4_T_BUSY_US        2000u   /* vor dem erneuten Senden bei BUSY    */
 #define V4_RETRIES          4       /* Versuche bei Framing-/Link-Fehler   */
+/* Obergrenze fuer die verlaengerte Wartezeit im Wiederholungsfall: liefert der
+ * Slave einen unbrauchbaren Rahmen, bekommt er beim naechsten Versuch mehr Zeit
+ * (Verdopplung ab t_wait). R3 nennt eine Untergrenze -- laenger warten ist
+ * erlaubt, und im Feld brauchte der ESP32 deutlich mehr als 2000 us. */
+#define V4_T_WAIT_RETRY_MAX_US 100000u
+
+/* Verdoppelt die Wartezeit bis zur Obergrenze (siehe oben). */
+#define V4_WAIT_BACKOFF(w)                                                   \
+    do {                                                                     \
+        if ((w) < V4_T_WAIT_RETRY_MAX_US) {                                  \
+            (w) *= 2u;                                                       \
+            if ((w) > V4_T_WAIT_RETRY_MAX_US) {                              \
+                (w) = V4_T_WAIT_RETRY_MAX_US;                                \
+            }                                                                \
+        }                                                                    \
+    } while (0)
 #define V4_BUSY_TRIES       40      /* ≈ 80 ms pro Befehl                  */
 #define V4_BADCRC_TRIES     4       /* Klarstellung, siehe README, Abschnitt
                                      * "Abweichungen und Klaerungen", Punkt 2 */

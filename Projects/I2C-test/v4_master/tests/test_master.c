@@ -962,9 +962,14 @@ static void test_helpers(void)
 
 /*
  * R3 (§1.3) und §1.4 als pruefbare Invariante: pro abgesetztem WRITE-Frame
- * genau eine Wartezeit t_wait vor dem Lesen, pro BUSY- und pro
- * BAD_CRC-Runde zusaetzlich t_busy. Ein Master ohne Wartezeit oder mit
- * falscher Wartezeit faellt hier durch.
+ * eine Wartezeit vor dem Lesen (mindestens t_wait), pro BUSY- und pro
+ * BAD_CRC-Runde zusaetzlich t_busy. Ein Master ohne Wartezeit oder mit zu
+ * kleiner Wartezeit faellt hier durch.
+ *
+ * Die Wartezeit ist eine UNTERGRENZE, keine Gleichung: liefert der Slave einen
+ * unbrauchbaren Rahmen, verdoppelt der Master die Wartezeit fuer den naechsten
+ * Versuch (bis V4_T_WAIT_RETRY_MAX_US). Im Feld brauchte der ESP32 deutlich
+ * mehr als 2000 us -- die Zahl der Warteaufrufe bleibt trotzdem exakt.
  */
 static void check_delay_invariant(const v4_master_t *m,
                                   unsigned long d0, unsigned long u0,
@@ -976,8 +981,8 @@ static void check_delay_invariant(const v4_master_t *m,
     unsigned long dcrc  = m->badcrc_rounds - crc0;
 
     CHECK_EQ(v4_mock.delay_calls - d0, dtx + dbusy + dcrc);
-    CHECK_EQ(v4_mock.delay_us - u0,
-             dtx * (unsigned long)V4_T_WAIT_US
+    CHECK(v4_mock.delay_us - u0
+          >= dtx * (unsigned long)V4_T_WAIT_US
              + (dbusy + dcrc) * (unsigned long)V4_T_BUSY_US);
 }
 
@@ -1209,6 +1214,11 @@ static void test_spec_pinning(void)
     CHECK(M.badcrc_rounds >= crc0);          /* CRC-Pfad, nicht BUSY */
     check_delay_invariant(&M, d0, u0, tx0, busy0, crc0);
     CHECK_EQ(M.retries, 1ul);
+    /* Und die Verlaengerung ausdruecklich: 1. Versuch t_wait, 2. Versuch
+     * 2*t_wait -- der Slave bekommt nach einem unbrauchbaren Rahmen mehr
+     * Zeit (V4_WAIT_BACKOFF, im Feld brauchte der ESP32 sie). */
+    CHECK_EQ(v4_mock.delay_us - u0,
+             1ul * V4_T_WAIT_US + 2ul * V4_T_WAIT_US);
 
     v4_test_case("R3/§1.4: BUSY-Runden kosten t_busy zusaetzlich");
     fresh();

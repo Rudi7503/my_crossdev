@@ -88,8 +88,9 @@ uint8_t v4_transact_n(v4_master_t *m, uint8_t cmd,
     }
 
     for (;;) {
-        int attempt;
-        int got = 0;
+        int      attempt;
+        int      got  = 0;
+        uint32_t wait = m->t_wait_us;   /* waechst bei Framing-Fehlern */
 
         /* Wiederholungen bei Link- und Framing-Fehlern: SEQ bleibt stehen. */
         for (attempt = 0; (unsigned)attempt < m->try_max; attempt++) {
@@ -111,13 +112,14 @@ uint8_t v4_transact_n(v4_master_t *m, uint8_t cmd,
                     m->retries++;
                     v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, wrc, 0u,
                              NULL);
+                    V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
                     continue;
                 }
             }
 
             /* R3: vor jedem Lesen warten -- der Slave kann nicht stretchen. */
-            v4_trace(m, V4_TR_WAIT, cmd, m->seq, 0u, 0u, 0, m->t_wait_us, NULL);
-            v4_plat_delay_us(m->t_wait_us);
+            v4_trace(m, V4_TR_WAIT, cmd, m->seq, 0u, 0u, 0, wait, NULL);
+            v4_plat_delay_us(wait);
 
             v4_trace(m, V4_TR_RX_BEGIN, cmd, m->seq, 0u,
                      (uint16_t)V4P_READ_FRAME_LEN, 0, 0u, NULL);
@@ -134,6 +136,7 @@ uint8_t v4_transact_n(v4_master_t *m, uint8_t cmd,
                     m->unsafe_retries++;
                     v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, rrc, 0u,
                              NULL);
+                    V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
                     continue;
                 }
             }
@@ -150,6 +153,7 @@ uint8_t v4_transact_n(v4_master_t *m, uint8_t cmd,
                 m->retries++;
                 m->unsafe_retries++;
                 v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, rc, 0u, NULL);
+                V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
                 continue;
             }
             got = 1;
@@ -238,8 +242,9 @@ uint8_t v4_transact_bulk(v4_master_t *m, uint8_t cmd,
     rlen   = (uint16_t)(V4P_BULK_OVERHEAD + m->chunk);
 
     for (;;) {
-        int attempt;
-        int got = 0;
+        int      attempt;
+        int      got  = 0;
+        uint32_t wait = m->t_wait_us;   /* waechst bei Framing-Fehlern */
 
         for (attempt = 0; (unsigned)attempt < m->try_max; attempt++) {
             int rc;
@@ -259,12 +264,13 @@ uint8_t v4_transact_bulk(v4_master_t *m, uint8_t cmd,
                 if (wrc != 0) {
                     m->retries++;
                     v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, wrc, 0u, NULL);
+                    V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
                     continue;
                 }
             }
 
-            v4_trace(m, V4_TR_WAIT, cmd, m->seq, 0u, 0u, 0, m->t_wait_us, NULL);
-            v4_plat_delay_us(m->t_wait_us);
+            v4_trace(m, V4_TR_WAIT, cmd, m->seq, 0u, 0u, 0, wait, NULL);
+            v4_plat_delay_us(wait);
 
             /* R2: konstante Laenge -- auch der letzte, kurze Block ist
              * aufgefuellt, damit nie ueber das Ende gelesen wird. */
@@ -277,6 +283,7 @@ uint8_t v4_transact_bulk(v4_master_t *m, uint8_t cmd,
                     m->unsafe_retries++;
                     v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, rrc, 0u,
                              NULL);
+                    V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
                     continue;
                 }
             }
@@ -293,6 +300,7 @@ uint8_t v4_transact_bulk(v4_master_t *m, uint8_t cmd,
                 m->retries++;
                 m->unsafe_retries++;
                 v4_trace(m, V4_TR_RETRY, cmd, m->seq, 0u, 0u, rc, 0u, NULL);
+                V4_WAIT_BACKOFF(wait);   /* dem Slave mehr Zeit geben */
                 continue;
             }
             got = 1;
@@ -1125,7 +1133,7 @@ const char *v4_strerror(uint8_t code)
     case V4P_ST_TOO_LONG:  return "TOO_LONG";
     case V4P_ST_NO_HANDLE: return "NO_HANDLE";
     case V4P_ST_BT_ERR:    return "BT_ERR";
-    case V4_ERR_LINK:      return "LINK-Fehler (4 Versuche erfolglos)";
+    case V4_ERR_LINK:      return "LINK-Fehler (keine gueltige Antwort)";
     case V4_ERR_BUSY:      return "BUSY-Zeitbudget erschoepft (40 Versuche)";
     case V4_ERR_ARG:       return "ungueltiges Argument";
     case V4_ERR_FRAME:     return "Antwort gueltig, Nutzlast zu kurz";
