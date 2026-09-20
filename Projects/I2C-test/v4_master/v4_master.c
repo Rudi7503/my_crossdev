@@ -47,6 +47,7 @@ void v4_init(v4_master_t *m)
     }
     memset(m, 0, sizeof(*m));
     m->seq        = 0u;
+    m->try_max    = V4_RETRIES;     /* Versuche bei Framingfehlern */
     m->t_wait_us  = V4_T_WAIT_US;   /* R3: Wartezeit vor dem Lesen */
     m->chunk      = V4P_CHUNK_DEFAULT;
     m->path_valid = 1u;     /* leerer Spiegel ist gueltig: L=0 = Wurzel */
@@ -91,7 +92,7 @@ uint8_t v4_transact_n(v4_master_t *m, uint8_t cmd,
         int got = 0;
 
         /* Wiederholungen bei Link- und Framing-Fehlern: SEQ bleibt stehen. */
-        for (attempt = 0; attempt < V4_RETRIES; attempt++) {
+        for (attempt = 0; (unsigned)attempt < m->try_max; attempt++) {
             int rc;
 
             if (v4p_build_write(wf, cmd, m->seq, payload, len) != 0) {
@@ -240,7 +241,7 @@ uint8_t v4_transact_bulk(v4_master_t *m, uint8_t cmd,
         int attempt;
         int got = 0;
 
-        for (attempt = 0; attempt < V4_RETRIES; attempt++) {
+        for (attempt = 0; (unsigned)attempt < m->try_max; attempt++) {
             int rc;
 
             if (v4p_build_write(wf, cmd, m->seq, payload, len) != 0) {

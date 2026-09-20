@@ -286,6 +286,9 @@ smoke: $(BUILD)/v4_console_smoke
 	printf 'q\n' | ./$(BUILD)/v4_console_smoke -w 20000 > $(BUILD)/smoke15.txt 2>&1 || fail=1; \
 	grep -q "t_wait=20000 us" $(BUILD)/smoke15.txt \
 	    || { echo "  FEHLER: -w wirkt nicht"; fail=1; }; \
+	printf 'q\n' | ./$(BUILD)/v4_console_smoke -r 8 > $(BUILD)/smoke17.txt 2>&1 || fail=1; \
+	grep -q "Unbekannter Schalter" $(BUILD)/smoke17.txt \
+	    && { echo "  FEHLER: -r wird nicht akzeptiert"; fail=1; }; \
 	grep -q -- "-o braucht einen Pfad" $(BUILD)/smoke8.txt \
 	    || { echo "  FEHLER: Meldung zu -o ohne Pfad fehlt"; fail=1; }; \
 	echo "== Smoke 7: Browser-Navigation (n/p/u/r) =="; \

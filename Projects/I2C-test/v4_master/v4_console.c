@@ -34,6 +34,7 @@ static int         g_use_log    = 1;   /* 1 Vorgabe: Logdatei an, 0 mit -n,
 static int         g_settle     = 0;   /* -t <ticks>: Wartezeit je Logzeile */
 static int         g_wait_us    = 0;   /* -w <us>: t_wait, 0 = Vorgabe (R3) */
 static int         g_connect_s  = 45;  /* -c <s>: Wartezeit auf CONNECTED */
+static int         g_try_max    = 0;   /* -n <zahl>: Versuche, 0 = Vorgabe */
 static const char *g_log_path   = NULL;
 
 static void v4_msg(const char *fmt, ...)
@@ -394,6 +395,12 @@ static int parse_args(int argc, char **argv, const char **dev_out)
                 g_trace = 0;                /* still (ist die Vorgabe) */
             } else if (argv[i][1] == 'x') {
                 g_hex = 1;                  /* Antwortbytes zeigen */
+            } else if (argv[i][1] == 'r') {
+                if (i + 1 >= argc) {
+                    v4_msg("-r braucht die Versuchszahl, z.B. -r 8\n");
+                    return 5;
+                }
+                g_try_max = atoi(argv[++i]);    /* Versuche je Transaktion */
             } else if (argv[i][1] == 'c') {
                 if (i + 1 >= argc) {
                     v4_msg("-c braucht Sekunden, z.B. -c 60\n");
@@ -424,7 +431,8 @@ static int parse_args(int argc, char **argv, const char **dev_out)
                 g_use_log  = 2;          /* ausdruecklicher Pfad */
             } else {
                 v4_msg("Unbekannter Schalter '%s' (erlaubt: -a -q -x -n "
-                       "-o <pfad> -t <ticks> -w <us> -c <s>)\n", argv[i]);
+                       "-o <pfad> -t <ticks> -w <us> -c <s> -r <versuche>)\n",
+                       argv[i]);
                 return 5;
             }
         } else if (dev == NULL) {
@@ -700,15 +708,47 @@ static void browse_files(v4_master_t *m)
             /* Im Feld kam hier "DIR: NO_HANDLE" vom Slave -- transient. Also
              * nicht das Programm beenden, sondern fragen. */
             print_failure(m, "DIR", rc);
+            free(l.ent);
+            if (dir[0] != '\0') {
+                dir[0] = '\0';         /* nach einem Fehler in die Wurzel */
+                v4_msg("(zurueck in die Wurzel)\n");
+            }
+            if (rc == V4P_ST_NO_HANDLE) {
+                /* Haeufigste Ursache im Feld: die Karte ist nicht eingerichtet,
+                 * weil SD_MOUNT vorher am Framing gescheitert ist. Deshalb
+                 * hier nachholen statt zu fragen. */
+                unsigned k;
+
+                for (k = 0u; k < 3u; k++) {
+                    rc = v4_sd_mount_wait(m, 50u);
+                    v4_msg("SD_MOUNT (nachgeholt): %s\n", v4_strerror(rc));
+                    if (rc == V4P_ST_OK) {
+                        break;
+                    }
+                }
+                if (rc != V4P_ST_OK) {
+                    v4_msg("  Ohne eingerichtete Karte kann der Slave keine "
+                           "Verzeichnisse\n  oeffnen. Hilft mehr Wartezeit vor "
+                           "dem Lesen (-w) oder mehr\n  Versuche je Transaktion "
+                           "(-r)?\n");
+                }
+                continue;               /* Liste neu holen */
+            }
             v4_msg("(r) nochmal, (m) SD-Karte neu einbinden, (q)ende: ");
             fflush(stdout);
-            free(l.ent);
             if (fgets(line, sizeof(line), stdin) == NULL) {
                 return;
             }
             if (line[0] == 'm' || line[0] == 'M') {
-                rc = v4_sd_mount_wait(m, 50u);
-                v4_msg("SD_MOUNT: %s\n", v4_strerror(rc));
+                unsigned k;
+
+                for (k = 0u; k < 3u; k++) {
+                    rc = v4_sd_mount_wait(m, 50u);
+                    v4_msg("SD_MOUNT: %s\n", v4_strerror(rc));
+                    if (rc == V4P_ST_OK) {
+                        break;
+                    }
+                }
             } else if (line[0] != 'r' && line[0] != 'R') {
                 return;
             }
@@ -951,6 +991,11 @@ static int console_run(const char *dev)
      * v4_open() stehen, weil v4_init() die Struktur nullt. */
     m.trace     = console_trace;
     m.trace_ctx = NULL;
+    if (g_try_max > 0) {
+        /* Die Antwortbereitschaft des Slaves streut; mehr Versuche je
+         * Transaktion machen eine Verzeichnisliste robuster. */
+        m.try_max = (unsigned)g_try_max;
+    }
     if (g_wait_us > 0) {
         /* R3 verlangt eine Wartezeit VOR jedem Lesen; die Untergrenze steht in
          * der Spezifikation, laenger warten ist erlaubt. Im Feld hat sich
@@ -997,8 +1042,13 @@ static int console_run(const char *dev)
      * Programmstarts hinweg -- dann muss man nicht wieder durch die
      * Geraeteliste. */
     if (st.state == V4P_STATE_CONNECTED) {
-        v4_msg("\nBereits verbunden: Index %u (%s), audio_flags=0x%02X%s\n",
-               (unsigned)st.conn_index, state_name(st.state),
+        v4_msg("\nBereits verbunden: ");
+        if (st.conn_index == 0xFFu) {
+            v4_msg("Index unbekannt");  /* Slave hat den Index nicht behalten */
+        } else {
+            v4_msg("Index %u", (unsigned)st.conn_index);
+        }
+        v4_msg(" (%s), audio_flags=0x%02X%s\n", state_name(st.state),
                (unsigned)st.audio_flags,
                ((st.audio_flags & V4P_AUDIO_A2DP_STREAMING) != 0u)
                    ? " (A2DP)" : "");
@@ -1247,11 +1297,18 @@ static int console_run(const char *dev)
     }
 
     v4_msg("\n-- SD-Karte --\n");
-    rc = v4_sd_mount_wait(&m, 50u);
-    if (rc == V4P_ST_OK) {
-        v4_msg("SD_MOUNT: %s\n", v4_strerror(rc));
-    } else {
-        print_failure(&m, "SD_MOUNT", rc);
+    {
+        int k;
+
+        for (k = 0; k < 3; k++) {
+            rc = v4_sd_mount_wait(&m, 50u);
+            if (rc == V4P_ST_OK) {
+                v4_msg("SD_MOUNT: %s\n", v4_strerror(rc));
+                break;
+            }
+            print_failure(&m, "SD_MOUNT", rc);
+            v4_msg("  neuer Versuch ...\n");
+        }
     }
     if (rc == V4P_ST_OK) {
         if (g_diag != 0) {

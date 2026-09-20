@@ -48,6 +48,7 @@ Programs:test/v4_console -o ram:lauf.log   # anderer Logpfad
 Programs:test/v4_console -t 50    # 1 s Wartezeit je Logzeile (Absturzfahrt)
 Programs:test/v4_console -w 20000 # t_wait vor dem Lesen (Vorgabe 2000 us, R3)
 Programs:test/v4_console -c 90    # auf CONNECTED warten (Vorgabe 45 s)
+Programs:test/v4_console -r 8     # Versuche je Transaktion (Vorgabe 4, §5.1)
 
 # nach einem Absturz: Logdatei holen und ansehen
 make log
@@ -721,6 +722,24 @@ DIR: NO_HANDLE
 
 `m` setzt vorher `SD_MOUNT` neu auf; nach einem Fehler geht es in die Wurzel
 zurück, damit ein kaputter Unterordner nicht die ganze Sitzung blockiert.
+
+## Wenn die Antworten streuen: `-w` und `-r`
+
+Im Feld scheiterten einzelne Antworten am Framing (`falsche Magic`), während der
+Busfehler `0x000000FF` (OK) meldete — die Übertragung läuft, der Slave liefert
+nur gelegentlich einen unbrauchbaren Rahmen. Zwei Stellschrauben dagegen:
+
+* **`-w <us>`** — länger vor dem Lesen warten (Vorgabe 2000 µs, R3 ist eine
+  Untergrenze).
+* **`-r <n>`** — mehr Versuche je Transaktion (Vorgabe 4). Eine Verzeichnisliste
+  ist ein Dutzend Transaktionen; ein einziger erschöpfter Versuch beendet sie.
+
+Wichtig für die Deutung: bleibt `retries` im Kurzbericht über mehrere Fehler
+**gleich**, war das Framing in Ordnung und der Slave hat geantwortet — dann ist
+die Ursache auf der Slave-Seite (im Feld: `NO_HANDLE`, weil `SD_MOUNT` vorher am
+Framing gescheitert war und die Karte darum nicht eingerichtet ist). Genau
+deshalb holt das Programm bei `NO_HANDLE` das Einbinden selbst nach (bis zu
+dreimal) und listet danach neu auf.
 
 ## Ein Gerät in der Liste heißt nicht, dass es da ist
 

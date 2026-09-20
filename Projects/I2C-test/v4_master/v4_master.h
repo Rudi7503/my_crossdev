@@ -193,6 +193,11 @@ static inline int v4_i2c_err_is_ok(unsigned long err)
 
 typedef struct {
     uint8_t  seq;                       /* naechste Sequenznummer      */
+    unsigned try_max;                   /* Versuche je Transaktion bei
+                                         * Framing-/Linkfehler (Vorgabe
+                                         * V4_RETRIES; im Feld erhoehen, weil
+                                         * die Antwortbereitschaft des Slaves
+                                         * streut -- Schalter -n). */
     uint32_t t_wait_us;                 /* Wartezeit vor dem Lesen (R3).
                                          * Vorgabe V4_T_WAIT_US; im Feld
                                          * anpassbar (Schalter -w), weil die
