@@ -42,6 +42,10 @@ int main(int argc, char **argv)
         (void)v4_mock_add_file("MUSIC/C.OGG", pat, 64u);
     }
 
+    env = getenv("V4_SMOKE_ALREADY_CONNECTED");
+    if (env != NULL && env[0] != '\0') {
+        v4_mock_set_connected(atoi(env));
+    }
     env = getenv("V4_SMOKE_CONNECT_ROUNDS");
     if (env != NULL && env[0] != '\0') {
         v4_mock.connect_rounds = atoi(env);

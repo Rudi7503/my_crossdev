@@ -674,6 +674,31 @@ Zwei Konsequenzen:
    `GET_STATUS`, `SCAN_START`, `DEV_COUNT`, `CONNECT`, `SD_MOUNT` und
    `PLAY_FILE` den letzten Prüfgrund samt Rahmenbilanz.
 
+## Bestehende Verbindung weiterbenutzen
+
+Auf der Slave-Seite hält die Bluetooth-Verbindung über Programmstarts hinweg.
+`v4_console` fragt deshalb zuerst den Zustand ab; ist schon jemand verbunden,
+muss man nicht wieder durch die Geräteliste:
+
+```
+state=3 (CONNECTED) conn_index=0x01 dev_count=2 scan_active=1
+sd: mounted=1 card_present=1  audio_flags=0x01 (A2DP )
+
+Bereits verbunden: Index 1 (CONNECTED), audio_flags=0x01 (A2DP)
+(w)eiter damit, (r) neu suchen, (t)rennen, (q)ende: w
+```
+
+| Eingabe | Wirkung |
+|---|---|
+| `w` | bestehende Verbindung benutzen, direkt zur SD-Karte und in den Browser |
+| `r` | neu scannen und verbinden (wie unten) |
+| `t` | trennen und danach neu suchen |
+| `q` | Programm beenden |
+
+Damit entfällt der Umweg über die Geräteliste, wenn das Headset ohnehin noch
+verbunden ist — und `audio_flags=0x01 (A2DP)` zeigt sofort, dass die
+Audio-Strecke steht.
+
 ## Geräte suchen und auswählen
 
 Der Scan läuft auf der Slave-Seite asynchron. `v4_console` startet ihn, pollt

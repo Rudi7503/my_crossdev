@@ -88,6 +88,10 @@ void v4_mock_set_sd_playback(int playing);    /* Bit SD_PLAYBACK          */
 void v4_mock_end_playback(void);
 void v4_mock_bump_scan_gen(void);
 
+/* Zustand von aussen setzen: "es ist schon jemand verbunden" (Test des
+ * Bereits-verbunden-Zweigs im Konsolenprogramm). */
+void v4_mock_set_connected(int index);
+
 /* Simuliert einen Bus-Reset: halbe Antwort verwerfen, FIFO leeren.
  * Danach muss der naechste Befehl wieder saubere Daten liefern (§14.3). */
 void v4_mock_bus_reset(void);

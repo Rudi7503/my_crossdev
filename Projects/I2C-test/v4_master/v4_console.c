@@ -900,6 +900,7 @@ static int console_run(const char *dev)
     v4p_sdinfo_t si;
     uint8_t     count = 0u;
     uint8_t     rc;
+    int         need_connect = 1;   /* 0 = bestehende Verbindung nutzen */
     char        line[160];
 
     v4_msg("I2C-Master fuer den ESP32-Slave (Proto v%u)\n", V4P_PROTO_VER);
@@ -968,69 +969,16 @@ static int console_run(const char *dev)
         print_status(&st);
     }
 
-    v4_msg("\n-- Scan --\n");
-    for (;;) {
-        rc = v4_scan_start(&m, 8u, 1);
-        if (rc != V4P_ST_OK) {
-            print_failure(&m, "SCAN_START", rc);
-            v4_close();
-            return 10;
-        }
-
-        /* Das ist kein Diagnoseschritt, sondern noetig: der Scan laeuft auf der
-         * Slave-Seite asynchron. Ohne diese Warteschleife ist DEV_COUNT
-         * unmittelbar nach SCAN_START noch 0 -- genau das ist im Feld passiert
-         * ("Geraete: 0", "Keine Geraete -- Abbruch"). */
-        v4_msg("Suche Bluetooth-Geraete ");
-        fflush(stdout);
-        count = 0u;
-        for (i = 0; i < 40; i++) {              /* hoechstens 20 s */
-            rc = v4_dev_count(&m, &count);
-            if (rc == V4P_ST_OK && count > 0u) {
-                break;
-            }
-            if (rc != V4P_ST_OK && i >= 3) {
-                v4_msg("\n");
-                print_failure(&m, "DEV_COUNT", rc);
-                break;
-            }
-            v4_plat_delay_us(500000u);
-            v4_msg(".");
-            fflush(stdout);
-        }
-        v4_msg("\n");
-
-        rc = v4_dev_count(&m, &count);
-        if (rc != V4P_ST_OK) {
-            print_failure(&m, "DEV_COUNT", rc);
-            v4_close();
-            return 10;
-        }
-        v4_msg("Geraete: %u\n", (unsigned)count);
-        for (i = 0; i < (int)count; i++) {
-            v4p_dev_t d;
-
-            rc = v4_dev_get(&m, (uint8_t)i, &d);
-            if (rc == V4P_ST_OK) {
-                v4_msg("  [%2d] %-32s %02X:%02X:%02X:%02X:%02X:%02X\n", i,
-                       d.name, (unsigned)d.bda[0], (unsigned)d.bda[1],
-                       (unsigned)d.bda[2], (unsigned)d.bda[3],
-                       (unsigned)d.bda[4], (unsigned)d.bda[5]);
-            } else {
-                v4_msg("  [%2d] %s\n", i, v4_strerror(rc));
-            }
-        }
-        /* Auswahl: 'r' sucht neu (z.B. nachdem das Headset eingeschaltet
-         * wurde), 'q' beendet. Bei leerer Liste bleibt nur das. */
-        if (count == 0u) {
-            v4_msg("Keine Geraete gefunden.\n"
-                   "  Ist das Headset eingeschaltet und in Reichweite? Der Scan\n"
-                   "  laeuft dauerhaft -- sobald es auftaucht, steht es in der Liste.\n");
-            v4_msg("\n'[r]' = neu suchen, 'q' = Ende: ");
-        } else {
-            v4_msg("\nGeraeteindex zum Verbinden (0-%u, 'r' = neu suchen, "
-                   "'q' = Ende): ", (unsigned)(count - 1u));
-        }
+    /* Schon verbunden? Die Verbindung auf der Slave-Seite haelt ueber
+     * Programmstarts hinweg -- dann muss man nicht wieder durch die
+     * Geraeteliste. */
+    if (st.state == V4P_STATE_CONNECTED) {
+        v4_msg("\nBereits verbunden: Index %u (%s), audio_flags=0x%02X%s\n",
+               (unsigned)st.conn_index, state_name(st.state),
+               (unsigned)st.audio_flags,
+               ((st.audio_flags & V4P_AUDIO_A2DP_STREAMING) != 0u)
+                   ? " (A2DP)" : "");
+        v4_msg("(w)eiter damit, (r) neu suchen, (t)rennen, (q)ende: ");
         fflush(stdout);
         if (fgets(line, sizeof(line), stdin) == NULL) {
             v4_close();
@@ -1040,96 +988,180 @@ static int console_run(const char *dev)
             v4_close();
             return 0;
         }
-        if (line[0] == 'r' || line[0] == 'R') {
-            continue;                   /* neu scannen und neu auflisten */
+        if (line[0] == 'w' || line[0] == 'W') {
+            need_connect = 0;
+        } else if (line[0] == 't' || line[0] == 'T') {
+            rc = v4_disconnect(&m);
+            v4_msg("DISCONNECT: %s\n", v4_strerror(rc));
         }
-        if (count == 0u) {
-            v4_msg("Es gibt nichts auszuwaehlen -- 'r' sucht neu, "
-                   "'q' beendet.\n");
-            continue;
-        }
-        i = atoi(line);
-        if (i < 0 || i >= (int)count) {
-            v4_msg("Index %d liegt nicht zwischen 0 und %u.\n", i,
-                   (unsigned)(count - 1u));
-            continue;                   /* nochmal fragen */
-        }
-        break;                          /* Auswahl steht */
+        /* 'r' oder alles andere: normaler Ablauf */
     }
 
-    v4_msg("\n-- Verbinden --\n");
-    rc = v4_connect(&m, (uint8_t)i);
-    if (rc != V4P_ST_OK) {
-        /* Der Befehl kann den Slave trotzdem erreicht haben -- auf der
-         * fehlerhaften Seite steht unsere Antwortpruefung. Deshalb den Zustand
-         * fragen, statt sofort abzubrechen: im Feld hat das Headset verbunden,
-         * waehrend der Master LINK-Fehler meldete. */
-        print_failure(&m, "CONNECT", rc);
-        if (v4_get_status(&m, &st) == V4P_ST_OK
-            && (st.state == V4P_STATE_CONNECTING
-                || st.state == V4P_STATE_CONNECTED)) {
-            v4_msg("  Der Slave ist trotzdem in state=%u (%s) -- es wird "
-                   "weitergewartet.\n", (unsigned)st.state,
-                   state_name(st.state));
-        } else {
-            v4_close();
-            return 10;
-        }
-    }
-    {
-        int want = i;                   /* der eben gewaehlte Index */
-
-        v4_msg("CONNECT gesendet, warte auf state == CONNECTED ");
-        fflush(stdout);
-        for (i = 0; i < 200; i++) {
-            rc = v4_get_status(&m, &st);
+    if (need_connect != 0) {
+        v4_msg("\n-- Scan --\n");
+        for (;;) {
+            rc = v4_scan_start(&m, 8u, 1);
             if (rc != V4P_ST_OK) {
-                v4_msg("\nGET_STATUS: %s\n", v4_strerror(rc));
-                break;
+                print_failure(&m, "SCAN_START", rc);
+                v4_close();
+                return 10;
             }
-            if (st.state == V4P_STATE_CONNECTED
-                || st.state == V4P_STATE_IDLE) {
-                break;                  /* fertig oder abgebrochen */
-            }
-            v4_plat_delay_us(50000u);
-            if ((i % 20) == 19) {
-                v4_msg("[%s]", state_name(st.state));
-            } else {
+
+            /* Das ist kein Diagnoseschritt, sondern noetig: der Scan laeuft auf der
+             * Slave-Seite asynchron. Ohne diese Warteschleife ist DEV_COUNT
+             * unmittelbar nach SCAN_START noch 0 -- genau das ist im Feld passiert
+             * ("Geraete: 0", "Keine Geraete -- Abbruch"). */
+            v4_msg("Suche Bluetooth-Geraete ");
+            fflush(stdout);
+            count = 0u;
+            for (i = 0; i < 40; i++) {              /* hoechstens 20 s */
+                rc = v4_dev_count(&m, &count);
+                if (rc == V4P_ST_OK && count > 0u) {
+                    break;
+                }
+                if (rc != V4P_ST_OK && i >= 3) {
+                    v4_msg("\n");
+                    print_failure(&m, "DEV_COUNT", rc);
+                    break;
+                }
+                v4_plat_delay_us(500000u);
                 v4_msg(".");
+                fflush(stdout);
+            }
+            v4_msg("\n");
+
+            rc = v4_dev_count(&m, &count);
+            if (rc != V4P_ST_OK) {
+                print_failure(&m, "DEV_COUNT", rc);
+                v4_close();
+                return 10;
+            }
+            v4_msg("Geraete: %u\n", (unsigned)count);
+            for (i = 0; i < (int)count; i++) {
+                v4p_dev_t d;
+
+                rc = v4_dev_get(&m, (uint8_t)i, &d);
+                if (rc == V4P_ST_OK) {
+                    v4_msg("  [%2d] %-32s %02X:%02X:%02X:%02X:%02X:%02X\n", i,
+                           d.name, (unsigned)d.bda[0], (unsigned)d.bda[1],
+                           (unsigned)d.bda[2], (unsigned)d.bda[3],
+                           (unsigned)d.bda[4], (unsigned)d.bda[5]);
+                } else {
+                    v4_msg("  [%2d] %s\n", i, v4_strerror(rc));
+                }
+            }
+            /* Auswahl: 'r' sucht neu (z.B. nachdem das Headset eingeschaltet
+             * wurde), 'q' beendet. Bei leerer Liste bleibt nur das. */
+            if (count == 0u) {
+                v4_msg("Keine Geraete gefunden.\n"
+                       "  Ist das Headset eingeschaltet und in Reichweite? Der Scan\n"
+                       "  laeuft dauerhaft -- sobald es auftaucht, steht es in der Liste.\n");
+                v4_msg("\n'[r]' = neu suchen, 'q' = Ende: ");
+            } else {
+                v4_msg("\nGeraeteindex zum Verbinden (0-%u, 'r' = neu suchen, "
+                       "'q' = Ende): ", (unsigned)(count - 1u));
             }
             fflush(stdout);
+            if (fgets(line, sizeof(line), stdin) == NULL) {
+                v4_close();
+                return 0;
+            }
+            if (line[0] == 'q' || line[0] == 'Q') {
+                v4_close();
+                return 0;
+            }
+            if (line[0] == 'r' || line[0] == 'R') {
+                continue;                   /* neu scannen und neu auflisten */
+            }
+            if (count == 0u) {
+                v4_msg("Es gibt nichts auszuwaehlen -- 'r' sucht neu, "
+                       "'q' beendet.\n");
+                continue;
+            }
+            i = atoi(line);
+            if (i < 0 || i >= (int)count) {
+                v4_msg("Index %d liegt nicht zwischen 0 und %u.\n", i,
+                       (unsigned)(count - 1u));
+                continue;                   /* nochmal fragen */
+            }
+            break;                          /* Auswahl steht */
         }
-        v4_msg("\n");
 
-        /* Der Zustand allein sagt noch nichts: er muss zum gewaehlten Index
-         * passen, und die Audio-Strecke muss stehen. Ein ausgeschaltetes
-         * Headset liefert keinen A2DP-Stream. */
-        if (st.state == V4P_STATE_CONNECTED && st.conn_index == (uint8_t)want) {
-            v4_msg("Verbunden mit Index %u (%s).\n", (unsigned)st.conn_index,
-                   state_name(st.state));
-        } else if (st.state == V4P_STATE_CONNECTED) {
-            v4_msg("WARNUNG: Slave meldet CONNECTED, aber mit Index %u statt "
-                   "%d.\n", (unsigned)st.conn_index, want);
-        } else {
-            v4_msg("Verbindung NICHT bestaetigt: state=%u (%s) nach %d "
-                   "Abfragen.\n", (unsigned)st.state, state_name(st.state),
-                   i + 1);
-        }
-
-        if (v4_get_status(&m, &st) == V4P_ST_OK) {
-            v4_msg("Status: state=%u (%s) conn_index=%u audio_flags=0x%02X "
-                   "(%s%s)\n", (unsigned)st.state, state_name(st.state),
-                   (unsigned)st.conn_index, (unsigned)st.audio_flags,
-                   ((st.audio_flags & V4P_AUDIO_A2DP_STREAMING) != 0u)
-                       ? "A2DP " : "kein A2DP",
-                   ((st.audio_flags & V4P_AUDIO_SD_PLAYBACK) != 0u)
-                       ? "SD-Wiedergabe" : "");
-            if (st.state == V4P_STATE_CONNECTED
-                && (st.audio_flags & V4P_AUDIO_A2DP_STREAMING) == 0u) {
-                v4_msg("WARNUNG: verbunden, aber kein A2DP-Stream -- ist das "
-                       "Headset eingeschaltet?\n");
+        v4_msg("\n-- Verbinden --\n");
+        rc = v4_connect(&m, (uint8_t)i);
+        if (rc != V4P_ST_OK) {
+            /* Der Befehl kann den Slave trotzdem erreicht haben -- auf der
+             * fehlerhaften Seite steht unsere Antwortpruefung. Deshalb den Zustand
+             * fragen, statt sofort abzubrechen: im Feld hat das Headset verbunden,
+             * waehrend der Master LINK-Fehler meldete. */
+            print_failure(&m, "CONNECT", rc);
+            if (v4_get_status(&m, &st) == V4P_ST_OK
+                && (st.state == V4P_STATE_CONNECTING
+                    || st.state == V4P_STATE_CONNECTED)) {
+                v4_msg("  Der Slave ist trotzdem in state=%u (%s) -- es wird "
+                       "weitergewartet.\n", (unsigned)st.state,
+                       state_name(st.state));
+            } else {
+                v4_close();
+                return 10;
             }
         }
+        {
+            int want = i;                   /* der eben gewaehlte Index */
+
+            v4_msg("CONNECT gesendet, warte auf state == CONNECTED ");
+            fflush(stdout);
+            for (i = 0; i < 200; i++) {
+                rc = v4_get_status(&m, &st);
+                if (rc != V4P_ST_OK) {
+                    v4_msg("\nGET_STATUS: %s\n", v4_strerror(rc));
+                    break;
+                }
+                if (st.state == V4P_STATE_CONNECTED
+                    || st.state == V4P_STATE_IDLE) {
+                    break;                  /* fertig oder abgebrochen */
+                }
+                v4_plat_delay_us(50000u);
+                if ((i % 20) == 19) {
+                    v4_msg("[%s]", state_name(st.state));
+                } else {
+                    v4_msg(".");
+                }
+                fflush(stdout);
+            }
+            v4_msg("\n");
+
+            /* Der Zustand allein sagt noch nichts: er muss zum gewaehlten Index
+             * passen, und die Audio-Strecke muss stehen. Ein ausgeschaltetes
+             * Headset liefert keinen A2DP-Stream. */
+            if (st.state == V4P_STATE_CONNECTED && st.conn_index == (uint8_t)want) {
+                v4_msg("Verbunden mit Index %u (%s).\n", (unsigned)st.conn_index,
+                       state_name(st.state));
+            } else if (st.state == V4P_STATE_CONNECTED) {
+                v4_msg("WARNUNG: Slave meldet CONNECTED, aber mit Index %u statt "
+                       "%d.\n", (unsigned)st.conn_index, want);
+            } else {
+                v4_msg("Verbindung NICHT bestaetigt: state=%u (%s) nach %d "
+                       "Abfragen.\n", (unsigned)st.state, state_name(st.state),
+                       i + 1);
+            }
+
+            if (v4_get_status(&m, &st) == V4P_ST_OK) {
+                v4_msg("Status: state=%u (%s) conn_index=%u audio_flags=0x%02X "
+                       "(%s%s)\n", (unsigned)st.state, state_name(st.state),
+                       (unsigned)st.conn_index, (unsigned)st.audio_flags,
+                       ((st.audio_flags & V4P_AUDIO_A2DP_STREAMING) != 0u)
+                           ? "A2DP " : "kein A2DP",
+                       ((st.audio_flags & V4P_AUDIO_SD_PLAYBACK) != 0u)
+                           ? "SD-Wiedergabe" : "");
+                if (st.state == V4P_STATE_CONNECTED
+                    && (st.audio_flags & V4P_AUDIO_A2DP_STREAMING) == 0u) {
+                    v4_msg("WARNUNG: verbunden, aber kein A2DP-Stream -- ist das "
+                           "Headset eingeschaltet?\n");
+                }
+            }
+        }
+
     }
 
     v4_msg("\n-- SD-Karte --\n");

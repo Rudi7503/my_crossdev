@@ -316,7 +316,15 @@ smoke: $(BUILD)/v4_console_smoke
 	    || { echo "  FEHLER: Hinweis auf erneutes Suchen fehlt"; fail=1; }; \
 	test $$(grep -c "Geraete: 3" $(BUILD)/smoke14.txt) -ge 2 \
 	    || { echo "  FEHLER: nach 'r' wurde nicht neu aufgelistet"; fail=1; }; \
-	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (11 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
+	echo "== Smoke 12: bestehende Verbindung weiterbenutzen =="; \
+	printf 'w\nq\n' | env V4_SMOKE_ALREADY_CONNECTED=1 ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke16.txt 2>&1 || fail=1; \
+	grep -q "Bereits verbunden: Index 1 (CONNECTED)" $(BUILD)/smoke16.txt \
+	    || { echo "  FEHLER: bestehende Verbindung wird nicht erkannt"; fail=1; }; \
+	grep -q "(w)eiter damit, (r) neu suchen, (t)rennen, (q)ende" $(BUILD)/smoke16.txt \
+	    || { echo "  FEHLER: Auswahl zur bestehenden Verbindung fehlt"; fail=1; }; \
+	grep -q "Suche Bluetooth-Geraete" $(BUILD)/smoke16.txt \
+	    && { echo "  FEHLER: 'w' hat trotzdem neu gescannt"; fail=1; }; \
+	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (12 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
 
 # Alles, was ohne Hardware pruefbar ist.
 verify: lint selftest-lint test test-san smoke asm amiga check-no-moviw probe

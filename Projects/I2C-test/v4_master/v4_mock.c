@@ -1385,6 +1385,14 @@ void v4_mock_end_playback(void)
     s_audio_flags  = (uint8_t)(s_audio_flags & ~V4P_AUDIO_SD_PLAYBACK);
 }
 
+void v4_mock_set_connected(int index)
+{
+    s_state       = V4P_STATE_CONNECTED;
+    s_conn_index  = (uint8_t)index;
+    s_scan_active = 1;
+    s_scan_gen++;
+}
+
 void v4_mock_bump_scan_gen(void)
 {
     s_scan_gen++;
