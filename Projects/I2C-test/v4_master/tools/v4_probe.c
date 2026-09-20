@@ -121,6 +121,18 @@ static void probe_trace(const v4_trace_t *ev, void *ctx)
     }
 }
 
+/* Auf der echten CPU pruefen, was MOVIW.L mit dem oberen Wort macht. GCC
+ * erzeugt diese 68080-Form, wenn eine 16-Bit-Konstante in ein Long-Register
+ * soll -- genau bei Open(pfad, MODE_NEWFILE) mit 1006. Bleibt das obere Wort
+ * stehen, ist der Modus Muell. */
+static ULONG moviw_test(void)
+{
+    ULONG r = 0xFFFFFFFFul;             /* oberes Wort absichtlich gesetzt */
+
+    __asm__ __volatile__("moviw.l #1006,%0" : "+d"(r));
+    return r;
+}
+
 /* Rohe Hardware lesen, die die Apollo-Variante von i2c.library benutzt:
  *   $BFD000  CIA-B PRA -- die Library liest das Register als Verzoegerung
  *   $DE0080  Apollo-I2C-Datenregister (Bit0 = SDA, Bit1 = SCL)
@@ -163,6 +175,22 @@ int main(int argc, char **argv)
         }
     }
 
+    /* ---- 0: Logdatei zuerst -- damit auch Stack und DOSBase im Log stehen --- */
+    if (g_log_on) {
+        const char *wunsch = (g_log_path != NULL) ? g_log_path
+                                                  : PROBE_LOG_DEFAULT;
+        int rc;
+
+        step("[probe] 0/9 oeffne Logdatei \"%s\" ...\n", wunsch);
+        rc = v4_plat_log_open((g_log_path != NULL) ? g_log_path
+                                                  : PROBE_LOG_DEFAULT);
+        step("[probe] 0/9 Logdatei -> %d (IoErr %ld)\n", rc, (long)IoErr());
+        if (rc != 0) {
+            step("[probe] 0/9 Hinweis: alles Weitere steht nur auf der Konsole.\n");
+            g_log_on = 0;
+        }
+    }
+
     /* ---- 1: laeuft das Programm ueberhaupt an? ---------------------- */
     step("[probe] 1/9 Start erreicht (argc=%d)\n", argc);
     {
@@ -181,19 +209,14 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* ---- 2b: Logdatei oeffnen (ab hier ist alles im Log) ------------ */
-    if (g_log_on) {
-        const char *wunsch = (g_log_path != NULL) ? g_log_path
-                                                  : PROBE_LOG_DEFAULT;
-        int rc;
+    /* ---- 2c: was macht die CPU mit MOVIW? -------------------------- */
+    {
+        ULONG m = moviw_test();
 
-        step("[probe] 2b/9 oeffne Logdatei \"%s\" ...\n", wunsch);
-        rc = v4_plat_log_open((g_log_path != NULL) ? g_log_path
-                                                  : PROBE_LOG_DEFAULT);
-        step("[probe] 2b/9 Logdatei -> %d (IoErr %ld)\n", rc, (long)IoErr());
-        if (rc != 0) {
-            step("[probe] 2b/9 Hinweis: die naechsten Zeilen stehen nur auf der Konsole.\n");
-        }
+        step("[probe] 2c/9 moviw.l #1006 aus 0xFFFFFFFF -> 0x%08lX %s\n",
+             (unsigned long)m,
+             (m == 0x000003EEul) ? "(oberes Wort geloescht: GCC ok)"
+                                 : "(OBERES WORT BLEIBT: GCC-Falle!)");
     }
 
     /* ---- 3: Dateien oeffnen, jeden Pfad einzeln --------------------
@@ -240,7 +263,14 @@ int main(int argc, char **argv)
             fh = Open((CONST_STRPTR)"T:v4_probe_dos.txt", mode_new);
             step("[probe] 3b/9 DOS-Open -> %08lx (IoErr %ld)\n",
                  (unsigned long)fh, (long)IoErr());
-            if (fh != (BPTR)0) {
+
+            /* Ein BPTR ist immer geraude (Longword-Adresse). Ein ungerader
+             * Wert ist Muell -- damit darf NICHT geschrieben werden, genau
+             * das hat den vorigen Lauf hier abgebrochen. */
+            if ((unsigned long)fh != 0ul
+                && (((unsigned long)fh & 3ul) != 0ul)) {
+                step("[probe] 3b/9 UNGUELTIGER BPTR -- Write uebersprungen\n");
+            } else if (fh != (BPTR)0) {
                 (void)Write(fh, (CONST_APTR)"x\n", 2L);
                 (void)Flush(fh);
                 Close(fh);
