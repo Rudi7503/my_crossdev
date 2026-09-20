@@ -33,6 +33,7 @@ static int         g_use_log    = 1;   /* 1 Vorgabe: Logdatei an, 0 mit -n,
                                         * 2 mit -o <pfad> */
 static int         g_settle     = 0;   /* -t <ticks>: Wartezeit je Logzeile */
 static int         g_wait_us    = 0;   /* -w <us>: t_wait, 0 = Vorgabe (R3) */
+static int         g_connect_s  = 45;  /* -c <s>: Wartezeit auf CONNECTED */
 static const char *g_log_path   = NULL;
 
 static void v4_msg(const char *fmt, ...)
@@ -393,6 +394,12 @@ static int parse_args(int argc, char **argv, const char **dev_out)
                 g_trace = 0;                /* still (ist die Vorgabe) */
             } else if (argv[i][1] == 'x') {
                 g_hex = 1;                  /* Antwortbytes zeigen */
+            } else if (argv[i][1] == 'c') {
+                if (i + 1 >= argc) {
+                    v4_msg("-c braucht Sekunden, z.B. -c 60\n");
+                    return 5;
+                }
+                g_connect_s = atoi(argv[++i]);  /* Wartezeit auf CONNECTED */
             } else if (argv[i][1] == 'w') {
                 if (i + 1 >= argc) {
                     v4_msg("-w braucht Mikrosekunden, z.B. -w 20000\n");
@@ -417,7 +424,7 @@ static int parse_args(int argc, char **argv, const char **dev_out)
                 g_use_log  = 2;          /* ausdruecklicher Pfad */
             } else {
                 v4_msg("Unbekannter Schalter '%s' (erlaubt: -a -q -x -n "
-                       "-o <pfad> -t <ticks> -w <us>)\n", argv[i]);
+                       "-o <pfad> -t <ticks> -w <us> -c <s>)\n", argv[i]);
                 return 5;
             }
         } else if (dev == NULL) {
@@ -1109,27 +1116,66 @@ static int console_run(const char *dev)
         {
             int want = i;                   /* der eben gewaehlte Index */
 
-            v4_msg("CONNECT gesendet, warte auf state == CONNECTED ");
-            fflush(stdout);
-            for (i = 0; i < 200; i++) {
-                rc = v4_get_status(&m, &st);
-                if (rc != V4P_ST_OK) {
-                    v4_msg("\nGET_STATUS: %s\n", v4_strerror(rc));
-                    break;
+            /* Ein A2DP-Aufbau dauert: der Slave braucht je nach Geraet und
+             * BT-Zustand deutlich mehr als ein paar Sekunden. Deshalb wird hier
+             * gewartet, bis CONNECTED kommt, der Slave aufgibt (IDLE) oder die
+             * Zeit (-c, Vorgabe 45 s) um ist. */
+            for (;;) {
+                int rounds = (g_connect_s > 0) ? (g_connect_s * 20) : 20;
+
+                v4_msg("CONNECT gesendet, warte auf CONNECTED (hoechstens "
+                       "%d s) ", g_connect_s);
+                fflush(stdout);
+                for (i = 0; i < rounds; i++) {
+                    rc = v4_get_status(&m, &st);
+                    if (rc != V4P_ST_OK) {
+                        v4_msg("\n");
+                        print_failure(&m, "GET_STATUS", rc);
+                        break;
+                    }
+                    if (st.state == V4P_STATE_CONNECTED
+                        || st.state == V4P_STATE_IDLE) {
+                        break;              /* fertig oder aufgegeben */
+                    }
+                    v4_plat_delay_us(50000u);
+                    if ((i % 40) == 39) {   /* alle 2 s */
+                        v4_msg("[%s]", state_name(st.state));
+                    } else {
+                        v4_msg(".");
+                    }
+                    fflush(stdout);
                 }
+                v4_msg("\n");
                 if (st.state == V4P_STATE_CONNECTED
                     || st.state == V4P_STATE_IDLE) {
-                    break;                  /* fertig oder abgebrochen */
+                    break;
                 }
-                v4_plat_delay_us(50000u);
-                if ((i % 20) == 19) {
-                    v4_msg("[%s]", state_name(st.state));
-                } else {
-                    v4_msg(".");
-                }
+
+                /* Zeit abgelaufen, der Slave arbeitet aber noch. */
+                v4_msg("Nach %d s noch in %s.\n", g_connect_s,
+                       state_name(st.state));
+                v4_msg("(w)eiter warten, (a)bbrechen, (q)ende: ");
                 fflush(stdout);
+                if (fgets(line, sizeof(line), stdin) == NULL) {
+                    v4_close();
+                    return 0;
+                }
+                if (line[0] == 'q' || line[0] == 'Q') {
+                    v4_close();
+                    return 0;
+                }
+                if (line[0] == 'a' || line[0] == 'A') {
+                    rc = v4_disconnect(&m);
+                    v4_msg("DISCONNECT: %s\n", v4_strerror(rc));
+                    v4_close();
+                    return 0;
+                }
+                /* alles andere (auch 'w'): weiter warten */
             }
-            v4_msg("\n");
+
+            /* Der Zustand allein sagt noch nichts: er muss zum gewaehlten Index
+             * passen, und die Audio-Strecke muss stehen. Ein ausgeschaltetes
+             * Headset liefert keinen A2DP-Stream. */
 
             /* Der Zustand allein sagt noch nichts: er muss zum gewaehlten Index
              * passen, und die Audio-Strecke muss stehen. Ein ausgeschaltetes
@@ -1141,9 +1187,17 @@ static int console_run(const char *dev)
                 v4_msg("WARNUNG: Slave meldet CONNECTED, aber mit Index %u statt "
                        "%d.\n", (unsigned)st.conn_index, want);
             } else {
-                v4_msg("Verbindung NICHT bestaetigt: state=%u (%s) nach %d "
-                       "Abfragen.\n", (unsigned)st.state, state_name(st.state),
-                       i + 1);
+                v4_msg("Verbindung NICHT bestaetigt: state=%u (%s).\n",
+                       (unsigned)st.state, state_name(st.state));
+                if (st.state == V4P_STATE_IDLE) {
+                    v4_msg("  Der Slave hat den Aufbau aufgegeben. Steht das "
+                           "Geraet in der\n  Scan-Liste, ist es vermutlich "
+                           "ausgeschaltet: die Liste kommt vom\n  ESP32 und "
+                           "kann bekannte Geraete enthalten, die gerade nicht\n"
+                           "  erreichbar sind. Der Master kann das nicht "
+                           "unterscheiden --\n  er sieht nur Name und "
+                           "Bluetooth-Adresse (kein Zustandsfeld).\n");
+                }
             }
 
             if (v4_get_status(&m, &st) == V4P_ST_OK) {

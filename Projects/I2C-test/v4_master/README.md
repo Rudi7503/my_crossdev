@@ -47,6 +47,7 @@ Programs:test/v4_console -n       # keine Logdatei, nur Konsole
 Programs:test/v4_console -o ram:lauf.log   # anderer Logpfad
 Programs:test/v4_console -t 50    # 1 s Wartezeit je Logzeile (Absturzfahrt)
 Programs:test/v4_console -w 20000 # t_wait vor dem Lesen (Vorgabe 2000 us, R3)
+Programs:test/v4_console -c 90    # auf CONNECTED warten (Vorgabe 45 s)
 
 # nach einem Absturz: Logdatei holen und ansehen
 make log
@@ -662,6 +663,12 @@ Seite, nicht der Slave.
 
 Zwei Konsequenzen:
 
+0. **Auf den Verbindungsaufbau wird lange genug gewartet.** `CONNECT` ist nur
+   der Startschuss: ein A2DP-Aufbau dauert. Es wird deshalb gepollt, bis
+   `CONNECTED` kommt, der Slave aufgibt (`IDLE`) oder die Zeit abläuft —
+   **Vorgabe 45 s**, mit `-c <s>` einstellbar. Alle 2 s steht der Zustand in
+   Klammern (`[CONNECTING]`). Läuft die Zeit ab, während der Slave noch
+   arbeitet, fragt das Programm: `(w)eiter warten, (a)bbrechen, (q)ende`.
 1. **`CONNECT` bricht nicht mehr ab**, wenn die Antwortprüfung scheitert. Statt
    dessen wird `GET_STATUS` gefragt: steht der Slave auf `CONNECTING` oder
    `CONNECTED`, läuft das Programm weiter und wartet auf die Bestätigung. Nur
@@ -698,6 +705,28 @@ Bereits verbunden: Index 1 (CONNECTED), audio_flags=0x01 (A2DP)
 Damit entfällt der Umweg über die Geräteliste, wenn das Headset ohnehin noch
 verbunden ist — und `audio_flags=0x01 (A2DP)` zeigt sofort, dass die
 Audio-Strecke steht.
+
+## Ein Gerät in der Liste heißt nicht, dass es da ist
+
+Der ESP32 liefert nur **Name und Bluetooth-Adresse** je Eintrag — ein Feld
+„erreichbar/verbunden" gibt es im Protokoll nicht. Steht ein ausgeschaltetes
+Headset trotzdem in der Liste, ist das eine Eigenschaft der Slave-Seite (die
+Liste kann bekannte Geräte enthalten). Der Master kann das nicht unterscheiden;
+er kann nur **verbinden und den Zustand prüfen**. Genau das tut er: bleibt der
+Zustand `IDLE` oder läuft die Zeit ab, steht im Log
+
+```
+Verbindung NICHT bestaetigt: state=0 (IDLE).
+  Der Slave hat den Aufbau aufgegeben. Steht das Geraet in der
+  Scan-Liste, ist es vermutlich ausgeschaltet: die Liste kommt vom
+  ESP32 und kann bekannte Geraete enthalten, die gerade nicht
+  erreichbar sind. Der Master kann das nicht unterscheiden --
+  er sieht nur Name und Bluetooth-Adresse (kein Zustandsfeld).
+```
+
+Was der Master zusätzlich sichtbar macht: `scan_gen` (der Slave erhöht ihn,
+wenn sich die Liste ändert) und `dev_count` im Statusblock — damit lässt sich
+erkennen, ob die Liste überhaupt neu aufgebaut wurde.
 
 ## Geräte suchen und auswählen
 
