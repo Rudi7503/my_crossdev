@@ -6,10 +6,11 @@
  * Bleibt die Ausgabe nach Schritt N stehen, sitzt der Absturz in Schritt N+1
  * -- ohne Debugger, ohne Raterei.
  *
- * Schritt 3 (serieller Anschluss) ist nur mit `-s` dabei: ein zweites Oeffnen
- * von "ser:" kann einer Shell, die selbst auf dem seriellen Anschluss laeuft,
- * die Konsole wegziehen. Das Hauptprogramm benutzt ser: nicht mehr -- seine
- * Vorgabe ist die Logdatei Programs:test/v4_console.log.
+ * Schritt 3 oeffnet der Reihe nach mehrere Logpfade (T:, ram:, die Vorgabe des
+ * Konsolenprogramms) -- jeder mit einer Marke VOR dem Aufruf. Stuerzt es bei
+ * einem Pfad ab, steht der Pfad als letzte Zeile da. Der serielle Anschluss ist
+ * nur mit `-s` dabei: ein zweites Oeffnen von "ser:" kann einer Shell, die
+ * selbst auf dem seriellen Anschluss laeuft, die Konsole wegziehen.
  *
  * Aufruf auf der V4:
  *     ram:v4_probe          # Schritte 1,2,4..8 (kein ser:)
@@ -116,38 +117,52 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* ---- 3: serielle Ausgabe (nur mit -s) --------------------------- */
-    if (with_ser) {
-        static const char msg[] = "[probe] Text ueber ser:\n";
-        BPTR  fh;
-        long  w;
-        int   rc;
+    /* ---- 3: Logdateien oeffnen ------------------------------------- */
+    {
+        static const char *pfade[] = {
+            "T:v4_probe.txt",                       /* immer da, RAM-basiert */
+            "ram:v4_probe.txt",                     /* RAM-Disk */
+            "Programs:test/v4_probe.txt",           /* der echte Zielordner */
+            V4_LOG_DEFAULT_AMIGA                    /* Vorgabe des Programms */
+        };
+        unsigned i;
 
-        /* Erst nur lesend oeffnen: das ist der harmlose Weg. MODE_NEWFILE
-         * kommt danach getrennt, damit ein Absturz eindeutig zuzuordnen ist. */
-        SetIoErr(0);
-        step("[probe] 3/8 oeffne ser: mit MODE_OLDFILE ...\n");
-        fh = Open((CONST_STRPTR)"ser:", MODE_OLDFILE);
-        step("[probe] 3/8 ser: MODE_OLDFILE -> %08lx (DOS-Fehler %ld)\n",
-             (unsigned long)fh, (long)IoErr());
-        if (fh != (BPTR)0) {
-            Close(fh);
-        }
+        for (i = 0u; i < (unsigned)(sizeof(pfade) / sizeof(pfade[0])); i++) {
+            static const char msg[] = "[probe] Text in die Logdatei\n";
+            LONG w;
+            int  rc;
 
-        step("[probe] 3/8 oeffne ser: mit MODE_NEWFILE ...\n");
-        SetIoErr(0);
-        rc = v4_plat_log_open("ser:");   /* ausdruecklich, nicht die Vorgabe */
-        step("[probe] 3/8 ser: MODE_NEWFILE -> %d (DOS-Fehler %ld)\n", rc,
-             (long)IoErr());
-        if (rc == 0) {
+            /* Marke VOR dem Oeffnen: die letzte Zeile vor einem Absturz nennt
+             * damit den Pfad, der ihn ausgeloest hat. */
+            step("[probe] 3/8 --- oeffne \"%s\" ...\n", pfade[i]);
+            SetIoErr(0);
+            rc = v4_plat_log_open(pfade[i]);
+            step("[probe] 3/8 open -> %d (IoErr %ld)\n", rc, (long)IoErr());
+            if (rc != 0) {
+                continue;
+            }
             w = v4_plat_log_write(msg, (unsigned long)(sizeof(msg) - 1u));
-            step("[probe] 3/8 ser: schreiben -> %ld (muss %lu sein)\n", w,
+            step("[probe] 3/8 write+flush -> %ld (soll %lu)\n", w,
                  (unsigned long)(sizeof(msg) - 1u));
             v4_plat_log_close();
-            step("[probe] 3/8 ser: geschlossen\n");
+            step("[probe] 3/8 close ok\n");
         }
-    } else {
-        step("[probe] 3/8 ser: uebersprungen (nur mit -s)\n");
+
+        if (with_ser) {
+            step("[probe] 3/8 --- oeffne \"ser:\" ...\n");
+            SetIoErr(0);
+            if (v4_plat_log_open("ser:") == 0) {
+                step("[probe] 3/8 ser: offen, schreibe ...\n");
+                (void)v4_plat_log_write("[probe] Text ueber ser:\n", 24ul);
+                v4_plat_log_close();
+                step("[probe] 3/8 ser: geschlossen\n");
+            } else {
+                step("[probe] 3/8 ser: nicht verfuegbar (IoErr %ld)\n",
+                     (long)IoErr());
+            }
+        } else {
+            step("[probe] 3/8 ser: uebersprungen (nur mit -s)\n");
+        }
     }
 
     /* ---- 4: i2c.library -------------------------------------------- */

@@ -221,17 +221,20 @@ smoke: $(BUILD)/v4_console_smoke
 	    || { echo "  FEHLER: PING fehlt auf der seriellen Ausgabe"; fail=1; }; \
 	grep -q "DISCONNECT: OK" $(BUILD)/smoke_log.txt \
 	    || { echo "  FEHLER: Ende fehlt auf der seriellen Ausgabe"; fail=1; }; \
-	grep -q "Oeffne Logdatei" $(BUILD)/smoke5.txt \
+	grep -q '(K) Log: Open(' $(BUILD)/smoke5.txt \
 	    || { echo "  FEHLER: Konsolen-Marke vor dem Oeffnen fehlt"; fail=1; }; \
+	grep -q '(K) Log: Open zurueck, rc=0' $(BUILD)/smoke5.txt \
+	    || { echo "  FEHLER: Marke nach dem Oeffnen fehlt"; fail=1; }; \
 	grep -q "Logdatei: $(BUILD)/smoke_log.txt" $(BUILD)/smoke_log.txt \
 	    || { echo "  FEHLER: Logdatei nennt ihren eigenen Pfad nicht"; fail=1; }; \
-	grep -v "Oeffne Logdatei" $(BUILD)/smoke5.txt > $(BUILD)/smoke5_konsole.txt; \
-	cmp -s $(BUILD)/smoke5_konsole.txt $(BUILD)/smoke_log.txt \
+	grep -v '^(K) ' $(BUILD)/smoke5.txt > $(BUILD)/smoke5_konsole.txt; \
+	grep -v '^(K) ' $(BUILD)/smoke_log.txt > $(BUILD)/smoke5_log.txt; \
+	cmp -s $(BUILD)/smoke5_konsole.txt $(BUILD)/smoke5_log.txt \
 	    || { echo "  FEHLER: Logdatei weicht von der Konsole ab"; fail=1; }; \
 	echo "== Smoke 6: Schalterfehler werden gemeldet =="; \
 	printf 'q\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke6.txt 2>&1 || fail=1; \
-	grep -q "Logdatei nicht verfuegbar (Standardpfad)" $(BUILD)/smoke6.txt \
-	    || { echo "  FEHLER: Hinweis auf fehlenden Standardpfad fehlt"; fail=1; }; \
+	grep -q "Logdatei nicht verfuegbar (Programs:test/v4_console.log)" $(BUILD)/smoke6.txt \
+	    || { echo "  FEHLER: Hinweis auf nicht oeffenbare Vorgabedatei fehlt"; fail=1; }; \
 	if ./$(BUILD)/v4_console_smoke -s > $(BUILD)/smoke9.txt 2>&1; then \
 	    echo "  FEHLER: der alte Seriell-Schalter -s wird noch akzeptiert"; fail=1; fi; \
 	grep -q "Unbekannter Schalter" $(BUILD)/smoke9.txt \

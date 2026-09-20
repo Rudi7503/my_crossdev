@@ -35,7 +35,9 @@ static const char *g_log_path   = NULL;
 
 static void v4_msg(const char *fmt, ...)
 {
-    char    buf[512];
+    /* Absichtlich statisch: 512 Byte weniger Stack pro Aufruf. Das Programm ist
+     * einprozessig und v4_msg wird nie verschachtelt gerufen. */
+    static char buf[512];
     va_list ap;
     int     n;
 
@@ -597,20 +599,28 @@ int v4_console_main(int argc, char **argv)
         return rc;
     }
 
+    /* Zeilen mit dem Praefix "(K) " sind Konsolen-Marken fuer die
+     * Absturzlokalisierung: sie stehen VOR bzw. ZWISCHEN den DOS-Aufrufen.
+     * Der Smoketest filtert sie auf beiden Seiten heraus, wenn er Konsole und
+     * Logdatei vergleicht (siehe Makefile, Smoke 5). */
     if (g_use_log != 0) {
-        /* Marke VOR dem Oeffnen: bleibt der Bildschirm danach stehen, sitzt der
-         * Absturz in Open() und nicht weiter unten. Die Datei ist noch nicht
-         * offen, die Zeile geht also nur auf die Konsole. */
-        v4_msg("Oeffne Logdatei ...\n");
-        if (v4_plat_log_open(g_log_path) == 0) {
-            v4_msg("Logdatei: %s\n", (g_log_path != NULL) ? g_log_path
-                                                         : "Standardpfad");
+        const char *wunsch = (g_log_path != NULL) ? g_log_path
+                                                  : V4_LOG_DEFAULT_AMIGA;
+
+        v4_msg("(K) Log: Open(\"%s\") ...\n", wunsch);   /* vor dem Aufruf */
+        rc = v4_plat_log_open(g_log_path);
+        v4_msg("(K) Log: Open zurueck, rc=%d\n", rc);      /* nach dem Aufruf */
+
+        if (rc == 0) {
+            /* Erster Schreibvorgang: Write() + Flush(). Kommt diese Zeile noch,
+             * aber die Datei bleibt leer, sitzt es in Flush(). */
+            v4_msg("Logdatei: %s\n", wunsch);
+            v4_msg("(K) Log: erster Schreibvorgang ok\n");
         } else {
-            v4_msg("Logdatei nicht verfuegbar (%s) -- nur Konsole.\n",
-                   (g_log_path != NULL) ? g_log_path : "Standardpfad");
+            v4_msg("Logdatei nicht verfuegbar (%s) -- nur Konsole.\n", wunsch);
         }
     } else {
-        v4_msg("Logdatei: abgeschaltet (-n).\n");
+        v4_msg("(K) Logdatei: abgeschaltet (-n).\n");
     }
 
     rc = console_run(dev);

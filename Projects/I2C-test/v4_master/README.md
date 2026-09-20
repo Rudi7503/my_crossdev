@@ -460,6 +460,22 @@ acp "192.168.178.50:Programs/test/v4_console.log" build/ && cat build/v4_console
 Die letzten Zeilen sind die Diagnose: die letzte Zeile benennt den Schritt, in
 dem es geknallt hat (dieselbe Bedeutung wie beim Trace, siehe Tabelle oben).
 
+Zeilen mit dem Präfix `(K) ` sind **Konsolen-Marken** für die
+Absturzlokalisierung: sie stehen vor bzw. zwischen den DOS-Aufrufen. Beim
+Logaufbau sind das
+
+```
+(K) Log: Open("Programs:test/v4_console.log") ...   <- vor dem DOS-Aufruf
+(K) Log: Open zurueck, rc=0                          <- Open hat ueberlebt
+Logdatei: Programs:test/v4_console.log               <- erste Zeile IN der Datei
+(K) Log: erster Schreibvorgang ok                    <- Write+Flush haben geklappt
+```
+
+Bleibt es nach der ersten Zeile stehen, sitzt der Absturz in `Open()`. Kommt
+`Open zurueck, rc=0`, aber die Logdatei bleibt leer, sitzt er in `Write()` oder
+`Flush()`. Der Smoketest filtert die `(K) `-Zeilen auf beiden Seiten heraus und
+verlangt für den Rest weiterhin Byte-Gleichheit.
+
 **Zwei Dinge, die hier zählen:**
 
 1. **`Flush()` nach jeder Zeile.** AmigaDOS puffert Schreibvorgänge im
@@ -499,26 +515,56 @@ eine Zeile und flusht sofort; **bleibt die Ausgabe nach Schritt N stehen, sitzt
 der Absturz in Schritt N+1** — ohne Debugger.
 
 ```sh
-ram:v4_probe          # Schritte 1,2,4..8 -- oeffnet ser: NICHT an
-ram:v4_probe -s       # zusaetzlich Schritt 3: ser: oeffnen, schreiben, schliessen
+Programs:test/v4_probe      # Schritte 1,2,4..8 (Dateitests in Schritt 3)
+Programs:test/v4_probe -s   # zusaetzlich ser: in Schritt 3
 ```
 
 | Schritt | Was geprüft wird | Typischer Befund |
 |---|---|---|
 | 1/8 | Programm startet, Stackgröße | kommt nichts: Startproblem, nicht der Bus |
 | 2/8 | `DOSBase`, `Output()` — trägt jedes `printf` | `DOSBase=NULL` → ohne dos.library geht keine Ausgabe |
-| 3/8 | `ser:` erst mit `MODE_OLDFILE`, dann mit `MODE_NEWFILE`, inkl. `Write` und `IoErr()` | belegt/falsches Gerät = DOS-Fehler statt Absturz |
+| 3/8 | Dateien öffnen: `T:`, `ram:`, `Programs:test/`, die Vorgabe — je mit Marke **vor** dem Aufruf, dann `Open`-Ergebnis + `IoErr()` + `Write`/`Flush` + `Close`; mit `-s` zusätzlich `ser:` | die letzte Zeile nennt den Pfad, der den Absturz auslöst |
 | 4/8 | `i2c.library` V39+ | fehlt sie, bricht der Master sonst schon in `v4_open()` ab |
 | 5/8 | `timer.device` `UNIT_MICROHZ` — Träger von `t_wait` | |
 | 6/8 | Byte-Order-Selbsttest | muss 1 sein |
 | 7/8 | `v4_open()` + `PING` mit knappem Trace | Busfehler 0x…0200 = kein Slave/falsche Adresse |
 | 8/8 | `v4_close()` und Programmende | |
 
-Schritt 3 ist **absichtlich nicht** im Standardlauf und das Hauptprogramm benutzt
-`ser:` überhaupt nicht mehr (Vorgabe ist die Logdatei). Er bleibt in der Probe,
-weil ein zweites Öffnen von `ser:` einer Shell, die selbst auf dem seriellen
-Anschluss läuft, die Konsole wegziehen kann — und weil man so prüfen kann, ob der
-serielle Weg grundsätzlich trägt, wenn man ihn doch einmal braucht.
+Schritt 3 ist die Dateiprobe: er öffnet die vier Pfade **nacheinander**, jeder mit
+einer Marke davor. Stürzt es beim zweiten Pfad ab, steht der Pfad als letzte Zeile
+da — damit ist „irgendein Log-Open crasht" auf einen konkreten Pfad eingekreist.
+Der serielle Anschluss hängt nur mit `-s` dran: das Hauptprogramm benutzt `ser:`
+überhaupt nicht mehr, und ein zweites Öffnen von `ser:` kann einer Shell, die
+selbst auf dem seriellen Anschluss läuft, die Konsole wegziehen.
+
+### Wenn es direkt nach einer Marke abstürzt: Stack prüfen
+
+Ein Amiga-Programm bekommt seinen Stack von der Shell (`cli_DefaultStack`, bei
+AmigaOS klassisch **4 KB**, per `Stack`-Befehl änderbar). Im Hunk-Format der
+Amiga-Executables gibt es **kein** Feld dafür — diese Toolchain hat auch keine
+Linker-Option dafür, das Programm kann seinen Stack also nicht selbst
+mitbringen. Deshalb ist der erste Verdacht bei „stürzt sofort ab" der Stack:
+
+```sh
+Stack 65536
+Programs:test/v4_console
+```
+
+Schritt 1 der Stufenprobe nennt die tatsächliche Stackgröße. Der eigene Bedarf
+ist mit `-fstack-usage` für m68k gemessen; die größten Frames:
+
+| Funktion | Frame |
+|---|---|
+| `console_run` | 516 Byte |
+| `v4_path_append` | 344 Byte |
+| `v4_transact_n` | 268 Byte |
+| `v4_file_open` / `v4_read_file` | 212 / 208 Byte |
+| alle übrigen | ≤ 196 Byte |
+
+Die tiefste Kette (Trace → `v4_msg` → `vsnprintf` → `_write` → `Write`) liegt
+damit bei rund 1,5 KB; dazu kommt, was die DOS-Funktionen selbst brauchen. Der
+Nachrichtenpuffer in `v4_msg` ist deshalb **statisch** (512 Byte weniger Stack pro
+Zeile), und die `read_file_manual`-Puffer liegen im Heap.
 
 ## Feldbefund: die Konvention von `i2c.library` ist umgekehrt zu „0 = OK"
 
