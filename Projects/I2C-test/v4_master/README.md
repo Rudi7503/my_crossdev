@@ -757,7 +757,12 @@ DISCONNECT: OK
 Damit ist die Kette vom Dateibrowser auf der V4 bis zum Ton im Headset belegt:
 Verzeichnis lesen, Datei öffnen, `PLAY_FILE`, `audio_flags` wechselt auf
 `0x03` (A2DP **und** SD-Wiedergabe), `STOP_PLAY` fällt auf `0x01` (nur A2DP)
-zurück, `DISCONNECT` räumt auf.
+zurück, `DISCONNECT` räumt auf. Der Mitschnitt zeigt außerdem das **Lernen der
+Wartezeit**: nach ein paar Framing-Fehlern stand im Kurzbericht
+`t_wait=32000 us, Versuche je Transaktion=4`, und danach lief die 72-Einträge-
+Liste samt Unterordnern und zwei Wiedergaben
+(`Settlers2/sound/0001.WAV`, `…/0017.WAV`) ohne einen einzigen weiteren Fehler
+durch.
 
 ## Wenn die Antworten streuen: `-w` und `-r`
 

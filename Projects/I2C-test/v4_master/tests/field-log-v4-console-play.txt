@@ -3,7 +3,7 @@ Logdatei: Programs:test/v4_console.log
 (K) Log: erster Schreibvorgang ok
 I2C-Master fuer den ESP32-Slave (Proto v3)
 ========================================
-Trace: aus (mit -a einschaltbar), t_wait=10000 us
+Trace: aus (mit -a einschaltbar), t_wait=2000 us
 [trace] oeffne I2C-Bus (Standard) ...
 PING ok: proto=3 fw=2 write=32 read=128 bulk_max=1024 chunk=128
 
@@ -27,7 +27,16 @@ Geraete: 2
 
 Geraeteindex zum Verbinden (0-1, 'r' = neu suchen, 'q' = Ende): 
 -- Verbinden --
-CONNECT gesendet, warte auf CONNECTED (hoechstens 45 s) ...................
+CONNECT: LINK-Fehler (keine gueltige Antwort)
+  letzte Pruefung: falsche Magic
+  Rahmen: tx=16 rx=16 retries=4 unsicher=4 busy=0 badcrc=0
+  t_wait=32000 us, Versuche je Transaktion=4
+  Busfehler: 0x000000FF (OK)
+  Die ersten Bytes sind keine gueltige Magic: entweder eine
+  Firmware mit 64-Byte-READ-Frame (proto 2) oder ein um einige
+  Bytes verschobener Antwortstrom.
+  Der Slave ist trotzdem in state=2 (CONNECTING) -- es wird weitergewartet.
+CONNECT gesendet, warte auf CONNECTED (hoechstens 45 s) ............................
 Verbunden mit Index 1 (CONNECTED).
 Status: state=3 (CONNECTED) conn_index=1 audio_flags=0x01 (A2DP )
 
@@ -36,39 +45,6 @@ SD_MOUNT: OK
 
 -- Dateien --
 Pfad: /
-
-Seite 1/4 -- 72 von 72 Eintraegen
-  [  0] AUDIO     4630501  test.mp3
-  [  1] AUDIO       75531  test2.mp3
-  [  2] AUDIO      264644  test_tone_440.wav
-  [  3] <DIR>           0  Amiga Server/
-  [  4] <DIR>           0  Copy_of_Glubble/
-  [  5] <DIR>           0  FOUND.000/
-  [  6] <DIR>           0  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)/
-  [  7] <DIR>           0  Glubble/
-  [  8] <DIR>           0  Settlers2/
-  [  9] <DIR>           0  Settlers2_Digital_Version/
-  [ 10] <DIR>           0  System Volume Information/
-  [ 11] <DIR>           0  webroot/
-  [ 12] <DIR>           0  WHDLoad/
-  [ 13] Datei      576794  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2).zip
-  [ 14] Datei      901120  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)[a2].adf
-  [ 15] Datei      577367  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)[a2].zip
-  [ 16] Datei     1059705  GamesSummerEdition_v1.0.lha
-  [ 17] Datei      772778  GamesWinterEdition_v1.0.lha
-  [ 18] Datei          52  kick33180.A500.PAT
-  [ 19] Datei        3882  kick33180.A500.RTB
-Nummer = auswaehlen, n = weiter, p = zurueck, f = nur Abspielbares, u = hoch, r = Wurzel, Enter/q = Ende: 
-Gewaehlt: test.mp3 (4630501 Byte laut Liste) -- abspielbar
-Oeffnen: OK, 4630501 Byte
-(a)bsspielen, (l)esen/pruefen, (z)urueck, (q)ende: PLAY_FILE: LINK-Fehler (4 Versuche erfolglos)
-  letzte Pruefung: falsche Magic
-  Rahmen: tx=130 rx=130 retries=18 unsicher=18 busy=0 badcrc=0
-  Achtung: 1 moegliche Handle-Lecks auf der Slave-Seite.
-  Busfehler: 0x000000FF (OK)
-  Die ersten Bytes sind keine gueltige Magic: entweder eine
-  Firmware mit 64-Byte-READ-Frame (proto 2) oder ein um einige
-  Bytes verschobener Antwortstrom.
 
 Seite 1/4 -- 72 von 72 Eintraegen
   [  0] AUDIO     4630501  test.mp3
@@ -102,6 +78,172 @@ Wiedergabe laeuft -- Enter zum Stoppen ...STOP_PLAY: OK
 state=3 (CONNECTED) conn_index=0x01 dev_count=2 scan_active=1
 sd: mounted=1 card_present=1  audio_flags=0x01 (A2DP )
 scan_gen=3 free=58702602 kB chunk=128
+
+Seite 1/4 -- 72 von 72 Eintraegen
+  [  0] AUDIO     4630501  test.mp3
+  [  1] AUDIO       75531  test2.mp3
+  [  2] AUDIO      264644  test_tone_440.wav
+  [  3] <DIR>           0  Amiga Server/
+  [  4] <DIR>           0  Copy_of_Glubble/
+  [  5] <DIR>           0  FOUND.000/
+  [  6] <DIR>           0  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)/
+  [  7] <DIR>           0  Glubble/
+  [  8] <DIR>           0  Settlers2/
+  [  9] <DIR>           0  Settlers2_Digital_Version/
+  [ 10] <DIR>           0  System Volume Information/
+  [ 11] <DIR>           0  webroot/
+  [ 12] <DIR>           0  WHDLoad/
+  [ 13] Datei      576794  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2).zip
+  [ 14] Datei      901120  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)[a2].adf
+  [ 15] Datei      577367  Games, The - Summer Edition (1989)(U.S. Gold)[cr PNA](Disk 1 of 2)[a2].zip
+  [ 16] Datei     1059705  GamesSummerEdition_v1.0.lha
+  [ 17] Datei      772778  GamesWinterEdition_v1.0.lha
+  [ 18] Datei          52  kick33180.A500.PAT
+  [ 19] Datei        3882  kick33180.A500.RTB
+Nummer = auswaehlen, n = weiter, p = zurueck, f = nur Abspielbares, u = hoch, r = Wurzel, Enter/q = Ende: 
+-- Dateien --
+Pfad: /Settlers2
+
+Seite 1/4 -- 66 von 66 Eintraegen
+  [  0] <DIR>           0  ANIMDAT/
+  [  1] <DIR>           0  BOBS/
+  [  2] <DIR>           0  CBOB/
+  [  3] <DIR>           0  GFX/
+  [  4] <DIR>           0  IO/
+  [  5] <DIR>           0  libs/
+  [  6] <DIR>           0  LOCA/
+  [  7] <DIR>           0  MAPS/
+  [  8] <DIR>           0  MAPS2/
+  [  9] <DIR>           0  MAPS3/
+  [ 10] <DIR>           0  MAPS4/
+  [ 11] <DIR>           0  MASKS/
+  [ 12] <DIR>           0  MBOB/
+  [ 13] <DIR>           0  MISSIONS/
+  [ 14] <DIR>           0  music/
+  [ 15] <DIR>           0  ONLINE/
+  [ 16] <DIR>           0  SAVE/
+  [ 17] <DIR>           0  sound/
+  [ 18] <DIR>           0  SOUNDDAT/
+  [ 19] <DIR>           0  TEXTURES/
+Nummer = auswaehlen, n = weiter, p = zurueck, f = nur Abspielbares, u = hoch, r = Wurzel, Enter/q = Ende: 
+-- Dateien --
+Pfad: /Settlers2/sound
+
+Seite 1/3 -- 53 von 53 Eintraegen
+  [  0] AUDIO       54852  0001.WAV
+  [  1] AUDIO       11252  0002.WAV
+  [  2] AUDIO       27816  0003.WAV
+  [  3] AUDIO       16172  0004.WAV
+  [  4] AUDIO       11052  0005.WAV
+  [  5] AUDIO        7312  0006.WAV
+  [  6] AUDIO       50860  0007.WAV
+  [  7] AUDIO       77356  0008.WAV
+  [  8] AUDIO       20180  0009.WAV
+  [  9] AUDIO       49708  0011.WAV
+  [ 10] AUDIO       37676  0012.WAV
+  [ 11] AUDIO       14636  0014.WAV
+  [ 12] AUDIO       25132  0015.WAV
+  [ 13] AUDIO        4600  0016.WAV
+  [ 14] AUDIO      166112  0017.WAV
+  [ 15] AUDIO       28716  0018.WAV
+  [ 16] AUDIO        3264  0019.WAV
+  [ 17] AUDIO       26156  0020.WAV
+  [ 18] AUDIO       41388  0021.WAV
+  [ 19] AUDIO        5224  0022.WAV
+Nummer = auswaehlen, n = weiter, p = zurueck, f = nur Abspielbares, u = hoch, r = Wurzel, Enter/q = Ende: 
+Gewaehlt: Settlers2/sound/0001.WAV (54852 Byte laut Liste) -- abspielbar
+Oeffnen: OK, 54852 Byte
+(a)bsspielen, (l)esen/pruefen, (z)urueck, (q)ende: PLAY_FILE: OK
+state=3 (CONNECTED) conn_index=0x01 dev_count=2 scan_active=1
+sd: mounted=1 card_present=1  audio_flags=0x03 (A2DP SD-Wiedergabe)
+scan_gen=3 free=58702602 kB chunk=128
+Wiedergabe laeuft -- Enter zum Stoppen ...STOP_PLAY: OK
+state=3 (CONNECTED) conn_index=0x01 dev_count=2 scan_active=1
+sd: mounted=1 card_present=1  audio_flags=0x01 (A2DP )
+scan_gen=3 free=58702602 kB chunk=128
+
+Seite 1/3 -- 53 von 53 Eintraegen
+  [  0] AUDIO       54852  0001.WAV
+  [  1] AUDIO       11252  0002.WAV
+  [  2] AUDIO       27816  0003.WAV
+  [  3] AUDIO       16172  0004.WAV
+  [  4] AUDIO       11052  0005.WAV
+  [  5] AUDIO        7312  0006.WAV
+  [  6] AUDIO       50860  0007.WAV
+  [  7] AUDIO       77356  0008.WAV
+  [  8] AUDIO       20180  0009.WAV
+  [  9] AUDIO       49708  0011.WAV
+  [ 10] AUDIO       37676  0012.WAV
+  [ 11] AUDIO       14636  0014.WAV
+  [ 12] AUDIO       25132  0015.WAV
+  [ 13] AUDIO        4600  0016.WAV
+  [ 14] AUDIO      166112  0017.WAV
+  [ 15] AUDIO       28716  0018.WAV
+  [ 16] AUDIO        3264  0019.WAV
+  [ 17] AUDIO       26156  0020.WAV
+  [ 18] AUDIO       41388  0021.WAV
+  [ 19] AUDIO        5224  0022.WAV
+Nummer = auswaehlen, n = weiter, p = zurueck, f = nur Abspielbares, u = hoch, r = Wurzel, Enter/q = Ende: 
+Gewaehlt: Settlers2/sound/0017.WAV (166112 Byte laut Liste) -- abspielbar
+Oeffnen: OK, 166112 Byte
+(a)bsspielen, (l)esen/pruefen, (z)urueck, (q)ende: PLAY_FILE: OK
+state=3 (CONNECTED) conn_index=0x01 dev_count=2 scan_active=1
+sd: mounted=1 card_present=1  audio_flags=0x03 (A2DP SD-Wiedergabe)
+scan_gen=3 free=58702602 kB chunk=128
+Wiedergabe laeuft -- Enter zum Stoppen ...STOP_PLAY: OK
+state=3 (CONNECTED) conn_index=0x01 dev_count=2 scan_active=1
+sd: mounted=1 card_present=1  audio_flags=0x01 (A2DP )
+scan_gen=3 free=58702602 kB chunk=128
+
+Seite 1/3 -- 53 von 53 Eintraegen
+  [  0] AUDIO       54852  0001.WAV
+  [  1] AUDIO       11252  0002.WAV
+  [  2] AUDIO       27816  0003.WAV
+  [  3] AUDIO       16172  0004.WAV
+  [  4] AUDIO       11052  0005.WAV
+  [  5] AUDIO        7312  0006.WAV
+  [  6] AUDIO       50860  0007.WAV
+  [  7] AUDIO       77356  0008.WAV
+  [  8] AUDIO       20180  0009.WAV
+  [  9] AUDIO       49708  0011.WAV
+  [ 10] AUDIO       37676  0012.WAV
+  [ 11] AUDIO       14636  0014.WAV
+  [ 12] AUDIO       25132  0015.WAV
+  [ 13] AUDIO        4600  0016.WAV
+  [ 14] AUDIO      166112  0017.WAV
+  [ 15] AUDIO       28716  0018.WAV
+  [ 16] AUDIO        3264  0019.WAV
+  [ 17] AUDIO       26156  0020.WAV
+  [ 18] AUDIO       41388  0021.WAV
+  [ 19] AUDIO        5224  0022.WAV
+Nummer = auswaehlen, n = weiter, p = zurueck, f = nur Abspielbares, u = hoch, r = Wurzel, Enter/q = Ende: 
+-- Dateien --
+Pfad: /Settlers2
+
+Seite 1/4 -- 66 von 66 Eintraegen
+  [  0] <DIR>           0  ANIMDAT/
+  [  1] <DIR>           0  BOBS/
+  [  2] <DIR>           0  CBOB/
+  [  3] <DIR>           0  GFX/
+  [  4] <DIR>           0  IO/
+  [  5] <DIR>           0  libs/
+  [  6] <DIR>           0  LOCA/
+  [  7] <DIR>           0  MAPS/
+  [  8] <DIR>           0  MAPS2/
+  [  9] <DIR>           0  MAPS3/
+  [ 10] <DIR>           0  MAPS4/
+  [ 11] <DIR>           0  MASKS/
+  [ 12] <DIR>           0  MBOB/
+  [ 13] <DIR>           0  MISSIONS/
+  [ 14] <DIR>           0  music/
+  [ 15] <DIR>           0  ONLINE/
+  [ 16] <DIR>           0  SAVE/
+  [ 17] <DIR>           0  sound/
+  [ 18] <DIR>           0  SOUNDDAT/
+  [ 19] <DIR>           0  TEXTURES/
+Nummer = auswaehlen, n = weiter, p = zurueck, f = nur Abspielbares, u = hoch, r = Wurzel, Enter/q = Ende: 
+-- Dateien --
+Pfad: /
 
 Seite 1/4 -- 72 von 72 Eintraegen
   [  0] AUDIO     4630501  test.mp3
