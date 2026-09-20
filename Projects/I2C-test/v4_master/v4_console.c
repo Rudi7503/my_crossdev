@@ -597,6 +597,10 @@ int v4_console_main(int argc, char **argv)
     }
 
     if (g_use_serial != 0) {
+        /* Marke VOR dem Oeffnen: bleibt der Bildschirm danach stehen, sitzt der
+         * Absturz in Open() und nicht weiter unten. Der Kanal ist noch nicht
+         * offen, die Zeile geht also nur auf die Konsole. */
+        v4_msg("Oeffne serielle Ausgabe ...\n");
         if (v4_plat_serial_open(g_ser_dev) == 0) {
             v4_msg("Serielle Ausgabe: %s\n",
                    (g_ser_dev != NULL) ? g_ser_dev

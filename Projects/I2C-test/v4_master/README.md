@@ -34,6 +34,7 @@ make asm        # Nachweis im erzeugten m68k-Objektcode
 make smoke      # Konsolenprogramm einmal komplett gegen den Mock durchlaufen
 make demo       # Konsolenprogramm für den Harness (braucht /dev/i2c-N)
 make amiga      # AmigaOS-Executable für die V4
+make probe      # Stufenprobe für die V4 (Start in 8 nummerierten Schritten)
 ```
 
 Das Programm auf der V4:
@@ -494,6 +495,34 @@ Ist kein Adapter angeschlossen oder das Gerät belegt, ist das **kein Fehler**:
 unverändert weiter. Das Schreiben ohne offenen Kanal ist ein No-op; ein Test
 prüft diesen Vertrag (`tests/test_master.c`, Fall „serial hooks").
 
+## Stufenprobe auf der V4: `v4_probe`
+
+Wenn auf der V4 „nichts kommt" oder das Programm sofort verschwindet, zerlegt
+`v4_probe` den Start in acht nummerierte Schritte. Jeder Schritt schreibt genau
+eine Zeile und flusht sofort; **bleibt die Ausgabe nach Schritt N stehen, sitzt
+der Absturz in Schritt N+1** — ohne Debugger.
+
+```sh
+ram:v4_probe          # Schritte 1,2,4..8 -- oeffnet ser: NICHT an
+ram:v4_probe -s       # zusaetzlich Schritt 3: ser: oeffnen, schreiben, schliessen
+```
+
+| Schritt | Was geprüft wird | Typischer Befund |
+|---|---|---|
+| 1/8 | Programm startet, Stackgröße | kommt nichts: Startproblem, nicht der Bus |
+| 2/8 | `DOSBase`, `Output()` — trägt jedes `printf` | `DOSBase=NULL` → ohne dos.library geht keine Ausgabe |
+| 3/8 | `ser:` erst mit `MODE_OLDFILE`, dann mit `MODE_NEWFILE`, inkl. `Write` und `IoErr()` | belegt/falsches Gerät = DOS-Fehler statt Absturz |
+| 4/8 | `i2c.library` V39+ | fehlt sie, bricht der Master sonst schon in `v4_open()` ab |
+| 5/8 | `timer.device` `UNIT_MICROHZ` — Träger von `t_wait` | |
+| 6/8 | Byte-Order-Selbsttest | muss 1 sein |
+| 7/8 | `v4_open()` + `PING` mit knappem Trace | Busfehler 0x…0200 = kein Slave/falsche Adresse |
+| 8/8 | `v4_close()` und Programmende | |
+
+Schritt 3 ist **absichtlich nicht** im Standardlauf: läuft die Shell selbst auf
+dem seriellen Anschluss, kann ein zweites Öffnen von `ser:` der Shell die
+Konsole wegziehen. Wer in so einer Shell arbeitet, braucht `-s` auch im
+Hauptprogramm nicht — die Ausgabe ist dann ohnehin auf COM6 zu sehen.
+
 ## Feldbefund: die Konvention von `i2c.library` ist umgekehrt zu „0 = OK"
 
 Beim ersten Lauf auf der V4 meldete das Programm `PING: LINK-Fehler`. Ursache war
@@ -630,7 +659,8 @@ ram:v4_console
 ram:v4_console.info
 ```
 
-**Starten auf der V4:** aus einer Shell, nicht per Doppelklick —
+**Starten auf der V4:** aus einer Shell, nicht per Doppelklick — `make upload`
+legt zusätzlich `v4_probe` mit ab, die Stufenprobe aus dem Abschnitt oben —
 
 ```
 ram:v4_console

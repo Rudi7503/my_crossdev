@@ -12,6 +12,7 @@
 # -o <geraet> (Ausgabe zusaetzlich auf ein bestimmtes Geraet/eine Datei).
 #   make asm          m68k-Disassembly der Byte-Order-Helfer (Nachweis)
 #   make lint         nur der Portabilitaets-Lint
+#   make probe        Stufenprobe fuer die V4 (Start in 8 nummerierten Schritten)
 #   make upload       Programm + Ikone direkt auf die V4 (ApolloExplorer/acp)
 #   make upload-debug zusaetzlich bgdbserver und Debug-Startskript
 #   make acp-ls       Verzeichnis auf der V4 auflisten (nur lesend)
@@ -50,6 +51,7 @@ APOLLO_PREFIX ?= ../../../Compilers/GCC-6.50-Latest
 APOLLO_CC      = $(APOLLO_PREFIX)/bin/m68k-amigaos-gcc
 I2C_INC        = ../i2clib-master/include
 AMIGA_SRC      = $(LIB_SRC) v4_amiga_i2c.c v4_console.c
+PROBE_SRC      = $(LIB_SRC) v4_amiga_i2c.c tools/v4_probe.c
 
 # Cross-Werkzeuge fuer den Endianness-Lauf
 M68K_CC   ?= m68k-linux-gnu-gcc
@@ -74,7 +76,7 @@ ICONS  ?= $(REPO_ROOT)/_icons
 # Name, unter dem das Programm auf der V4 liegt (ohne Endung).
 AMIGA_NAME ?= v4_console
 
-.PHONY: all test lint test-m68k amiga demo asm clean selftest-lint verify \
+.PHONY: all test lint test-m68k amiga probe demo asm clean selftest-lint verify \
         smoke test-san upload upload-debug check-host check-upload acp-hosts acp-ls verify
 
 all: test
@@ -150,6 +152,15 @@ amiga: | $(BUILD)
 	    -o $(BUILD)/v4_console_amiga $(AMIGA_SRC)
 	@echo "Fertig: $(BUILD)/v4_console_amiga (m68k-amigaos)"
 
+# Stufenprobe: zerlegt den Start auf der V4 in nummerierte Schritte. Bleibt die
+# Ausgabe nach Schritt N stehen, sitzt der Absturz in Schritt N+1. Bewusst ohne
+# serielle Ausgabe (nur mit -s), damit eine serielle Shell nicht stoert.
+probe: | $(BUILD)
+	$(APOLLO_CC) -std=gnu99 $(WARN) $(OPT) -m68080 -m68881 -noixemul \
+	    -DREGPARM=4 -DV4_PLAT_AMIGA=1 -I. -I$(I2C_INC) \
+	    -o $(BUILD)/v4_probe $(PROBE_SRC)
+	@echo "Fertig: $(BUILD)/v4_probe (m68k-amigaos)"
+
 # Nachweis der Byte-Order-Behandlung im erzeugten m68k-Code: die Helfer und
 # alle Frame-Funktionen duerfen nur move.b auf Puffer erzeugen (§0).
 # Ersatz fuer den qemu-Lauf, der ohne gcc-m68k-linux-gnu nicht moeglich ist.
@@ -190,7 +201,7 @@ smoke: $(BUILD)/v4_console_smoke
 	grep -q "PLAY_FILE: OK" $(BUILD)/smoke4.txt || { echo "  FEHLER: PLAY_FILE fehlt"; fail=1; }; \
 	grep -q "STOP_PLAY: OK" $(BUILD)/smoke4.txt || { echo "  FEHLER: STOP_PLAY fehlt"; fail=1; }; \
 	grep -q "SD-Wiedergabe" $(BUILD)/smoke4.txt || { echo "  FEHLER: audio_flags SD-Wiedergabe fehlt"; fail=1; }; \
-	echo "== Smoke 5: serielle Ausgabe spiegeln (-o schreibt mit) =="; \
+	echo "== Smoke 5: serielle Ausgabe spiegeln (-o schreibt mit), eine Marke bleibt Konsole =="; \
 	rm -f $(BUILD)/smoke5.txt $(BUILD)/smoke_serial.txt; \
 	printf '0\n\n' | ./$(BUILD)/v4_console_smoke -o $(BUILD)/smoke_serial.txt \
 	    > $(BUILD)/smoke5.txt 2>&1 || fail=1; \
@@ -199,7 +210,10 @@ smoke: $(BUILD)/v4_console_smoke
 	    || { echo "  FEHLER: PING fehlt auf der seriellen Ausgabe"; fail=1; }; \
 	grep -q "DISCONNECT: OK" $(BUILD)/smoke_serial.txt \
 	    || { echo "  FEHLER: Ende fehlt auf der seriellen Ausgabe"; fail=1; }; \
-	cmp -s $(BUILD)/smoke5.txt $(BUILD)/smoke_serial.txt \
+	grep -q "Oeffne serielle Ausgabe" $(BUILD)/smoke5.txt \
+	    || { echo "  FEHLER: Konsolen-Marke vor dem Oeffnen fehlt"; fail=1; }; \
+	grep -v "Oeffne serielle Ausgabe" $(BUILD)/smoke5.txt > $(BUILD)/smoke5_konsole.txt; \
+	cmp -s $(BUILD)/smoke5_konsole.txt $(BUILD)/smoke_serial.txt \
 	    || { echo "  FEHLER: serielle Ausgabe weicht von der Konsole ab"; fail=1; }; \
 	echo "== Smoke 6: Schalterfehler werden gemeldet =="; \
 	printf 'q\n' | ./$(BUILD)/v4_console_smoke -s > $(BUILD)/smoke6.txt 2>&1 || fail=1; \
@@ -216,7 +230,7 @@ smoke: $(BUILD)/v4_console_smoke
 	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (6 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
 
 # Alles, was ohne Hardware pruefbar ist.
-verify: lint selftest-lint test test-san smoke asm amiga
+verify: lint selftest-lint test test-san smoke asm amiga probe
 	@echo
 	@echo "verify: Lint, Tests, Sanitizer, Smoke, m68k-Nachweis und Amiga-Build sind durch."
 
@@ -242,12 +256,13 @@ check-upload: check-host
 	    echo "FEHLER: Ikone fehlt: $(ICONS)/ApolloIcon.info"; exit 1; }
 
 # Programm + Ikone auf die V4 legen.
-upload: amiga check-upload
+upload: amiga probe check-upload
 	@cp -f $(BUILD)/v4_console_amiga $(BUILD)/$(AMIGA_NAME)
 	@cp -f $(ICONS)/ApolloIcon.info $(BUILD)/$(AMIGA_NAME).info
 	$(ACP) "$(BUILD)/$(AMIGA_NAME)" "$(APOLLO_V4_HOST)"
 	$(ACP) "$(BUILD)/$(AMIGA_NAME).info" "$(APOLLO_V4_HOST)"
-	@echo "Auf der V4: $(APOLLO_V4_HOST)$(AMIGA_NAME)"
+	$(ACP) "$(BUILD)/v4_probe" "$(APOLLO_V4_HOST)"
+	@echo "Auf der V4: $(APOLLO_V4_HOST)$(AMIGA_NAME) und v4_probe"
 
 # Wie im Hausstil zusaetzlich der Debug-Stub und ein Startskript, das den
 # Debugger startet (dazu passt launch.json: ${AMIGAHOST}:2345).
