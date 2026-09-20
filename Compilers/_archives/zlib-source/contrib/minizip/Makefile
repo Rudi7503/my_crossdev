@@ -1,29 +1,67 @@
-CC?=cc
-CFLAGS := $(CFLAGS) -O -I../..
+# Makefile for classic zlib contrib/minizip
+#
+# Builds:
+#   libminizip.a
+#   miniunz   (optional test/extract tool)
+#   minizip   (optional test/create tool)
+#
+# Usage:
+#   make
+#   make clean
+#
+# Override tools/flags like this:
+#   make CC=ppc-amigaos-gcc AR=ppc-amigaos-ar RANLIB=ppc-amigaos-ranlib
+#
+# If your platform has no fopen64/fseeko64/ftello64, add:
+#   make CPPFLAGS="-Dfopen64=fopen -Dftello64=ftell -Dfseeko64=fseek"
 
-UNZ_OBJS = miniunz.o unzip.o ioapi.o ../../libz.a
-ZIP_OBJS = minizip.o zip.o   ioapi.o ../../libz.a
+#PREFIX= ../../../ApolloCrossDev/Compilers/GCC-6.50-Stable/bin
+#CC      = $(PREFIX)/m68k-amigaos-gcc
+#AR      = $(PREFIX)/m68k-amigaos-ar
+#RANLIB  = $(PREFIX)/m68k-amigaos-ranlib
 
-.c.o:
-	$(CC) -c $(CFLAGS) $*.c
+RM      = rm -f
 
-all: miniunz minizip
+CFLAGS   = -O2 -Wall -m68040 -m68881 -noixemul 
+CPPFLAGS = -Dfopen64=fopen -Dftello64=ftell -Dfseeko64=fseek
+LDFLAGS  = -noixemul
+LIBS     = -lz
 
-miniunz:  $(UNZ_OBJS)
-	$(CC) $(CFLAGS) -o $@ $(UNZ_OBJS)
+TARGET_LIB      = libminizip.a
+TARGET_MINIUNZ  = miniunz
+TARGET_MINIZIP  = minizip
 
-minizip:  $(ZIP_OBJS)
-	$(CC) $(CFLAGS) -o $@ $(ZIP_OBJS)
+LIB_OBJS = \
+	ioapi.o \
+	unzip.o \
+	zip.o
 
-test:	miniunz minizip
-	@rm -f test.*
-	@echo hello hello hello > test.txt
-	./minizip test test.txt
-	./miniunz -l test.zip
-	@mv test.txt test.old
-	./miniunz test.zip
-	@cmp test.txt test.old
-	@rm -f test.*
+MINIUNZ_OBJS = \
+	miniunz.o
+
+MINIZIP_OBJS = \
+	minizip.o
+
+.PHONY: all clean lib tools
+
+all: lib tools
+
+lib: $(TARGET_LIB)
+
+tools: $(TARGET_MINIUNZ) $(TARGET_MINIZIP)
+
+$(TARGET_LIB): $(LIB_OBJS)
+	$(AR) rcs $@ $(LIB_OBJS)
+	$(RANLIB) $@
+
+$(TARGET_MINIUNZ): $(MINIUNZ_OBJS) $(TARGET_LIB)
+	$(CC) $(LDFLAGS) -o $@ $(MINIUNZ_OBJS) $(TARGET_LIB) $(LIBS)
+
+$(TARGET_MINIZIP): $(MINIZIP_OBJS) $(TARGET_LIB)
+	$(CC) $(LDFLAGS) -o $@ $(MINIZIP_OBJS) $(TARGET_LIB) $(LIBS)
+
+%.o: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 clean:
-	/bin/rm -f *.o *~ minizip miniunz test.*
+	$(RM) *.o $(TARGET_LIB) $(TARGET_MINIUNZ) $(TARGET_MINIZIP)
