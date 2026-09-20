@@ -479,12 +479,17 @@ verlangt für den Rest weiterhin Byte-Gleichheit.
 
 **Zwei Dinge, die hier zählen:**
 
-1. **Nach jeder Zeile schließen.** AmigaDOS puffert Schreibvorgänge im
-   FileHandle; auf die Platte kommt der Puffer erst beim Schließen. Die
-   Amiga-Schicht schreibt deshalb mit `fwrite` + `fflush`, schließt die Datei
-   und öffnet sie im Anhängemodus wieder (`v4_amiga_i2c.c`). Ohne diesen Griff
-   stünde nach einem Absturz oder einer Hängerei genau der Teil nicht in der
-   Datei, auf den es ankommt.
+1. **Nach jeder Zeile schließen und 1 Sekunde warten.** AmigaDOS puffert
+   Schreibvorgänge im FileHandle, und der Datenträger hat eigene Puffer; auf die
+   Platte kommt beides erst mit der Zeit. Die Amiga-Schicht schreibt deshalb mit
+   `fwrite` + `fflush`, schließt die Datei, wartet `Delay(50)` (1 s) und öffnet
+   sie dann im Anhängemodus wieder (`v4_amiga_i2c.c`). Ohne diesen Griff stünde
+   nach einem harten Absturz genau der Teil nicht in der Datei, auf den es
+   ankommt — bei einem Systemabsturz fehlte sogar die Dateigröße, die Datei las
+   sich dann noch auf dem alten Stand. Der Preis: rund **eine Sekunde je
+   Logzeile**. Während einer Transaktion heißt das bis zu 1 s zwischen
+   I²C-Schreiben und Antwortlesen; für eine Diagnosefahrt ist das in Ordnung,
+   für den Dauerbetrieb nicht.
 2. **Frische Datei je Lauf.** Der erste `fopen` benutzt `"w"`, damit im Log nie
    Zeilen zweier Läufe vermischt sind.
 

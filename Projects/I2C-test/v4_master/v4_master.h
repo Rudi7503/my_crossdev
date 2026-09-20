@@ -107,10 +107,12 @@ const char *v4_plat_error_text(void);
 /*                                                                     */
 /* Alle Plattformen benutzen die Standard-C-Funktionen (fopen/fwrite/   */
 /* fflush/fclose). Auf der Amiga-Seite wird die Datei zusaetzlich nach  */
-/* JEDER Zeile geschlossen und anhaengend wieder geoeffnet: AmigaDOS     */
-/* puffert Schreibvorgaenge im FileHandle, und nur das Schliessen        */
-/* schreibt sie auf die Platte. Ohne diesen Griff fehlte nach einem      */
-/* Absturz genau der Teil des Logs, auf den es ankommt.                  */
+/* JEDER Zeile geschlossen und anhaengend wieder geoeffnet, und danach   */
+/* wird 1 Sekunde gewartet (Delay(50)): AmigaDOS puffert Schreibvorgaenge */
+/* im FileHandle und der Datentraeger hat eigene Puffer -- erst das       */
+/* Schliessen plus diese Pause bringt die Zeile wirklich auf die Platte.  */
+/* Ein harter Absturz nimmt sonst genau den Schwanz mit, auf den es       */
+/* ankommt. Das kostet rund eine Sekunde je Logzeile.                    */
 /* ------------------------------------------------------------------ */
 
 #define V4_LOG_DEFAULT_AMIGA "Programs:test/v4_console.log"

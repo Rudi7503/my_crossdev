@@ -81,6 +81,13 @@ unsigned long v4_plat_last_error(void)
 /* Platte -- die Zeile, auf die es ankommt.                              */
 /* ------------------------------------------------------------------ */
 
+/* Nach jedem Schreiben 1 Sekunde warten (50 Ticks zu 1/50 s). AmigaDOS und der
+ * Datentraeger puffern; erst diese Pause gibt beiden Zeit, die Zeile wirklich
+ * auf die Platte zu bringen. Ein harter Absturz nimmt sonst genau den Schwanz
+ * mit, auf den es ankommt. Kostet rund eine Sekunde je Logzeile -- fuer eine
+ * Diagnosefahrt ist das der Preis dafuer, dass das Log den Absturz ueberlebt. */
+#define V4_LOG_SETTLE_TICKS 50
+
 static FILE       *s_log      = NULL;
 static const char *s_log_path = NULL;
 
@@ -110,6 +117,7 @@ long v4_plat_log_write(const char *s, unsigned long len)
     n = fwrite(s, 1u, (size_t)len, s_log);
     (void)fflush(s_log);
     (void)fclose(s_log);                /* schreibt den DOS-Puffer weg */
+    Delay((LONG)V4_LOG_SETTLE_TICKS);   /* 1 s: Datentraeger Zeit geben */
     s_log = fopen(s_log_path, "a");     /* und wieder anhaengen */
     if (s_log == NULL) {
         return 0;                       /* Log ist weg, Konsole laeuft weiter */
