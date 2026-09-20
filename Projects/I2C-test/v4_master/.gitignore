@@ -1,0 +1,3 @@
+# Buildartefakte (Binaries, Objekte, Logs, Smoke-Ausgaben)
+build/
+*.o
