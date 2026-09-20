@@ -11,12 +11,50 @@
 
 #include "v4_master.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 static unsigned long g_blocks;
 static unsigned long g_bytes;
+
+/* ------------------------------------------------------------------ */
+/* Serielle Diagnoseausgabe                                            */
+/*                                                                     */
+/* Alle Texte gehen ueber v4_msg(): erst auf die Konsole, dann -- wenn  */
+/* mit -s oder -o eingeschaltet -- zusaetzlich auf die serielle         */
+/* Schnittstelle (V4 -> PC, z.B. COM6). Das ist beim Suchen eines       */
+/* Absturzes entscheidend: der UART sendet bereits gepufferte Zeichen   */
+/* auch dann noch, wenn die Task unmittelbar danach stirbt. Genau       */
+/* deshalb wird hier pro Zeile geflusht und sofort geschrieben.         */
+/* ------------------------------------------------------------------ */
+
+static int         g_use_serial = 0;   /* 0 aus, 1 Standard, 2 -o <dev> */
+static const char *g_ser_dev    = NULL;
+
+static void v4_msg(const char *fmt, ...)
+{
+    char    buf[512];
+    va_list ap;
+    int     n;
+
+    va_start(ap, fmt);
+    n = vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    if (n < 0) {
+        return;
+    }
+    if ((size_t)n > sizeof(buf) - 1u) {
+        n = (int)(sizeof(buf) - 1u);    /* gekuerzt, aber terminiert */
+    }
+
+    fputs(buf, stdout);
+    fflush(stdout);                     /* nichts darf im Puffer bleiben */
+    if (g_use_serial != 0) {
+        (void)v4_plat_serial_write(buf, (unsigned long)n);
+    }
+}
 
 /* ------------------------------------------------------------------ */
 /* Trace -- damit auf der V4 sichtbar wird, WO es knallt.              */
@@ -51,12 +89,12 @@ static void dump_hex(const uint8_t *d, uint16_t len)
     uint16_t n = (len > 32u) ? 32u : len;
 
     for (i = 0; i < n; i++) {
-        printf("%02X%s", (unsigned)d[i], ((i % 16u) == 15u) ? "\n            " : " ");
+        v4_msg("%02X%s", (unsigned)d[i], ((i % 16u) == 15u) ? "\n            " : " ");
     }
     if (len > n) {
-        printf("... (%u weitere)", (unsigned)(len - n));
+        v4_msg("... (%u weitere)", (unsigned)(len - n));
     }
-    printf("\n");
+    v4_msg("\n");
     fflush(stdout);
 }
 
@@ -67,53 +105,53 @@ static void console_trace(const v4_trace_t *ev, void *ctx)
         return;
     }
 
-    printf("[trace] %-12s cmd=0x%02X seq=%3u ", trace_name(ev->event),
+    v4_msg("[trace] %-12s cmd=0x%02X seq=%3u ", trace_name(ev->event),
            (unsigned)ev->cmd, (unsigned)ev->seq);
 
     switch (ev->event) {
     case V4_TR_TX_BEGIN:
-        printf("schreibe %u Byte\n", (unsigned)ev->len);
+        v4_msg("schreibe %u Byte\n", (unsigned)ev->len);
         break;
     case V4_TR_TX_END:
-        printf("rc=%d\n", ev->rc);
+        v4_msg("rc=%d\n", ev->rc);
         if (ev->rc != 0) {
-            printf("            Busfehler 0x%08lX: %s\n", v4_plat_last_error(),
+            v4_msg("            Busfehler 0x%08lX: %s\n", v4_plat_last_error(),
                    v4_plat_error_text());
         }
         break;
     case V4_TR_WAIT:
-        printf("%lu us warten\n", (unsigned long)ev->us);
+        v4_msg("%lu us warten\n", (unsigned long)ev->us);
         break;
     case V4_TR_RX_BEGIN:
-        printf("lese %u Byte ...\n", (unsigned)ev->len);
+        v4_msg("lese %u Byte ...\n", (unsigned)ev->len);
         break;
     case V4_TR_RX_END:
-        printf("rc=%d\n", ev->rc);
+        v4_msg("rc=%d\n", ev->rc);
         if (ev->rc != 0) {
-            printf("            Busfehler 0x%08lX: %s\n", v4_plat_last_error(),
+            v4_msg("            Busfehler 0x%08lX: %s\n", v4_plat_last_error(),
                    v4_plat_error_text());
         } else if (g_hex && ev->data != NULL) {
-            printf("            ");
+            v4_msg("            ");
             dump_hex(ev->data, ev->len);
         }
         break;
     case V4_TR_CHECK:
-        printf("%s (status=0x%02X len=%u)\n", v4_check_str(ev->rc),
+        v4_msg("%s (status=0x%02X len=%u)\n", v4_check_str(ev->rc),
                (unsigned)ev->status, (unsigned)ev->len);
         break;
     case V4_TR_RETRY:
-        printf("neuer Versuch, Grund: %s\n", v4_check_str(ev->rc));
+        v4_msg("neuer Versuch, Grund: %s\n", v4_check_str(ev->rc));
         break;
     case V4_TR_BUSY:
-        printf("Slave sagt BUSY, neuer Versuch\n");
+        v4_msg("Slave sagt BUSY, neuer Versuch\n");
         break;
     case V4_TR_DONE:
-        printf("%s (status=0x%02X len=%u)\n",
+        v4_msg("%s (status=0x%02X len=%u)\n",
                v4_strerror((uint8_t)ev->rc), (unsigned)ev->status,
                (unsigned)ev->len);
         break;
     default:
-        printf("\n");
+        v4_msg("\n");
         break;
     }
     fflush(stdout);     /* nichts darf im Puffer haengenbleiben */
@@ -123,7 +161,7 @@ static void console_trace(const v4_trace_t *ev, void *ctx)
  * der Code der Library die wichtigste Diagnose. */
 static void print_bus_error(void)
 {
-    printf("  letzter Busfehler: 0x%08lX (%s)\n", v4_plat_last_error(),
+    v4_msg("  letzter Busfehler: 0x%08lX (%s)\n", v4_plat_last_error(),
            v4_plat_error_text());
 }
 
@@ -131,16 +169,16 @@ static void print_bus_error(void)
  * der Wechsel in `audio_flags` sichtbar ist. */
 static void print_status(const v4p_status_t *st)
 {
-    printf("state=%u conn_index=0x%02X dev_count=%u scan_active=%u\n",
+    v4_msg("state=%u conn_index=0x%02X dev_count=%u scan_active=%u\n",
            (unsigned)st->state, (unsigned)st->conn_index,
            (unsigned)st->dev_count, (unsigned)st->scan_active);
-    printf("sd: mounted=%u card_present=%u  audio_flags=0x%02X (%s%s)\n",
+    v4_msg("sd: mounted=%u card_present=%u  audio_flags=0x%02X (%s%s)\n",
            (unsigned)st->sd_mounted, (unsigned)st->sd_card_present,
            (unsigned)st->audio_flags,
            ((st->audio_flags & V4P_AUDIO_A2DP_STREAMING) != 0u) ? "A2DP " : "",
            ((st->audio_flags & V4P_AUDIO_SD_PLAYBACK) != 0u)
                ? "SD-Wiedergabe" : "");
-    printf("scan_gen=%u free=%lu kB chunk=%u\n",
+    v4_msg("scan_gen=%u free=%lu kB chunk=%u\n",
            (unsigned)st->scan_gen, (unsigned long)st->sd_free_kb,
            (unsigned)st->chunk);
 }
@@ -148,7 +186,7 @@ static void print_status(const v4p_status_t *st)
 static void dir_cb(const v4p_dirent_t *ent, void *ctx)
 {
     (void)ctx;
-    printf("  %-8s %10lu  %s\n",
+    v4_msg("  %-8s %10lu  %s\n",
            ((ent->attr & V4P_ATTR_DIR) != 0u) ? "<DIR>" : "Datei",
            (unsigned long)ent->size, ent->name);
 }
@@ -161,7 +199,7 @@ static void file_cb(uint16_t block, const uint8_t *data, uint16_t len,
     g_blocks++;
     g_bytes += (unsigned long)len;
     if (block < 2u || block == 0xFFFFu || (block % 64u) == 0u) {
-        printf("  Block %5u: %4u Byte (gesamt %lu)\n", (unsigned)block,
+        v4_msg("  Block %5u: %4u Byte (gesamt %lu)\n", (unsigned)block,
                (unsigned)len, g_bytes);
     }
 }
@@ -223,7 +261,7 @@ static uint8_t read_file_manual(v4_master_t *m, const char *path)
         free(scratch);
         return rc;
     }
-    printf("  Datei: %lu Byte, attr 0x%02X\n", (unsigned long)size,
+    v4_msg("  Datei: %lu Byte, attr 0x%02X\n", (unsigned long)size,
            (unsigned)attr);
 
     for (;;) {
@@ -259,11 +297,13 @@ static uint8_t read_file_manual(v4_master_t *m, const char *path)
         }
     }
     free(scratch);
-    printf("  gelesen: %lu Byte\n", (unsigned long)total);
+    v4_msg("  gelesen: %lu Byte\n", (unsigned long)total);
     return rc;
 }
 
-int v4_console_main(int argc, char **argv)
+/* Schalter lesen. Muss VOR der ersten Ausgabe passieren, damit -s/-o schon
+ * fuer die erste Zeile gilt. */
+static int parse_args(int argc, char **argv, const char **dev_out)
 {
     const char *dev = NULL;
     int         i;
@@ -274,15 +314,32 @@ int v4_console_main(int argc, char **argv)
                 g_trace = 0;                /* still */
             } else if (argv[i][1] == 'x') {
                 g_hex = 1;                  /* Antwortbytes zeigen */
+            } else if (argv[i][1] == 's') {
+                g_use_serial = 1;           /* Standardgeraet der Plattform */
+            } else if (argv[i][1] == 'o') {
+                if (i + 1 >= argc) {
+                    v4_msg("-o braucht ein Geraet, z.B. -o /dev/ttyUSB0\n");
+                    return 5;
+                }
+                g_ser_dev    = argv[++i];
+                g_use_serial = 2;           /* ausdrueckliches Geraet */
             } else {
-                printf("Unbekannter Schalter '%s' (erlaubt: -q -x)\n",
-                       argv[i]);
+                v4_msg("Unbekannter Schalter '%s' "
+                       "(erlaubt: -q -x -s -o <geraet>)\n", argv[i]);
                 return 5;
             }
         } else if (dev == NULL) {
             dev = argv[i];                  /* nur Linux: /dev/i2c-N */
         }
     }
+    *dev_out = dev;
+    return 0;
+}
+
+static int console_run(const char *dev)
+{
+    int         i;
+
     v4_master_t m;
     v4p_info_t  info;
     v4p_status_t st;
@@ -291,22 +348,22 @@ int v4_console_main(int argc, char **argv)
     uint8_t     rc;
     char        line[160];
 
-    printf("I2C-Master fuer den ESP32-Slave (Proto v%u)\n", V4P_PROTO_VER);
-    printf("========================================\n");
+    v4_msg("I2C-Master fuer den ESP32-Slave (Proto v%u)\n", V4P_PROTO_VER);
+    v4_msg("========================================\n");
 
     if (v4p_selftest_byteorder() != 1) {
-        printf("Byte-Order-Selbsttest fehlgeschlagen -- Abbruch.\n");
+        v4_msg("Byte-Order-Selbsttest fehlgeschlagen -- Abbruch.\n");
         return 10;
     }
 
-    printf("Trace: %s%s (mit -q abschaltbar)\n", g_trace ? "an" : "aus",
+    v4_msg("Trace: %s%s (mit -q abschaltbar)\n", g_trace ? "an" : "aus",
            g_hex ? ", Hexdump an" : "");
-    printf("[trace] oeffne I2C-Bus%s%s ...\n", dev ? ": " : "",
+    v4_msg("[trace] oeffne I2C-Bus%s%s ...\n", dev ? ": " : "",
            dev ? dev : " (Standard)");
     fflush(stdout);
 
     if (v4_open(&m, dev) != 0) {
-        printf("I2C-Bus nicht verfuegbar (%s).\n", v4_plat_error_text());
+        v4_msg("I2C-Bus nicht verfuegbar (%s).\n", v4_plat_error_text());
         return 10;
     }
     /* Ab jetzt jeden Transaktionsschritt protokollieren. Muss NACH
@@ -316,8 +373,8 @@ int v4_console_main(int argc, char **argv)
 
     rc = v4_ping(&m, &info);
     if (rc != V4P_ST_OK) {
-        printf("PING: %s\n", v4_strerror(rc));
-        printf("Hinweis: eine Firmware mit dem alten 64-Byte-READ-Frame\n"
+        v4_msg("PING: %s\n", v4_strerror(rc));
+        v4_msg("Hinweis: eine Firmware mit dem alten 64-Byte-READ-Frame\n"
                "         (proto_ver 2) liefert auf einen 128-Byte-Read keine\n"
                "         gueltige Antwort -- dann ist der Stand zu alt fuer\n"
                "         proto_ver 3. Aktuell erwartet wird proto_ver %u.\n",
@@ -330,7 +387,7 @@ int v4_console_main(int argc, char **argv)
     if (rc != V4P_ST_OK) {
         /* Wichtig seit der 128-Byte-Fassung: eine aeltere Firmware meldet
          * read_frame_len = 64 -- dann waere jede Antwort verschoben. */
-        printf("Protokoll passt nicht (%s): Slave meldet proto=%u "
+        v4_msg("Protokoll passt nicht (%s): Slave meldet proto=%u "
                "write=%u read=%u chunk=%u; erwartet proto=%u write=%u "
                "read=%u\n", v4_strerror(rc), (unsigned)info.proto_ver,
                (unsigned)info.write_frame_len, (unsigned)info.read_frame_len,
@@ -339,71 +396,71 @@ int v4_console_main(int argc, char **argv)
         v4_close();
         return 10;
     }
-    printf("PING ok: proto=%u fw=%u write=%u read=%u bulk_max=%u chunk=%u\n",
+    v4_msg("PING ok: proto=%u fw=%u write=%u read=%u bulk_max=%u chunk=%u\n",
            (unsigned)info.proto_ver, (unsigned)info.fw_ver,
            (unsigned)info.write_frame_len, (unsigned)info.read_frame_len,
            (unsigned)info.bulk_payload_max, (unsigned)info.chunk);
 
-    printf("\n-- Zustand --\n");
+    v4_msg("\n-- Zustand --\n");
     rc = v4_get_status(&m, &st);
     if (rc != V4P_ST_OK) {
-        printf("GET_STATUS: %s\n", v4_strerror(rc));
+        v4_msg("GET_STATUS: %s\n", v4_strerror(rc));
     } else {
         print_status(&st);
     }
 
-    printf("\n-- Scan --\n");
+    v4_msg("\n-- Scan --\n");
     rc = v4_scan_start(&m, 8u, 1);
     if (rc != V4P_ST_OK) {
-        printf("SCAN_START: %s\n", v4_strerror(rc));
+        v4_msg("SCAN_START: %s\n", v4_strerror(rc));
     } else {
         uint16_t gen = st.scan_gen;
 
-        printf("Dauer-Scan laeuft, warte auf Aenderung der Geraeteliste");
+        v4_msg("Dauer-Scan laeuft, warte auf Aenderung der Geraeteliste");
         fflush(stdout);
         for (i = 0; i < 20; i++) {
             v4_plat_delay_us(500000u);
             rc = v4_get_status(&m, &st);
             if (rc != V4P_ST_OK) {
-                printf("\nGET_STATUS: %s\n", v4_strerror(rc));
+                v4_msg("\nGET_STATUS: %s\n", v4_strerror(rc));
                 break;
             }
             if (st.scan_gen != gen) {
                 break;
             }
-            printf(".");
+            v4_msg(".");
             fflush(stdout);
         }
-        printf("\n");
+        v4_msg("\n");
     }
 
     rc = v4_dev_count(&m, &count);
     if (rc == V4P_ST_OK) {
-        printf("Geraete: %u\n", (unsigned)count);
+        v4_msg("Geraete: %u\n", (unsigned)count);
         for (i = 0; i < (int)count; i++) {
             v4p_dev_t d;
 
             rc = v4_dev_get(&m, (uint8_t)i, &d);
             if (rc == V4P_ST_OK) {
-                printf("  [%2d] %-32s %02X:%02X:%02X:%02X:%02X:%02X\n", i,
+                v4_msg("  [%2d] %-32s %02X:%02X:%02X:%02X:%02X:%02X\n", i,
                        d.name, (unsigned)d.bda[0], (unsigned)d.bda[1],
                        (unsigned)d.bda[2], (unsigned)d.bda[3],
                        (unsigned)d.bda[4], (unsigned)d.bda[5]);
             } else {
-                printf("  [%2d] %s\n", i, v4_strerror(rc));
+                v4_msg("  [%2d] %s\n", i, v4_strerror(rc));
             }
         }
     } else {
-        printf("DEV_COUNT: %s\n", v4_strerror(rc));
+        v4_msg("DEV_COUNT: %s\n", v4_strerror(rc));
     }
 
     if (count == 0u) {
-        printf("Keine Geraete -- Abbruch.\n");
+        v4_msg("Keine Geraete -- Abbruch.\n");
         v4_close();
         return 0;
     }
 
-    printf("\nGeraeteindex zum Verbinden (0-%u, 'q' = Ende): ",
+    v4_msg("\nGeraeteindex zum Verbinden (0-%u, 'q' = Ende): ",
            (unsigned)(count - 1u));
     fflush(stdout);
     if (fgets(line, sizeof(line), stdin) == NULL) {
@@ -416,60 +473,60 @@ int v4_console_main(int argc, char **argv)
     }
     i = atoi(line);
     if (i < 0 || i >= (int)count) {
-        printf("Index ausserhalb des Bereichs.\n");
+        v4_msg("Index ausserhalb des Bereichs.\n");
         v4_close();
         return 5;
     }
 
-    printf("\n-- Verbinden --\n");
+    v4_msg("\n-- Verbinden --\n");
     rc = v4_connect(&m, (uint8_t)i);
     if (rc != V4P_ST_OK) {
-        printf("CONNECT: %s\n", v4_strerror(rc));
+        v4_msg("CONNECT: %s\n", v4_strerror(rc));
         v4_close();
         return 10;
     }
-    printf("CONNECT gesendet, warte auf state == CONNECTED ");
+    v4_msg("CONNECT gesendet, warte auf state == CONNECTED ");
     fflush(stdout);
     for (i = 0; i < 200; i++) {
         rc = v4_get_status(&m, &st);
         if (rc != V4P_ST_OK) {
-            printf("\nGET_STATUS: %s\n", v4_strerror(rc));
+            v4_msg("\nGET_STATUS: %s\n", v4_strerror(rc));
             break;
         }
         if (st.state == V4P_STATE_CONNECTED) {
             break;
         }
         v4_plat_delay_us(50000u);
-        printf(".");
+        v4_msg(".");
         fflush(stdout);
     }
-    printf("\n");
+    v4_msg("\n");
     if (st.state == V4P_STATE_CONNECTED) {
-        printf("Verbunden mit Index %u.\n", (unsigned)st.conn_index);
+        v4_msg("Verbunden mit Index %u.\n", (unsigned)st.conn_index);
     } else {
-        printf("Verbindung nicht bestaetigt (state=%u).\n", (unsigned)st.state);
+        v4_msg("Verbindung nicht bestaetigt (state=%u).\n", (unsigned)st.state);
     }
 
-    printf("\n-- SD-Karte --\n");
+    v4_msg("\n-- SD-Karte --\n");
     rc = v4_sd_mount_wait(&m, 50u);
-    printf("SD_MOUNT: %s\n", v4_strerror(rc));
+    v4_msg("SD_MOUNT: %s\n", v4_strerror(rc));
     if (rc == V4P_ST_OK) {
         rc = v4_sd_info(&m, &si);
         if (rc == V4P_ST_OK) {
-            printf("total=%lu kB free=%lu kB sector=%u fat=%u\n",
+            v4_msg("total=%lu kB free=%lu kB sector=%u fat=%u\n",
                    (unsigned long)si.total_kb, (unsigned long)si.free_kb,
                    (unsigned)si.sector_size, (unsigned)si.fat_type);
         } else {
-            printf("SD_INFO: %s\n", v4_strerror(rc));
+            v4_msg("SD_INFO: %s\n", v4_strerror(rc));
         }
 
-        printf("\n-- Wurzelverzeichnis --\n");
+        v4_msg("\n-- Wurzelverzeichnis --\n");
         rc = v4_list_dir(&m, "/", dir_cb, NULL);
         if (rc != V4P_ST_OK) {
-            printf("DIR: %s\n", v4_strerror(rc));
+            v4_msg("DIR: %s\n", v4_strerror(rc));
         }
 
-        printf("\nDatei lesen (Pfad relativ zum Mount, leer = ueberspringen): ");
+        v4_msg("\nDatei lesen (Pfad relativ zum Mount, leer = ueberspringen): ");
         fflush(stdout);
         if (fgets(line, sizeof(line), stdin) != NULL) {
             size_t n = strlen(line);
@@ -481,7 +538,7 @@ int v4_console_main(int argc, char **argv)
                 g_blocks = 0ul;
                 g_bytes  = 0ul;
                 rc = read_file_manual(&m, line);
-                printf("FILE_READ: %s (%lu Byte in %lu Bloecken)\n",
+                v4_msg("FILE_READ: %s (%lu Byte in %lu Bloecken)\n",
                        v4_strerror(rc), g_bytes, g_blocks);
                 if (rc == V4_ERR_LINK) {
                     print_bus_error();
@@ -490,8 +547,8 @@ int v4_console_main(int argc, char **argv)
         }
     }
 
-    printf("\n-- Wiedergabe von der SD-Karte (PLAY_FILE/STOP_PLAY) --\n");
-    printf("Datei abspielen (Pfad, leer = ueberspringen): ");
+    v4_msg("\n-- Wiedergabe von der SD-Karte (PLAY_FILE/STOP_PLAY) --\n");
+    v4_msg("Datei abspielen (Pfad, leer = ueberspringen): ");
     fflush(stdout);
     if (fgets(line, sizeof(line), stdin) != NULL) {
         size_t n = strlen(line);
@@ -501,19 +558,19 @@ int v4_console_main(int argc, char **argv)
         }
         if (n > 0u) {
             rc = v4_play_file(&m, line);
-            printf("PLAY_FILE: %s\n", v4_strerror(rc));
+            v4_msg("PLAY_FILE: %s\n", v4_strerror(rc));
             if (rc == V4P_ST_OK) {
                 if (v4_get_status(&m, &st) == V4P_ST_OK) {
                     print_status(&st);
                 }
-                printf("Wiedergabe laeuft -- Enter zum Stoppen ...");
+                v4_msg("Wiedergabe laeuft -- Enter zum Stoppen ...");
                 fflush(stdout);
                 if (fgets(line, sizeof(line), stdin) == NULL) {
                     /* Eingabe zu Ende (Pipe/EOF): trotzdem sauber stoppen. */
-                    printf("\n(Eingabe beendet -- Wiedergabe wird gestoppt)\n");
+                    v4_msg("\n(Eingabe beendet -- Wiedergabe wird gestoppt)\n");
                 }
                 rc = v4_stop_play(&m);
-                printf("STOP_PLAY: %s\n", v4_strerror(rc));
+                v4_msg("STOP_PLAY: %s\n", v4_strerror(rc));
                 if (v4_get_status(&m, &st) == V4P_ST_OK) {
                     print_status(&st);
                 }
@@ -521,12 +578,41 @@ int v4_console_main(int argc, char **argv)
         }
     }
 
-    printf("\n-- Trennen --\n");
+    v4_msg("\n-- Trennen --\n");
     rc = v4_disconnect(&m);
-    printf("DISCONNECT: %s\n", v4_strerror(rc));
+    v4_msg("DISCONNECT: %s\n", v4_strerror(rc));
 
     v4_close();
     return 0;
+}
+
+int v4_console_main(int argc, char **argv)
+{
+    const char *dev = NULL;
+    int         rc;
+
+    rc = parse_args(argc, argv, &dev);
+    if (rc != 0) {
+        return rc;
+    }
+
+    if (g_use_serial != 0) {
+        if (v4_plat_serial_open(g_ser_dev) == 0) {
+            v4_msg("Serielle Ausgabe: %s\n",
+                   (g_ser_dev != NULL) ? g_ser_dev
+                                       : "Standardgeraet (Amiga ser:, 9600 8N1)");
+        } else {
+            v4_msg("Serielle Ausgabe nicht verfuegbar (%s) -- nur Konsole.\n",
+                   (g_ser_dev != NULL) ? g_ser_dev : "Standardgeraet");
+        }
+    }
+
+    rc = console_run(dev);
+
+    /* Erst hier schliessen: so wird der Kanal auch auf jedem frueheren
+     * return-Pfad sauber geschlossen. */
+    v4_plat_serial_close();
+    return rc;
 }
 
 /* Einstiegspunkt. Fuer den Smoketest (tests/smoke_console.c) wird nur

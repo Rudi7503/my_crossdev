@@ -36,6 +36,16 @@ make demo       # Konsolenprogramm für den Harness (braucht /dev/i2c-N)
 make amiga      # AmigaOS-Executable für die V4
 ```
 
+Das Programm auf der V4:
+
+```sh
+ram:v4_console          # Trace an (Vorgabe)
+ram:v4_console -q       # still
+ram:v4_console -x       # zusaetzlich Hexdump der ersten 32 Antwortbytes
+ram:v4_console -s       # Ausgabe zusaetzlich auf seriell (ser: = 9600 8N1)
+ram:v4_console -o ser:  # dasselbe, aber mit ausdruecklichem Geraet
+```
+
 Voraussetzungen: `gcc`, `make` für den Harness; die Apollo-Toolchain unter
 `../../../Compilers/GCC-6.50-Latest` (Pfad über `APOLLO_PREFIX` überschreibbar)
 für das Zielsystem.
@@ -60,7 +70,8 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
 | Fuzzing der Parser (deterministisch, 160 000 Frames) | `make test` | grün, kein Zufallsframe akzeptiert |
 | Derselbe Lauf unter AddressSanitizer + UndefinedBehaviorSanitizer | `make test-san` | grün, keine Befunde (inkl. Leck-Erkennung) |
 | Statische Analyse (`gcc -fanalyzer`) über alle Quellen | manuell | keine Befunde |
-| Smoketest des echten Konsolenprogramms gegen den Mock | `make smoke` | grün, 4 Durchläufe (inkl. PLAY_FILE/STOP_PLAY) |
+| Smoketest des echten Konsolenprogramms gegen den Mock | `make smoke` | grün, 6 Durchläufe (inkl. PLAY_FILE/STOP_PLAY, Schalterfehler) |
+| Ausgabe-Spiegelung Konsole → serielle Schnittstelle | `make smoke` | grün, gespiegelte Datei per `cmp` **byte-gleich** zur Konsole |
 | Lint der Byte-Order-Regeln | `make lint` | grün, mit Selbsttest und Live-Positivkontrolle |
 | m68k-Objektcode greift nur byteweise auf Puffer zu | `make asm` | grün, Gate nachweislich nicht vakuant |
 | Amiga-Build (`-Wall -Wextra -Werror`, `m68080`) | `make amiga` | grün, erzeugt AmigaOS-Executable |
@@ -102,6 +113,14 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
 3. **Die Amiga-Plattformschicht ist übersetzt, aber nicht gelaufen.**
    `v4_amiga_i2c.c` kompiliert sauber für m68k-amigaos; auf echter Hardware
    wurden `SendI2C`/`ReceiveI2C` und insbesondere die Verzögerung nicht geprüft.
+   Dasselbe gilt für die **serielle Ausgabe**: die Haken sind auf dem Mock
+   getestet (byte-gleiche Spiegelung) und der m68k-Code ist geprüft (`Open`
+   −30, `Write` −48, `Close` −36 auf `_DOSBase`), aber ob auf der V4
+   `serial.device` Unit 0 frei ist und die angenommenen **9600 8N1** stimmen,
+   zeigt erst der Lauf mit `ram:v4_console -s` und einem Terminal auf der
+   Gegenseite. Das Programm setzt die Parameter nicht selbst
+   (`SDCMD_SETPARAMS` fehlt) und meldet ein belegtes Gerät nur als
+   „nicht verfügbar" — es stürzt dabei nicht ab.
 
 4. **Die Verzögerung `t_wait` ist protokolltragend** (§1.3, Regel R3). Der Slave
    kann nicht clock-stretchen; ein zu früh gelesener Frame ist Müll. Auf der V4
@@ -409,6 +428,71 @@ Der Trace wird vom Master über einen Haken gerufen (`v4_master_t.trace`, siehe
 `v4_master.h`); ohne Haken (`NULL`) kostet er nichts. Ein Test prüft, dass die
 Ereignisse in der richtigen Reihenfolge und vollständig kommen — sonst würde das
 Instrument beim Hardwarefehler Falsches zeigen.
+
+### Dieselbe Ausgabe zusätzlich über die serielle Schnittstelle (V4 → PC)
+
+Wenn der Absturz den Ausgabekanal mitnimmt, ist auch die letzte Zeile weg. Deshalb
+kann die komplette Ausgabe **zusätzlich auf die serielle Schnittstelle** gelegt
+werden: der UART puffert selbst, und was `serial.device` schon angenommen hat,
+geht auch dann noch raus, wenn die Task unmittelbar danach stirbt.
+
+```sh
+ram:v4_console -s                  # Standardgeraet: Amiga "ser:" = Unit 0
+ram:v4_console -s -q               # nur die Meldungen, ohne Trace
+ram:v4_console -o ser:             # ausdrueckliches Geraet (dasselbe)
+ram:v4_console -o ram:log.txt      # im Harness/Mock: alles in eine Datei
+```
+
+Am PC hängt das Terminal am Gegenstück:
+
+| V4 | PC |
+|---|---|
+| `ser:` (`serial.device` Unit 0) | COM6 |
+
+Mitlesen auf einem Linux-Rechner (COM6 entspricht dort üblicherweise
+`/dev/ttyS5`, `COM<n>` ↔ `ttyS<n-1>`; bei einem USB-Adapter `/dev/ttyUSB0`):
+
+```sh
+stty -F /dev/ttyS5 9600 cs8 -cstopb -parenb raw -echo
+cat /dev/ttyS5
+```
+
+Auf der V4 dann `ram:v4_console -s` starten. `acp` kann **kein** Programm
+starten — der Start erfolgt immer auf der V4 (Shell oder Ikone).
+
+Einstellungen: **9600 Baud, 8 Datenbits, keine Parität, 1 Stopbit, kein
+Handshake** — die AmigaOS-Vorgabe für `ser:`. Das Programm setzt die Parameter
+absichtlich nicht selbst (`SDCMD_SETPARAMS`), die Baudrate ist also noch nicht
+umschaltbar; für die Trace-Zeilen reicht 9600.
+
+Alle Texte laufen über `v4_msg()` in `v4_console.c`: erst Konsole, dann — wenn
+eingeschaltet — dieselbe Zeile auf die serielle Seite. Der Smoketest vergleicht
+beide Ausgaben mit `cmp` und verlangt **Byte-Gleichheit**, damit auf der seriellen
+Seite garantiert keine Zeile fehlt.
+
+Die Spiegelung ist ein Plattformhaken (`v4_master.h`), genau wie
+`v4_plat_delay_us` — die Konsole kennt nur diese drei Funktionen:
+
+| Haken | Amiga (`v4_amiga_i2c.c`) | Linux-Harness / Mock |
+|---|---|---|
+| `v4_plat_serial_open(dev)` | `Open(dev, MODE_NEWFILE)`; `dev == NULL` → `"ser:"` | `fopen(dev, "a")`; ohne `dev` → `-1` (kein Standardgerät) |
+| `v4_plat_serial_write(s, len)` | `Write()` auf den Kanal; ohne offenen Kanal `0` | `fwrite()` + `fflush()`; ohne offenen Kanal `0` |
+| `v4_plat_serial_close()` | `Close()`; mehrfach aufrufbar | `fclose()`; mehrfach aufrufbar |
+
+**Achtung, Laufzeit:** die Ausgabe auf `ser:` ist *synchron* — `Write()` kehrt
+erst zurück, wenn der UART die Zeichen angenommen hat. Bei 9600 Baud sind das
+rund 1 ms pro 10 Zeichen, und die Trace-Zeilen liegen **zwischen** Schreiben und
+Antwortlesen (`t_wait` bleibt davon unberührt, weil danach gewartet wird). Für die
+normalen Zeilen ist das unkritisch; `-x` schreibt pro Transaktion einen Hexdump
+von gut 100 Zeichen und schiebt damit ≈ 100 ms zwischen Befehl und Lesen. Wer
+`-s -x` kombiniert, sollte das wissen. Eine höhere Baudrate wäre über
+`SDCMD_SETPARAMS` möglich, ist aber noch nicht implementiert.
+
+Ist kein Adapter angeschlossen oder das Gerät belegt, ist das **kein Fehler**:
+`v4_plat_serial_open()` meldet nur
+`Serielle Ausgabe nicht verfuegbar (...) -- nur Konsole.` und das Programm läuft
+unverändert weiter. Das Schreiben ohne offenen Kanal ist ein No-op; ein Test
+prüft diesen Vertrag (`tests/test_master.c`, Fall „serial hooks").
 
 ## Feldbefund: die Konvention von `i2c.library` ist umgekehrt zu „0 = OK"
 

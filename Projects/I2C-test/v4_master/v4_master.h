@@ -92,7 +92,7 @@ const char *v4_plat_error_text(void);
 /*                                                                     */
 /* Zweck: die Ausgaben zusaetzlich auf die serielle Schnittstelle      */
 /* legen, damit sie am PC mitgelesen werden koennen (V4 -> COMx).      */
-/* Das ist beim Suchen eines Absturzes dem Bildschirmfenster           */
+/* Beim Suchen eines Absturzes ist das dem Bildschirmfenster           */
 /* ueberlegen: was der UART bereits gepuffert hat, wird auch dann noch */
 /* gesendet, wenn die Task unmittelbar danach stirbt.                   */
 /*                                                                     */
@@ -101,8 +101,8 @@ const char *v4_plat_error_text(void);
 /*               9600 Baud, 8 Datenbits, keine Paritaet, 1 Stopbit     */
 /*        Linux/Mock: kein Standardgeraet, nur mit ausdruecklichem     */
 /*                Pfad (Geraet oder Datei)                             */
-/*   Rueckgabe 0 = offen, -1 = nicht verfuegbar (KEIN Fehler -- die    */
-/*   Ausgabe geht dann nur auf die Konsole).                           */
+/*   Rueckgabe 0 = offen, -1 = nicht verfuegbar (KEIN Fehler -- die     */
+/*   Ausgabe geht dann nur auf die Konsole).                            */
 /* ------------------------------------------------------------------ */
 
 int  v4_plat_serial_open (const char *dev);

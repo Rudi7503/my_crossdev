@@ -6,6 +6,10 @@
 #   make test-m68k    Testsuite unter qemu-m68k (Big Endian) -- siehe unten
 #   make amiga        Bibliothek + Amiga-Plattform + Konsole fuer m68k-amigaos
 #   make demo         Konsolenprogramm fuer den Linux-Harness (i2c-dev)
+#
+# Das Konsolenprogramm kennt -q (still), -x (Hexdump), -s (Ausgabe zusaetzlich
+# auf das Standard-Seriellgeraet, auf dem Amiga "ser:" = 9600 8N1) und
+# -o <geraet> (Ausgabe zusaetzlich auf ein bestimmtes Geraet/eine Datei).
 #   make asm          m68k-Disassembly der Byte-Order-Helfer (Nachweis)
 #   make lint         nur der Portabilitaets-Lint
 #   make upload       Programm + Ikone direkt auf die V4 (ApolloExplorer/acp)
@@ -186,7 +190,30 @@ smoke: $(BUILD)/v4_console_smoke
 	grep -q "PLAY_FILE: OK" $(BUILD)/smoke4.txt || { echo "  FEHLER: PLAY_FILE fehlt"; fail=1; }; \
 	grep -q "STOP_PLAY: OK" $(BUILD)/smoke4.txt || { echo "  FEHLER: STOP_PLAY fehlt"; fail=1; }; \
 	grep -q "SD-Wiedergabe" $(BUILD)/smoke4.txt || { echo "  FEHLER: audio_flags SD-Wiedergabe fehlt"; fail=1; }; \
-	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (4 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
+	echo "== Smoke 5: serielle Ausgabe spiegeln (-o schreibt mit) =="; \
+	rm -f $(BUILD)/smoke5.txt $(BUILD)/smoke_serial.txt; \
+	printf '0\n\n' | ./$(BUILD)/v4_console_smoke -o $(BUILD)/smoke_serial.txt \
+	    > $(BUILD)/smoke5.txt 2>&1 || fail=1; \
+	test -s $(BUILD)/smoke_serial.txt || { echo "  FEHLER: serielle Datei leer"; fail=1; }; \
+	grep -q "PING ok: proto=3" $(BUILD)/smoke_serial.txt \
+	    || { echo "  FEHLER: PING fehlt auf der seriellen Ausgabe"; fail=1; }; \
+	grep -q "DISCONNECT: OK" $(BUILD)/smoke_serial.txt \
+	    || { echo "  FEHLER: Ende fehlt auf der seriellen Ausgabe"; fail=1; }; \
+	cmp -s $(BUILD)/smoke5.txt $(BUILD)/smoke_serial.txt \
+	    || { echo "  FEHLER: serielle Ausgabe weicht von der Konsole ab"; fail=1; }; \
+	echo "== Smoke 6: Schalterfehler werden gemeldet =="; \
+	printf 'q\n' | ./$(BUILD)/v4_console_smoke -s > $(BUILD)/smoke6.txt 2>&1 || fail=1; \
+	grep -q "Serielle Ausgabe nicht verfuegbar" $(BUILD)/smoke6.txt \
+	    || { echo "  FEHLER: Hinweis auf fehlendes Standardgeraet fehlt"; fail=1; }; \
+	if ./$(BUILD)/v4_console_smoke -Z > $(BUILD)/smoke7.txt 2>&1; then \
+	    echo "  FEHLER: unbekannter Schalter wurde nicht abgelehnt"; fail=1; fi; \
+	grep -q "Unbekannter Schalter" $(BUILD)/smoke7.txt \
+	    || { echo "  FEHLER: Meldung zum unbekannten Schalter fehlt"; fail=1; }; \
+	if ./$(BUILD)/v4_console_smoke -o > $(BUILD)/smoke8.txt 2>&1; then \
+	    echo "  FEHLER: -o ohne Geraet wurde nicht abgelehnt"; fail=1; fi; \
+	grep -q -- "-o braucht ein Geraet" $(BUILD)/smoke8.txt \
+	    || { echo "  FEHLER: Meldung zu -o ohne Geraet fehlt"; fail=1; }; \
+	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (6 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
 
 # Alles, was ohne Hardware pruefbar ist.
 verify: lint selftest-lint test test-san smoke asm amiga
