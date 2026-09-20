@@ -31,6 +31,7 @@ static unsigned long g_bytes;
 
 static int         g_use_log    = 1;   /* 1 Vorgabe: Logdatei an, 0 mit -n,
                                         * 2 mit -o <pfad> */
+static int         g_settle     = 0;   /* -t <ticks>: Wartezeit je Logzeile */
 static const char *g_log_path   = NULL;
 
 static void v4_msg(const char *fmt, ...)
@@ -185,13 +186,6 @@ static void print_status(const v4p_status_t *st)
            (unsigned)st->chunk);
 }
 
-static void dir_cb(const v4p_dirent_t *ent, void *ctx)
-{
-    (void)ctx;
-    v4_msg("  %-8s %10lu  %s\n",
-           ((ent->attr & V4P_ATTR_DIR) != 0u) ? "<DIR>" : "Datei",
-           (unsigned long)ent->size, ent->name);
-}
 
 static void file_cb(uint16_t block, const uint8_t *data, uint16_t len,
                     void *ctx)
@@ -316,6 +310,12 @@ static int parse_args(int argc, char **argv, const char **dev_out)
                 g_trace = 0;                /* still */
             } else if (argv[i][1] == 'x') {
                 g_hex = 1;                  /* Antwortbytes zeigen */
+            } else if (argv[i][1] == 't') {
+                if (i + 1 >= argc) {
+                    v4_msg("-t braucht Ticks (1/50 s), z.B. -t 50\n");
+                    return 5;
+                }
+                g_settle = atoi(argv[++i]); /* Wartezeit je Logzeile */
             } else if (argv[i][1] == 'n') {
                 g_use_log = 0;           /* keine Logdatei, nur Konsole */
             } else if (argv[i][1] == 'o') {
@@ -328,7 +328,7 @@ static int parse_args(int argc, char **argv, const char **dev_out)
                 g_use_log  = 2;          /* ausdruecklicher Pfad */
             } else {
                 v4_msg("Unbekannter Schalter '%s' "
-                       "(erlaubt: -q -x -n -o <pfad>)\n", argv[i]);
+                       "(erlaubt: -q -x -n -o <pfad> -t <ticks>)\n", argv[i]);
                 return 5;
             }
         } else if (dev == NULL) {
@@ -337,6 +337,328 @@ static int parse_args(int argc, char **argv, const char **dev_out)
     }
     *dev_out = dev;
     return 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dateiauswahl: browsen statt Pfad eintippen                          */
+/*                                                                     */
+/* Der Slave liefert Verzeichniseintraege einzeln (DIR_OPEN, DIR_NEXT,  */
+/* DIR_CLOSE). Fuer eine Auswahl per Nummer wird die Liste deshalb erst  */
+/* vollstaendig eingesammelt, sortiert (Verzeichnisse zuerst) und        */
+/* seitenweise angezeigt.                                               */
+/* ------------------------------------------------------------------ */
+
+#define BROWSE_PAGE 20u          /* Eintraege je Seite                 */
+#define BROWSE_MAX  512u         /* Obergrenze je Verzeichnis (Speicher) */
+
+typedef struct {
+    char     name[V4P_NAME_BUF + 1u];
+    uint32_t size;
+    uint8_t  attr;
+} browse_ent_t;
+
+typedef struct {
+    browse_ent_t *ent;
+    unsigned      count;
+    unsigned      cap;
+    int           overflow;
+} browse_list_t;
+
+static void browse_add(const v4p_dirent_t *e, void *ctx)
+{
+    browse_list_t *l = (browse_list_t *)ctx;
+    size_t         n;
+
+    if (l->count >= l->cap) {
+        unsigned      newcap = (l->cap == 0u) ? 64u : (l->cap * 2u);
+        browse_ent_t *neu;
+
+        if (newcap > BROWSE_MAX) {
+            newcap = BROWSE_MAX;
+        }
+        if (l->count >= newcap) {
+            l->overflow = 1;
+            return;
+        }
+        neu = (browse_ent_t *)realloc(l->ent,
+                                      (size_t)newcap * sizeof(browse_ent_t));
+        if (neu == NULL) {
+            l->overflow = 1;
+            return;
+        }
+        l->ent = neu;
+        l->cap = newcap;
+    }
+    n = strlen(e->name);
+    if (n > (size_t)V4P_NAME_BUF) {
+        n = (size_t)V4P_NAME_BUF;
+    }
+    memcpy(l->ent[l->count].name, e->name, n);
+    l->ent[l->count].name[n] = '\0';
+    l->ent[l->count].size    = e->size;
+    l->ent[l->count].attr    = e->attr;
+    l->count++;
+}
+
+/* Verzeichnisse zuerst, dann alphabetisch ohne Ruecksicht auf Gross/Klein. */
+static int browse_cmp(const void *a, const void *b)
+{
+    const browse_ent_t *x = (const browse_ent_t *)a;
+    const browse_ent_t *y = (const browse_ent_t *)b;
+    const char         *p = x->name;
+    const char         *q = y->name;
+    int                 dx = ((x->attr & V4P_ATTR_DIR) != 0u) ? 0 : 1;
+    int                 dy = ((y->attr & V4P_ATTR_DIR) != 0u) ? 0 : 1;
+
+    if (dx != dy) {
+        return dx - dy;
+    }
+    for (;;) {
+        int cx = (int)(unsigned char)*p++;
+        int cy = (int)(unsigned char)*q++;
+
+        if (cx >= 'a' && cx <= 'z') {
+            cx -= 'a' - 'A';
+        }
+        if (cy >= 'a' && cy <= 'z') {
+            cy -= 'a' - 'A';
+        }
+        if (cx != cy) {
+            return cx - cy;
+        }
+        if (cx == 0) {
+            return 0;
+        }
+    }
+}
+
+/* Name an einen Pfad anhaengen ("/" dazwischen, nie fuehrend). */
+static void path_append(char *buf, size_t cap, const char *name)
+{
+    size_t n = strlen(buf);
+    size_t k;
+
+    if (n > 0u && n + 1u < cap) {
+        buf[n++] = '/';
+        buf[n]   = '\0';
+    }
+    k = strlen(name);
+    if (n + k >= cap) {
+        k = (cap > n + 1u) ? (cap - n - 1u) : 0u;
+    }
+    memcpy(buf + n, name, k);
+    buf[n + k] = '\0';
+}
+
+/* Wiedergabe starten, laufen lassen, auf Enter wieder stoppen. */
+static void do_play(v4_master_t *m, const char *path)
+{
+    v4p_status_t st;
+    uint8_t      rc = v4_play_file(m, path);
+    char         line[32];
+
+    v4_msg("PLAY_FILE: %s\n", v4_strerror(rc));
+
+    /* Zweiter Versuch mit fuehrendem Schraegstrich: der Slave bekommt Pfade
+     * relativ zum Mount, aber wenn er sie absolut erwartet, hilft diese Form.
+     * Der Mitschnitt zeigt dann, welche funktioniert. */
+    if (rc == V4P_ST_NOT_FOUND && path[0] != '/') {
+        char alt[V4P_PATH_MAX + 2u];
+
+        alt[0] = '/';
+        if (strlen(path) < sizeof(alt) - 1u) {
+            memcpy(alt + 1u, path, strlen(path) + 1u);
+            v4_msg("zweiter Versuch mit fuehrendem \"/\": %s\n", alt);
+            rc = v4_play_file(m, alt);
+            v4_msg("PLAY_FILE: %s\n", v4_strerror(rc));
+        }
+    }
+    if (rc != V4P_ST_OK) {
+        return;
+    }
+    if (v4_get_status(m, &st) == V4P_ST_OK) {
+        print_status(&st);
+    }
+    v4_msg("Wiedergabe laeuft -- Enter zum Stoppen ...");
+    fflush(stdout);
+    if (fgets(line, sizeof(line), stdin) == NULL) {
+        v4_msg("\n(Eingabe beendet -- Wiedergabe wird gestoppt)\n");
+    }
+    rc = v4_stop_play(m);
+    v4_msg("STOP_PLAY: %s\n", v4_strerror(rc));
+    if (v4_get_status(m, &st) == V4P_ST_OK) {
+        print_status(&st);
+    }
+}
+
+/* Datei pruefen (oeffnen und gleich wieder schliessen). */
+static uint8_t file_probe(v4_master_t *m, const char *path, uint32_t *size)
+{
+    uint8_t handle = 0u;
+    uint8_t attr   = 0u;
+    uint8_t rc     = v4_file_open(m, path, &handle, size, &attr);
+
+    if (rc == V4P_ST_OK) {
+        (void)v4_file_close(m, handle);
+    }
+    return rc;
+}
+
+/* Browsen bis 'q'. Enter beendet, Nummern waehlen, n/p blaettern,
+ * u = eine Ebene hoch, r = Wurzel. */
+static void browse_files(v4_master_t *m)
+{
+    char dir[V4P_PATH_MAX + 1u];
+
+    dir[0] = '\0';                         /* Wurzel */
+    for (;;) {
+        browse_list_t l;
+        unsigned      pages;
+        unsigned      page = 0u;
+        uint8_t       rc;
+        char          line[32];
+
+        memset(&l, 0, sizeof(l));
+        v4_msg("\n-- Dateien --\nPfad: /%s\n", dir);
+        rc = v4_list_dir(m, dir, browse_add, &l);
+        if (rc != V4P_ST_OK) {
+            v4_msg("DIR: %s\n", v4_strerror(rc));
+            free(l.ent);
+            return;
+        }
+        if (l.count > 1u) {
+            qsort(l.ent, l.count, sizeof(browse_ent_t), browse_cmp);
+        }
+        pages = (l.count + BROWSE_PAGE - 1u) / BROWSE_PAGE;
+        if (pages == 0u) {
+            pages = 1u;
+        }
+        v4_msg("%u Eintraege%s\n", l.count,
+               (l.overflow != 0) ? " (Liste abgeschnitten)" : "");
+
+        for (;;) {                          /* Seiten-Schleife */
+            unsigned first = page * BROWSE_PAGE;
+            unsigned last  = first + BROWSE_PAGE;
+            unsigned i;
+            unsigned idx;
+
+            if (last > l.count) {
+                last = l.count;
+            }
+            v4_msg("\nSeite %u/%u\n", page + 1u, pages);
+            for (i = first; i < last; i++) {
+                int isdir = ((l.ent[i].attr & V4P_ATTR_DIR) != 0u);
+
+                v4_msg("  [%3u] %-6s %10lu  %s%s\n", i,
+                       isdir ? "<DIR>" : "Datei",
+                       (unsigned long)l.ent[i].size, l.ent[i].name,
+                       isdir ? "/" : "");
+            }
+            v4_msg("Nummer = auswaehlen, n = weiter, p = zurueck, u = hoch, "
+                   "r = Wurzel, Enter/q = Ende: ");
+            fflush(stdout);
+            if (fgets(line, sizeof(line), stdin) == NULL) {
+                free(l.ent);
+                return;
+            }
+            if (line[0] == 'q' || line[0] == 'Q' || line[0] == '\n'
+                || line[0] == '\r' || line[0] == '\0') {
+                free(l.ent);
+                return;
+            }
+            if (line[0] == 'r' || line[0] == 'R') {
+                dir[0] = '\0';
+                break;                      /* neu einlesen */
+            }
+            if (line[0] == 'u' || line[0] == 'U') {
+                size_t n = strlen(dir);
+
+                while (n > 0u && dir[n - 1u] != '/') {
+                    n--;
+                }
+                if (n > 0u) {
+                    n--;                    /* Schraegstrich weg */
+                }
+                dir[n] = '\0';
+                break;                      /* neu einlesen */
+            }
+            if (line[0] == 'n' || line[0] == 'N') {
+                if (page + 1u < pages) {
+                    page++;
+                }
+                continue;
+            }
+            if (line[0] == 'p' || line[0] == 'P') {
+                if (page > 0u) {
+                    page--;
+                }
+                continue;
+            }
+
+            idx = (unsigned)atoi(line);
+            if (idx >= l.count) {
+                v4_msg("Kein Eintrag [%u].\n", idx);
+                continue;
+            }
+            if ((l.ent[idx].attr & V4P_ATTR_DIR) != 0u) {
+                path_append(dir, sizeof(dir), l.ent[idx].name);
+                break;                      /* hinein */
+            }
+
+            /* Datei: Pfad bauen, pruefen, Aktion anbieten. */
+            {
+                char     fpath[V4P_PATH_MAX + 1u];
+                uint32_t fsize = 0u;
+                uint8_t  prc;
+
+                fpath[0] = '\0';
+                if (dir[0] != '\0') {
+                    size_t n = strlen(dir);
+
+                    if (n >= sizeof(fpath)) {
+                        n = sizeof(fpath) - 1u;
+                    }
+                    memcpy(fpath, dir, n);
+                    fpath[n] = '\0';
+                }
+                path_append(fpath, sizeof(fpath), l.ent[idx].name);
+
+                v4_msg("\nGewaehlt: %s (%lu Byte laut Liste)\n", fpath,
+                       (unsigned long)l.ent[idx].size);
+                prc = file_probe(m, fpath, &fsize);
+                if (prc == V4P_ST_OK) {
+                    v4_msg("Oeffnen: OK, %lu Byte\n", (unsigned long)fsize);
+                } else {
+                    v4_msg("Oeffnen: %s\n", v4_strerror(prc));
+                }
+                v4_msg("(a)bsspielen, (l)esen/pruefen, (z)urueck, "
+                       "(q)ende: ");
+                fflush(stdout);
+                if (fgets(line, sizeof(line), stdin) == NULL) {
+                    free(l.ent);
+                    return;
+                }
+                if (line[0] == 'q' || line[0] == 'Q') {
+                    free(l.ent);
+                    return;
+                }
+                if (line[0] == 'a' || line[0] == 'A') {
+                    do_play(m, fpath);
+                } else if (line[0] == 'l' || line[0] == 'L') {
+                    g_blocks = 0ul;
+                    g_bytes  = 0ul;
+                    rc = read_file_manual(m, fpath);
+                    v4_msg("FILE_READ: %s (%lu Byte in %lu Bloecken)\n",
+                           v4_strerror(rc), g_bytes, g_blocks);
+                    if (rc == V4_ERR_LINK) {
+                        print_bus_error();
+                    }
+                }
+                /* alles andere (auch 'z'): zurueck zur Liste */
+            }
+        }
+        free(l.ent);
+    }
 }
 
 static int console_run(const char *dev)
@@ -523,62 +845,7 @@ static int console_run(const char *dev)
             v4_msg("SD_INFO: %s\n", v4_strerror(rc));
         }
 
-        v4_msg("\n-- Wurzelverzeichnis --\n");
-        rc = v4_list_dir(&m, "/", dir_cb, NULL);
-        if (rc != V4P_ST_OK) {
-            v4_msg("DIR: %s\n", v4_strerror(rc));
-        }
-
-        v4_msg("\nDatei lesen (Pfad relativ zum Mount, leer = ueberspringen): ");
-        fflush(stdout);
-        if (fgets(line, sizeof(line), stdin) != NULL) {
-            size_t n = strlen(line);
-
-            while (n > 0u && (line[n - 1u] == '\n' || line[n - 1u] == '\r')) {
-                line[--n] = '\0';
-            }
-            if (n > 0u) {
-                g_blocks = 0ul;
-                g_bytes  = 0ul;
-                rc = read_file_manual(&m, line);
-                v4_msg("FILE_READ: %s (%lu Byte in %lu Bloecken)\n",
-                       v4_strerror(rc), g_bytes, g_blocks);
-                if (rc == V4_ERR_LINK) {
-                    print_bus_error();
-                }
-            }
-        }
-    }
-
-    v4_msg("\n-- Wiedergabe von der SD-Karte (PLAY_FILE/STOP_PLAY) --\n");
-    v4_msg("Datei abspielen (Pfad, leer = ueberspringen): ");
-    fflush(stdout);
-    if (fgets(line, sizeof(line), stdin) != NULL) {
-        size_t n = strlen(line);
-
-        while (n > 0u && (line[n - 1u] == '\n' || line[n - 1u] == '\r')) {
-            line[--n] = '\0';
-        }
-        if (n > 0u) {
-            rc = v4_play_file(&m, line);
-            v4_msg("PLAY_FILE: %s\n", v4_strerror(rc));
-            if (rc == V4P_ST_OK) {
-                if (v4_get_status(&m, &st) == V4P_ST_OK) {
-                    print_status(&st);
-                }
-                v4_msg("Wiedergabe laeuft -- Enter zum Stoppen ...");
-                fflush(stdout);
-                if (fgets(line, sizeof(line), stdin) == NULL) {
-                    /* Eingabe zu Ende (Pipe/EOF): trotzdem sauber stoppen. */
-                    v4_msg("\n(Eingabe beendet -- Wiedergabe wird gestoppt)\n");
-                }
-                rc = v4_stop_play(&m);
-                v4_msg("STOP_PLAY: %s\n", v4_strerror(rc));
-                if (v4_get_status(&m, &st) == V4P_ST_OK) {
-                    print_status(&st);
-                }
-            }
-        }
+        browse_files(&m);
     }
 
     v4_msg("\n-- Trennen --\n");
@@ -589,6 +856,7 @@ static int console_run(const char *dev)
     return 0;
 }
 
+
 int v4_console_main(int argc, char **argv)
 {
     const char *dev = NULL;
@@ -598,6 +866,8 @@ int v4_console_main(int argc, char **argv)
     if (rc != 0) {
         return rc;
     }
+
+    v4_plat_log_settle(g_settle);       /* 0 = sofort, 50 = eine Sekunde */
 
     /* Zeilen mit dem Praefix "(K) " sind Konsolen-Marken fuer die
      * Absturzlokalisierung: sie stehen VOR bzw. ZWISCHEN den DOS-Aufrufen.

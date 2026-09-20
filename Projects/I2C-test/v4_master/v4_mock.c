@@ -1149,6 +1149,11 @@ long v4_plat_log_write(const char *s, unsigned long len)
     return (long)n;
 }
 
+void v4_plat_log_settle(int ticks)
+{
+    (void)ticks;                        /* Dateisystem schreibt sofort */
+}
+
 void v4_plat_log_close(void)
 {
     if (s_log != NULL) {

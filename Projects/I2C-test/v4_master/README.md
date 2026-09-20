@@ -41,10 +41,11 @@ Das Programm auf der V4:
 
 ```sh
 Programs:test/v4_console          # Trace an, Logdatei an (Vorgabe)
-Programs:test/v4_console -q       # still
+Programs:test/v4_console -q       # still (schnell!)
 Programs:test/v4_console -x       # zusaetzlich Hexdump der ersten 32 Antwortbytes
 Programs:test/v4_console -n       # keine Logdatei, nur Konsole
 Programs:test/v4_console -o ram:lauf.log   # anderer Logpfad
+Programs:test/v4_console -t 50    # 1 s Wartezeit je Logzeile (Absturzfahrt)
 
 # nach einem Absturz: Logdatei holen und ansehen
 make log
@@ -74,7 +75,7 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
 | Fuzzing der Parser (deterministisch, 160 000 Frames) | `make test` | grün, kein Zufallsframe akzeptiert |
 | Derselbe Lauf unter AddressSanitizer + UndefinedBehaviorSanitizer | `make test-san` | grün, keine Befunde (inkl. Leck-Erkennung) |
 | Statische Analyse (`gcc -fanalyzer`) über alle Quellen | manuell | keine Befunde |
-| Smoketest des echten Konsolenprogramms gegen den Mock | `make smoke` | grün, 6 Durchläufe (inkl. PLAY_FILE/STOP_PLAY, Schalterfehler) |
+| Smoketest des echten Konsolenprogramms gegen den Mock | `make smoke` | grün, 7 Durchläufe (inkl. Browser-Auswahl, PLAY_FILE/STOP_PLAY, Schalterfehler) |
 | Ausgabe-Spiegelung Konsole → Logdatei | `make smoke` | grün, Logdatei per `cmp` **byte-gleich** zur Konsole (bis auf die Marke vor dem Öffnen) |
 | Lint der Byte-Order-Regeln | `make lint` | grün, mit Selbsttest und Live-Positivkontrolle |
 | m68k-Objektcode greift nur byteweise auf Puffer zu | `make asm` | grün, Gate nachweislich nicht vakuant |
@@ -490,17 +491,18 @@ verlangt für den Rest weiterhin Byte-Gleichheit.
 
 **Zwei Dinge, die hier zählen:**
 
-1. **Nach jeder Zeile schließen und 1 Sekunde warten.** AmigaDOS puffert
-   Schreibvorgänge im FileHandle, und der Datenträger hat eigene Puffer; auf die
-   Platte kommt beides erst mit der Zeit. Die Amiga-Schicht schreibt deshalb mit
-   `fwrite` + `fflush`, schließt die Datei, wartet `Delay(50)` (1 s) und öffnet
-   sie dann im Anhängemodus wieder (`v4_amiga_i2c.c`). Ohne diesen Griff stünde
-   nach einem harten Absturz genau der Teil nicht in der Datei, auf den es
-   ankommt — bei einem Systemabsturz fehlte sogar die Dateigröße, die Datei las
-   sich dann noch auf dem alten Stand. Der Preis: rund **eine Sekunde je
-   Logzeile**. Während einer Transaktion heißt das bis zu 1 s zwischen
-   I²C-Schreiben und Antwortlesen; für eine Diagnosefahrt ist das in Ordnung,
-   für den Dauerbetrieb nicht.
+1. **Nach jeder Zeile schließen.** AmigaDOS puffert Schreibvorgänge im
+   FileHandle; auf die Platte kommt der Puffer erst beim Schließen. Die
+   Amiga-Schicht schreibt deshalb mit `fwrite` + `fflush`, schließt die Datei
+   und öffnet sie im Anhängemodus wieder (`v4_amiga_i2c.c`) — damit liegt jede
+   Zeile im Dateisystem, bevor der nächste Schritt läuft.
+   Zusätzlich lässt sich nach jedem Schreiben eine Wartezeit setzen
+   (**`-t <ticks>`**, 1 Tick = 1/50 s): `-t 50` ist die Sekunde aus der
+   Absturzlaufzeit, die auch dem Datenträger Zeit gibt. **Vorgabe ist 0.**
+   Grund: eine Verzeichnisliste mit 74 Einträgen erzeugt leicht tausend
+   Logzeilen — mit einer Sekunde je Zeile dauert das Minuten und macht das
+   Browsen unbrauchbar. Für eine Absturzfahrt also `-t 50`, für die normale
+   Benutzung `-q` (gar kein Trace) oder die Vorgabe.
 2. **Frische Datei je Lauf.** Der erste `fopen` benutzt `"w"`, damit im Log nie
    Zeilen zweier Läufe vermischt sind.
 
@@ -558,6 +560,47 @@ eine Marke, die vor dem Öffnen auf die Konsole geht.
 frei wählbar, `-o ser:` schreibt also nach wie vor auf `serial.device` Unit 0
 (AmigaOS-Vorgabe 9600 8N1). Nur der *Standardpfad* ist jetzt die Datei — COM6
 braucht damit keinen Adapter mehr und kann nichts blockieren.
+
+## Dateien auswählen: der Browser
+
+Der erste Hardwarelauf hat gezeigt, wie unbrauchbar ein frei eingetippter Pfad
+ist: `Datei abspielen: ` … `PLAY_FILE: NOT_FOUND`. Deshalb gibt es statt der
+Pfadabfrage einen **Browser**: der Slave liefert die Verzeichniseinträge einzeln
+(`DIR_OPEN`/`DIR_NEXT`/`DIR_CLOSE`), das Programm sammelt sie ein, sortiert
+(Verzeichnisse zuerst, dann alphabetisch) und zeigt sie **seitenweise mit
+Nummern**:
+
+```
+-- Dateien --
+Pfad: /MUSIC
+3 Eintraege
+
+Seite 1/1
+  [  0] Datei        1000  A.MP3
+  [  1] Datei          37  B.MP3
+  [  2] Datei       65536  BIG.BIN
+Nummer = auswaehlen, n = weiter, p = zurueck, u = hoch, r = Wurzel, Enter/q = Ende: 1
+
+Gewaehlt: MUSIC/B.MP3 (37 Byte laut Liste)
+Oeffnen: OK, 37 Byte
+(a)bsspielen, (l)esen/pruefen, (z)urueck, (q)ende: a
+```
+
+| Eingabe | Wirkung |
+|---|---|
+| Zahl | Verzeichnis → hinein; Datei → Prüfen und Aktionsmenü |
+| `n` / `p` | nächste / vorherige Seite (20 Einträge je Seite) |
+| `u` | eine Ebene hoch |
+| `r` | zurück zur Wurzel |
+| `Enter` / `q` | Browsen beenden (weiter im Programm) |
+| `a` / `l` / `z` / `q` | im Dateimenü: abspielen / lesen und prüfen / zurück / Ende |
+
+Vor dem Abspielen **öffnet** das Programm die Datei (`FILE_OPEN`) und zeigt
+Größe und Ergebnis — so sieht man sofort, ob der Pfad trägt. Meldet der Slave
+`NOT_FOUND`, versucht `do_play()` denselben Pfad zusätzlich mit führendem `/`
+und protokolliert beide Ergebnisse; damit fällt auf, welche Form der Slave
+erwartet. Bis zu 512 Einträge je Verzeichnis werden gehalten (danach meldet die
+Liste „abgeschnitten"); die Liste kommt aus dem Heap, nicht vom Stack.
 
 ## Feldnachweis: der erste durchgelaufene Lauf
 

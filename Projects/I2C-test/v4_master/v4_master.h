@@ -121,6 +121,14 @@ int  v4_plat_log_open (const char *path);
 long v4_plat_log_write(const char *s, unsigned long len);
 void v4_plat_log_close(void);
 
+/* Wartezeit nach jedem Schreiben, in Plattform-Ticks (Amiga: 1/50 s).
+ * 0 = sofort weiter. Vorgabe der Amiga-Seite ist 0: das Schliessen je Zeile
+ * schiebt den DOS-Puffer bereits auf die Platte, und eine Sekunde je Zeile
+ * macht das Browsen unbrauchbar (eine Verzeichnisliste sind leicht tausend
+ * Zeilen). Fuer eine Absturzfahrt mit maximaler Sicherheit: -t 50.
+ * Linux/Mock: ohne Wirkung. */
+void v4_plat_log_settle(int ticks);
+
 /* ------------------------------------------------------------------ */
 /* Trace -- Debugausgabe im Transaktionskern                           */
 /*                                                                     */

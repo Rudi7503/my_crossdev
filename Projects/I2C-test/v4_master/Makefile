@@ -236,12 +236,14 @@ smoke: $(BUILD)/v4_console_smoke
 	grep -q "total=8000000 kB free=491520 kB" $(BUILD)/smoke2.txt || { echo "  FEHLER: SD_INFO fehlt"; fail=1; }; \
 	grep -q "TXT.TXT" $(BUILD)/smoke2.txt || { echo "  FEHLER: Verzeichnisliste fehlt"; fail=1; }; \
 	grep -q "DISCONNECT: OK" $(BUILD)/smoke2.txt || { echo "  FEHLER: DISCONNECT fehlt"; fail=1; }; \
-	echo "== Smoke 3: Datei wirklich lesen =="; \
-	printf '0\nMUSIC/B.MP3\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke3.txt 2>&1 || fail=1; \
+	echo "== Smoke 3: im Browser waehlen und die Datei lesen =="; \
+	printf '0\n1\n1\nl\nq\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke3.txt 2>&1 || fail=1; \
+	grep -q "Pfad: /MUSIC" $(BUILD)/smoke3.txt || { echo "  FEHLER: Wechsel in MUSIC fehlt"; fail=1; }; \
+	grep -q "\[  0\] Datei" $(BUILD)/smoke3.txt || { echo "  FEHLER: numerierte Liste fehlt"; fail=1; }; \
 	grep -q "Datei: 37 Byte" $(BUILD)/smoke3.txt || { echo "  FEHLER: Dateigroesse fehlt"; fail=1; }; \
 	grep -q "FILE_READ: OK (37 Byte in 1 Bloecken)" $(BUILD)/smoke3.txt || { echo "  FEHLER: Leseergebnis fehlt"; fail=1; }; \
-	echo "== Smoke 4: PLAY_FILE / STOP_PLAY =="; \
-	printf '0\n\nMUSIC/B.MP3\n\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke4.txt 2>&1 || fail=1; \
+	echo "== Smoke 4: im Browser waehlen und abspielen =="; \
+	printf '0\n1\n1\na\n\nq\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke4.txt 2>&1 || fail=1; \
 	grep -q "PLAY_FILE: OK" $(BUILD)/smoke4.txt || { echo "  FEHLER: PLAY_FILE fehlt"; fail=1; }; \
 	grep -q "STOP_PLAY: OK" $(BUILD)/smoke4.txt || { echo "  FEHLER: STOP_PLAY fehlt"; fail=1; }; \
 	grep -q "SD-Wiedergabe" $(BUILD)/smoke4.txt || { echo "  FEHLER: audio_flags SD-Wiedergabe fehlt"; fail=1; }; \
@@ -280,7 +282,13 @@ smoke: $(BUILD)/v4_console_smoke
 	    echo "  FEHLER: -o ohne Geraet wurde nicht abgelehnt"; fail=1; fi; \
 	grep -q -- "-o braucht einen Pfad" $(BUILD)/smoke8.txt \
 	    || { echo "  FEHLER: Meldung zu -o ohne Pfad fehlt"; fail=1; }; \
-	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (6 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
+	echo "== Smoke 7: Browser-Navigation (n/p/u/r) =="; \
+	printf '0\n1\nn\np\nu\nr\nq\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke10.txt 2>&1 || fail=1; \
+	grep -q "Pfad: /MUSIC" $(BUILD)/smoke10.txt || { echo "  FEHLER: MUSIC nicht geoeffnet"; fail=1; }; \
+	grep -q "A.MP3" $(BUILD)/smoke10.txt || { echo "  FEHLER: Inhalt von MUSIC fehlt"; fail=1; }; \
+	grep -q "Kein Eintrag" $(BUILD)/smoke10.txt && { echo "  FEHLER: Navigation erzeugt Fehlermeldung"; fail=1; }; \
+	grep -q "EMPTY/" $(BUILD)/smoke10.txt || { echo "  FEHLER: u/r kommen nicht zurueck in die Wurzel"; fail=1; }; \
+	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (7 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
 
 # Alles, was ohne Hardware pruefbar ist.
 verify: lint selftest-lint test test-san smoke asm amiga check-no-moviw probe
