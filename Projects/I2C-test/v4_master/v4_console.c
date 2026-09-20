@@ -950,35 +950,43 @@ static int console_run(const char *dev)
     }
 
     v4_msg("\n-- Scan --\n");
-    rc = v4_scan_start(&m, 8u, 1);
-    if (rc != V4P_ST_OK) {
-        v4_msg("SCAN_START: %s\n", v4_strerror(rc));
-    } else if (g_diag != 0) {
-        /* Nur im Diagnosemodus: die Warteschleife aus §13 vorfuehren. */
-        uint16_t gen = st.scan_gen;
+    for (;;) {
+        rc = v4_scan_start(&m, 8u, 1);
+        if (rc != V4P_ST_OK) {
+            print_failure(&m, "SCAN_START", rc);
+            v4_close();
+            return 10;
+        }
 
-        v4_msg("Dauer-Scan laeuft, warte auf Aenderung der Geraeteliste");
+        /* Das ist kein Diagnoseschritt, sondern noetig: der Scan laeuft auf der
+         * Slave-Seite asynchron. Ohne diese Warteschleife ist DEV_COUNT
+         * unmittelbar nach SCAN_START noch 0 -- genau das ist im Feld passiert
+         * ("Geraete: 0", "Keine Geraete -- Abbruch"). */
+        v4_msg("Suche Bluetooth-Geraete ");
         fflush(stdout);
-        for (i = 0; i < 20; i++) {
+        count = 0u;
+        for (i = 0; i < 40; i++) {              /* hoechstens 20 s */
+            rc = v4_dev_count(&m, &count);
+            if (rc == V4P_ST_OK && count > 0u) {
+                break;
+            }
+            if (rc != V4P_ST_OK && i >= 3) {
+                v4_msg("\n");
+                print_failure(&m, "DEV_COUNT", rc);
+                break;
+            }
             v4_plat_delay_us(500000u);
-            rc = v4_get_status(&m, &st);
-            if (rc != V4P_ST_OK) {
-                v4_msg("\nGET_STATUS: %s\n", v4_strerror(rc));
-                break;
-            }
-            if (st.scan_gen != gen) {
-                break;
-            }
             v4_msg(".");
             fflush(stdout);
         }
         v4_msg("\n");
-    } else {
-        v4_msg("Dauer-Scan gestartet (Diagnoseschritte nur mit -a).\n");
-    }
 
-    rc = v4_dev_count(&m, &count);
-    if (rc == V4P_ST_OK) {
+        rc = v4_dev_count(&m, &count);
+        if (rc != V4P_ST_OK) {
+            print_failure(&m, "DEV_COUNT", rc);
+            v4_close();
+            return 10;
+        }
         v4_msg("Geraete: %u\n", (unsigned)count);
         for (i = 0; i < (int)count; i++) {
             v4p_dev_t d;
@@ -993,14 +1001,20 @@ static int console_run(const char *dev)
                 v4_msg("  [%2d] %s\n", i, v4_strerror(rc));
             }
         }
-    } else {
-        v4_msg("DEV_COUNT: %s\n", v4_strerror(rc));
-    }
+        if (count > 0u) {
+            break;
+        }
 
-    if (count == 0u) {
-        v4_msg("Keine Geraete -- Abbruch.\n");
-        v4_close();
-        return 0;
+        v4_msg("Keine Geraete gefunden.\n"
+               "  Ist das Headset eingeschaltet und in Reichweite? Der Scan\n"
+               "  laeuft dauerhaft -- sobald es auftaucht, steht es in der Liste.\n");
+        v4_msg("(r) nochmal suchen, sonst Ende: ");
+        fflush(stdout);
+        if (fgets(line, sizeof(line), stdin) == NULL
+            || (line[0] != 'r' && line[0] != 'R')) {
+            v4_close();
+            return 0;
+        }
     }
 
     v4_msg("\nGeraeteindex zum Verbinden (0-%u, 'q' = Ende): ",
