@@ -307,7 +307,13 @@ smoke: $(BUILD)/v4_console_smoke
 	    || { echo "  FEHLER: Filter blendet nicht auf Abspielbares"; fail=1; }; \
 	grep -q "\[  0\] AUDIO" $(BUILD)/smoke13.txt || { echo "  FEHLER: AUDIO-Kennzeichnung fehlt"; fail=1; }; \
 	grep -q "\[  0\] Datei" $(BUILD)/smoke13.txt && { echo "  FEHLER: Datei steht vor der Musik"; fail=1; }; \
-	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (10 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
+	echo "== Smoke 11: 'r' sucht an der Geraeteauswahl neu =="; \
+	printf 'r\nq\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke14.txt 2>&1 || fail=1; \
+	grep -q "'r' = neu suchen" $(BUILD)/smoke14.txt \
+	    || { echo "  FEHLER: Hinweis auf erneutes Suchen fehlt"; fail=1; }; \
+	test $$(grep -c "Geraete: 3" $(BUILD)/smoke14.txt) -ge 2 \
+	    || { echo "  FEHLER: nach 'r' wurde nicht neu aufgelistet"; fail=1; }; \
+	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (11 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
 
 # Alles, was ohne Hardware pruefbar ist.
 verify: lint selftest-lint test test-san smoke asm amiga check-no-moviw probe

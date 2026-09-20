@@ -1001,38 +1001,41 @@ static int console_run(const char *dev)
                 v4_msg("  [%2d] %s\n", i, v4_strerror(rc));
             }
         }
-        if (count > 0u) {
-            break;
+        /* Auswahl: 'r' sucht neu (z.B. nachdem das Headset eingeschaltet
+         * wurde), 'q' beendet. Bei leerer Liste bleibt nur das. */
+        if (count == 0u) {
+            v4_msg("Keine Geraete gefunden.\n"
+                   "  Ist das Headset eingeschaltet und in Reichweite? Der Scan\n"
+                   "  laeuft dauerhaft -- sobald es auftaucht, steht es in der Liste.\n");
+            v4_msg("\n'[r]' = neu suchen, 'q' = Ende: ");
+        } else {
+            v4_msg("\nGeraeteindex zum Verbinden (0-%u, 'r' = neu suchen, "
+                   "'q' = Ende): ", (unsigned)(count - 1u));
         }
-
-        v4_msg("Keine Geraete gefunden.\n"
-               "  Ist das Headset eingeschaltet und in Reichweite? Der Scan\n"
-               "  laeuft dauerhaft -- sobald es auftaucht, steht es in der Liste.\n");
-        v4_msg("(r) nochmal suchen, sonst Ende: ");
         fflush(stdout);
-        if (fgets(line, sizeof(line), stdin) == NULL
-            || (line[0] != 'r' && line[0] != 'R')) {
+        if (fgets(line, sizeof(line), stdin) == NULL) {
             v4_close();
             return 0;
         }
-    }
-
-    v4_msg("\nGeraeteindex zum Verbinden (0-%u, 'q' = Ende): ",
-           (unsigned)(count - 1u));
-    fflush(stdout);
-    if (fgets(line, sizeof(line), stdin) == NULL) {
-        v4_close();
-        return 0;
-    }
-    if (line[0] == 'q' || line[0] == 'Q') {
-        v4_close();
-        return 0;
-    }
-    i = atoi(line);
-    if (i < 0 || i >= (int)count) {
-        v4_msg("Index ausserhalb des Bereichs.\n");
-        v4_close();
-        return 5;
+        if (line[0] == 'q' || line[0] == 'Q') {
+            v4_close();
+            return 0;
+        }
+        if (line[0] == 'r' || line[0] == 'R') {
+            continue;                   /* neu scannen und neu auflisten */
+        }
+        if (count == 0u) {
+            v4_msg("Es gibt nichts auszuwaehlen -- 'r' sucht neu, "
+                   "'q' beendet.\n");
+            continue;
+        }
+        i = atoi(line);
+        if (i < 0 || i >= (int)count) {
+            v4_msg("Index %d liegt nicht zwischen 0 und %u.\n", i,
+                   (unsigned)(count - 1u));
+            continue;                   /* nochmal fragen */
+        }
+        break;                          /* Auswahl steht */
     }
 
     v4_msg("\n-- Verbinden --\n");

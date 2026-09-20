@@ -651,6 +651,23 @@ nie bestätigt; Szenario 9: verbunden ohne A2DP-Stream) — gesteuert über die
 Mock-Knöpfe `V4_SMOKE_CONNECT_ROUNDS` und `V4_SMOKE_NO_AUDIO` in
 `tests/smoke_console.c`.
 
+## Geräte suchen und auswählen
+
+Der Scan läuft auf der Slave-Seite asynchron. `v4_console` startet ihn, pollt
+`DEV_COUNT` (höchstens 20 Sekunden, Punkte als Fortschritt) und zeigt dann die
+Liste. Danach:
+
+```
+Geraeteindex zum Verbinden (0-1, 'r' = neu suchen, 'q' = Ende):
+```
+
+**`r` sucht jederzeit neu** — auch wenn schon Geräte in der Liste stehen. Genau
+das fehlte im Feld: das Headset war aus, der Scan fand nur ein anderes Gerät,
+und ohne `r` gab es keinen Weg, nach dem Einschalten erneut zu suchen. Wird
+nichts gefunden, erscheint der Hinweis auf das eingeschaltete Headset, und der
+Prompt bietet nur noch `r`/`q` an. Eine Zahl außerhalb des Bereichs führt zurück
+zur Frage, statt das Programm zu beenden.
+
 ## Feldnachweis: der erste durchgelaufene Lauf
 
 Der Mitschnitt des ersten vollständigen Laufs liegt als
