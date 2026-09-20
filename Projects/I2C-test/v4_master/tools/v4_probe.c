@@ -51,9 +51,6 @@ static int         g_log_on   = 1;      /* mit -n abschaltbar */
 static int         g_upto     = 0;      /* -x <n>: nach Phase n sauber beenden */
 static const char *g_log_path = NULL;   /* NULL = PROBE_LOG_DEFAULT */
 
-static struct timerequest s_timer;
-static int                s_timer_open = 0;
-
 /* Jede Zeile sofort auf beide Kanaele -- bei einem Absturz darf nichts im
  * Puffer bleiben. Der Puffer ist statisch (weniger Stack). */
 static void step(const char *fmt, ...)
@@ -94,18 +91,21 @@ static void phase_gate(int phase)
     exit(0);
 }
 
-/* Millisekunden seit dem Systemstart -- fuer die Laufzeitmessung des PING. */
+/* Millisekunden seit Mitternacht -- fuer die Laufzeitmessung des PING.
+ *
+ * Absichtlich ueber die DOS-Uhr (DateStamp, LVO -192) statt ueber timer.device:
+ * UNIT_MICROHZ kann nach einem abgestuerzten Lauf belegt bleiben, und dann
+ * blockiert das naechste OpenDevice. Die Probe haelt deshalb gar kein eigenes
+ * timer.device offen -- sie prueft es nur in Schritt 5 und schliesst es gleich
+ * wieder. */
 static ULONG ms_now(void)
 {
-    if (!s_timer_open) {
-        return 0ul;
-    }
-    s_timer.tr_node.io_Command = TR_GETSYSTIME;
-    if (DoIO((struct IORequest *)&s_timer) != 0) {
-        return 0ul;
-    }
-    return (ULONG)s_timer.tr_time.tv_secs * 1000ul
-         + (ULONG)s_timer.tr_time.tv_micro / 1000ul;
+    struct DateStamp ds;
+
+    DateStamp(&ds);
+    return ((((ULONG)ds.ds_Minute * 60ul)
+             + ((ULONG)ds.ds_Tick / 50ul)) * 1000ul)
+         + (((ULONG)ds.ds_Tick % 50ul) * 20ul);
 }
 
 /* Knapper Trace: eine Zeile je Transaktionsschritt. */
@@ -147,9 +147,18 @@ static void probe_trace(const v4_trace_t *ev, void *ctx)
  * stehen, ist der Modus Muell. */
 static ULONG moviw_test(void)
 {
-    ULONG r = 0xFFFFFFFFul;             /* oberes Wort absichtlich gesetzt */
+    ULONG r;
 
-    __asm__ __volatile__("moviw.l #1006,%0" : "+d"(r));
+    /* Die Bytes werden roh eingesetzt, damit der Test unabhaengig von den
+     * -m-Schaltern uebersetzt: 0x303d ist fuer GCC "moviw.l #imm,d0", auf
+     * dieser V4 aber offenbar ein PC-relativer Wort-Load. Genau das soll der
+     * Test zeigen -- das obere Wort von d0 bleibt stehen (Startwert -1), das
+     * untere wird irgendein Wort aus dem Code. */
+    __asm__ __volatile__("moveq #-1,d0\n\t"
+                         ".short 0x303d\n\t"
+                         ".short 0x03ee\n\t"
+                         "move.l d0,%0"
+                         : "=d"(r) : : "d0");
     return r;
 }
 
@@ -342,17 +351,27 @@ int main(int argc, char **argv)
         CloseLibrary(lib);
     }
 
-    /* ---- 5: timer.device (Traeger von t_wait) ---------------------- */
-    step("[probe] 5/9 oeffne timer.device ...\n");
-    s_timer.tr_node.io_Command = TR_ADDREQUEST;
-    if (OpenDevice((CONST_STRPTR)TIMERNAME, UNIT_MICROHZ,
-                   (struct IORequest *)&s_timer, 0) != 0) {
-        step("  ABBRUCH: timer.device UNIT_MICROHZ laesst sich nicht oeffnen.\n");
-        return 1;
+    /* ---- 5: timer.device (Traeger von t_wait) ----------------------
+     * Nur pruefen und sofort wieder schliessen: UNIT_MICROHZ kann nach einem
+     * abgestuerzten Lauf belegt sein, und ein zweites offenes Geraet wuerde
+     * den spaeteren v4_open() blockieren. */
+    {
+        struct timerequest tr;
+
+        step("[probe] 5/9 oeffne timer.device ...\n");
+        tr.tr_node.io_Command = TR_ADDREQUEST;
+        if (OpenDevice((CONST_STRPTR)TIMERNAME, UNIT_MICROHZ,
+                       (struct IORequest *)&tr, 0) != 0) {
+            step("  ABBRUCH: timer.device UNIT_MICROHZ laesst sich nicht oeffnen.\n");
+            step("  Hinweis: nach einem abgestuerzten Lauf kann das Geraet belegt\n");
+            step("  sein -- die V4 einmal neu starten.\n");
+            return 1;
+        }
+        step("[probe] 5/9 timer.device ok (io_Device=%08lx)\n",
+             (unsigned long)tr.tr_node.io_Device);
+        CloseDevice((struct IORequest *)&tr);
+        step("[probe] 5/9 timer.device wieder geschlossen\n");
     }
-    s_timer_open = 1;
-    step("[probe] 5/9 timer.device ok (io_Device=%08lx)\n",
-         (unsigned long)s_timer.tr_node.io_Device);
 
     /* ---- 6: Byte-Order-Selbsttest ---------------------------------- */
     step("[probe] 6/9 byteorder-selbsttest -> %d (muss 1 sein)\n",

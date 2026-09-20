@@ -78,7 +78,8 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
 | Ausgabe-Spiegelung Konsole → Logdatei | `make smoke` | grün, Logdatei per `cmp` **byte-gleich** zur Konsole (bis auf die Marke vor dem Öffnen) |
 | Lint der Byte-Order-Regeln | `make lint` | grün, mit Selbsttest und Live-Positivkontrolle |
 | m68k-Objektcode greift nur byteweise auf Puffer zu | `make asm` | grün, Gate nachweislich nicht vakuant |
-| Amiga-Build (`-Wall -Wextra -Werror`, `m68080`) | `make amiga` | grün, erzeugt AmigaOS-Executable |
+| Amiga-Build (`-Wall -Wextra -Werror`, `m68020`) | `make amiga` | grün, erzeugt AmigaOS-Executable |
+| Kein `moviw.l` im Produktcode (mit Positivkontrolle) | `make check-no-moviw` | grün |
 | **Testlauf auf echtem Big Endian (qemu-m68k)** | `make test-m68k` | **SKIP — Werkzeuge fehlen** |
 | **Lauf auf echter V4-Hardware (§14.2)** | — | **nicht erfolgt** |
 
@@ -99,7 +100,8 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
    104/104 ergeben.
 
 2. **Ersatzweise Endianness-Nachweis.** `make asm` prüft den **erzeugten
-   m68k-Objektcode** (Apollo-GCC, `-m68080`) und stellt sicher:
+   m68k-Objektcode** (Apollo-GCC, `-m68020 -m68881`, dasselbe Ziel wie der
+   Build) und stellt sicher:
    - die Helfer `v4p_put_u16le/u32le` und `v4p_get_u16le/u32le` erzeugen
      ausschließlich `move.b` auf den Puffer,
    - in den echten Frame-Funktionen (`v4p_build_*`, `v4p_check_*`) gibt es
@@ -114,7 +116,7 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
    dem Lint (der Casts, `memcpy` auf Frames, `packed` und Bitfelder verbietet)
    ist damit belegt, dass kein Frame-Byte anders als byteweise berührt wird.
 
-3. **Die Amiga-Plattformschicht ist übersetzt, aber nicht gelaufen.**
+3. **Die Amiga-Plattformschicht ist übersetzt, aber nicht vollständig gelaufen.**
    `v4_amiga_i2c.c` kompiliert sauber für m68k-amigaos; auf echter Hardware
    wurden `SendI2C`/`ReceiveI2C` und insbesondere die Verzögerung nicht geprüft.
    Dasselbe gilt für die **Logdatei**: die Haken sind auf dem Mock getestet
@@ -493,15 +495,38 @@ verlangt für den Rest weiterhin Byte-Gleichheit.
 2. **Frische Datei je Lauf.** Der erste `fopen` benutzt `"w"`, damit im Log nie
    Zeilen zweier Läufe vermischt sind.
 
-Und ein Punkt, der hier teuer gelernt wurde: die Logdatei wird mit den
-**Standard-C-Funktionen** geschrieben, nicht mit eigenen `dos.library`-Aufrufen.
-Die eigene Variante (`Open(pfad, MODE_NEWFILE)` + `Write` + `Flush`) hat auf der
-V4 **überhaupt keine Datei angelegt** — im erzeugten Code stand für den Modus
-`1006` die 68080-Form `moviw.l #1006,d2`, also ein 16-Bit-Transfer in ein
-Long-Register. libnix' `fopen` bildet denselben Modus mit einem vollen
-`move.l #1005,d2`. Seit der Umstellung auf stdio gibt es diese Baustelle nicht
-mehr; ein Blick in das erzeugte Binary bestätigt: **kein `moviw` mehr**, und
-unser Code ruft kein DOS-`Open` mehr auf.
+### Die `moviw`-Falle — auf der V4 gemessen
+
+Die Logdatei wird mit den **Standard-C-Funktionen** geschrieben, nicht mit
+eigenen `dos.library`-Aufrufen. Die eigene Variante (`Open(pfad, MODE_NEWFILE)` +
+`Write` + `Flush`) hat auf der V4 **überhaupt keine Datei angelegt** und den
+nächsten `Write` mit einem Systemabsturz quittiert. Ursache war nicht DOS,
+sondern der erzeugte Code:
+
+GCC lädt mit `-m68080` eine 16-Bit-Konstante in ein Long-Register als
+`moviw.l #imm,dn`. Auf dieser V4 ist das **keine** Konstante: die Bytes verhalten
+sich wie ein PC-relativer Wort-Load — das obere Wort bleibt stehen, das untere
+wird irgendein Wort aus dem Code. Schritt 2c der Stufenprobe misst das direkt auf
+der CPU:
+
+```
+[probe] 2c/9 moviw.l #1006 aus 0xFFFFFFFF -> 0xFFFF0001 (OBERES WORT BLEIBT: GCC-Falle!)
+```
+
+Erwartet wäre `0x000003EE`. Als Dateimodus für `Open()` ist so ein Wert Müll: der
+Aufruf kam mit einem **ungeraden, ungültigen BPTR `0x000000d1`** zurück, und der
+folgende `Write` darauf hat die Maschine weggezogen. libnix' `fopen` bildet
+denselben Modus mit einem vollen `move.l #1005,d2` — deshalb funktioniert stdio.
+
+Konsequenzen, alle drei umgesetzt:
+
+1. Die Logdatei läuft über `fopen`/`fwrite`/`fflush`/`fclose`.
+2. Der Amiga-Build zielt auf **`-m68020`** statt `-m68080` (die V4 ist
+   68020-kompatibel). Damit kann GCC die Falle gar nicht mehr aufmachen.
+3. `make check-no-moviw` wacht über das Produkt-Binary: es darf kein
+   `.short 0x3?3d` enthalten. Die Stufenprobe enthält diese Bytes absichtlich
+   (Schritt 2c) und dient als **Positivkontrolle** — das Gate kann also nicht
+   vakuant werden.
 
 Die Ausgabe ist ein Plattformhaken (`v4_master.h`), genau wie
 `v4_plat_delay_us` — die Konsole kennt nur diese drei Funktionen:

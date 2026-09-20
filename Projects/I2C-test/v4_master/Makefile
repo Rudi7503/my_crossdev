@@ -12,6 +12,7 @@
 # Schalter: -q (still), -x (Hexdump), -n (keine Logdatei),
 # -o <pfad> (anderer Logpfad, im Harness z.B. eine Datei).
 #   make asm          m68k-Disassembly der Byte-Order-Helfer (Nachweis)
+#   make check-no-moviw  sichert den Produktcode gegen die 68080-moviw-Falle ab
 #   make lint         nur der Portabilitaets-Lint
 #   make probe        Stufenprobe fuer die V4 (Start in 8 nummerierten Schritten)
 #   make upload       Programm + Ikone direkt auf die V4 (ApolloExplorer/acp)
@@ -49,9 +50,21 @@ TEST_SRC  = $(LIB_SRC) v4_mock.c tests/test_main.c tests/test_proto.c \
 DEMO_SRC  = $(LIB_SRC) v4_linux_i2c.c v4_console.c
 
 # Apollo-Toolchain (siehe ../../../GCC-6.50-Latest.sh)
+#
+# CPU-Ziel: -m68020, absichtlich NICHT -m68080.
+# GCC laedt mit -m68080 16-Bit-Konstanten in Long-Register als "moviw.l #imm,dn".
+# Auf der V4 gemessen ist das keine Konstante: die Bytes werden als PC-relativer
+# Wort-Load ausgefuehrt, das obere Wort bleibt stehen, das untere wird Muell
+# (moviw.l #1006 aus 0xFFFFFFFF ergab 0xFFFF0001). Als Dateimodus fuer
+# Open(pfad, MODE_NEWFILE) lieferte das einen ungeraden, ungueltigen BPTR
+# (0x000000d1), und der folgende Write brachte die Maschine weg. Mit -m68020
+# bildet GCC Long-Konstanten als volles move.l -- das Gate `check-no-moviw`
+# wacht darueber. Die V4 ist 68020-kompatibel.
 APOLLO_PREFIX ?= ../../../Compilers/GCC-6.50-Latest
 APOLLO_CC      = $(APOLLO_PREFIX)/bin/m68k-amigaos-gcc
 I2C_INC        = ../i2clib-master/include
+# CPU-Ziel des Amiga-Builds: siehe Kommentar bei der Apollo-Toolchain.
+AMIGA_CPU     ?= -m68020 -m68881
 AMIGA_SRC      = $(LIB_SRC) v4_amiga_i2c.c v4_console.c
 PROBE_SRC      = $(LIB_SRC) v4_amiga_i2c.c tools/v4_probe.c
 
@@ -88,7 +101,7 @@ LOG_NAME   ?= v4_console.log
 
 .PHONY: all test lint test-m68k amiga probe demo asm clean selftest-lint verify \
         smoke test-san upload upload-debug check-host check-upload acp-hosts acp-ls \
-        log verify
+        log check-no-moviw verify
 
 all: test
 
@@ -158,16 +171,36 @@ test-m68k: | $(BUILD)
 # ------------------------------------------------------------------ #
 
 amiga: | $(BUILD)
-	$(APOLLO_CC) -std=gnu99 $(WARN) $(OPT) -m68080 -m68881 -noixemul \
+	$(APOLLO_CC) -std=gnu99 $(WARN) $(OPT) $(AMIGA_CPU) -noixemul \
 	    -DREGPARM=4 -DV4_PLAT_AMIGA=1 -I. -I$(I2C_INC) \
 	    -o $(BUILD)/v4_console_amiga $(AMIGA_SRC)
 	@echo "Fertig: $(BUILD)/v4_console_amiga (m68k-amigaos)"
+
+# 68080-Konstantenfalle: GCC laedt 16-Bit-Konstanten in Long-Register gern als
+# "moviw.l #imm,dn". Auf der V4 gemessen setzt dieser Befehl das obere Wort NICHT
+# zurueck (moviw.l #1006 aus 0xFFFFFFFF ergab 0xFFFF0001). Als Dateimodus fuer
+# Open(pfad, MODE_NEWFILE) ist das Muell: der Aufruf lieferte einen ungeraden,
+# ungueltigen BPTR (0x000000d1) und der folgende Write brachte die Maschine weg.
+# Im Produktcode darf moviw deshalb nicht vorkommen -- der Stufenprobe-Text
+# findet es im Disassembly als ".short 0x343d".
+check-no-moviw: amiga probe
+	@if $(APOLLO_PREFIX)/bin/m68k-amigaos-objdump -d $(BUILD)/v4_console_amiga \
+	    | grep -qE '\.short[[:space:]]+0x3[0-7]3d'; then \
+	    echo "FEHLER: moviw.l im Produktcode (68080-Konstante, siehe README)."; \
+	    exit 1; \
+	fi
+	@$(APOLLO_PREFIX)/bin/m68k-amigaos-objdump -d $(BUILD)/v4_probe \
+	    | grep -qE '\.short[[:space:]]+0x3[0-7]3d' \
+	    || { echo "FEHLER: Gate ist vakuant -- das Muster findet die Bytes in"; \
+	         echo "        der Stufenprobe nicht, die sie absichtlich enthaelt."; \
+	         exit 1; }
+	@echo "moviw-Check: Produktcode sauber, Positivkontrolle in v4_probe gefunden"
 
 # Stufenprobe: zerlegt den Start auf der V4 in nummerierte Schritte. Bleibt die
 # Ausgabe nach Schritt N stehen, sitzt der Absturz in Schritt N+1. Bewusst ohne
 # serielle Ausgabe (nur mit -s), damit eine serielle Shell nicht stoert.
 probe: | $(BUILD)
-	$(APOLLO_CC) -std=gnu99 $(WARN) $(OPT) -m68080 -m68881 -noixemul \
+	$(APOLLO_CC) -std=gnu99 $(WARN) $(OPT) $(AMIGA_CPU) -noixemul \
 	    -DREGPARM=4 -DV4_PLAT_AMIGA=1 -I. -I$(I2C_INC) \
 	    -o $(BUILD)/v4_probe $(PROBE_SRC)
 	@echo "Fertig: $(BUILD)/v4_probe (m68k-amigaos)"
@@ -250,7 +283,7 @@ smoke: $(BUILD)/v4_console_smoke
 	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (6 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
 
 # Alles, was ohne Hardware pruefbar ist.
-verify: lint selftest-lint test test-san smoke asm amiga probe
+verify: lint selftest-lint test test-san smoke asm amiga check-no-moviw probe
 	@echo
 	@echo "verify: Lint, Tests, Sanitizer, Smoke, m68k-Nachweis und Amiga-Build sind durch."
 

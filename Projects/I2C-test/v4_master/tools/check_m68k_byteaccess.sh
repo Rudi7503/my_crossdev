@@ -75,7 +75,7 @@ unsigned probe_bad_wide_load(const unsigned char *p)
 }
 EOF
 
-if ! "$CC" -std=gnu99 -O2 -m68080 -m68881 -noixemul -I. \
+if ! "$CC" -std=gnu99 -O2 -m68020 -m68881 -noixemul -I. \
         -c "$WORK/probe.c" -o "$WORK/probe.o" 2> "$WORK/cc.log"; then
     echo "  FEHLER: Probe liess sich nicht uebersetzen"
     sed 's/^/    /' "$WORK/cc.log"
@@ -137,7 +137,7 @@ control _probe_bad_wide_store "$WIDE_STORE" "breiter Store mit Displacement"
 control _probe_bad_wide_load  "$WIDE_ANY"   "breiter Load mit Displacement"
 
 echo "== 2. Echte Frame-Funktionen aus v4_proto.c =="
-if ! "$CC" -std=gnu99 -O2 -m68080 -m68881 -noixemul -I. \
+if ! "$CC" -std=gnu99 -O2 -m68020 -m68881 -noixemul -I. \
         -c v4_proto.c -o "$WORK/proto.o" 2> "$WORK/cc2.log"; then
     echo "  FEHLER: v4_proto.c liess sich nicht uebersetzen"
     sed 's/^/    /' "$WORK/cc2.log"
