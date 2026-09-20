@@ -1,0 +1,78 @@
+[probe] 0/9 Logdatei -> 0 (IoErr 0)
+[probe] 1/9 Start erreicht (argc=1)
+[probe] 1/9 Stack: 40960 Byte (SPUpper=0610dcf8)
+[probe] 2/9 DOSBase=05a0b1b4 Output=01827c0f
+[probe] 2c/9 moviw.l #1006 aus 0xFFFFFFFF -> 0x066630F4 (OBERES WORT BLEIBT: GCC-Falle!)
+[probe] 3/9 --- fopen "T:v4_probe.txt" ...
+[probe] 3/9 fopen -> ok
+[probe] 3/9 fwrite -> 29
+[probe] 3/9 geschlossen
+[probe] 3/9 --- fopen "ram:v4_probe.txt" ...
+[probe] 3/9 fopen -> ok
+[probe] 3/9 fwrite -> 29
+[probe] 3/9 geschlossen
+[probe] 3/9 --- fopen "Programs:test/v4_probe.txt" ...
+[probe] 3/9 fopen -> ok
+[probe] 3/9 fwrite -> 29
+[probe] 3/9 geschlossen
+[probe] 3/9 --- fopen "Programs:test/v4_console.log" ...
+[probe] 3/9 fopen -> ok
+[probe] 3/9 fwrite -> 29
+[probe] 3/9 geschlossen
+[probe] 3b/9 DOS-Open "T:v4_probe_dos.txt" (Modus aus Variable) ...
+[probe] 3b/9 DOS-Open -> 0182fa23 (IoErr 0)
+[probe] 3b/9 UNGUELTIGER BPTR -- Write uebersprungen
+[probe] 4/9 i2c.library -> 05dff814
+[probe] 4/9 Version 40.0
+[probe] 5/9 oeffne timer.device ...
+[probe] 5/9 timer.device ok (io_Device=0184bad0)
+[probe] 5/9 timer.device wieder geschlossen
+[probe] 6/9 byteorder-selbsttest -> 1 (muss 1 sein)
+[probe] 6b/9 lese $BFD000 (CIA-B PRA, Verzoegerung der Library) ...
+[probe] 6b/9 $BFD000 = 0xFF
+[probe] 6c/9 lese $DE0080/$DE0081 (Apollo-I2C) ...
+[probe] 6c/9 $DE0080 = 0x00, $DE0081 = 0x01 (SDA = Bit 0)
+[probe] 6d/9 ReceiveI2C(0xA0, 8) ...
+[probe] 6d/9 ReceiveI2C -> 0x000000FF OK
+[probe] 6e/9 SendI2C(0xA0, 1) ...
+[probe] 6e/9 SendI2C -> 0x000000FF OK
+[probe] 7/9 v4_open ok
+[probe] 7a/9 v4_plat_delay_us(2000) ...
+[probe] 7a/9 Verzoegerung zurueck nach 0 ms (soll ~2 ms)
+[probe] 7/9 AllocI2C -> 0 (0 = OK)
+[probe] 7/9 SetI2CDelay(READONLY) -> 0
+[probe] 7/9 GetI2COpponent -> (keiner)
+[probe] 7/9 I2CDELAY im Environment -> (nicht gesetzt)
+[probe] 7/9 sende PING ...
+        TX  cmd=0x01 seq=0, 32 Byte
+        TX  rc=0
+        Warten 2000 us
+        RX  lese 128 Byte
+        RX  rc=0
+        falsche Magic
+        falsche Magic
+        TX  cmd=0x01 seq=0, 32 Byte
+        TX  rc=0
+        Warten 2000 us
+        RX  lese 128 Byte
+        RX  rc=0
+        falsche Magic
+        falsche Magic
+        TX  cmd=0x01 seq=0, 32 Byte
+        TX  rc=0
+        Warten 2000 us
+        RX  lese 128 Byte
+        RX  rc=0
+        falsche Magic
+        falsche Magic
+        TX  cmd=0x01 seq=0, 32 Byte
+        TX  rc=0
+        Warten 2000 us
+        RX  lese 128 Byte
+        RX  rc=0
+        ok
+        ok
+[probe] 7/9 PING -> OK (28520 ms)
+[probe] 7/9 proto=3 fw=2 write=32 read=128 chunk=128
+[probe] 8/9 v4_close ok
+[probe] 9/9 Programmende

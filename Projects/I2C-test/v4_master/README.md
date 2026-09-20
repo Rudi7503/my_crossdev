@@ -81,7 +81,11 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
 | Amiga-Build (`-Wall -Wextra -Werror`, `m68020`) | `make amiga` | grün, erzeugt AmigaOS-Executable |
 | Kein `moviw.l` im Produktcode (mit Positivkontrolle) | `make check-no-moviw` | grün |
 | **Testlauf auf echtem Big Endian (qemu-m68k)** | `make test-m68k` | **SKIP — Werkzeuge fehlen** |
-| **Lauf auf echter V4-Hardware (§14.2)** | — | **nicht erfolgt** |
+| **Lauf auf echter V4-Hardware (§14.2)** | `v4_probe` auf der V4 | **erfolgt, siehe unten** |
+| i2c.library direkt: `ReceiveI2C`/`SendI2C` an 0xA0 | `v4_probe` 6d/6e | grün, beide `0x000000FF` = OK |
+| `v4_plat_delay_us` (Träger von `t_wait`) auf Hardware | `v4_probe` 7a | grün, kein Hänger mehr |
+| **PING gegen den ESP32-Slave** | `v4_probe` 7 | **OK** |
+| Slave-Angaben aus dem PING | `v4_probe` 7 | `proto=3 fw=2 write=32 read=128 chunk=128` — **passt zum 128-Byte-Format** |
 
 ### Was NICHT geprüft ist — bitte vor dem Hardwareeinsatz lesen
 
@@ -116,9 +120,14 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
    dem Lint (der Casts, `memcpy` auf Frames, `packed` und Bitfelder verbietet)
    ist damit belegt, dass kein Frame-Byte anders als byteweise berührt wird.
 
-3. **Die Amiga-Plattformschicht ist übersetzt, aber nicht vollständig gelaufen.**
-   `v4_amiga_i2c.c` kompiliert sauber für m68k-amigaos; auf echter Hardware
-   wurden `SendI2C`/`ReceiveI2C` und insbesondere die Verzögerung nicht geprüft.
+3. **Die Amiga-Plattformschicht ist übersetzt und teilweise gelaufen.**
+   `v4_amiga_i2c.c` kompiliert sauber für m68k-amigaos. Auf echter Hardware
+   bestätigt: `SendI2C`/`ReceiveI2C` an 0xA0 (`0x000000FF` = OK),
+   `v4_plat_delay_us` (kein Hänger), `AllocI2C` = 0, `SetI2CDelay` = 0,
+   `i2c.library` 40.0 und der **PING** samt Protokollangaben des Slaves. Noch
+   **nicht** gelaufen ist die vollständige Abfolge aus §13 (Status, Scan,
+   Verbinden, SD-Karte, Verzeichnis, Datei lesen, Wiedergabe) auf Hardware —
+   dafür ist das Konsolenprogramm da.
    Dasselbe gilt für die **Logdatei**: die Haken sind auf dem Mock getestet
    (byte-gleiche Spiegelung) und der m68k-Code ist geprüft (unser Code ruft kein
    DOS-`Open` mehr, sondern libnix' `fopen`), aber ob auf der V4
@@ -550,6 +559,41 @@ frei wählbar, `-o ser:` schreibt also nach wie vor auf `serial.device` Unit 0
 (AmigaOS-Vorgabe 9600 8N1). Nur der *Standardpfad* ist jetzt die Datei — COM6
 braucht damit keinen Adapter mehr und kann nichts blockieren.
 
+## Feldnachweis: der erste durchgelaufene Lauf
+
+Der Mitschnitt des ersten vollständigen Laufs liegt als
+`tests/field-log-v4-probe.txt` bei. Die Kernzeilen:
+
+```
+[probe] 6d/9 ReceiveI2C(0xA0, 8)    -> 0x000000FF OK
+[probe] 6e/9 SendI2C(0xA0, 1)       -> 0x000000FF OK
+[probe] 7/9 AllocI2C -> 0, SetI2CDelay(READONLY) -> 0
+[probe] 7/9 I2CDELAY im Environment -> (nicht gesetzt)
+[probe] 7/9 sende PING ...
+        TX cmd=0x01 seq=0, 32 Byte / TX rc=0 / Warten 2000 us
+        RX lese 128 Byte / RX rc=0
+        falsche Magic        (3 Versuche)
+        ok                   (4. Versuch)
+[probe] 7/9 PING -> OK (28520 ms)
+[probe] 7/9 proto=3 fw=2 write=32 read=128 chunk=128
+```
+
+Damit ist belegt: Bus, Adresse 0xA0, `i2c.library` 40.0, die Verzögerung, der
+32-Byte-WRITE-Rahmen und der **128-Byte-READ-Rahmen** funktionieren gegen den
+ESP32, und der Slave meldet genau das Format, das `v4_check_info()` erwartet
+(`proto=3 write=32 read=128`).
+
+Zwei Beobachtungen aus dem Mitschnitt:
+
+* Die ersten drei Leseversuche lieferten `falsche Magic`, erst der vierte ein
+  gültiges Framing. Die Wiederholungslogik (§5.1, gleiche SEQ) hat das
+  aufgefangen — der PING ist damit „OK", aber die Zeit zwischen WRITE und READ
+  ist offenbar knapp. Wer die Ursache sucht: `t_wait` bzw. die Bereitschaft des
+  Slaves, nicht der Master.
+* Die Laufzeit von 28,5 s für einen PING stammt fast vollständig aus der
+  1-Sekunden-Pause je Logzeile (rund 30 Zeilen). Für eine Diagnosefahrt ist das
+  gewollt; sonst `V4_LOG_SETTLE_TICKS` in `v4_amiga_i2c.c` verkleinern.
+
 ## Stufenprobe auf der V4: `v4_probe`
 
 Wenn auf der V4 „nichts kommt" oder das Programm sofort verschwindet, zerlegt
@@ -765,7 +809,10 @@ Programs:test/v4_probe
 ```
 
 **Starten auf der V4:** aus einer Shell, nicht per Doppelklick — `make upload`
-legt zusätzlich `v4_probe` mit ab, die Stufenprobe aus dem Abschnitt oben —
+legt zusätzlich `v4_probe` mit ab, die Stufenprobe aus dem Abschnitt oben. Nach
+dem Feldnachweis (PING OK) ist das Konsolenprogramm der nächste Schritt: es
+läuft die Abfolge aus §13 durch und schreibt sie nach
+`Programs:test/v4_console.log` (`make log`) —
 
 ```
 Programs:test/v4_console
