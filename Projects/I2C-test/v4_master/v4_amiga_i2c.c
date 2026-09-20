@@ -29,6 +29,8 @@
 
 #include "v4_master.h"
 
+#include <stdio.h>
+
 #include <exec/types.h>
 #include <exec/io.h>
 #include <devices/timer.h>
@@ -65,44 +67,55 @@ unsigned long v4_plat_last_error(void)
 /* ------------------------------------------------------------------ */
 /* Logdatei -- Vorgabe V4_LOG_DEFAULT_AMIGA, also Programs:test/...     */
 /*                                                                     */
-/* MODE_NEWFILE: jeder Lauf beginnt mit einer frischen Datei, damit im   */
-/* Log nie Zeilen zweier Laeufe vermischt sind. Wenn der Pfad nicht      */
-/* existiert (Drawer fehlt, Volume gesperrt), liefert Open() NULL -- das  */
-/* Programm laeuft dann nur auf der Konsole weiter.                      */
+/* Bewusst mit den Standard-C-Funktionen (fopen/fwrite/fflush/fclose)    */
+/* statt mit eigenen DOS-Open/Write-Aufrufen: die DOS-Variante legte auf  */
+/* der V4 ueberhaupt keine Datei an. Der Grund war die Uebergabe des      */
+/* Modus als LONG -- im erzeugten Code stand dafuer "moviw.l #1006,d2",   */
+/* eine 68080-Form, die eine 16-Bit-Konstante in ein Register legt.       */
+/* Genau solche Fallen umgeht libnix' fopen.                             */
+/*                                                                     */
+/* AmigaDOS puffert Schreibvorgaenge zusaetzlich im FileHandle. Deshalb   */
+/* wird die Datei nach JEDER Zeile geschlossen (fclose schreibt den       */
+/* Puffer auf die Platte) und im Anhaengemodus wieder geoeffnet. Nur so   */
+/* steht nach einem Absturz oder einer Haengerei die letzte Zeile auf der */
+/* Platte -- die Zeile, auf die es ankommt.                              */
 /* ------------------------------------------------------------------ */
 
-static BPTR s_log = (BPTR)0;
+static FILE       *s_log      = NULL;
+static const char *s_log_path = NULL;
 
 int v4_plat_log_open(const char *path)
 {
     if (path == NULL) {
         path = V4_LOG_DEFAULT_AMIGA;
     }
-    s_log = Open((CONST_STRPTR)path, MODE_NEWFILE);
-    return (s_log == (BPTR)0) ? -1 : 0;
+    s_log_path = path;
+    s_log = fopen(path, "w");           /* frische Datei je Lauf */
+    return (s_log == NULL) ? -1 : 0;
 }
 
 long v4_plat_log_write(const char *s, unsigned long len)
 {
-    LONG n;
+    size_t n;
 
-    if (s_log == (BPTR)0 || len == 0ul) {
+    if (s_log == NULL || len == 0ul) {
         return 0;
     }
-    n = Write(s_log, (CONST_APTR)s, (LONG)len);
-
-    /* Das ist der Kern der Sache: AmigaDOS puffert im FileHandle. Ohne
-     * Flush() waere nach einem Absturz genau die letzte Zeile weg -- die,
-     * die den Schritt benennt. Deshalb nach JEDER Zeile schreiben. */
-    (void)Flush(s_log);
+    n = fwrite(s, 1u, (size_t)len, s_log);
+    (void)fflush(s_log);
+    (void)fclose(s_log);                /* schreibt den DOS-Puffer weg */
+    s_log = fopen(s_log_path, "a");     /* und wieder anhaengen */
+    if (s_log == NULL) {
+        return 0;                       /* Log ist weg, Konsole laeuft weiter */
+    }
     return (long)n;
 }
 
 void v4_plat_log_close(void)
 {
-    if (s_log != (BPTR)0) {
-        Close(s_log);
-        s_log = (BPTR)0;
+    if (s_log != NULL) {
+        (void)fclose(s_log);
+        s_log = NULL;
     }
 }
 

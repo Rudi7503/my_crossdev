@@ -99,15 +99,18 @@ const char *v4_plat_error_text(void);
 /*                                                                     */
 /*   v4_plat_log_open(NULL) -> Standardpfad der Plattform:             */
 /*        Amiga: V4_LOG_DEFAULT_AMIGA ("Programs:test/v4_console.log"), */
-/*               mit MODE_NEWFILE, also eine frische Datei je Lauf      */
+/*               "w", also eine frische Datei je Lauf                   */
 /*        Linux/Mock: kein Standardpfad, nur mit ausdruecklichem Pfad   */
 /*               (im Harness eine Datei, sonst z.B. /dev/ttyUSB0)       */
 /*   Rueckgabe 0 = offen, -1 = nicht verfuegbar (KEIN Fehler -- die     */
 /*   Ausgabe geht dann nur auf die Konsole).                            */
 /*                                                                     */
-/* WICHTIG fuer den Absturzfall: AmigaDOS puffert Schreibvorgaenge im   */
-/* FileHandle. Darum ruft die Amiga-Schicht nach JEDER Zeile Flush().   */
-/* Ohne das fehlte im Log genau der Teil, auf den es ankommt.           */
+/* Alle Plattformen benutzen die Standard-C-Funktionen (fopen/fwrite/   */
+/* fflush/fclose). Auf der Amiga-Seite wird die Datei zusaetzlich nach  */
+/* JEDER Zeile geschlossen und anhaengend wieder geoeffnet: AmigaDOS     */
+/* puffert Schreibvorgaenge im FileHandle, und nur das Schliessen        */
+/* schreibt sie auf die Platte. Ohne diesen Griff fehlte nach einem      */
+/* Absturz genau der Teil des Logs, auf den es ankommt.                  */
 /* ------------------------------------------------------------------ */
 
 #define V4_LOG_DEFAULT_AMIGA "Programs:test/v4_console.log"

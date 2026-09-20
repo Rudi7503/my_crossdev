@@ -118,10 +118,11 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
    `v4_amiga_i2c.c` kompiliert sauber für m68k-amigaos; auf echter Hardware
    wurden `SendI2C`/`ReceiveI2C` und insbesondere die Verzögerung nicht geprüft.
    Dasselbe gilt für die **Logdatei**: die Haken sind auf dem Mock getestet
-   (byte-gleiche Spiegelung) und der m68k-Code ist geprüft (`Open` −30,
-   `Write` −48, `Close` −36, `Flush` −360 auf `_DOSBase`), aber ob auf der V4
-   `Programs:test/` beschreibbar ist und ob `Flush()` dort wirklich jede Zeile
-   durchschreibt, zeigt erst ein echter Lauf mit anschließendem `make log`.
+   (byte-gleiche Spiegelung) und der m68k-Code ist geprüft (unser Code ruft kein
+   DOS-`Open` mehr, sondern libnix' `fopen`), aber ob auf der V4
+   `Programs:test/` aus dem Programm heraus beschreibbar ist und ob das
+   Schließen je Zeile dort wirklich durchschreibt, zeigt erst ein echter Lauf
+   mit anschließendem `make log`.
    Geht die Datei nicht auf, meldet das Programm nur „nicht verfügbar" und
    läuft weiter — es stürzt dabei nicht ab.
 
@@ -478,21 +479,33 @@ verlangt für den Rest weiterhin Byte-Gleichheit.
 
 **Zwei Dinge, die hier zählen:**
 
-1. **`Flush()` nach jeder Zeile.** AmigaDOS puffert Schreibvorgänge im
-   FileHandle. Ohne `Flush()` stünde nach einem Absturz genau der Teil nicht in
-   der Datei, auf den es ankommt. Die Amiga-Schicht ruft es deshalb nach jedem
-   `Write()` (`v4_amiga_i2c.c`).
-2. **`MODE_NEWFILE`.** Jeder Lauf beginnt mit einer frischen Datei, damit im Log
-   nie Zeilen zweier Läufe vermischt sind.
+1. **Nach jeder Zeile schließen.** AmigaDOS puffert Schreibvorgänge im
+   FileHandle; auf die Platte kommt der Puffer erst beim Schließen. Die
+   Amiga-Schicht schreibt deshalb mit `fwrite` + `fflush`, schließt die Datei
+   und öffnet sie im Anhängemodus wieder (`v4_amiga_i2c.c`). Ohne diesen Griff
+   stünde nach einem Absturz oder einer Hängerei genau der Teil nicht in der
+   Datei, auf den es ankommt.
+2. **Frische Datei je Lauf.** Der erste `fopen` benutzt `"w"`, damit im Log nie
+   Zeilen zweier Läufe vermischt sind.
+
+Und ein Punkt, der hier teuer gelernt wurde: die Logdatei wird mit den
+**Standard-C-Funktionen** geschrieben, nicht mit eigenen `dos.library`-Aufrufen.
+Die eigene Variante (`Open(pfad, MODE_NEWFILE)` + `Write` + `Flush`) hat auf der
+V4 **überhaupt keine Datei angelegt** — im erzeugten Code stand für den Modus
+`1006` die 68080-Form `moviw.l #1006,d2`, also ein 16-Bit-Transfer in ein
+Long-Register. libnix' `fopen` bildet denselben Modus mit einem vollen
+`move.l #1005,d2`. Seit der Umstellung auf stdio gibt es diese Baustelle nicht
+mehr; ein Blick in das erzeugte Binary bestätigt: **kein `moviw` mehr**, und
+unser Code ruft kein DOS-`Open` mehr auf.
 
 Die Ausgabe ist ein Plattformhaken (`v4_master.h`), genau wie
 `v4_plat_delay_us` — die Konsole kennt nur diese drei Funktionen:
 
 | Haken | Amiga (`v4_amiga_i2c.c`) | Linux-Harness / Mock |
 |---|---|---|
-| `v4_plat_log_open(pfad)` | `Open(pfad, MODE_NEWFILE)`; `pfad == NULL` → `V4_LOG_DEFAULT_AMIGA` | `fopen(pfad, "w")`; ohne Pfad → `-1` (kein Standardpfad) |
-| `v4_plat_log_write(s, len)` | `Write()` + `Flush()`; ohne offene Datei `0` | `fwrite()` + `fflush()`; ohne offene Datei `0` |
-| `v4_plat_log_close()` | `Close()`; mehrfach aufrufbar | `fclose()`; mehrfach aufrufbar |
+| `v4_plat_log_open(pfad)` | `fopen(pfad, "w")`; `pfad == NULL` → `V4_LOG_DEFAULT_AMIGA` | `fopen(pfad, "w")`; ohne Pfad → `-1` (kein Standardpfad) |
+| `v4_plat_log_write(s, len)` | `fwrite` + `fflush` + `fclose` + `fopen(..., "a")` | `fwrite()` + `fflush()` |
+| `v4_plat_log_close()` | `fclose()`; mehrfach aufrufbar | `fclose()`; mehrfach aufrufbar |
 
 Geht die Datei nicht auf (Drawer fehlt, Volume gesperrt), ist das **kein Fehler**:
 `v4_plat_log_open()` meldet nur

@@ -47,8 +47,9 @@
  * ueberschreibt. */
 #define PROBE_LOG_DEFAULT "Programs:test/v4_probe.log"
 
-static int         g_log_on   = 1;      /* mit -n abschaltbar */
-static const char *g_log_path = NULL;   /* NULL = PROBE_LOG_DEFAULT */
+static int         g_log_on      = 1;   /* mit -n abschaltbar */
+static int         g_log_pause   = 0;   /* waehrend der Dateitests */
+static const char *g_log_path    = NULL;/* NULL = PROBE_LOG_DEFAULT */
 
 static struct timerequest s_timer;
 static int                s_timer_open = 0;
@@ -69,7 +70,7 @@ static void step(const char *fmt, ...)
     }
     fputs(buf, stdout);
     fflush(stdout);
-    if (g_log_on) {
+    if (g_log_on && !g_log_pause) {
         (void)v4_plat_log_write(buf, (unsigned long)n);
     }
 }
@@ -188,7 +189,8 @@ int main(int argc, char **argv)
         int rc;
 
         step("[probe] 2b/9 oeffne Logdatei \"%s\" ...\n", wunsch);
-        rc = v4_plat_log_open(g_log_path);
+        rc = v4_plat_log_open((g_log_path != NULL) ? g_log_path
+                                                  : PROBE_LOG_DEFAULT);
         step("[probe] 2b/9 Logdatei -> %d (IoErr %ld)\n", rc, (long)IoErr());
         if (rc != 0) {
             step("[probe] 2b/9 Hinweis: die naechsten Zeilen stehen nur auf der Konsole.\n");
@@ -204,6 +206,11 @@ int main(int argc, char **argv)
             V4_LOG_DEFAULT_AMIGA                    /* Vorgabe des Programms */
         };
         unsigned k;
+
+        /* Die Tests oeffnen fremde Dateien ueber dieselben Haken -- dabei
+         * wuerde das eigene Log umgebogen. Also kurz pausieren. */
+        step("[probe] 3/9 (Dateitests laufen, eigenes Log pausiert)\n");
+        g_log_pause = 1;
 
         for (k = 0u; k < (unsigned)(sizeof(pfade) / sizeof(pfade[0])); k++) {
             static const char msg[] = "[probe] Text in die Logdatei\n";
@@ -239,10 +246,31 @@ int main(int argc, char **argv)
             }
         }
 
-        /* Die eigene Logdatei wieder oeffnen -- die Tests oben haben sie
-         * geschlossen bzw. durch die Konsolen-Vorgabe ersetzt. */
+        /* Roher DOS-Open, Modus aus einer Variablen geladen. Damit laesst sich
+         * pruefen, ob die 16-Bit-Konstante MODE_NEWFILE (moviw.l) die Ursache
+         * war: dieselbe Datei, zwei Wege. */
+        {
+            static const LONG mode_new = 1006L;   /* MODE_NEWFILE, 32 Bit */
+            BPTR fh;
+
+            step("[probe] 3b/9 DOS-Open \"T:v4_probe_dos.txt\" mit Modus aus einer Variablen ...\n");
+            SetIoErr(0);
+            fh = Open((CONST_STRPTR)"T:v4_probe_dos.txt", mode_new);
+            step("[probe] 3b/9 DOS-Open -> %08lx (IoErr %ld)\n",
+                 (unsigned long)fh, (long)IoErr());
+            if (fh != (BPTR)0) {
+                (void)Write(fh, (CONST_APTR)"x\n", 2L);
+                (void)Flush(fh);
+                Close(fh);
+                step("[probe] 3b/9 geschrieben und geschlossen\n");
+            }
+        }
+
+        /* Eigenes Log wieder aufnehmen. */
+        g_log_pause = 0;
         if (g_log_on) {
-            int rc = v4_plat_log_open(g_log_path);
+            int rc = v4_plat_log_open((g_log_path != NULL) ? g_log_path
+                                                           : PROBE_LOG_DEFAULT);
 
             step("[probe] 3/9 eigenes Log wieder offen -> %d\n", rc);
             if (rc != 0) {
