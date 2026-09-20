@@ -215,6 +215,37 @@ static void print_bus_error(void)
            v4_plat_error_text());
 }
 
+/* Kurzbericht, wenn ein Befehl nicht durchkommt -- auch ohne Trace (-a).
+ * Der Trace zeigt jede Transaktion, hier steht das Ergebnis: welcher Pruef-
+ * schritt zuletzt gescheitert ist und wie die Rahmenbilanz aussieht. */
+static void print_failure(const v4_master_t *m, const char *what, uint8_t rc)
+{
+    v4_msg("%s: %s\n", what, v4_strerror(rc));
+    v4_msg("  letzte Pruefung: %s\n", v4_check_str(m->last_check));
+    v4_msg("  Rahmen: tx=%lu rx=%lu retries=%lu unsicher=%lu busy=%lu "
+           "badcrc=%lu\n", m->tx_frames, m->rx_frames, m->retries,
+           m->unsafe_retries, m->busy_rounds, m->badcrc_rounds);
+    if (m->possible_handle_leaks > 0ul) {
+        v4_msg("  Achtung: %lu moegliche Handle-Lecks auf der Slave-Seite.\n",
+               m->possible_handle_leaks);
+    }
+    v4_msg("  Busfehler: 0x%08lX (%s)\n", v4_plat_last_error(),
+           v4_plat_error_text());
+
+    if (m->last_check == V4P_CHECK_MAGIC) {
+        v4_msg("  Die ersten Bytes sind keine gueltige Magic: entweder eine\n"
+               "  Firmware mit 64-Byte-READ-Frame (proto 2) oder ein um einige\n"
+               "  Bytes verschobener Antwortstrom.\n");
+    } else if (m->last_check == V4P_CHECK_ECHO) {
+        v4_msg("  Der Slave spiegelt cmd/seq nicht: Antwort gehoert zu einem\n"
+               "  anderen Befehl (Synchronisation verloren).\n");
+    } else if (m->last_check == V4P_CHECK_LEN) {
+        v4_msg("  Das len-Feld der Antwort ist unzulaessig.\n");
+    } else if (m->last_check == V4P_CHECK_CRC) {
+        v4_msg("  Magic stimmt, CRC nicht: die Uebertragung verliert Bits.\n");
+    }
+}
+
 /* Statuszeilen -- wird auch nach PLAY_FILE/STOP_PLAY erneut ausgegeben, damit
  * der Wechsel in `audio_flags` sichtbar ist. */
 static void print_status(const v4p_status_t *st)
@@ -886,13 +917,9 @@ static int console_run(const char *dev)
 
     rc = v4_ping(&m, &info);
     if (rc != V4P_ST_OK) {
-        v4_msg("PING: %s\n", v4_strerror(rc));
-        v4_msg("Hinweis: eine Firmware mit dem alten 64-Byte-READ-Frame\n"
-               "         (proto_ver 2) liefert auf einen 128-Byte-Read keine\n"
-               "         gueltige Antwort -- dann ist der Stand zu alt fuer\n"
-               "         proto_ver 3. Aktuell erwartet wird proto_ver %u.\n",
+        print_failure(&m, "PING", rc);
+        v4_msg("Erwartet wird ein 128-Byte-READ-Rahmen (proto_ver %u).\n",
                (unsigned)V4P_PROTO_VER);
-        print_bus_error();
         v4_close();
         return 10;
     }
@@ -917,7 +944,7 @@ static int console_run(const char *dev)
     v4_msg("\n-- Zustand --\n");
     rc = v4_get_status(&m, &st);
     if (rc != V4P_ST_OK) {
-        v4_msg("GET_STATUS: %s\n", v4_strerror(rc));
+        print_failure(&m, "GET_STATUS", rc);
     } else {
         print_status(&st);
     }
@@ -1055,7 +1082,11 @@ static int console_run(const char *dev)
 
     v4_msg("\n-- SD-Karte --\n");
     rc = v4_sd_mount_wait(&m, 50u);
-    v4_msg("SD_MOUNT: %s\n", v4_strerror(rc));
+    if (rc == V4P_ST_OK) {
+        v4_msg("SD_MOUNT: %s\n", v4_strerror(rc));
+    } else {
+        print_failure(&m, "SD_MOUNT", rc);
+    }
     if (rc == V4P_ST_OK) {
         if (g_diag != 0) {
             rc = v4_sd_info(&m, &si);
