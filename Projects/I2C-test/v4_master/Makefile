@@ -242,7 +242,7 @@ smoke: $(BUILD)/v4_console_smoke
 	echo "== Smoke 3: im Browser waehlen und die Datei lesen =="; \
 	printf '0\n1\n1\nl\nq\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke3.txt 2>&1 || fail=1; \
 	grep -q "Pfad: /MUSIC" $(BUILD)/smoke3.txt || { echo "  FEHLER: Wechsel in MUSIC fehlt"; fail=1; }; \
-	grep -q "\[  0\] Datei" $(BUILD)/smoke3.txt || { echo "  FEHLER: numerierte Liste fehlt"; fail=1; }; \
+	grep -q "\[  0\] AUDIO" $(BUILD)/smoke3.txt || { echo "  FEHLER: numerierte Liste mit AUDIO fehlt"; fail=1; }; \
 	grep -q "Datei: 37 Byte" $(BUILD)/smoke3.txt || { echo "  FEHLER: Dateigroesse fehlt"; fail=1; }; \
 	grep -q "FILE_READ: OK (37 Byte in 1 Bloecken)" $(BUILD)/smoke3.txt || { echo "  FEHLER: Leseergebnis fehlt"; fail=1; }; \
 	echo "== Smoke 4: im Browser waehlen und abspielen =="; \
@@ -301,7 +301,13 @@ smoke: $(BUILD)/v4_console_smoke
 	    || { echo "  FEHLER: Verbindung nicht gemeldet"; fail=1; }; \
 	grep -q "WARNUNG: verbunden, aber kein A2DP-Stream" $(BUILD)/smoke12.txt \
 	    || { echo "  FEHLER: fehlender A2DP-Stream wird nicht gewarnt"; fail=1; }; \
-	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (9 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
+	echo "== Smoke 10: Musik zuerst und Filter f =="; \
+	printf '0\n1\nf\nq\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke13.txt 2>&1 || fail=1; \
+	grep -q "2 von 3 Eintraegen, Filter: nur Abspielbares" $(BUILD)/smoke13.txt \
+	    || { echo "  FEHLER: Filter blendet nicht auf Abspielbares"; fail=1; }; \
+	grep -q "\[  0\] AUDIO" $(BUILD)/smoke13.txt || { echo "  FEHLER: AUDIO-Kennzeichnung fehlt"; fail=1; }; \
+	grep -q "\[  0\] Datei" $(BUILD)/smoke13.txt && { echo "  FEHLER: Datei steht vor der Musik"; fail=1; }; \
+	if [ "$$fail" -eq 0 ]; then echo "Smoke: OK (10 Durchlaeufe)"; else echo "Smoke: FEHLGESCHLAGEN"; exit 1; fi
 
 # Alles, was ohne Hardware pruefbar ist.
 verify: lint selftest-lint test test-san smoke asm amiga check-no-moviw probe

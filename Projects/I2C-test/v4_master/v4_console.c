@@ -451,19 +451,57 @@ static void browse_add(const v4p_dirent_t *e, void *ctx)
     l->count++;
 }
 
-/* Verzeichnisse zuerst, dann alphabetisch ohne Ruecksicht auf Gross/Klein. */
-static int browse_cmp(const void *a, const void *b)
+/* Abspielbare Dateiendungen. Was der Slave wirklich dekodiert, weiss der Master
+ * nicht -- diese Liste bestimmt nur die Reihenfolge und den Filter im Browser.
+ * Alles andere bleibt erreichbar (Filter aus, oder ueber das Dateimenue
+ * "lesen"). */
+static int is_playable(const char *name)
 {
-    const browse_ent_t *x = (const browse_ent_t *)a;
-    const browse_ent_t *y = (const browse_ent_t *)b;
-    const char         *p = x->name;
-    const char         *q = y->name;
-    int                 dx = ((x->attr & V4P_ATTR_DIR) != 0u) ? 0 : 1;
-    int                 dy = ((y->attr & V4P_ATTR_DIR) != 0u) ? 0 : 1;
+    static const char *ext[] = { "MP3", "WAV", "FLAC", "OGG",
+                                 "M4A", "AAC", "WMA" };
+    size_t   n = strlen(name);
+    unsigned i;
 
-    if (dx != dy) {
-        return dx - dy;
+    for (i = 0u; i < (unsigned)(sizeof(ext) / sizeof(ext[0])); i++) {
+        size_t e = strlen(ext[i]);
+        size_t k;
+
+        if (n <= e + 1u || name[n - e - 1u] != '.') {
+            continue;
+        }
+        for (k = 0u; k < e; k++) {
+            char c = name[n - e + k];
+
+            if (c >= 'a' && c <= 'z') {
+                c = (char)(c - 'a' + 'A');
+            }
+            if (c != ext[i][k]) {
+                break;
+            }
+        }
+        if (k == e) {
+            return 1;
+        }
     }
+    return 0;
+}
+
+/* Anzeige-Reihenfolge: abspielbare Dateien zuerst, dann Verzeichnisse, dann
+ * der Rest. */
+static int browse_rank(const browse_ent_t *e)
+{
+    if ((e->attr & V4P_ATTR_DIR) == 0u && is_playable(e->name)) {
+        return 0;
+    }
+    if ((e->attr & V4P_ATTR_DIR) != 0u) {
+        return 1;
+    }
+    return 2;
+}
+
+/* Innerhalb einer Gruppe alphabetisch ohne Ruecksicht auf Gross/Klein. */
+static int name_cmp_ci(const char *p, const char *q)
+{
     for (;;) {
         int cx = (int)(unsigned char)*p++;
         int cy = (int)(unsigned char)*q++;
@@ -481,6 +519,24 @@ static int browse_cmp(const void *a, const void *b)
             return 0;
         }
     }
+}
+
+/* Vergleich ueber Indizes in die Eintragsliste (fuer die Ansicht). */
+static const browse_ent_t *s_sort_ent;          /* Sortierkontext */
+
+static int browse_idx_cmp(const void *a, const void *b)
+{
+    unsigned            ia = *(const unsigned *)a;
+    unsigned            ib = *(const unsigned *)b;
+    const browse_ent_t *x  = &s_sort_ent[ia];
+    const browse_ent_t *y  = &s_sort_ent[ib];
+    int                 rx = browse_rank(x);
+    int                 ry = browse_rank(y);
+
+    if (rx != ry) {
+        return rx - ry;
+    }
+    return name_cmp_ci(x->name, y->name);
 }
 
 /* Name an einen Pfad anhaengen ("/" dazwischen, nie fuehrend). */
@@ -556,16 +612,26 @@ static uint8_t file_probe(v4_master_t *m, const char *path, uint32_t *size)
 }
 
 /* Browsen bis 'q'. Enter beendet, Nummern waehlen, n/p blaettern,
- * u = eine Ebene hoch, r = Wurzel. */
+ * f = nur Abspielbares, u = eine Ebene hoch, r = Wurzel.
+ *
+ * Angezeigt wird ueber eine Ansicht (Indizes in die eingesammelte Liste):
+ * abspielbare Dateien zuerst, dann Verzeichnisse, dann der Rest. Mit 'f'
+ * verschwindet der Rest -- Verzeichnisse bleiben sichtbar, sonst koennte man
+ * nicht mehr navigieren. */
 static void browse_files(v4_master_t *m)
 {
-    char dir[V4P_PATH_MAX + 1u];
+    char     dir[V4P_PATH_MAX + 1u];
+    int      only_playable = 0;
 
     dir[0] = '\0';                         /* Wurzel */
     for (;;) {
         browse_list_t l;
+        unsigned     *view = NULL;      /* sortierte Gesamtansicht        */
+        unsigned     *sel  = NULL;      /* gefilterte Ansicht (Anzeige)   */
+        unsigned      shown = 0u;
+        int           need_sel = 1;     /* Filter neu anwenden            */
         unsigned      pages;
-        unsigned      page = 0u;
+        unsigned      page  = 0u;
         uint8_t       rc;
         char          line[32];
 
@@ -577,45 +643,94 @@ static void browse_files(v4_master_t *m)
             free(l.ent);
             return;
         }
-        if (l.count > 1u) {
-            qsort(l.ent, l.count, sizeof(browse_ent_t), browse_cmp);
-        }
-        pages = (l.count + BROWSE_PAGE - 1u) / BROWSE_PAGE;
-        if (pages == 0u) {
-            pages = 1u;
-        }
-        v4_msg("%u Eintraege%s\n", l.count,
-               (l.overflow != 0) ? " (Liste abgeschnitten)" : "");
-
-        for (;;) {                          /* Seiten-Schleife */
-            unsigned first = page * BROWSE_PAGE;
-            unsigned last  = first + BROWSE_PAGE;
+        if (l.count > 0u) {
             unsigned i;
-            unsigned idx;
 
-            if (last > l.count) {
-                last = l.count;
+            view = (unsigned *)malloc((size_t)l.count * sizeof(unsigned));
+            sel  = (unsigned *)malloc((size_t)l.count * sizeof(unsigned));
+            if (view == NULL || sel == NULL) {
+                v4_msg("Kein Speicher fuer die Ansicht.\n");
+                free(view);
+                free(sel);
+                free(l.ent);
+                return;
             }
-            v4_msg("\nSeite %u/%u\n", page + 1u, pages);
+            for (i = 0u; i < l.count; i++) {
+                view[i] = i;
+            }
+            s_sort_ent = l.ent;
+            qsort(view, l.count, sizeof(unsigned), browse_idx_cmp);
+            s_sort_ent = NULL;
+        }
+
+        for (;;) {                          /* Seiten-Schleife der Ansicht */
+            unsigned first;
+            unsigned last;
+            unsigned pos = 0u;
+            unsigned i;
+
+            /* Bei Filter nur Abspielbares + Verzeichnisse. Die sortierte
+             * Gesamtansicht bleibt dabei unberuehrt -- 'f' kann den Filter
+             * jederzeit wieder loesen. */
+            if (need_sel != 0) {
+                shown    = 0u;
+                need_sel = 0;
+                for (i = 0u; i < l.count; i++) {
+                    int r = browse_rank(&l.ent[view[i]]);
+
+                    if (only_playable != 0 && r == 2) {
+                        continue;           /* Rest ausgeblendet */
+                    }
+                    sel[shown++] = view[i];
+                }
+            }
+            pages = (shown + BROWSE_PAGE - 1u) / BROWSE_PAGE;
+            if (pages == 0u) {
+                pages = 1u;
+            }
+            if (page >= pages) {
+                page = pages - 1u;
+            }
+
+            v4_msg("\nSeite %u/%u -- %u von %u Eintraegen%s%s\n",
+                   page + 1u, pages, shown, l.count,
+                   (l.overflow != 0) ? " (Liste abgeschnitten)" : "",
+                   (only_playable != 0) ? ", Filter: nur Abspielbares" : "");
+
+            first = page * BROWSE_PAGE;
+            last  = first + BROWSE_PAGE;
+            if (last > shown) {
+                last = shown;
+            }
             for (i = first; i < last; i++) {
-                int isdir = ((l.ent[i].attr & V4P_ATTR_DIR) != 0u);
+                const browse_ent_t *e = &l.ent[sel[i]];
+                int                 isdir = ((e->attr & V4P_ATTR_DIR) != 0u);
 
                 v4_msg("  [%3u] %-6s %10lu  %s%s\n", i,
-                       isdir ? "<DIR>" : "Datei",
-                       (unsigned long)l.ent[i].size, l.ent[i].name,
-                       isdir ? "/" : "");
+                       isdir ? "<DIR>" : (is_playable(e->name) ? "AUDIO" : "Datei"),
+                       (unsigned long)e->size, e->name, isdir ? "/" : "");
             }
-            v4_msg("Nummer = auswaehlen, n = weiter, p = zurueck, u = hoch, "
-                   "r = Wurzel, Enter/q = Ende: ");
+            v4_msg("Nummer = auswaehlen, n = weiter, p = zurueck, f = %s, "
+                   "u = hoch, r = Wurzel, Enter/q = Ende: ",
+                   (only_playable != 0) ? "alles zeigen" : "nur Abspielbares");
             fflush(stdout);
             if (fgets(line, sizeof(line), stdin) == NULL) {
+                free(view);
+                free(sel);
                 free(l.ent);
                 return;
             }
             if (line[0] == 'q' || line[0] == 'Q' || line[0] == '\n'
                 || line[0] == '\r' || line[0] == '\0') {
+                free(view);
                 free(l.ent);
                 return;
+            }
+            if (line[0] == 'f' || line[0] == 'F') {
+                only_playable = (only_playable == 0) ? 1 : 0;
+                need_sel      = 1;          /* Filter neu anwenden */
+                page          = 0u;
+                continue;
             }
             if (line[0] == 'r' || line[0] == 'R') {
                 dir[0] = '\0';
@@ -646,14 +761,18 @@ static void browse_files(v4_master_t *m)
                 continue;
             }
 
-            idx = (unsigned)atoi(line);
-            if (idx >= l.count) {
-                v4_msg("Kein Eintrag [%u].\n", idx);
+            pos = (unsigned)atoi(line);
+            if (pos >= shown) {
+                v4_msg("Kein Eintrag [%u].\n", pos);
                 continue;
             }
-            if ((l.ent[idx].attr & V4P_ATTR_DIR) != 0u) {
-                path_append(dir, sizeof(dir), l.ent[idx].name);
-                break;                      /* hinein */
+            {
+                const browse_ent_t *e = &l.ent[sel[pos]];
+
+                if ((e->attr & V4P_ATTR_DIR) != 0u) {
+                    path_append(dir, sizeof(dir), e->name);
+                    break;                  /* hinein */
+                }
             }
 
             /* Datei: Pfad bauen, pruefen, Aktion anbieten. */
@@ -672,10 +791,12 @@ static void browse_files(v4_master_t *m)
                     memcpy(fpath, dir, n);
                     fpath[n] = '\0';
                 }
-                path_append(fpath, sizeof(fpath), l.ent[idx].name);
+                path_append(fpath, sizeof(fpath), l.ent[sel[pos]].name);
 
-                v4_msg("\nGewaehlt: %s (%lu Byte laut Liste)\n", fpath,
-                       (unsigned long)l.ent[idx].size);
+                v4_msg("\nGewaehlt: %s (%lu Byte laut Liste)%s\n", fpath,
+                       (unsigned long)l.ent[sel[pos]].size,
+                       is_playable(l.ent[sel[pos]].name)
+                           ? " -- abspielbar" : " -- kein bekannter Audiotyp");
                 prc = file_probe(m, fpath, &fsize);
                 if (prc == V4P_ST_OK) {
                     v4_msg("Oeffnen: OK, %lu Byte\n", (unsigned long)fsize);
@@ -686,10 +807,14 @@ static void browse_files(v4_master_t *m)
                        "(q)ende: ");
                 fflush(stdout);
                 if (fgets(line, sizeof(line), stdin) == NULL) {
+                    free(view);
+                    free(sel);
                     free(l.ent);
                     return;
                 }
                 if (line[0] == 'q' || line[0] == 'Q') {
+                    free(view);
+                    free(sel);
                     free(l.ent);
                     return;
                 }
@@ -708,6 +833,8 @@ static void browse_files(v4_master_t *m)
                 /* alles andere (auch 'z'): zurueck zur Liste */
             }
         }
+        free(view);
+        free(sel);
         free(l.ent);
     }
 }

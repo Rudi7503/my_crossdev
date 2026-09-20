@@ -75,7 +75,7 @@ Ehrlich getrennt nach „geprüft" und „ungeprüft":
 | Fuzzing der Parser (deterministisch, 160 000 Frames) | `make test` | grün, kein Zufallsframe akzeptiert |
 | Derselbe Lauf unter AddressSanitizer + UndefinedBehaviorSanitizer | `make test-san` | grün, keine Befunde (inkl. Leck-Erkennung) |
 | Statische Analyse (`gcc -fanalyzer`) über alle Quellen | manuell | keine Befunde |
-| Smoketest des echten Konsolenprogramms gegen den Mock | `make smoke` | grün, 9 Durchläufe (inkl. Browser-Auswahl, PLAY_FILE/STOP_PLAY, Verbindungsprüfung, Schalterfehler) |
+| Smoketest des echten Konsolenprogramms gegen den Mock | `make smoke` | grün, 10 Durchläufe (inkl. Browser mit Filter, PLAY_FILE/STOP_PLAY, Verbindungsprüfung, Schalterfehler) |
 | Ausgabe-Spiegelung Konsole → Logdatei | `make smoke` | grün, Logdatei per `cmp` **byte-gleich** zur Konsole (bis auf die Marke vor dem Öffnen) |
 | Lint der Byte-Order-Regeln | `make lint` | grün, mit Selbsttest und Live-Positivkontrolle |
 | m68k-Objektcode greift nur byteweise auf Puffer zu | `make asm` | grün, Gate nachweislich nicht vakuant |
@@ -569,20 +569,29 @@ braucht damit keinen Adapter mehr und kann nichts blockieren.
 Der erste Hardwarelauf hat gezeigt, wie unbrauchbar ein frei eingetippter Pfad
 ist: `Datei abspielen: ` … `PLAY_FILE: NOT_FOUND`. Deshalb gibt es statt der
 Pfadabfrage einen **Browser**: der Slave liefert die Verzeichniseinträge einzeln
-(`DIR_OPEN`/`DIR_NEXT`/`DIR_CLOSE`), das Programm sammelt sie ein, sortiert
-(Verzeichnisse zuerst, dann alphabetisch) und zeigt sie **seitenweise mit
-Nummern**:
+(`DIR_OPEN`/`DIR_NEXT`/`DIR_CLOSE`), das Programm sammelt sie ein, bringt sie in
+Anzeigereihenfolge und zeigt sie **seitenweise mit Nummern**.
+
+**Reihenfolge: abspielbare Dateien zuerst** (`.mp3`, `.wav`, `.flac`, `.ogg`,
+`.m4a`, `.aac`, `.wma`, ohne Rücksicht auf Groß/Klein), dann die Verzeichnisse,
+dann der Rest. Mit **`f`** wird der Rest ausgeblendet — Verzeichnisse bleiben
+sichtbar, sonst könnte man nicht mehr navigieren. `AUDIO` kennzeichnet die
+abspielbaren Dateien:
 
 ```
 -- Dateien --
 Pfad: /MUSIC
-3 Eintraege
 
-Seite 1/1
-  [  0] Datei        1000  A.MP3
-  [  1] Datei          37  B.MP3
+Seite 1/1 -- 3 von 3 Eintraegen
+  [  0] AUDIO        1000  A.MP3
+  [  1] AUDIO          37  B.MP3
   [  2] Datei       65536  BIG.BIN
-Nummer = auswaehlen, n = weiter, p = zurueck, u = hoch, r = Wurzel, Enter/q = Ende: 1
+Nummer = auswaehlen, n = weiter, p = zurueck, f = nur Abspielbares, u = hoch, r = Wurzel, Enter/q = Ende: f
+
+Seite 1/1 -- 2 von 3 Eintraegen, Filter: nur Abspielbares
+  [  0] AUDIO        1000  A.MP3
+  [  1] AUDIO          37  B.MP3
+Nummer = auswaehlen, n = weiter, p = zurueck, f = alles zeigen, u = hoch, r = Wurzel, Enter/q = Ende: 1
 
 Gewaehlt: MUSIC/B.MP3 (37 Byte laut Liste)
 Oeffnen: OK, 37 Byte
@@ -592,6 +601,7 @@ Oeffnen: OK, 37 Byte
 | Eingabe | Wirkung |
 |---|---|
 | Zahl | Verzeichnis → hinein; Datei → Prüfen und Aktionsmenü |
+| `f` | Filter umschalten: nur Abspielbares (+ Verzeichnisse) oder alles |
 | `n` / `p` | nächste / vorherige Seite (20 Einträge je Seite) |
 | `u` | eine Ebene hoch |
 | `r` | zurück zur Wurzel |
@@ -602,8 +612,11 @@ Vor dem Abspielen **öffnet** das Programm die Datei (`FILE_OPEN`) und zeigt
 Größe und Ergebnis — so sieht man sofort, ob der Pfad trägt. Meldet der Slave
 `NOT_FOUND`, versucht `do_play()` denselben Pfad zusätzlich mit führendem `/`
 und protokolliert beide Ergebnisse; damit fällt auf, welche Form der Slave
-erwartet. Bis zu 512 Einträge je Verzeichnis werden gehalten (danach meldet die
-Liste „abgeschnitten"); die Liste kommt aus dem Heap, nicht vom Stack.
+erwartet. Bis zu 512 Einträge je Verzeichnis werden gehalten (danach meldet die Liste
+„abgeschnitten"); die Liste kommt aus dem Heap, nicht vom Stack. Die
+Dateiendungen bestimmen **nur** Reihenfolge und Filter — was der Slave wirklich
+dekodiert, weiß der Master nicht; jede andere Datei bleibt über `l` (lesen)
+erreichbar und wird weiterhin angezeigt, wenn der Filter aus ist.
 
 ## Verbindung prüfen: Zustand allein reicht nicht
 
