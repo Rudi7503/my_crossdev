@@ -48,6 +48,7 @@
 #define PROBE_LOG_DEFAULT "Programs:test/v4_probe.log"
 
 static int         g_log_on   = 1;      /* mit -n abschaltbar */
+static int         g_upto     = 0;      /* -x <n>: nach Phase n sauber beenden */
 static const char *g_log_path = NULL;   /* NULL = PROBE_LOG_DEFAULT */
 
 static struct timerequest s_timer;
@@ -72,6 +73,25 @@ static void step(const char *fmt, ...)
     if (g_log_on) {
         (void)v4_plat_log_write(buf, (unsigned long)n);
     }
+}
+
+/* Phasen-Gatter: bricht VOR der naechsten Phase sauber ab. Damit laesst sich
+ * der Absturzpunkt ohne Reboot-Runden eingrenzen:
+ *   1 Start/Stack/DOSBase/MOVIW   2 Dateitests      3 Library+Timer+Register
+ *   4 direkte I2C-Aufrufe         5 gerahmter PING  6 Ende
+ * Ein harter Absturz nimmt den Logdatei-Schwanz mit; die Konsole zeigt aber
+ * immer, wie weit es kam. */
+static void phase_gate(int phase)
+{
+    if (g_upto == 0 || phase <= g_upto) {
+        return;
+    }
+    step("[probe] Ende nach Phase %d (-x %d): alles davor ist durchgelaufen.\n",
+         g_upto, g_upto);
+    if (g_log_on) {
+        v4_plat_log_close();
+    }
+    exit(0);
 }
 
 /* Millisekunden seit dem Systemstart -- fuer die Laufzeitmessung des PING. */
@@ -172,6 +192,16 @@ int main(int argc, char **argv)
                 return 5;
             }
             g_log_path = argv[++i];
+        } else if (argv[i][1] == 'x') {
+            if (i + 1 >= argc) {
+                step("-x braucht eine Phasennummer (1..6)\n");
+                return 5;
+            }
+            g_upto = atoi(argv[++i]);
+            if (g_upto < 1 || g_upto > 6) {
+                step("-x liegt zwischen 1 und 6\n");
+                return 5;
+            }
         }
     }
 
@@ -190,6 +220,8 @@ int main(int argc, char **argv)
             g_log_on = 0;
         }
     }
+
+    phase_gate(1);
 
     /* ---- 1: laeuft das Programm ueberhaupt an? ---------------------- */
     step("[probe] 1/9 Start erreicht (argc=%d)\n", argc);
@@ -218,6 +250,8 @@ int main(int argc, char **argv)
              (m == 0x000003EEul) ? "(oberes Wort geloescht: GCC ok)"
                                  : "(OBERES WORT BLEIBT: GCC-Falle!)");
     }
+
+    phase_gate(2);
 
     /* ---- 3: Dateien oeffnen, jeden Pfad einzeln --------------------
      * Absichtlich mit stdio direkt, NICHT ueber die Log-Haken: die Haken
@@ -292,6 +326,8 @@ int main(int argc, char **argv)
         }
     }
 
+    phase_gate(3);
+
     /* ---- 4: i2c.library -------------------------------------------- */
     {
         struct Library *lib = OpenLibrary((CONST_STRPTR)"i2c.library", 39);
@@ -325,6 +361,8 @@ int main(int argc, char **argv)
     /* ---- 6b/6c: rohe Register, die die Library benutzt ------------- */
     roh_zugriffe();
 
+    phase_gate(4);
+
     /* ---- 6d/6e: direkter Library-Test, genau wie das Programm, das auf
      * dieser V4 nachweislich funktioniert hat: erst ReceiveI2C, dann
      * SendI2C, ohne Rahmen/CRC. Damit ist die Library selbst geprueft,
@@ -355,6 +393,8 @@ int main(int argc, char **argv)
             I2C_Base = NULL;
         }
     }
+
+    phase_gate(5);
 
     /* ---- 7: Bus oeffnen und PING (der erste echte Busverkehr) ------ */
     probe_rc = V4P_ST_OK;
@@ -413,6 +453,8 @@ int main(int argc, char **argv)
         v4_close();
         step("[probe] 8/9 v4_close ok\n");
     }
+
+    phase_gate(6);
 
     /* ---- 9: Logdatei schliessen ------------------------------------ */
     step("[probe] 9/9 Programmende\n");
