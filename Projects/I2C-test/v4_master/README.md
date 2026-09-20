@@ -515,27 +515,47 @@ eine Zeile und flusht sofort; **bleibt die Ausgabe nach Schritt N stehen, sitzt
 der Absturz in Schritt N+1** — ohne Debugger.
 
 ```sh
-Programs:test/v4_probe      # Schritte 1,2,4..8 (Dateitests in Schritt 3)
-Programs:test/v4_probe -s   # zusaetzlich ser: in Schritt 3
+Programs:test/v4_probe            # alles, Logdatei Programs:test/v4_probe.log
+Programs:test/v4_probe -n         # ohne Logdatei (nur Konsole)
+Programs:test/v4_probe -s         # zusaetzlich ser: in Schritt 3
+make log LOG_NAME=v4_probe.log    # Log von der V4 holen und anzeigen
 ```
+
+Die Probe schreibt ihr Protokoll **selbst in eine Logdatei** (`v4_probe.log`,
+eigener Name, damit sie das Log des Konsolenprogramms nicht überschreibt). Nach
+einem Absturz oder einer Hängerei holt man sie mit `make log` — vom
+Amiga-Bildschirm muss niemand abtippen.
 
 | Schritt | Was geprüft wird | Typischer Befund |
 |---|---|---|
-| 1/8 | Programm startet, Stackgröße | kommt nichts: Startproblem, nicht der Bus |
-| 2/8 | `DOSBase`, `Output()` — trägt jedes `printf` | `DOSBase=NULL` → ohne dos.library geht keine Ausgabe |
-| 3/8 | Dateien öffnen: `T:`, `ram:`, `Programs:test/`, die Vorgabe — je mit Marke **vor** dem Aufruf, dann `Open`-Ergebnis + `IoErr()` + `Write`/`Flush` + `Close`; mit `-s` zusätzlich `ser:` | die letzte Zeile nennt den Pfad, der den Absturz auslöst |
-| 4/8 | `i2c.library` V39+ | fehlt sie, bricht der Master sonst schon in `v4_open()` ab |
-| 5/8 | `timer.device` `UNIT_MICROHZ` — Träger von `t_wait` | |
-| 6/8 | Byte-Order-Selbsttest | muss 1 sein |
-| 7/8 | `v4_open()` + `PING` mit knappem Trace | Busfehler 0x…0200 = kein Slave/falsche Adresse |
-| 8/8 | `v4_close()` und Programmende | |
+| 1/9 | Programm startet, **Stackgröße** | kommt nichts: Startproblem, nicht der Bus |
+| 2/9 | `DOSBase`, `Output()` — trägt jedes `printf` | `DOSBase=NULL` → ohne dos.library geht keine Ausgabe |
+| 2b/9 | eigene Logdatei öffnen | ab hier steht alles auch in der Datei |
+| 3/9 | Dateien öffnen: `T:`, `ram:`, `Programs:test/`, die Vorgabe — je mit Marke **vor** dem Aufruf, dann `Open` + `IoErr()` + `Write`/`Flush` + `Close`; mit `-s` zusätzlich `ser:` | die letzte Zeile nennt den Pfad, der stört |
+| 4/9 | `i2c.library` V39+ **und ihre Version** | fehlt sie, bricht der Master sonst schon in `v4_open()` ab |
+| 5/9 | `timer.device` `UNIT_MICROHZ` — Träger von `t_wait` | |
+| 6/9 | Byte-Order-Selbsttest | muss 1 sein |
+| 6b/9 | `$BFD000` (CIA-B PRA) lesen — das Verzögerungsregister der Library | bleibt es hier stehen, fault schon dieser Zugriff |
+| 6c/9 | `$DE0080`/`$DE0081` lesen — das Apollo-I²C-Register (Bit 0 = SDA) | |
+| 7/9 | `v4_open()`, dann `AllocI2C`, `SetI2CDelay(READONLY)`, `GetI2COpponent`, `I2CDELAY` aus dem Environment, dann `PING` **mit Laufzeitmessung** | Busfehler 0x…0200 = kein Slave, 0x…0800 = Hardware busy (Allocierung) |
+| 8/9 | `v4_close()` | |
+| 9/9 | Logdatei schließen, Programmende | |
 
-Schritt 3 ist die Dateiprobe: er öffnet die vier Pfade **nacheinander**, jeder mit
-einer Marke davor. Stürzt es beim zweiten Pfad ab, steht der Pfad als letzte Zeile
-da — damit ist „irgendein Log-Open crasht" auf einen konkreten Pfad eingekreist.
-Der serielle Anschluss hängt nur mit `-s` dran: das Hauptprogramm benutzt `ser:`
-überhaupt nicht mehr, und ein zweites Öffnen von `ser:` kann einer Shell, die
-selbst auf dem seriellen Anschluss läuft, die Konsole wegziehen.
+Hintergrund zu 6b/6c: die Apollo-Variante von `i2c.library` (hier läuft
+**40.0 (09 Dec 21) for Apollo Core boards**) erzeugt ihre Bittakte, indem sie
+`$DE0080` setzt/liest und als Verzögerung `$BFD000` liest
+(`src/apollo.i`: `CIABPRA = $BFD000`, `I2CDAT = $DE0080`). Beide Zugriffe sind
+byteweise, und **alle** Warteschleifen in `NineBitIO`/`DELAY` sind durch den
+Verzögerungswert begrenzt — die Library kann also nicht unbegrenzt warten, außer
+am Semaphor (`ObtainSemaphore`), das ein abgestürzter Lauf offen hinterlassen
+kann. Deshalb: **vor so einem Lauf die V4 einmal neu starten.**
+
+Schritt 3 öffnet die vier Pfade **nacheinander**, jeder mit einer Marke davor.
+Stürzt es beim zweiten Pfad ab, steht der Pfad als letzte Zeile da — damit ist
+„irgendein Log-Open crasht" auf einen konkreten Pfad eingekreist. Der serielle
+Anschluss hängt nur mit `-s` dran: das Hauptprogramm benutzt `ser:` überhaupt
+nicht mehr, und ein zweites Öffnen von `ser:` kann einer Shell, die selbst auf
+dem seriellen Anschluss läuft, die Konsole wegziehen.
 
 ### Wenn es direkt nach einer Marke abstürzt: Stack prüfen
 
