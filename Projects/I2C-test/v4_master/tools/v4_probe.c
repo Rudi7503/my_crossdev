@@ -47,9 +47,8 @@
  * ueberschreibt. */
 #define PROBE_LOG_DEFAULT "Programs:test/v4_probe.log"
 
-static int         g_log_on      = 1;   /* mit -n abschaltbar */
-static int         g_log_pause   = 0;   /* waehrend der Dateitests */
-static const char *g_log_path    = NULL;/* NULL = PROBE_LOG_DEFAULT */
+static int         g_log_on   = 1;      /* mit -n abschaltbar */
+static const char *g_log_path = NULL;   /* NULL = PROBE_LOG_DEFAULT */
 
 static struct timerequest s_timer;
 static int                s_timer_open = 0;
@@ -70,7 +69,7 @@ static void step(const char *fmt, ...)
     }
     fputs(buf, stdout);
     fflush(stdout);
-    if (g_log_on && !g_log_pause) {
+    if (g_log_on) {
         (void)v4_plat_log_write(buf, (unsigned long)n);
     }
 }
@@ -197,7 +196,10 @@ int main(int argc, char **argv)
         }
     }
 
-    /* ---- 3: Dateien oeffnen, jeden Pfad einzeln -------------------- */
+    /* ---- 3: Dateien oeffnen, jeden Pfad einzeln --------------------
+     * Absichtlich mit stdio direkt, NICHT ueber die Log-Haken: die Haken
+     * gehoeren der eigenen Logdatei, und ein zweites Oeffnen auf dieselbe
+     * Datei liess das Log vorzeitig abreissen (auf der V4 passiert). */
     {
         static const char *pfade[] = {
             "T:v4_probe.txt",                       /* immer da, RAM-basiert */
@@ -207,53 +209,33 @@ int main(int argc, char **argv)
         };
         unsigned k;
 
-        /* Die Tests oeffnen fremde Dateien ueber dieselben Haken -- dabei
-         * wuerde das eigene Log umgebogen. Also kurz pausieren. */
-        step("[probe] 3/9 (Dateitests laufen, eigenes Log pausiert)\n");
-        g_log_pause = 1;
-
         for (k = 0u; k < (unsigned)(sizeof(pfade) / sizeof(pfade[0])); k++) {
             static const char msg[] = "[probe] Text in die Logdatei\n";
-            LONG w;
-            int  rc;
+            FILE *f;
 
             /* Marke VOR dem Oeffnen: die letzte Zeile vor einem Absturz nennt
              * damit den Pfad, der ihn ausgeloest hat. */
-            step("[probe] 3/9 --- oeffne \"%s\" ...\n", pfade[k]);
-            SetIoErr(0);
-            rc = v4_plat_log_open(pfade[k]);
-            step("[probe] 3/9 open -> %d (IoErr %ld)\n", rc, (long)IoErr());
-            if (rc != 0) {
+            step("[probe] 3/9 --- fopen \"%s\" ...\n", pfade[k]);
+            f = fopen(pfade[k], "w");
+            step("[probe] 3/9 fopen -> %s\n", (f != NULL) ? "ok" : "FEHLER");
+            if (f == NULL) {
                 continue;
             }
-            w = v4_plat_log_write(msg, (unsigned long)(sizeof(msg) - 1u));
-            step("[probe] 3/9 write+flush -> %ld (soll %lu)\n", w,
-                 (unsigned long)(sizeof(msg) - 1u));
-            v4_plat_log_close();
-            step("[probe] 3/9 close ok\n");
+            step("[probe] 3/9 fwrite -> %lu\n",
+                 (unsigned long)fwrite(msg, 1u, sizeof(msg) - 1u, f));
+            (void)fflush(f);
+            (void)fclose(f);                    /* schreibt auf die Platte */
+            step("[probe] 3/9 geschlossen\n");
         }
 
-        if (with_ser) {
-            step("[probe] 3/9 --- oeffne \"ser:\" ...\n");
-            SetIoErr(0);
-            if (v4_plat_log_open("ser:") == 0) {
-                (void)v4_plat_log_write("[probe] Text ueber ser:\n", 24ul);
-                v4_plat_log_close();
-                step("[probe] 3/9 ser: geschrieben und geschlossen\n");
-            } else {
-                step("[probe] 3/9 ser: nicht verfuegbar (IoErr %ld)\n",
-                     (long)IoErr());
-            }
-        }
-
-        /* Roher DOS-Open, Modus aus einer Variablen geladen. Damit laesst sich
-         * pruefen, ob die 16-Bit-Konstante MODE_NEWFILE (moviw.l) die Ursache
-         * war: dieselbe Datei, zwei Wege. */
+        /* Roher DOS-Open mit dem Modus aus einer Variablen: Gegenprobe zur
+         * stdio-Variante und zugleich Test, ob MODE_NEWFILE (1006) als
+         * 16-Bit-Konstante (moviw.l) die Ursache war. */
         {
             static const LONG mode_new = 1006L;   /* MODE_NEWFILE, 32 Bit */
             BPTR fh;
 
-            step("[probe] 3b/9 DOS-Open \"T:v4_probe_dos.txt\" mit Modus aus einer Variablen ...\n");
+            step("[probe] 3b/9 DOS-Open \"T:v4_probe_dos.txt\" (Modus aus Variable) ...\n");
             SetIoErr(0);
             fh = Open((CONST_STRPTR)"T:v4_probe_dos.txt", mode_new);
             step("[probe] 3b/9 DOS-Open -> %08lx (IoErr %ld)\n",
@@ -266,15 +248,16 @@ int main(int argc, char **argv)
             }
         }
 
-        /* Eigenes Log wieder aufnehmen. */
-        g_log_pause = 0;
-        if (g_log_on) {
-            int rc = v4_plat_log_open((g_log_path != NULL) ? g_log_path
-                                                           : PROBE_LOG_DEFAULT);
+        if (with_ser) {
+            FILE *f = fopen("ser:", "w");
 
-            step("[probe] 3/9 eigenes Log wieder offen -> %d\n", rc);
-            if (rc != 0) {
-                g_log_on = 0;
+            step("[probe] 3/9 fopen(\"ser:\") -> %s\n",
+                 (f != NULL) ? "ok" : "FEHLER");
+            if (f != NULL) {
+                (void)fwrite("[probe] Text ueber ser:\n", 1u, 24u, f);
+                (void)fflush(f);
+                (void)fclose(f);
+                step("[probe] 3/9 ser: geschrieben und geschlossen\n");
             }
         }
     }
@@ -311,6 +294,37 @@ int main(int argc, char **argv)
 
     /* ---- 6b/6c: rohe Register, die die Library benutzt ------------- */
     roh_zugriffe();
+
+    /* ---- 6d/6e: direkter Library-Test, genau wie das Programm, das auf
+     * dieser V4 nachweislich funktioniert hat: erst ReceiveI2C, dann
+     * SendI2C, ohne Rahmen/CRC. Damit ist die Library selbst geprueft,
+     * bevor unser gerahmtes Protokoll drankommt. ---- */
+    {
+        struct Library *lib = OpenLibrary((CONST_STRPTR)"i2c.library", 39);
+
+        if (lib != NULL) {
+            UBYTE buf[16];
+            ULONG err;
+
+            /* Die Inline-Makros der Library benutzen die GLOBALE I2C_Base --
+             * ohne diese Zuweisung liefe der Sprung durch einen Nullzeiger. */
+            I2C_Base = lib;
+
+            step("[probe] 6d/9 ReceiveI2C(0x%02X, 8) ...\n", (unsigned)0xA0);
+            err = ReceiveI2C((UBYTE)0xA0, 8, buf);
+            step("[probe] 6d/9 ReceiveI2C -> 0x%08lX %s\n", (unsigned long)err,
+                 (const char *)I2CErrText(err));
+
+            buf[0] = 0u;
+            step("[probe] 6e/9 SendI2C(0x%02X, 1) ...\n", (unsigned)0xA0);
+            err = SendI2C((UBYTE)0xA0, 1, buf);
+            step("[probe] 6e/9 SendI2C -> 0x%08lX %s\n", (unsigned long)err,
+                 (const char *)I2CErrText(err));
+
+            CloseLibrary(lib);
+            I2C_Base = NULL;
+        }
+    }
 
     /* ---- 7: Bus oeffnen und PING (der erste echte Busverkehr) ------ */
     probe_rc = V4P_ST_OK;

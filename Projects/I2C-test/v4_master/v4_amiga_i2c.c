@@ -89,6 +89,12 @@ int v4_plat_log_open(const char *path)
     if (path == NULL) {
         path = V4_LOG_DEFAULT_AMIGA;
     }
+    if (s_log != NULL) {
+        /* Kein Handle leaken: ein offen gebliebener Kanal kann das erneute
+         * Oeffnen derselben Datei blockieren (auf der V4 passiert). */
+        (void)fclose(s_log);
+        s_log = NULL;
+    }
     s_log_path = path;
     s_log = fopen(path, "w");           /* frische Datei je Lauf */
     return (s_log == NULL) ? -1 : 0;
