@@ -457,8 +457,17 @@ static void browse_add(const v4p_dirent_t *e, void *ctx)
  * "lesen"). */
 static int is_playable(const char *name)
 {
-    static const char *ext[] = { "MP3", "WAV", "FLAC", "OGG",
-                                 "M4A", "AAC", "WMA" };
+    static const char *ext[] = {
+        /* Verlustbehaftet und verlustfrei -- das, was ein Audiodekoder auf
+         * der Slave-Seite ueblicherweise kennt: */
+        "MP3", "MP2", "WAV", "FLAC", "OGG", "OGA", "OPUS", "M4A", "M4B",
+        "AAC", "WMA", "AIF", "AIFF", "AU", "SND", "VOC",
+        "APE", "WV", "TTA", "AC3", "MKA",
+        /* Amiga/Tracker: Musik, aber nicht garantiert vom Slave dekodierbar.
+         * Die Liste steuert nur Reihenfolge und Filter -- was wirklich laeuft,
+         * entscheidet der Slave. */
+        "MOD", "IT", "XM", "S3M", "MED", "8SVX"
+    };
     size_t   n = strlen(name);
     unsigned i;
 

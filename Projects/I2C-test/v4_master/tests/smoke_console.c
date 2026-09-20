@@ -34,6 +34,14 @@ int main(int argc, char **argv)
     if (env != NULL && env[0] != '\0') {
         v4_mock_set_audio(0);
     }
+    /* Ein zusaetzliches Audioformat: damit prueft Szenario 10 die Formatliste
+     * des Browsers mit (OGG gehoert zu den abspielbaren Endungen). */
+    {
+        static const uint8_t pat[8] = { 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u };
+
+        (void)v4_mock_add_file("MUSIC/C.OGG", pat, 64u);
+    }
+
     env = getenv("V4_SMOKE_CONNECT_ROUNDS");
     if (env != NULL && env[0] != '\0') {
         v4_mock.connect_rounds = atoi(env);

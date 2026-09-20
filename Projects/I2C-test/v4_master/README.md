@@ -572,11 +572,18 @@ Pfadabfrage einen **Browser**: der Slave liefert die Verzeichniseinträge einzel
 (`DIR_OPEN`/`DIR_NEXT`/`DIR_CLOSE`), das Programm sammelt sie ein, bringt sie in
 Anzeigereihenfolge und zeigt sie **seitenweise mit Nummern**.
 
-**Reihenfolge: abspielbare Dateien zuerst** (`.mp3`, `.wav`, `.flac`, `.ogg`,
-`.m4a`, `.aac`, `.wma`, ohne Rücksicht auf Groß/Klein), dann die Verzeichnisse,
-dann der Rest. Mit **`f`** wird der Rest ausgeblendet — Verzeichnisse bleiben
-sichtbar, sonst könnte man nicht mehr navigieren. `AUDIO` kennzeichnet die
-abspielbaren Dateien:
+**Reihenfolge: abspielbare Dateien zuerst**, dann die Verzeichnisse, dann der
+Rest. Mit **`f`** wird der Rest ausgeblendet — Verzeichnisse bleiben sichtbar,
+sonst könnte man nicht mehr navigieren. `AUDIO` kennzeichnet die abspielbaren
+Dateien. Groß-/Kleinschreibung spielt keine Rolle; erkannt werden:
+
+| Gruppe | Endungen |
+|---|---|
+| Audio (üblich auf der Slave-Seite) | `mp3` `mp2` `wav` `flac` `ogg` `oga` `opus` `m4a` `m4b` `aac` `wma` `aif` `aiff` `au` `snd` `voc` `ape` `wv` `tta` `ac3` `mka` |
+| Amiga/Tracker (Musik, aber nicht garantiert dekodierbar) | `mod` `it` `xm` `s3m` `med` `8svx` |
+
+Die Liste steuert **nur** Reihenfolge und Filter — was der Slave wirklich
+dekodiert, entscheidet der Slave:
 
 ```
 -- Dateien --

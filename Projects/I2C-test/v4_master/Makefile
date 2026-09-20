@@ -303,7 +303,7 @@ smoke: $(BUILD)/v4_console_smoke
 	    || { echo "  FEHLER: fehlender A2DP-Stream wird nicht gewarnt"; fail=1; }; \
 	echo "== Smoke 10: Musik zuerst und Filter f =="; \
 	printf '0\n1\nf\nq\n' | ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke13.txt 2>&1 || fail=1; \
-	grep -q "2 von 3 Eintraegen, Filter: nur Abspielbares" $(BUILD)/smoke13.txt \
+	grep -q "3 von 4 Eintraegen, Filter: nur Abspielbares" $(BUILD)/smoke13.txt \
 	    || { echo "  FEHLER: Filter blendet nicht auf Abspielbares"; fail=1; }; \
 	grep -q "\[  0\] AUDIO" $(BUILD)/smoke13.txt || { echo "  FEHLER: AUDIO-Kennzeichnung fehlt"; fail=1; }; \
 	grep -q "\[  0\] Datei" $(BUILD)/smoke13.txt && { echo "  FEHLER: Datei steht vor der Musik"; fail=1; }; \
