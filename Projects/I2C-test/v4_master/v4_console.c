@@ -32,6 +32,7 @@ static unsigned long g_bytes;
 static int         g_use_log    = 1;   /* 1 Vorgabe: Logdatei an, 0 mit -n,
                                         * 2 mit -o <pfad> */
 static int         g_settle     = 0;   /* -t <ticks>: Wartezeit je Logzeile */
+static int         g_wait_us    = 0;   /* -w <us>: t_wait, 0 = Vorgabe (R3) */
 static const char *g_log_path   = NULL;
 
 static void v4_msg(const char *fmt, ...)
@@ -392,6 +393,12 @@ static int parse_args(int argc, char **argv, const char **dev_out)
                 g_trace = 0;                /* still (ist die Vorgabe) */
             } else if (argv[i][1] == 'x') {
                 g_hex = 1;                  /* Antwortbytes zeigen */
+            } else if (argv[i][1] == 'w') {
+                if (i + 1 >= argc) {
+                    v4_msg("-w braucht Mikrosekunden, z.B. -w 20000\n");
+                    return 5;
+                }
+                g_wait_us = atoi(argv[++i]);    /* Wartezeit vor dem Lesen */
             } else if (argv[i][1] == 't') {
                 if (i + 1 >= argc) {
                     v4_msg("-t braucht Ticks (1/50 s), z.B. -t 50\n");
@@ -410,7 +417,7 @@ static int parse_args(int argc, char **argv, const char **dev_out)
                 g_use_log  = 2;          /* ausdruecklicher Pfad */
             } else {
                 v4_msg("Unbekannter Schalter '%s' (erlaubt: -a -q -x -n "
-                       "-o <pfad> -t <ticks>)\n", argv[i]);
+                       "-o <pfad> -t <ticks> -w <us>)\n", argv[i]);
                 return 5;
             }
         } else if (dev == NULL) {
@@ -604,7 +611,11 @@ static void do_play(v4_master_t *m, const char *path)
     uint8_t      rc = v4_play_file(m, path);
     char         line[32];
 
-    v4_msg("PLAY_FILE: %s\n", v4_strerror(rc));
+    if (rc != V4P_ST_OK) {
+        print_failure(m, "PLAY_FILE", rc);
+    } else {
+        v4_msg("PLAY_FILE: %s\n", v4_strerror(rc));
+    }
 
     /* Zweiter Versuch mit fuehrendem Schraegstrich: der Slave bekommt Pfade
      * relativ zum Mount, aber wenn er sie absolut erwartet, hilft diese Form.
@@ -899,9 +910,10 @@ static int console_run(const char *dev)
         return 10;
     }
 
-    v4_msg("Trace: %s%s%s\n", g_trace ? "an" : "aus",
+    v4_msg("Trace: %s%s%s, t_wait=%lu us\n", g_trace ? "an" : "aus",
            g_diag ? " (Diagnosemodus -a)" : " (mit -a einschaltbar)",
-           g_hex ? ", Hexdump an" : "");
+           g_hex ? ", Hexdump an" : "",
+           (unsigned long)((g_wait_us > 0) ? g_wait_us : (int)V4_T_WAIT_US));
     v4_msg("[trace] oeffne I2C-Bus%s%s ...\n", dev ? ": " : "",
            dev ? dev : " (Standard)");
     fflush(stdout);
@@ -914,6 +926,13 @@ static int console_run(const char *dev)
      * v4_open() stehen, weil v4_init() die Struktur nullt. */
     m.trace     = console_trace;
     m.trace_ctx = NULL;
+    if (g_wait_us > 0) {
+        /* R3 verlangt eine Wartezeit VOR jedem Lesen; die Untergrenze steht in
+         * der Spezifikation, laenger warten ist erlaubt. Im Feld hat sich
+         * gezeigt, dass die Antwort des Slaves je nach BT-Zustand streut --
+         * damit laesst sich das ohne Neucompilieren anpassen. */
+        m.t_wait_us = (uint32_t)g_wait_us;
+    }
 
     rc = v4_ping(&m, &info);
     if (rc != V4P_ST_OK) {
@@ -1041,9 +1060,21 @@ static int console_run(const char *dev)
     v4_msg("\n-- Verbinden --\n");
     rc = v4_connect(&m, (uint8_t)i);
     if (rc != V4P_ST_OK) {
-        v4_msg("CONNECT: %s\n", v4_strerror(rc));
-        v4_close();
-        return 10;
+        /* Der Befehl kann den Slave trotzdem erreicht haben -- auf der
+         * fehlerhaften Seite steht unsere Antwortpruefung. Deshalb den Zustand
+         * fragen, statt sofort abzubrechen: im Feld hat das Headset verbunden,
+         * waehrend der Master LINK-Fehler meldete. */
+        print_failure(&m, "CONNECT", rc);
+        if (v4_get_status(&m, &st) == V4P_ST_OK
+            && (st.state == V4P_STATE_CONNECTING
+                || st.state == V4P_STATE_CONNECTED)) {
+            v4_msg("  Der Slave ist trotzdem in state=%u (%s) -- es wird "
+                   "weitergewartet.\n", (unsigned)st.state,
+                   state_name(st.state));
+        } else {
+            v4_close();
+            return 10;
+        }
     }
     {
         int want = i;                   /* der eben gewaehlte Index */
@@ -1061,7 +1092,11 @@ static int console_run(const char *dev)
                 break;                  /* fertig oder abgebrochen */
             }
             v4_plat_delay_us(50000u);
-            v4_msg(".");
+            if ((i % 20) == 19) {
+                v4_msg("[%s]", state_name(st.state));
+            } else {
+                v4_msg(".");
+            }
             fflush(stdout);
         }
         v4_msg("\n");

@@ -47,6 +47,7 @@ void v4_init(v4_master_t *m)
     }
     memset(m, 0, sizeof(*m));
     m->seq        = 0u;
+    m->t_wait_us  = V4_T_WAIT_US;   /* R3: Wartezeit vor dem Lesen */
     m->chunk      = V4P_CHUNK_DEFAULT;
     m->path_valid = 1u;     /* leerer Spiegel ist gueltig: L=0 = Wurzel */
 }
@@ -114,8 +115,8 @@ uint8_t v4_transact_n(v4_master_t *m, uint8_t cmd,
             }
 
             /* R3: vor jedem Lesen warten -- der Slave kann nicht stretchen. */
-            v4_trace(m, V4_TR_WAIT, cmd, m->seq, 0u, 0u, 0, V4_T_WAIT_US, NULL);
-            v4_plat_delay_us(V4_T_WAIT_US);
+            v4_trace(m, V4_TR_WAIT, cmd, m->seq, 0u, 0u, 0, m->t_wait_us, NULL);
+            v4_plat_delay_us(m->t_wait_us);
 
             v4_trace(m, V4_TR_RX_BEGIN, cmd, m->seq, 0u,
                      (uint16_t)V4P_READ_FRAME_LEN, 0, 0u, NULL);
@@ -261,8 +262,8 @@ uint8_t v4_transact_bulk(v4_master_t *m, uint8_t cmd,
                 }
             }
 
-            v4_trace(m, V4_TR_WAIT, cmd, m->seq, 0u, 0u, 0, V4_T_WAIT_US, NULL);
-            v4_plat_delay_us(V4_T_WAIT_US);
+            v4_trace(m, V4_TR_WAIT, cmd, m->seq, 0u, 0u, 0, m->t_wait_us, NULL);
+            v4_plat_delay_us(m->t_wait_us);
 
             /* R2: konstante Laenge -- auch der letzte, kurze Block ist
              * aufgefuellt, damit nie ueber das Ende gelesen wird. */

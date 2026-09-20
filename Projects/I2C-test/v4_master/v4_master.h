@@ -193,6 +193,11 @@ static inline int v4_i2c_err_is_ok(unsigned long err)
 
 typedef struct {
     uint8_t  seq;                       /* naechste Sequenznummer      */
+    uint32_t t_wait_us;                 /* Wartezeit vor dem Lesen (R3).
+                                         * Vorgabe V4_T_WAIT_US; im Feld
+                                         * anpassbar (Schalter -w), weil die
+                                         * Bereitschaft des Slaves je nach
+                                         * Firmware/BT-Zustand streut. */
     uint16_t chunk;                     /* aktuelle Chunkgroesse       */
     uint8_t  path[V4P_PATH_MAX + 1u];   /* per PATH_* gebauter Pfad    */
     uint16_t path_len;

@@ -46,6 +46,7 @@ Programs:test/v4_console -x       # zusaetzlich Hexdump der ersten 32 Antwortbyt
 Programs:test/v4_console -n       # keine Logdatei, nur Konsole
 Programs:test/v4_console -o ram:lauf.log   # anderer Logpfad
 Programs:test/v4_console -t 50    # 1 s Wartezeit je Logzeile (Absturzfahrt)
+Programs:test/v4_console -w 20000 # t_wait vor dem Lesen (Vorgabe 2000 us, R3)
 
 # nach einem Absturz: Logdatei holen und ansehen
 make log
@@ -650,6 +651,28 @@ Beide Fehlerfälle sind als Smoketests festgenagelt (Szenario 8: Verbindung wird
 nie bestätigt; Szenario 9: verbunden ohne A2DP-Stream) — gesteuert über die
 Mock-Knöpfe `V4_SMOKE_CONNECT_ROUNDS` und `V4_SMOKE_NO_AUDIO` in
 `tests/smoke_console.c`.
+
+## Wenn der Master meckert, der Slave aber arbeitet
+
+Im Feld ist genau das passiert: `CONNECT: LINK-Fehler (4 Versuche erfolglos)` —
+und das Headset war trotzdem verbunden. Der Busfehler war dabei `0x000000FF`
+(OK): der Befehl kam an und wurde ausgeführt, nur unsere **Antwortprüfung** hat
+alle vier Antworten verworfen. Der Master ist in diesem Fall die fehlerhafte
+Seite, nicht der Slave.
+
+Zwei Konsequenzen:
+
+1. **`CONNECT` bricht nicht mehr ab**, wenn die Antwortprüfung scheitert. Statt
+   dessen wird `GET_STATUS` gefragt: steht der Slave auf `CONNECTING` oder
+   `CONNECTED`, läuft das Programm weiter und wartet auf die Bestätigung. Nur
+   wenn der Zustand das nicht hergibt, wird abgebrochen.
+2. **`-w <us>`** setzt `t_wait` (Wartezeit vor jedem Lesen, Vorgabe 2000 µs nach
+   R3). Die Spezifikation nennt eine *Untergrenze* — länger warten ist erlaubt.
+   Da die Bereitschaft des Slaves je nach BT-Zustand streut, lässt sich damit
+   ohne Neucompilieren nachjustieren. Der Wert steht im Banner
+   (`t_wait=2000 us`), und Fehlermeldungen nennen jetzt bei `PING`,
+   `GET_STATUS`, `SCAN_START`, `DEV_COUNT`, `CONNECT`, `SD_MOUNT` und
+   `PLAY_FILE` den letzten Prüfgrund samt Rahmenbilanz.
 
 ## Geräte suchen und auswählen
 
