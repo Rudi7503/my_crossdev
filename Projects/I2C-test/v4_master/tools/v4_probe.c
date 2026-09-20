@@ -430,6 +430,16 @@ int main(int argc, char **argv)
         }
         step("[probe] 7/9 v4_open ok\n");
 
+        /* Die Verzoegerung zuerst einzeln: auf ihr stehen t_wait und die
+         * BUSY-Runden. Ohne Antwortport am timer.device blieb genau dieser
+         * Aufruf auf der V4 fuer immer stehen. */
+        step("[probe] 7a/9 v4_plat_delay_us(2000) ...\n");
+        t0 = ms_now();
+        v4_plat_delay_us(2000u);
+        t1 = ms_now();
+        step("[probe] 7a/9 Verzoegerung zurueck nach %lu ms (soll ~2 ms)\n",
+             (unsigned long)(t1 - t0));
+
         /* Zustand der Library abfragen, BEVOR der erste Transfer laeuft. */
         step("[probe] 7/9 AllocI2C -> %d (0 = OK)\n",
              (int)AllocI2C((UBYTE)DELAY_TIMER, (STRPTR)"v4_probe"));

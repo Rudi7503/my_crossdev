@@ -53,6 +53,14 @@ struct Library *I2C_Base = NULL;
 static struct TimeRequest s_timer;
 static int s_timer_open = 0;
 
+/* timer.device braucht einen Antwortport: DoIO() wartet auf die Antwort des
+ * Geraets, und ohne Port kann die nie ankommen -- der Aufruf blockiert dann
+ * fuer immer. Genau das ist auf der V4 passiert: die erste Verzoegerung nach
+ * dem 32-Byte-WRITE blieb stehen. Im Hausstil (siehe
+ * Projects/MUI-Examples/InputHandler.c: CreateMsgPort + CreateIORequest) wird
+ * der Port deshalb immer angelegt. */
+static struct MsgPort *s_timer_port = NULL;
+
 /* Roher Fehlercode der letzten SendI2C/ReceiveI2C-Transaktion im Format
  * $00AABBCC. ACHTUNG: CC != 0 heisst OK (siehe v4_i2c_err_is_ok in
  * v4_master.h) -- nicht "0 = OK". Fuer die Fehlersuche:
@@ -155,13 +163,24 @@ int v4_plat_open(const char *dev)
         return -1;
     }
 
-    s_timer.tr_node.io_Command = TR_ADDREQUEST;
+    s_timer_port = CreateMsgPort();
+    if (s_timer_port == NULL) {
+        CloseLibrary(I2C_Base);
+        I2C_Base = NULL;
+        return -1;
+    }
+    s_timer.tr_node.io_Message.mn_ReplyPort = s_timer_port;
+    s_timer.tr_node.io_Message.mn_Length    = (UWORD)sizeof(s_timer);
+    s_timer.tr_node.io_Command              = TR_ADDREQUEST;
+
     if (OpenDevice((CONST_STRPTR)TIMERNAME, UNIT_MICROHZ,
                    (struct IORequest *)&s_timer, 0) != 0
         || s_timer.tr_node.io_Device == NULL) {
         if (s_timer.tr_node.io_Device != NULL) {
             CloseDevice((struct IORequest *)&s_timer);
         }
+        DeleteMsgPort(s_timer_port);
+        s_timer_port = NULL;
         CloseLibrary(I2C_Base);
         I2C_Base = NULL;
         return -1;
@@ -175,6 +194,10 @@ void v4_plat_close(void)
     if (s_timer_open) {
         CloseDevice((struct IORequest *)&s_timer);
         s_timer_open = 0;
+    }
+    if (s_timer_port != NULL) {
+        DeleteMsgPort(s_timer_port);
+        s_timer_port = NULL;
     }
     if (I2C_Base != NULL) {
         CloseLibrary(I2C_Base);
