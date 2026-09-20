@@ -706,6 +706,22 @@ Damit entfällt der Umweg über die Geräteliste, wenn das Headset ohnehin noch
 verbunden ist — und `audio_flags=0x01 (A2DP)` zeigt sofort, dass die
 Audio-Strecke steht.
 
+## Wenn der Slave beim Dateizugriff klemmt
+
+Im Feld kam mitten im Browser `DIR: NO_HANDLE` vom Slave — transient, aber das
+Programm hat danach beendet. Jetzt wird gefragt statt abgebrochen:
+
+```
+DIR: NO_HANDLE
+  letzte Pruefung: ...
+  Rahmen: tx=.. rx=.. retries=.. unsicher=.. busy=.. badcrc=..
+  Busfehler: 0x........ (...)
+(r) nochmal, (m) SD-Karte neu einbinden, (q)ende:
+```
+
+`m` setzt vorher `SD_MOUNT` neu auf; nach einem Fehler geht es in die Wurzel
+zurück, damit ein kaputter Unterordner nicht die ganze Sitzung blockiert.
+
 ## Ein Gerät in der Liste heißt nicht, dass es da ist
 
 Der ESP32 liefert nur **Name und Bluetooth-Adresse** je Eintrag — ein Feld
@@ -714,6 +730,11 @@ Headset trotzdem in der Liste, ist das eine Eigenschaft der Slave-Seite (die
 Liste kann bekannte Geräte enthalten). Der Master kann das nicht unterscheiden;
 er kann nur **verbinden und den Zustand prüfen**. Genau das tut er: bleibt der
 Zustand `IDLE` oder läuft die Zeit ab, steht im Log
+
+Schlägt der Aufbau fehl (Zeitablauf oder `IDLE`), geht es **zurück zur
+Geräteliste** — dort sucht `r` neu und `q` beendet. Im Zeitablauf-Fall fragt das
+Programm vorher: `(w)eiter warten, (z)urueck zur Geraeteliste, (q)ende`. Damit
+bleibt das Abbrechen immer an der Stelle möglich, an der man die Liste sieht.
 
 ```
 Verbindung NICHT bestaetigt: state=0 (IDLE).

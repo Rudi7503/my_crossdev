@@ -295,13 +295,15 @@ smoke: $(BUILD)/v4_console_smoke
 	grep -q "Kein Eintrag" $(BUILD)/smoke10.txt && { echo "  FEHLER: Navigation erzeugt Fehlermeldung"; fail=1; }; \
 	grep -q "EMPTY/" $(BUILD)/smoke10.txt || { echo "  FEHLER: u/r kommen nicht zurueck in die Wurzel"; fail=1; }; \
 	echo "== Smoke 8: CONNECT wird nicht bestaetigt, Zeit laeuft ab =="; \
-	printf '0\n\na\n' | env V4_SMOKE_CONNECT_ROUNDS=100000 ./$(BUILD)/v4_console_smoke -c 2 > $(BUILD)/smoke11.txt 2>&1 || fail=1; \
+	printf '0\n\nz\nq\n' | env V4_SMOKE_CONNECT_ROUNDS=100000 ./$(BUILD)/v4_console_smoke -c 2 > $(BUILD)/smoke11.txt 2>&1 || fail=1; \
 	grep -q "Nach 2 s noch in CONNECTING." $(BUILD)/smoke11.txt \
 	    || { echo "  FEHLER: Zeitablauf beim Verbinden wird nicht gemeldet"; fail=1; }; \
-	grep -q "(w)eiter warten, (a)bbrechen, (q)ende" $(BUILD)/smoke11.txt \
+	grep -q "(w)eiter warten, (z)urueck zur Geraeteliste, (q)ende" $(BUILD)/smoke11.txt \
 	    || { echo "  FEHLER: Auswahl nach Zeitablauf fehlt"; fail=1; }; \
 	grep -q "DISCONNECT: OK" $(BUILD)/smoke11.txt \
-	    || { echo "  FEHLER: Abbruch trennt nicht"; fail=1; }; \
+	    || { echo "  FEHLER: Rueckweg trennt nicht"; fail=1; }; \
+	test $$(grep -c "Geraete: 3" $(BUILD)/smoke11.txt) -ge 2 \
+	    || { echo "  FEHLER: nach dem Fehlschlag kommt nicht die Liste wieder"; fail=1; }; \
 	echo "== Smoke 9: verbunden, aber kein A2DP-Stream (Headset aus) =="; \
 	printf '0\n\n' | env V4_SMOKE_NO_AUDIO=1 ./$(BUILD)/v4_console_smoke > $(BUILD)/smoke12.txt 2>&1 || fail=1; \
 	grep -q "Verbunden mit Index 0 (CONNECTED)" $(BUILD)/smoke12.txt \
