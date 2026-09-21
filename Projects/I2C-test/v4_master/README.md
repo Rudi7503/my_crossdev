@@ -1,7 +1,10 @@
 # v4_master — I2C-Master der Vampire V4
 
-Umsetzung der **V4-Seite (I2C-Master)** aus [`../PROTOCOL_V4_MASTER.md`](../PROTOCOL_V4_MASTER.md)
-(Version 2.0, Proto-Version 2) gegen den ESP32-Slave.
+Umsetzung der **V4-Seite (I2C-Master)** gegen den ESP32-Slave. Die verbindliche
+Schnittstellenfassung steht in [`PROTOCOL_V4_SYNC.md`](PROTOCOL_V4_SYNC.md):
+Rahmenlayouts, CRC-Parameter, SEQ- und Wiederholungsregeln, Zeitverhalten und
+Konformitätslisten für beide Seiten. Das frühere `../PROTOCOL_V4_MASTER.md`
+(Version 2.0, Proto-Version 2) ist verloren und war nur die Vorlage.
 
 Enthalten sind der portable Protokollcode, zwei Plattformschichten (Linux-Harness
 und Amiga), ein ESP32-Emulator für Tests ohne Hardware, die Testsuite aus §12/§13/§14
