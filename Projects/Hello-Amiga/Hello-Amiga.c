@@ -12,6 +12,7 @@ int main(int argc, void *argv[])
 
     if (DOSBase) {
         Write(Output(), "Hello Amiga!\n", 13);
+        Write(Output(), "Press any key to exit...\n", 26);
         CloseLibrary(DOSBase);
     }
 

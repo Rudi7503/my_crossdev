@@ -15,7 +15,7 @@
         "isDefault": false
       },
       "options": {
-        "cwd": "Projects/ApolloCoreDisplay"
+        "cwd": "${workspaceFolder}/Projects/ApolloCoreDisplay"
       },
       "problemMatcher": ["$gcc"]
     },
@@ -28,7 +28,7 @@
         "isDefault": false
       },
       "options": {
-        "cwd": "Projects/ApolloDemo"
+        "cwd": "${workspaceFolder}/Projects/ApolloDemo"
       },
       "problemMatcher": ["$gcc"]
     },
@@ -41,7 +41,7 @@
         "isDefault": false
       },
       "options": {
-        "cwd": "Projects/DebugTest"
+        "cwd": "${workspaceFolder}/Projects/DebugTest"
       },
       "problemMatcher": ["$gcc"]
     },
@@ -54,7 +54,7 @@
         "isDefault": false
       },
       "options": {
-        "cwd": "Projects/Hello-Amiga"
+        "cwd": "${workspaceFolder}/Projects/Hello-Amiga"
       },
       "problemMatcher": ["$gcc"]
     },
@@ -80,7 +80,7 @@
         "isDefault": false
       },
       "options": {
-        "cwd": "Projects/Hello-Intuition"
+        "cwd": "${workspaceFolder}/Projects/Hello-Intuition"
       },
       "problemMatcher": ["$gcc"]
     },
@@ -106,7 +106,7 @@
         "isDefault": false
       },
       "options": {
-        "cwd": "Projects/MUI-Examples"
+        "cwd": "${workspaceFolder}/Projects/MUI-Examples"
       },
       "problemMatcher": ["$gcc"]
     },
@@ -119,7 +119,7 @@
         "isDefault": false
       },
       "options": {
-        "cwd": "Projects/Mul-by-Ten"
+        "cwd": "${workspaceFolder}/Projects/Mul-by-Ten"
       },
       "problemMatcher": ["$gcc"]
     },
@@ -132,7 +132,7 @@
         "isDefault": false
       },
       "options": {
-        "cwd": "Projects/OpenScreen"
+        "cwd": "${workspaceFolder}/Projects/OpenScreen"
       },
       "problemMatcher": ["$gcc"]
     },
@@ -145,7 +145,7 @@
         "isDefault": false
       },
       "options": {
-        "cwd": "Projects/SAGAModes"
+        "cwd": "${workspaceFolder}/Projects/SAGAModes"
       },
       "problemMatcher": ["$gcc"]
     },

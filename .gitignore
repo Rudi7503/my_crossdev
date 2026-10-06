@@ -1,13 +1,60 @@
+# ============================================================
+#  ApolloCrossDev - Ignorierregeln
+# ============================================================
+
+# --- OS / Editor ---
+.DS_Store
+*~
+
+# --- Lokale, maschinenspezifische Dateien ---
 ApolloCrossDev.code-workspace
 *-Local.sh
 *-Bebbo.sh
 
+# --- Kompilierte Amiga-Programme (Binary traegt den Projektnamen) ---
 Projects/SAGAPiP/SAGAPiP
-Compilers/.DS_Store
-Projects/.DS_Store
 Projects/ApolloPointer/ApolloPointer
-.DS_Store
-Projects/.DS_Store
-Projects/ApolloExplorer/acp/Makefile
+
+# --- Von den Amiga-Makefiles erzeugte Dateien ---
+# Das Makefile kopiert die Icons in den Projektordner und legt dort
+# einen bgdbserver-Stub an (siehe Projects/Hello-Amiga/Makefile Z. 116-121).
+Projects/*/*_Debug
+Projects/*/*.info
+# Ausnahme: die Icon-Quellen in _icons/ sind echte Projektdateien
+!Projects/_icons/*.info
+
+# --- Objektdateien / Logs ---
+*.o
+*.obj
+*-log.txt
+
+# --- Qt / qmake ---
+# Ausschliesslich generierte Dateien
+moc_*.cpp
+moc_*.h
+moc_predefs.h
+ui_*.h
+qrc_*.cpp
+*.qm
+.qmake.stash
+.qmake.cache
+*.pro.user
+*.pro.user.*
+CMakeLists.txt.user
+
+# ACHTUNG: Makefile darf NICHT global ignoriert werden!
+# Die uebrigen Projekte (Hello-Amiga, I2C-test, MUI-Examples, ...) haben
+# handgeschriebene Makefiles, die versioniert werden muessen.
+# Nur im Qt-Projekt ApolloExplorer werden sie von qmake erzeugt.
+Projects/ApolloExplorer/Makefile
+Projects/ApolloExplorer/**/Makefile
+Projects/ApolloExplorer/**/Makefile.*
+
+# --- Qt-Binaries (ohne Dateisuffix) ---
 Projects/ApolloExplorer/acp/acp
-Projects/ApolloExplorer/acp/Makefile
+Projects/ApolloExplorer/ApolloExplorerPC/ApolloExplorer
+Projects/ApolloExplorer/AmigaIconReader/AmigaIconReader
+
+# HINWEIS: *.a / *.so / *.dll / *.exe werden bewusst NICHT ignoriert.
+# Das Repo liefert unter Compilers/_archives/ vorkompilierte Bibliotheken
+# mit (z. B. libSDL_image.a, libvorbis.a), die versioniert bleiben muessen.
