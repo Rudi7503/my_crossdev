@@ -5,6 +5,8 @@
 # --- OS / Editor ---
 .DS_Store
 *~
+# Windows-NTFS-Metadaten ("Datei aus dem Internet geladen") - kein Projektinhalt
+*:Zone.Identifier
 
 # --- Lokale, maschinenspezifische Dateien ---
 ApolloCrossDev.code-workspace
@@ -58,3 +60,11 @@ Projects/ApolloExplorer/AmigaIconReader/AmigaIconReader
 # HINWEIS: *.a / *.so / *.dll / *.exe werden bewusst NICHT ignoriert.
 # Das Repo liefert unter Compilers/_archives/ vorkompilierte Bibliotheken
 # mit (z. B. libSDL_image.a, libvorbis.a), die versioniert bleiben muessen.
+
+# --- Fremdprojekt, das nur lokal liegt ---
+# Projects/ADPCM ist ein lokaler Klon von https://github.com/dbry/adpcm-xq
+# (MIT-Lizenz) und bewusst NICHT Teil dieses Repos. Der Ordner enthaelt ein
+# eigenes .git und wuerde ohne diese Regel erneut als gitlink (Modus 160000)
+# im Index landen - dann fehlt beim Klon der Inhalt und es gibt keine
+# .gitmodules, die die Herkunft dokumentiert.
+Projects/ADPCM/
