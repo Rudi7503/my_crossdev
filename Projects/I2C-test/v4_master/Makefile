@@ -65,6 +65,8 @@ APOLLO_CC      = $(APOLLO_PREFIX)/bin/m68k-amigaos-gcc
 I2C_INC        = ../i2clib-master/include
 # CPU-Ziel des Amiga-Builds: siehe Kommentar bei der Apollo-Toolchain.
 AMIGA_CPU     ?= -m68020 -m68881
+# ApolloLib (Debug-UART der V4, siehe Projects/ApolloLib)
+APOLLOLIB     ?= ../../ApolloLib
 AMIGA_SRC      = $(LIB_SRC) v4_amiga_i2c.c v4_console.c
 PROBE_SRC      = $(LIB_SRC) v4_amiga_i2c.c tools/v4_probe.c
 
@@ -175,6 +177,22 @@ amiga: | $(BUILD)
 	    -DREGPARM=4 -DV4_PLAT_AMIGA=1 -I. -I$(I2C_INC) \
 	    -o $(BUILD)/v4_console_amiga $(AMIGA_SRC)
 	@echo "Fertig: $(BUILD)/v4_console_amiga (m68k-amigaos)"
+
+# MUI-Oberflaeche (Stufe 1) -- zweites Frontend, gleiche Protokollschicht.
+# Braucht -lmui (libmui.a liegt im Compilerbaum, siehe CrossDev).
+amiga-gui: | $(BUILD)
+	$(APOLLO_CC) -std=gnu99 $(WARN) -Wno-pointer-sign $(OPT) $(AMIGA_CPU) -noixemul \
+	    -DREGPARM=4 -DV4_PLAT_AMIGA=1 -I. -I$(I2C_INC) -I$(APOLLOLIB) \
+	    -o $(BUILD)/v4_gui_amiga $(LIB_SRC) v4_amiga_i2c.c v4_gui.c \
+	    $(APOLLOLIB)/ApolloCrossDev_Debug.c -lmui
+	@echo "Fertig: $(BUILD)/v4_gui_amiga (m68k-amigaos, MUI)"
+
+upload-gui: amiga-gui
+	@cp -f $(BUILD)/v4_gui_amiga $(BUILD)/v4_gui
+	@cp -f $(ICONS)/ApolloIcon.info $(BUILD)/v4_gui.info
+	$(ACP) "$(BUILD)/v4_gui" "$(APOLLO_V4_HOST)"
+	$(ACP) "$(BUILD)/v4_gui.info" "$(APOLLO_V4_HOST)"
+	@echo "Auf der V4: $(APOLLO_V4_HOST)v4_gui  (Ausgabe auch ueber ser:)"
 
 # 68080-Konstantenfalle: GCC laedt 16-Bit-Konstanten in Long-Register gern als
 # "moviw.l #imm,dn". Auf der V4 gemessen setzt dieser Befehl das obere Wort NICHT
