@@ -226,6 +226,7 @@ einem Wiederholungsfall nicht gefahrlos ein zweites Mal laufen (Abschnitt 3.3).
 | `0x52` | `FILE_CLOSE` | Handle (1) | 0 | |
 | `0x60` | `PLAY_FILE` | Pfad | 0 | **unsicher**; Umbau der Audio-Pipeline → langes BUSY-Budget (500 Runden) |
 | `0x61` | `STOP_PLAY` | 0 | 0 | wie `PLAY_FILE` |
+| `0x62` | `MEDIA_START` | 0 | 0 | **sicher**; startet die A2DP-Uebertragung. Der Slave wartet selbst, bis der Mischer laeuft (bis 2 s) → langes BUSY-Budget wie `PLAY_FILE`. Ohne verbundenes Geraet `BAD_STATE`. Seit 0.9.65 startet `PLAY_FILE` sie ebenfalls, wenn sie noch nicht laeuft |
 | `0x7E` | `RESET` | 0 | 0 | Slave in den Grundzustand |
 
 **Pfadregeln.** `len == 0` im WRITE-Rahmen bedeutet „benutze den PATH-Spiegel".

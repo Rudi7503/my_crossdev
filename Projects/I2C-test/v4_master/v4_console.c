@@ -625,9 +625,28 @@ static void path_append(char *buf, size_t cap, const char *name)
 static void do_play(v4_master_t *m, const char *path)
 {
     v4p_status_t st;
-    uint8_t      rc = v4_play_file(m, path);
+    uint8_t      rc;
     char         line[32];
 
+    /*
+     * §11a: Zuerst die A2DP-Uebertragung starten (0.9.65).
+     *
+     * Ohne sie hat der Datei-Zweig im ESP32 keinen Abnehmer, und die Wiedergabe
+     * endet sofort: "Wiedergabe beendet - stoppe den Datei-Zweig (ERROR)"
+     * (Mitschnitt field-log-v4-console-play.txt vom 08.10.2026). Der Slave
+     * startet sie inzwischen auch selbst bei PLAY_FILE; hier ist es explizit,
+     * damit der Anwender die Antwort sieht.
+     */
+    rc = v4_media_start(m);
+    if (rc == V4P_ST_OK) {
+        v4_msg("MEDIA_START: %s\n", v4_strerror(rc));
+    } else if (rc == V4P_ST_BAD_STATE) {
+        v4_msg("MEDIA_START: kein Geraet verbunden -- erst im Menue verbinden\n");
+    } else {
+        print_failure(m, "MEDIA_START", rc);
+    }
+
+    rc = v4_play_file(m, path);
     if (rc != V4P_ST_OK) {
         print_failure(m, "PLAY_FILE", rc);
     } else {

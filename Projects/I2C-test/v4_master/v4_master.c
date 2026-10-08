@@ -949,6 +949,31 @@ uint8_t v4_stop_play(v4_master_t *m)
                          V4_X_BUSY_RETRY, V4_PLAY_BUSY_TRIES);
 }
 
+/*
+ * §11a -- A2DP-Uebertragung starten (0x62).
+ *
+ * Ohne laufende Uebertragung hat der Datei-Zweig im ESP32 keinen Abnehmer:
+ * PLAY_FILE endet dann sofort mit ERROR ("Wiedergabe beendet - stoppe den
+ * Datei-Zweig (ERROR)", Mitschnitt vom 08.10.2026). Der Slave startet sie
+ * seit 0.9.65 auch selbst, wenn PLAY_FILE kommt - dieses Kommando macht es
+ * explizit und ist der Weg, den ein Master mit Kontrolle ueber den Ablauf
+ * nehmen sollte.
+ *
+ * Der Slave wartet beim Start selbst, bis der Mischer laeuft (rund 400-500 ms,
+ * Obergrenze 2 s), und antwortet so lange BUSY - deshalb dasselbe lange
+ * BUSY-Budget wie bei PLAY_FILE.
+ */
+uint8_t v4_media_start(v4_master_t *m)
+{
+    v4p_read_t r;
+
+    if (m == NULL) {
+        return V4_ERR_ARG;
+    }
+    return v4_transact_n(m, V4P_CMD_MEDIA_START, NULL, 0u, &r,
+                         V4_X_BUSY_RETRY, V4_PLAY_BUSY_TRIES);
+}
+
 /* ------------------------------------------------------------------ */
 /* Ablaufhilfen -- §7.2, §8.2, §13                                     */
 /* ------------------------------------------------------------------ */

@@ -908,6 +908,16 @@ static void mock_dispatch(uint8_t cmd, uint8_t seq, const uint8_t *pay,
         break;
     }
 
+    case V4P_CMD_MEDIA_START:
+        /* §11a: Ohne verbundenes Geraet registriert der echte Slave die
+         * Uebertragung nicht und antwortet BAD_STATE; sonst OK. */
+        if (s_state != V4P_STATE_CONNECTED) {
+            mock_answer_read_empty(cmd, seq, V4P_ST_BAD_STATE);
+            break;
+        }
+        mock_answer_read_empty(cmd, seq, V4P_ST_OK);
+        break;
+
     case V4P_CMD_PLAY_FILE: {
         /* §11: Datei von der SD-Karte selbst abspielen. Erst BUSY (Umbau der
          * Audio-Pipeline), dann OK. Derselbe Pfad ist idempotent. */

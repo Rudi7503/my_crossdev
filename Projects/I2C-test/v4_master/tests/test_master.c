@@ -76,6 +76,28 @@ static int pattern_ok(const uint8_t *buf, uint32_t len)
 /* §14.1 Normalbetrieb                                                 */
 /* ------------------------------------------------------------------ */
 
+/*
+ * §11a -- MEDIA_START (0x62).
+ *
+ * Ohne verbundenes Geraet lehnt der Slave mit BAD_STATE ab (er registriert die
+ * Uebertragung dann gar nicht erst), mit Verbindung antwortet er OK. PLAY_FILE
+ * setzt dasselbe voraus: seit 0.9.65 startet der ESP32 die Uebertragung auch
+ * selbst, wenn sie noch nicht laeuft.
+ */
+static void test_media_start(void)
+{
+    v4p_status_t st;
+
+    fresh();
+
+    v4_test_case("§11a MEDIA_START: ohne Geraet BAD_STATE, mit Verbindung OK");
+    CHECK_EQ(v4_media_start(&M), V4P_ST_BAD_STATE);
+
+    CHECK_EQ(v4_connect(&M, 1u), V4P_ST_OK);
+    CHECK_EQ(v4_wait_state(&M, V4P_STATE_CONNECTED, 10u, &st), V4P_ST_OK);
+    CHECK_EQ(v4_media_start(&M), V4P_ST_OK);
+}
+
 static void test_normal(void)
 {
     v4p_info_t   info;
@@ -1557,6 +1579,7 @@ int test_master(void)
 {
     v4_test_begin("test_master");
 
+    test_media_start();
     test_normal();
     test_seq_and_link();
     test_framing_errors();

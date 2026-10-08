@@ -333,6 +333,7 @@ uint8_t v4_reset      (v4_master_t *m);                             /* 0x7E */
 /* path == NULL: den per PATH_* gebauten Pfad benutzen (L = 0). */
 uint8_t v4_play_file  (v4_master_t *m, const char *path);           /* 0x60 */
 uint8_t v4_stop_play  (v4_master_t *m);                             /* 0x61 */
+uint8_t v4_media_start(v4_master_t *m);                             /* 0x62 */
 
 /* ------------------------------------------------------------------ */
 /* Ablaufhilfen -- §7.2, §8.1, §8.2, §13                               */

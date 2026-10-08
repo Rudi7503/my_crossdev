@@ -175,6 +175,7 @@ enum {
 
     V4P_CMD_PLAY_FILE   = 0x60,     /* SD-Datei selbst abspielen (§11) */
     V4P_CMD_STOP_PLAY   = 0x61,     /* zurueck auf I2S-Eingang (§11)   */
+    V4P_CMD_MEDIA_START = 0x62,     /* A2DP-Uebertragung starten (§11a) */
     V4P_CMD_RESET       = 0x7E
 };
 
