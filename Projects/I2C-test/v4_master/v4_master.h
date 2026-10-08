@@ -334,6 +334,10 @@ uint8_t v4_reset      (v4_master_t *m);                             /* 0x7E */
 uint8_t v4_play_file  (v4_master_t *m, const char *path);           /* 0x60 */
 uint8_t v4_stop_play  (v4_master_t *m);                             /* 0x61 */
 uint8_t v4_media_start(v4_master_t *m);                             /* 0x62 */
+uint8_t v4_eq_info     (v4_master_t *m, uint8_t *bands, uint8_t *active); /* 0x70 */
+uint8_t v4_eq_bands    (v4_master_t *m, uint8_t active, uint8_t *now);    /* 0x71 */
+uint8_t v4_eq_get      (v4_master_t *m, uint8_t idx, v4p_eq_band_t *out); /* 0x72 */
+uint8_t v4_eq_set      (v4_master_t *m, const v4p_eq_band_t *band);       /* 0x73 */
 
 /* ------------------------------------------------------------------ */
 /* Ablaufhilfen -- §7.2, §8.1, §8.2, §13                               */

@@ -81,6 +81,32 @@ static uint32_t s_total_kb;
 static uint32_t s_free_kb;
 static uint8_t  s_state;
 static uint8_t  s_conn_index;
+
+/*
+ * §15 Equalizer-Zustand des Mocks: 10 Baender, wie der ESP32 sie anlegt
+ * (pool_reg.c: alle Baender 0 dB, Typ Peak, fc 1000 Hz, Q 0,70).
+ */
+static v4p_eq_band_t s_eq[10];
+static int           s_eq_ready;
+static uint8_t       s_eq_active = 10;
+
+static void mock_eq_init(void)
+{
+    int i;
+    if (s_eq_ready) {
+        return;
+    }
+    for (i = 0; i < 10; i++) {
+        s_eq[i].idx     = (uint8_t)i;
+        s_eq[i].typ     = 3;              /* Peak */
+        s_eq[i].enabled = 1;
+        s_eq[i].fc      = 1000u;
+        s_eq[i].q100    = 70;             /* Q 0,70 */
+        s_eq[i].gain10  = 0;
+    }
+    s_eq_active = 10;
+    s_eq_ready  = 1;
+}
 static uint8_t  s_scan_active;
 static uint8_t  s_audio_flags;
 static int      s_card_present = 1;     /* Sockelschalter */
@@ -904,6 +930,70 @@ static void mock_dispatch(uint8_t cmd, uint8_t seq, const uint8_t *pay,
             s_files[h].used = 0;
         }
         mock_invalidate_bcache();           /* §8.2 */
+        mock_answer_read_empty(cmd, seq, V4P_ST_OK);
+        break;
+    }
+
+    case V4P_CMD_EQ_INFO: {
+        uint8_t pl[4];
+
+        mock_eq_init();
+        pl[0] = (uint8_t)(sizeof(s_eq) / sizeof(s_eq[0]));
+        pl[1] = s_eq_active;
+        pl[2] = V4P_EQ_BAND_LEN;
+        pl[3] = 0;
+        mock_answer_read(cmd, seq, V4P_ST_OK, 0u, pl, 4u);
+        break;
+    }
+
+    case V4P_CMD_EQ_BANDS: {
+        uint8_t pl[1];
+
+        mock_eq_init();
+        if (len < 1u || pay[0] > (uint8_t)(sizeof(s_eq) / sizeof(s_eq[0]))) {
+            mock_answer_read_empty(cmd, seq, V4P_ST_BAD_ARG);
+            break;
+        }
+        s_eq_active = pay[0];
+        pl[0] = s_eq_active;
+        mock_answer_read(cmd, seq, V4P_ST_OK, 0u, pl, 1u);
+        break;
+    }
+
+    case V4P_CMD_EQ_GET: {
+        uint8_t pl[V4P_EQ_BAND_LEN];
+
+        mock_eq_init();
+        if (len < 1u || pay[0] >= (uint8_t)(sizeof(s_eq) / sizeof(s_eq[0]))) {
+            mock_answer_read_empty(cmd, seq, V4P_ST_BAD_ARG);
+            break;
+        }
+        s_eq[pay[0]].enabled = (pay[0] < s_eq_active) ? 1u : 0u;
+        mock_answer_read(cmd, seq, V4P_ST_OK, 0u, pl,
+                         (uint8_t)v4p_enc_eq_band(pl, &s_eq[pay[0]]));
+        break;
+    }
+
+    case V4P_CMD_EQ_SET: {
+        v4p_eq_band_t b;
+
+        mock_eq_init();
+        if (len < 10u) {
+            mock_answer_read_empty(cmd, seq, V4P_ST_BAD_ARG);
+            break;
+        }
+        b.idx    = pay[0];
+        b.typ    = pay[1];
+        b.fc     = v4p_get_u32le(pay + 2);
+        b.q100   = (int16_t)v4p_get_u16le(pay + 6);
+        b.gain10 = (int16_t)v4p_get_u16le(pay + 8);
+        if (b.idx >= (uint8_t)(sizeof(s_eq) / sizeof(s_eq[0]))
+            || b.typ < 1u || b.typ > 5u) {
+            mock_answer_read_empty(cmd, seq, V4P_ST_BAD_ARG);
+            break;
+        }
+        b.enabled = (b.idx < s_eq_active) ? 1u : 0u;
+        s_eq[b.idx] = b;
         mock_answer_read_empty(cmd, seq, V4P_ST_OK);
         break;
     }

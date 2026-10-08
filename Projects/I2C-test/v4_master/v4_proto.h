@@ -176,6 +176,10 @@ enum {
     V4P_CMD_PLAY_FILE   = 0x60,     /* SD-Datei selbst abspielen (§11) */
     V4P_CMD_STOP_PLAY   = 0x61,     /* zurueck auf I2S-Eingang (§11)   */
     V4P_CMD_MEDIA_START = 0x62,     /* A2DP-Uebertragung starten (§11a) */
+    V4P_CMD_EQ_INFO     = 0x70,     /* Baender/aktive Baender (§15)     */
+    V4P_CMD_EQ_BANDS    = 0x71,     /* [aktiv u8] -> aktiv u8           */
+    V4P_CMD_EQ_GET      = 0x72,     /* [idx u8] -> v4p_eq_band_t        */
+    V4P_CMD_EQ_SET      = 0x73,     /* [idx][typ][fc u32][q u16][gain s16] */
     V4P_CMD_RESET       = 0x7E
 };
 
@@ -211,8 +215,31 @@ typedef struct {
 } v4p_info_t;
 
 /* Antwort auf GET_STATUS, Nutzlast 17 Byte (§11) */
+/*
+ * §15 Equalizer: ein Band auf der Leitung (12 Byte, little-endian).
+ *
+ * Q als Q x 100, Gain als dB x 10 (vorzeichenbehaftet) - so tauschen Big-Endian
+ * (V4) und Little-Endian (ESP32) ohne Fliesskomma aus.
+ */
+#define V4P_EQ_BAND_LEN     12
+#define V4P_EQ_OFF_IDX       0
+#define V4P_EQ_OFF_TYP       1
+#define V4P_EQ_OFF_ENABLED   2
+#define V4P_EQ_OFF_FC        4
+#define V4P_EQ_OFF_Q         8
+#define V4P_EQ_OFF_GAIN     10
+
 typedef struct {
-    uint8_t  state;
+    uint8_t  idx;
+    uint8_t  typ;        /* 1 HighPass, 2 LowPass, 3 Peak, 4 HighShelf, 5 LowShelf */
+    uint8_t  enabled;
+    uint32_t fc;         /* Hz   */
+    int16_t  q100;       /* Q x 100   */
+    int16_t  gain10;     /* dB x 10   */
+} v4p_eq_band_t;
+
+typedef struct {
+    uint8_t state;
     uint8_t  conn_index;    /* 0xFF = keiner */
     uint8_t  dev_count;
     uint8_t  scan_active;
@@ -365,6 +392,10 @@ size_t v4p_enc_file_open (uint8_t *p, uint8_t handle, uint32_t size,
                           uint8_t attr);
 
 /* Decoder liefern 0 bei Erfolg, -1 wenn `len` nicht ausreicht. */
+int v4p_dec_eq_info   (const uint8_t *p, uint8_t len, uint8_t *bands, uint8_t *active);
+int v4p_dec_eq_band   (const uint8_t *p, uint8_t len, v4p_eq_band_t *out);
+size_t v4p_enc_eq_band(uint8_t *p, const v4p_eq_band_t *in);
+size_t v4p_enc_eq_set (uint8_t *p, const v4p_eq_band_t *in);
 int v4p_dec_get_info  (const uint8_t *p, uint8_t len, v4p_info_t   *out);
 int v4p_dec_get_status(const uint8_t *p, uint8_t len, v4p_status_t *out);
 int v4p_dec_sd_info   (const uint8_t *p, uint8_t len, v4p_sdinfo_t *out);

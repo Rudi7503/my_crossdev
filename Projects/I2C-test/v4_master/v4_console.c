@@ -621,6 +621,88 @@ static void path_append(char *buf, size_t cap, const char *name)
     buf[n + k] = '\0';
 }
 
+/* §15: Equalizer anzeigen. */
+static void eq_show(v4_master_t *m)
+{
+    static const char *typen[] = { "?", "HighPass", "LowPass", "Peak", "HighShelf", "LowShelf" };
+    uint8_t bands = 0u, active = 0u;
+    uint8_t rc = v4_eq_info(m, &bands, &active);
+    unsigned i;
+
+    if (rc != V4P_ST_OK) {
+        v4_msg("EQ_INFO: %s\n", v4_strerror(rc));
+        return;
+    }
+    v4_msg("Equalizer: %u Baender, davon %u aktiv\n", (unsigned)bands, (unsigned)active);
+    for (i = 0u; i < bands && i < 10u; i++) {
+        v4p_eq_band_t b;
+
+        if (v4_eq_get(m, (uint8_t)i, &b) != V4P_ST_OK) {
+            continue;
+        }
+        v4_msg("  [%u] %-9s %s fc %5lu Hz  Q %u.%02u  Gain %+d.%u dB\n",
+               i, (b.typ <= 5u) ? typen[b.typ] : "?", b.enabled ? "an " : "aus",
+               (unsigned long)b.fc,
+               (unsigned)(b.q100 / 100), (unsigned)((b.q100 < 0 ? -b.q100 : b.q100) % 100),
+               (int)(b.gain10 / 10),
+               (unsigned)((b.gain10 < 0 ? -b.gain10 : b.gain10) % 10));
+    }
+}
+
+/* §15: Equalizer einstellen - Menue mit Nummer, Typ, fc, Q und Gain. */
+static void eq_menu(v4_master_t *m)
+{
+    char line[80];
+
+    for (;;) {
+        eq_show(m);
+        v4_msg("(Nummer) <typ> <fc> <q> <gain>   |   (b)and <n>   |   (z)urueck\n");
+        v4_msg("  1=HighPass 2=LowPass 3=Peak 4=HighShelf 5=LowShelf; "
+               "Beispiel:  2 5 4000 1.2 +6.0\n");
+        v4_msg("EQ> ");
+        fflush(stdout);
+        if (fgets(line, sizeof(line), stdin) == NULL) {
+            return;
+        }
+        if (line[0] == 'z' || line[0] == 'Z' || line[0] == 'q' || line[0] == '\n') {
+            return;
+        }
+        if (line[0] == 'b' || line[0] == 'B') {
+            unsigned n = 0u;
+            if (sscanf(line + 1, "%u", &n) == 1) {
+                uint8_t now = 0u;
+                uint8_t rc = v4_eq_bands(m, (uint8_t)n, &now);
+                v4_msg("EQ_BANDS: %s", v4_strerror(rc));
+                if (rc == V4P_ST_OK) {
+                    v4_msg(" (%u aktiv)", (unsigned)now);
+                }
+                v4_msg("\n");
+            }
+            continue;
+        }
+        {
+            unsigned idx = 0u, typ = 0u, fc = 0u;
+            float    q = 0.0f, gain = 0.0f;
+
+            if (sscanf(line, "%u %u %u %f %f", &idx, &typ, &fc, &q, &gain) == 5) {
+                v4p_eq_band_t b;
+                uint8_t       rc;
+
+                b.idx     = (uint8_t)idx;
+                b.typ     = (uint8_t)typ;
+                b.fc      = fc;
+                b.q100    = (int16_t)(q * 100.0f + (q >= 0.0f ? 0.5f : -0.5f));
+                b.gain10  = (int16_t)(gain * 10.0f + (gain >= 0.0f ? 0.5f : -0.5f));
+                b.enabled = 0u;
+                rc = v4_eq_set(m, &b);
+                v4_msg("EQ_SET: %s\n", v4_strerror(rc));
+            } else {
+                v4_msg("Eingabe nicht verstanden\n");
+            }
+        }
+    }
+}
+
 /* Wiedergabe starten, laufen lassen, auf Enter wieder stoppen. */
 static void do_play(v4_master_t *m, const char *path)
 {
@@ -1077,7 +1159,7 @@ static int console_run(const char *dev)
                (unsigned)st.audio_flags,
                ((st.audio_flags & V4P_AUDIO_A2DP_STREAMING) != 0u)
                    ? " (A2DP)" : "");
-        v4_msg("(w)eiter damit, (r) neu suchen, (t)rennen, (q)ende: ");
+        v4_msg("(w)eiter damit, (r) neu suchen, (t)rennen, (e)qualizer, (q)ende: ");
         fflush(stdout);
         if (fgets(line, sizeof(line), stdin) == NULL) {
             v4_close();
@@ -1092,6 +1174,8 @@ static int console_run(const char *dev)
         } else if (line[0] == 't' || line[0] == 'T') {
             rc = v4_disconnect(&m);
             v4_msg("DISCONNECT: %s\n", v4_strerror(rc));
+        } else if (line[0] == 'e' || line[0] == 'E') {
+            eq_menu(&m);
         }
         /* 'r' oder alles andere: normaler Ablauf */
     }

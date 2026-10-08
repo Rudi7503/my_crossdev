@@ -98,6 +98,51 @@ static void test_media_start(void)
     CHECK_EQ(v4_media_start(&M), V4P_ST_OK);
 }
 
+/*
+ * §15 -- Equalizer: INFO, BANDS, GET, SET.
+ *
+ * Q als Guete x 100, Gain als dB x 10: so gibt es keinen Fliesskomma-Austausch
+ * zwischen Big-Endian-V4 und Little-Endian-ESP32.
+ */
+static void test_eq(void)
+{
+    v4p_eq_band_t b;
+    uint8_t       bands = 0u, active = 0u, now = 0u;
+
+    fresh();
+
+    v4_test_case("§15 Equalizer: lesen, Bandzahl setzen, Band stellen und lesen");
+    CHECK_EQ(v4_eq_info(&M, &bands, &active), V4P_ST_OK);
+    CHECK_EQ(bands, 10u);
+    CHECK_EQ(active, 10u);
+
+    CHECK_EQ(v4_eq_get(&M, 0u, &b), V4P_ST_OK);
+    CHECK_EQ(b.idx, 0u);
+    CHECK_EQ(b.typ, 3u);
+    CHECK_EQ(b.enabled, 1u);
+
+    /* Band 2 als LowShelf, 4000 Hz, Q 1,20, +6,0 dB */
+    b.idx = 2u; b.typ = 5u; b.fc = 4000u; b.q100 = 120; b.gain10 = 60; b.enabled = 0u;
+    CHECK_EQ(v4_eq_set(&M, &b), V4P_ST_OK);
+    CHECK_EQ(v4_eq_get(&M, 2u, &b), V4P_ST_OK);
+    CHECK_EQ(b.typ, 5u);
+    CHECK_EQ(b.fc, 4000u);
+    CHECK_EQ(b.q100, 120);
+    CHECK_EQ(b.gain10, 60);
+
+    /* nur noch 3 Baender aktiv: Band 2 filtert, Band 5 nicht mehr */
+    CHECK_EQ(v4_eq_bands(&M, 3u, &now), V4P_ST_OK);
+    CHECK_EQ(now, 3u);
+    CHECK_EQ(v4_eq_get(&M, 2u, &b), V4P_ST_OK);
+    CHECK_EQ(b.enabled, 1u);
+    CHECK_EQ(v4_eq_get(&M, 5u, &b), V4P_ST_OK);
+    CHECK_EQ(b.enabled, 0u);
+
+    /* ungueltige Werte */
+    CHECK_EQ(v4_eq_get(&M, 99u, &b), V4P_ST_BAD_ARG);
+    CHECK_EQ(v4_eq_bands(&M, 99u, &now), V4P_ST_BAD_ARG);
+}
+
 static void test_normal(void)
 {
     v4p_info_t   info;
@@ -1579,6 +1624,7 @@ int test_master(void)
 {
     v4_test_begin("test_master");
 
+    test_eq();
     test_media_start();
     test_normal();
     test_seq_and_link();

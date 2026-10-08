@@ -327,6 +327,56 @@ size_t v4p_enc_get_status(uint8_t *p, const v4p_status_t *in)
     return V4P_ST_LEN;
 }
 
+int v4p_dec_eq_info(const uint8_t *p, uint8_t len, uint8_t *bands, uint8_t *active)
+{
+    if (len < 2u) {
+        return -1;
+    }
+    if (bands != NULL) {
+        *bands = p[0];
+    }
+    if (active != NULL) {
+        *active = p[1];
+    }
+    return 0;
+}
+
+int v4p_dec_eq_band(const uint8_t *p, uint8_t len, v4p_eq_band_t *out)
+{
+    if (len < V4P_EQ_BAND_LEN || out == NULL) {
+        return -1;
+    }
+    out->idx     = p[V4P_EQ_OFF_IDX];
+    out->typ     = p[V4P_EQ_OFF_TYP];
+    out->enabled = p[V4P_EQ_OFF_ENABLED];
+    out->fc      = v4p_get_u32le(p + V4P_EQ_OFF_FC);
+    out->q100    = (int16_t)v4p_get_u16le(p + V4P_EQ_OFF_Q);
+    out->gain10  = (int16_t)v4p_get_u16le(p + V4P_EQ_OFF_GAIN);
+    return 0;
+}
+
+size_t v4p_enc_eq_band(uint8_t *p, const v4p_eq_band_t *in)
+{
+    p[V4P_EQ_OFF_IDX]     = in->idx;
+    p[V4P_EQ_OFF_TYP]     = in->typ;
+    p[V4P_EQ_OFF_ENABLED] = in->enabled;
+    p[V4P_EQ_OFF_IDX + 3] = 0;
+    v4p_put_u32le(p + V4P_EQ_OFF_FC, in->fc);
+    v4p_put_u16le(p + V4P_EQ_OFF_Q, (uint16_t)in->q100);
+    v4p_put_u16le(p + V4P_EQ_OFF_GAIN, (uint16_t)in->gain10);
+    return V4P_EQ_BAND_LEN;
+}
+
+size_t v4p_enc_eq_set(uint8_t *p, const v4p_eq_band_t *in)
+{
+    p[0] = in->idx;
+    p[1] = in->typ;
+    v4p_put_u32le(p + 2, in->fc);
+    v4p_put_u16le(p + 6, (uint16_t)in->q100);
+    v4p_put_u16le(p + 8, (uint16_t)in->gain10);
+    return 10u;
+}
+
 int v4p_dec_get_status(const uint8_t *p, uint8_t len, v4p_status_t *out)
 {
     if (len < V4P_ST_LEN) {

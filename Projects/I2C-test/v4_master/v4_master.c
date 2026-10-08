@@ -974,6 +974,82 @@ uint8_t v4_media_start(v4_master_t *m)
                          V4_X_BUSY_RETRY, V4_PLAY_BUSY_TRIES);
 }
 
+/*
+ * §15 -- Equalizer hinter dem Mischer.
+ *
+ * Vier Kommandos: INFO (wie viele Baender, wie viele davon aktiv), BANDS (Anzahl
+ * aktiver Baender setzen), GET (ein Band lesen) und SET (ein Band stellen).
+ * Q als Guete x 100, Gain als dB x 10 - so gibt es keinen Fliesskomma-Austausch
+ * zwischen der Big-Endian-V4 und dem Little-Endian-ESP32.
+ */
+uint8_t v4_eq_info(v4_master_t *m, uint8_t *bands, uint8_t *active)
+{
+    v4p_read_t r;
+    uint8_t    rc;
+
+    if (m == NULL) {
+        return V4_ERR_ARG;
+    }
+    rc = v4_transact(m, V4P_CMD_EQ_INFO, NULL, 0u, &r);
+    if (rc != V4P_ST_OK) {
+        return rc;
+    }
+    if (v4p_dec_eq_info(r.payload, r.len, bands, active) != 0) {
+        return V4_ERR_FRAME;
+    }
+    return V4P_ST_OK;
+}
+
+uint8_t v4_eq_bands(v4_master_t *m, uint8_t active, uint8_t *now)
+{
+    uint8_t    p[1];
+    v4p_read_t r;
+    uint8_t    rc;
+
+    if (m == NULL) {
+        return V4_ERR_ARG;
+    }
+    p[0] = active;
+    rc = v4_transact(m, V4P_CMD_EQ_BANDS, p, 1u, &r);
+    if (rc != V4P_ST_OK) {
+        return rc;
+    }
+    if (now != NULL) {
+        *now = (r.len >= 1u) ? r.payload[0] : active;
+    }
+    return V4P_ST_OK;
+}
+
+uint8_t v4_eq_get(v4_master_t *m, uint8_t idx, v4p_eq_band_t *out)
+{
+    v4p_read_t r;
+    uint8_t    rc;
+
+    if (m == NULL || out == NULL) {
+        return V4_ERR_ARG;
+    }
+    rc = v4_transact(m, V4P_CMD_EQ_GET, &idx, 1u, &r);
+    if (rc != V4P_ST_OK) {
+        return rc;
+    }
+    if (v4p_dec_eq_band(r.payload, r.len, out) != 0) {
+        return V4_ERR_FRAME;
+    }
+    return V4P_ST_OK;
+}
+
+uint8_t v4_eq_set(v4_master_t *m, const v4p_eq_band_t *band)
+{
+    uint8_t    p[10];
+    v4p_read_t r;
+
+    if (m == NULL || band == NULL) {
+        return V4_ERR_ARG;
+    }
+    (void)v4p_enc_eq_set(p, band);
+    return v4_transact(m, V4P_CMD_EQ_SET, p, 10u, &r);
+}
+
 /* ------------------------------------------------------------------ */
 /* Ablaufhilfen -- §7.2, §8.2, §13                                     */
 /* ------------------------------------------------------------------ */

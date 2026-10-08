@@ -227,6 +227,10 @@ einem Wiederholungsfall nicht gefahrlos ein zweites Mal laufen (Abschnitt 3.3).
 | `0x60` | `PLAY_FILE` | Pfad | 0 | **unsicher**; Umbau der Audio-Pipeline → langes BUSY-Budget (500 Runden) |
 | `0x61` | `STOP_PLAY` | 0 | 0 | wie `PLAY_FILE` |
 | `0x62` | `MEDIA_START` | 0 | 0 | **sicher**; startet die A2DP-Uebertragung. Der Slave wartet selbst, bis der Mischer laeuft (bis 2 s) → langes BUSY-Budget wie `PLAY_FILE`. Ohne verbundenes Geraet `BAD_STATE`. Seit 0.9.65 startet `PLAY_FILE` sie ebenfalls, wenn sie noch nicht laeuft |
+| `0x70` | `EQ_INFO` | 0 | 4 | **sicher**; Baender u8, aktiv u8, Bandformat-Laenge u8, reserviert u8 |
+| `0x71` | `EQ_BANDS` | 1 | 1 | Anzahl aktiver Baender setzen -> neue Anzahl (`BAD_ARG` bei > Baender) |
+| `0x72` | `EQ_GET` | 1 | 12 | ein Band lesen (`v4p_eq_band_t`, §15) |
+| `0x73` | `EQ_SET` | 10 | 0 | ein Band stellen: idx, typ, fc u32, Q x 100 u16, Gain dB x 10 s16 |
 | `0x7E` | `RESET` | 0 | 0 | Slave in den Grundzustand |
 
 **Pfadregeln.** `len == 0` im WRITE-Rahmen bedeutet „benutze den PATH-Spiegel".
