@@ -50,7 +50,7 @@
 #define IPTR ULONG
 #endif
 
-#define GUI_VERSION   "0.6"
+#define GUI_VERSION   "0.8"
 #define GUI_DATUM     "08.10.2026"
 #define GUI_VER_STR   "$VER: v4_gui " GUI_VERSION " (" GUI_DATUM ")"
 
@@ -65,6 +65,7 @@
 #define ID_STOP       5
 #define ID_CONNECT    6
 #define ID_DISCONN    7
+#define ID_SCAN       8
 
 struct IntuitionBase *IntuitionBase;
 struct GfxBase       *GfxBase;
@@ -94,6 +95,13 @@ static int     s_logcount;
  * alle Zeilen auf denselben Speicher und damit auf den zuletzt geschriebenen
  * Namen ("beim Anklicken wird der Eintrag mit dem letzten ueberschrieben").
  */
+#define GUI_DEV_MAX   32
+static Object *s_devs;                /* Liste der gefundenen Geraete   */
+static Object *s_devs_lv;             /* deren Listview (Doppelklick)   */
+static char   *s_devlines[GUI_DEV_MAX];   /* eigene Kopien je Zeile     */
+static v4p_dev_t s_devtab[GUI_DEV_MAX];   /* zugehoerige Geraetedaten   */
+static int     s_devn;                    /* Anzahl in s_devtab         */
+
 #define GUI_FILE_MAX  512
 static char   *s_filelines[GUI_FILE_MAX];
 static int     s_filecount;
@@ -231,6 +239,66 @@ static void gui_status_refresh(void)
         set(s_status, MUIA_Text_Contents, (IPTR)buf);
     }
     gui_msg("[status] %s\n", buf);
+}
+
+static void gui_devices_clear(void)
+{
+    int i;
+
+    if (s_devs != NULL) {
+        DoMethod(s_devs, MUIM_List_Clear);
+    }
+    for (i = 0; i < s_devn; i++) {
+        free(s_devlines[i]);
+        s_devlines[i] = NULL;
+    }
+    s_devn = 0;
+}
+
+static void act_scan(void)
+{
+    uint8_t count = 0u;
+    uint8_t rc;
+    int     i;
+
+    gui_devices_clear();
+    rc = v4_scan_start(&M, 8u, 0);
+    gui_msg("[scan] Scan gestartet: %s\n", v4_strerror(rc));
+    rc = v4_dev_count(&M, &count);
+    if (rc != V4P_ST_OK) {
+        gui_msg("[scan] Geraetezahl nicht lesbar: %s\n", v4_strerror(rc));
+        return;
+    }
+    gui_msg("[scan] %u Geraet(e) gefunden\n", (unsigned)count);
+    for (i = 0; i < (int)count && i < GUI_DEV_MAX; i++) {
+        v4p_dev_t dev;
+        char      line[V4P_NAME_BUF + 24u];
+        char     *copy;
+
+        memset(&dev, 0, sizeof(dev));
+        if (v4_dev_get(&M, (uint8_t)i, &dev) != V4P_ST_OK) {
+            continue;
+        }
+        /* 0.8: einen Fund ohne Namen gar nicht erst anbieten (0.9.86 der
+         * Bruecke liefert dafuer "(ohne Namen)" - doppelt haelt besser). */
+        if (dev.name_len == 0 || dev.name[0] == '\0') {
+            gui_msg("[scan]   Fund %u ohne Namen - uebersprungen\n", (unsigned)i);
+            continue;
+        }
+        (void)snprintf(line, sizeof(line), "%s  (%02X:%02X:%02X:%02X:%02X:%02X)",
+                       dev.name, dev.bda[0], dev.bda[1], dev.bda[2],
+                       dev.bda[3], dev.bda[4], dev.bda[5]);
+        copy = (char *)malloc(strlen(line) + 1u);
+        if (copy == NULL) {
+            break;
+        }
+        (void)strcpy(copy, line);
+        s_devlines[s_devn] = copy;
+        s_devtab[s_devn]   = dev;
+        s_devn++;
+        DoMethod(s_devs, MUIM_List_InsertSingle, copy, MUIV_List_Insert_Bottom);
+        gui_msg("[scan]   %s\n", dev.name);
+    }
 }
 
 static void gui_list_clear(void)
@@ -421,6 +489,35 @@ static void act_connect(void)
     uint8_t     count = 0u;
     v4p_dev_t   dev;
     uint8_t     rc;
+    char       *sel = NULL;
+    int         i;
+
+    /*
+     * 0.7: Ist in der Geraeteliste etwas markiert, wird genau das verbunden.
+     * Sonst wie bisher: scannen und das erste Geraet nehmen.
+     */
+    if (s_devs != NULL &&
+        DoMethod(s_devs, MUIM_List_GetEntry, MUIV_List_GetEntry_Active, &sel) != 0 &&
+        sel != NULL) {
+        for (i = 0; i < s_devn; i++) {
+            if (s_devlines[i] == sel) {
+                /*
+                 * 0.8: Einen namenlosen Eintrag NIE verbinden. Genau das hat
+                 * am 08.10.2026 die Bruecke in den Zustand CONNECTING gebracht
+                 * ("[verbinden]  -> OK"), die Wiedergabe mit BAD_STATE
+                 * blockiert und danach 62 LINK-Fehler erzeugt.
+                 */
+                if (s_devtab[i].name_len == 0 || s_devtab[i].name[0] == '\0') {
+                    gui_msg("[verbinden] Eintrag ohne Namen - nicht verbunden\n");
+                    return;
+                }
+                rc = v4_connect(&M, s_devtab[i].idx);
+                gui_msg("[verbinden] %s -> %s\n", s_devtab[i].name, v4_strerror(rc));
+                gui_status_refresh();
+                return;
+            }
+        }
+    }
 
     rc = v4_scan_start(&M, 8u, 0);
     gui_msg("[connect] Scan: %s\n", v4_strerror(rc));
@@ -488,6 +585,7 @@ static void close_libs(void)
 static int gui_build(void)
 {
     Object *btn_refresh, *btn_up, *btn_play, *btn_stop, *btn_conn, *btn_disconn;
+    Object *btn_scan, *btn_conn2;
 
     s_app = ApplicationObject,
         MUIA_Application_Title,       (IPTR)"V4 Steuerung v" GUI_VERSION,
@@ -527,6 +625,16 @@ static int gui_build(void)
                         MUIA_Listview_List, s_files = ListObject,
                         End,
                     End,
+                    Child, VGroup,
+                        Child, s_devs_lv = ListviewObject,
+                            MUIA_Listview_List, s_devs = ListObject,
+                            End,
+                        End,
+                        Child, HGroup,
+                            Child, btn_scan = MUI_MakeObject(MUIO_Button, (IPTR)"Scannen", NULL),
+                            Child, btn_conn2 = MUI_MakeObject(MUIO_Button, (IPTR)"Verbinden", NULL),
+                        End,
+                    End,
                     Child, ListviewObject,
                         MUIA_Listview_List, s_logl = ListObject,
                         End,
@@ -553,6 +661,13 @@ static int gui_build(void)
      */
     DoMethod(s_files_lv, MUIM_Notify, MUIA_Listview_DoubleClick, TRUE,
              s_app, 2, MUIM_Application_ReturnID, ID_PLAY);
+    DoMethod(btn_scan, MUIM_Notify, MUIA_Pressed, FALSE,
+             s_app, 2, MUIM_Application_ReturnID, ID_SCAN);
+    DoMethod(btn_conn2, MUIM_Notify, MUIA_Pressed, FALSE,
+             s_app, 2, MUIM_Application_ReturnID, ID_CONNECT);
+    /* Doppelklick auf ein gefundenes Geraet verbindet es (0.7). */
+    DoMethod(s_devs_lv, MUIM_Notify, MUIA_Listview_DoubleClick, TRUE,
+             s_app, 2, MUIM_Application_ReturnID, ID_CONNECT);
     DoMethod(btn_refresh, MUIM_Notify, MUIA_Pressed, FALSE,
              s_app, 2, MUIM_Application_ReturnID, ID_REFRESH);
     DoMethod(btn_up, MUIM_Notify, MUIA_Pressed, FALSE,
@@ -677,6 +792,9 @@ int main(int argc, char **argv)
             break;
         case ID_CONNECT:
             act_connect();
+            break;
+        case ID_SCAN:
+            act_scan();
             break;
         case ID_DISCONN:
             act_disconnect();
