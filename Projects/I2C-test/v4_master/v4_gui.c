@@ -50,7 +50,7 @@
 #define IPTR ULONG
 #endif
 
-#define GUI_VERSION   "0.2"
+#define GUI_VERSION   "0.3"
 #define GUI_DATUM     "08.10.2026"
 #define GUI_VER_STR   "$VER: v4_gui " GUI_VERSION " (" GUI_DATUM ")"
 
@@ -236,9 +236,29 @@ static void gui_files_refresh(void)
         return;
     }
     for (index = 0u; index < 512u; index++) {
+        int versuch;
+
         memset(&ent, 0, sizeof(ent));
-        rc = v4_dir_next(&M, handle, index, &ent);
+        /*
+         * 0.3: Die Bruecke verzoegert jede Eintragsanfrage - der v4_work-Task
+         * liest den Eintrag nach, und der Master fragt denselben Index erneut.
+         * Genau das tut die Textkonsole, meine GUI tat es nicht und brach beim
+         * ersten "noch nicht fertig" ab: "[liste] '': 0 Eintraege", obwohl 73
+         * Eintraege da sind. Nur V4P_ST_END heisst wirklich "keine mehr".
+         */
+        for (versuch = 0; versuch < 12; versuch++) {
+            rc = v4_dir_next(&M, handle, index, &ent);
+            if (rc == V4P_ST_OK || rc == V4P_ST_END) {
+                break;
+            }
+            v4_plat_delay_us(20000u);       /* 20 ms, wie die Konsole */
+        }
+        if (rc == V4P_ST_END) {
+            break;
+        }
         if (rc != V4P_ST_OK) {
+            gui_msg("[liste] Index %u nicht lesbar (nach 12 Versuchen): %s\n",
+                    (unsigned)index, v4_strerror(rc));
             break;
         }
         if (ent.name[0] == '\0') {
