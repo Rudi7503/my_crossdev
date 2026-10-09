@@ -21,7 +21,7 @@
  *   3. in die Logdatei der Plattform (v4_plat_log_write).
  * Beim Start wird ein Versionsstring ausgegeben.
  *
- * Aufruf:  v4_gui [-nodebug] [-l <logdatei>] [-d <i2c-device>]
+ * Aufruf:  v4_gui [-nodebug] [-trace] [-l <logdatei>] [-d <i2c-device>]
  *
  * Die Protokollaufrufe blockieren (BUSY-Wiederholungen bis rund 1 s). In Stufe 1
  * friert das Fenster dabei kurz ein - bewusst in Kauf genommen, siehe README.
@@ -50,7 +50,7 @@
 #define IPTR ULONG
 #endif
 
-#define GUI_VERSION   "0.1"
+#define GUI_VERSION   "0.2"
 #define GUI_DATUM     "08.10.2026"
 #define GUI_VER_STR   "$VER: v4_gui " GUI_VERSION " (" GUI_DATUM ")"
 
@@ -75,6 +75,7 @@ static v4_master_t M;
 static const char *s_log_path;        /* NULL = Vorgabe der Plattform  */
 static const char *s_dev_path;        /* NULL = Vorgabe der Plattform  */
 static int     s_debug_uart = 1;      /* -nodebug schaltet den Debug-UART ab */
+static int     s_trace = 0;           /* -trace: jeden Rahmen mitschreiben (wie -a der Konsole) */
 
 static Object *s_app;
 static Object *s_win;
@@ -102,14 +103,16 @@ static void gui_loglist_add(const char *s)
         return;
     }
     if (s_logcount >= GUI_LOG_MAX) {
-        int i;
-        /* Einfach und ohne Leck: alles freigeben und die Liste leeren. */
-        DoMethod(s_logl, MUIM_List_Clear);
-        for (i = 0; i < s_logcount; i++) {
-            free(s_loglines[i]);
-            s_loglines[i] = NULL;
-        }
-        s_logcount = 0;
+        /*
+         * Nur die aelteste Zeile entfernen (0.2). Vorher habe ich bei 400
+         * Zeilen die ganze Liste geleert - MUIM_List_Clear verwirft dabei die
+         * Scrollposition, danach laesst sich die Liste nicht mehr rollen.
+         */
+        DoMethod(s_logl, MUIM_List_Remove, 0);
+        free(s_loglines[0]);
+        memmove(&s_loglines[0], &s_loglines[1],
+                sizeof(s_loglines[0]) * (size_t)(s_logcount - 1));
+        s_logcount--;
     }
     copy = (char *)malloc(strlen(s) + 1u);
     if (copy == NULL) {
@@ -156,8 +159,16 @@ static void gui_msg(const char *fmt, ...)
     if (n > (int)sizeof(buf) - 1) {
         n = (int)sizeof(buf) - 1;
     }
-    gui_print(buf, (unsigned)n);
-    gui_loglist_add(buf);
+    gui_print(buf, (unsigned)n);            /* mit Umbruch: Konsole und UART */
+
+    /* In die Liste ohne Umbruch - ein '\n' im Listeneintrag bringt MUI beim
+     * Rechnen durcheinander (0.2). */
+    while (n > 0 && (buf[n - 1] == '\n' || buf[n - 1] == '\r')) {
+        buf[--n] = '\0';
+    }
+    if (n > 0) {
+        gui_loglist_add(buf);
+    }
 }
 
 /* Meldungen der Protokollschicht (Trace) ins Logfeld. */
@@ -423,6 +434,15 @@ static int gui_build(void)
         MUIA_Application_Window, s_win = WindowObject,
             MUIA_Window_Title, "V4 Steuerung",
             MUIA_Window_ID,    MAKE_ID('V', '4', 'G', 'I'),
+            /*
+             * Feste Anfangsgroesse (0.2). Ohne sie zieht MUI das Fenster auf
+             * die Inhaltsgroesse: bei 73 Dateien und hunderten Logzeilen wird
+             * es breiter als der Bildschirm, und die rechte Spalte (Logfeld)
+             * liegt ausserhalb - genau der gemeldete Scrollfehler. Die Listen
+             * bekommen so eine feste Flaeche und eigene Rollbalken.
+             */
+            MUIA_Window_Width,  700,
+            MUIA_Window_Height, 420,
             WindowContents, VGroup,
                 Child, s_status = TextObject,
                     MUIA_Text_Contents, (IPTR)"Verbinde ...",
@@ -499,6 +519,8 @@ int main(int argc, char **argv)
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-nodebug") == 0) {
             s_debug_uart = 0;
+        } else if (strcmp(argv[i], "-trace") == 0) {
+            s_trace = 1;
         } else if (strcmp(argv[i], "-l") == 0 && i + 1 < argc) {
             s_log_path = argv[++i];
         } else if (strcmp(argv[i], "-d") == 0 && i + 1 < argc) {
@@ -524,7 +546,12 @@ int main(int argc, char **argv)
             (s_log_path != NULL) ? s_log_path : "(Vorgabe der Plattform)");
 
     v4_init(&M);
-    M.trace     = gui_trace;
+    /*
+     * Rahmen-Trace nur auf Wunsch (-trace). Vorgabe aus: jeder Befehl erzeugt
+     * acht Zeilen, eine Verzeichnisliste damit Hunderte - das hatte der erste
+     * Lauf auf der V4 gezeigt. Die Konsole hat dafuer ihr -a.
+     */
+    M.trace     = (s_trace != 0) ? gui_trace : NULL;
     M.trace_ctx = NULL;
 
     rc = (uint8_t)v4_plat_open(s_dev_path);

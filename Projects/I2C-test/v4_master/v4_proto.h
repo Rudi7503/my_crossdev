@@ -58,7 +58,7 @@
 
 #define V4P_CHUNK_DEFAULT       128u
 #define V4P_CHUNK_MIN           16u
-#define V4P_CHUNK_MAX           1024u
+#define V4P_CHUNK_MAX           256u
 
 #define V4P_PATH_MAX            128u    /* Pfadpuffer auf dem ESP32        */
 /* §10: beide Namensgrenzen sind seit proto_ver 3 113 Zeichen (8 + 113 = 121
