@@ -50,12 +50,12 @@
 #define IPTR ULONG
 #endif
 
-#define GUI_VERSION   "0.3"
+#define GUI_VERSION   "0.4"
 #define GUI_DATUM     "08.10.2026"
 #define GUI_VER_STR   "$VER: v4_gui " GUI_VERSION " (" GUI_DATUM ")"
 
 /* Logfeld: hoechstens so viele Zeilen, dann wird geleert (kein Wachstum). */
-#define GUI_LOG_MAX   400
+#define GUI_LOG_MAX   200
 
 /* ReturnIDs der MUI-Notifies */
 #define ID_QUIT       1
@@ -108,7 +108,9 @@ static void gui_loglist_add(const char *s)
          * Zeilen die ganze Liste geleert - MUIM_List_Clear verwirft dabei die
          * Scrollposition, danach laesst sich die Liste nicht mehr rollen.
          */
+        set(s_logl, MUIA_List_Quiet, TRUE);
         DoMethod(s_logl, MUIM_List_Remove, 0);
+        set(s_logl, MUIA_List_Quiet, FALSE);
         free(s_loglines[0]);
         memmove(&s_loglines[0], &s_loglines[1],
                 sizeof(s_loglines[0]) * (size_t)(s_logcount - 1));
@@ -120,7 +122,14 @@ static void gui_loglist_add(const char *s)
     }
     (void)strcpy(copy, s);
     s_loglines[s_logcount++] = copy;
+    /*
+     * 0.4: MUIA_List_Quiet um das Einfuegen. Ohne das zerstoert MUI die
+     * Darstellung beim Scrollen ("immer derselbe Eintrag") - die Liste wird
+     * waehrend des Einfuegens nicht neu gezeichnet.
+     */
+    set(s_logl, MUIA_List_Quiet, TRUE);
     DoMethod(s_logl, MUIM_List_InsertSingle, copy, MUIV_List_Insert_Bottom);
+    set(s_logl, MUIA_List_Quiet, FALSE);
 }
 
 static void gui_print(const char *s, unsigned len)
@@ -346,17 +355,25 @@ static void act_play(void)
         gui_msg("[play] nichts markiert\n");
         return;
     }
-    if (is_dir != 0) {
-        /* Verzeichnis: hineinwechseln statt abspielen. */
-        if (s_path[0] == '\0') {
-            (void)snprintf(s_path, sizeof(s_path), "%s", name);
-        } else {
-            (void)snprintf(s_path, sizeof(s_path), "%s/%s", s_path, name);
-        }
-        gui_files_refresh();
-        return;
-    }
     gui_path_join(name, path, sizeof(path));
+
+    /*
+     * 0.4: Erst versuchen, den Eintrag als Verzeichnis zu oeffnen. Gelingt das,
+     * wird hineingewechselt - sonst als Datei abgespielt. Damit haengt die
+     * Navigation weder am Schraegstrich noch am Attributbit (das war der Grund,
+     * warum der Wechsel in Unterverzeichnisse nicht funktionierte).
+     */
+    {
+        uint8_t probe = 0u;
+
+        if (v4_dir_open(&M, path, &probe) == V4P_ST_OK) {
+            (void)v4_dir_close(&M, probe);
+            (void)snprintf(s_path, sizeof(s_path), "%s", path);
+            gui_msg("[liste] wechsle nach \"%s\"\n", s_path);
+            gui_files_refresh();
+            return;
+        }
+    }
     rc = v4_play_file(&M, path);
     gui_msg("[play] %s -> %s\n", path, v4_strerror(rc));
     gui_status_refresh();
