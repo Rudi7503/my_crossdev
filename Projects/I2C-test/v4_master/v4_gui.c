@@ -50,7 +50,7 @@
 #define IPTR ULONG
 #endif
 
-#define GUI_VERSION   "0.5"
+#define GUI_VERSION   "0.6"
 #define GUI_DATUM     "08.10.2026"
 #define GUI_VER_STR   "$VER: v4_gui " GUI_VERSION " (" GUI_DATUM ")"
 
@@ -80,7 +80,8 @@ static int     s_trace = 0;           /* -trace: jeden Rahmen mitschreiben (wie 
 static Object *s_app;
 static Object *s_win;
 static Object *s_status;
-static Object *s_files;               /* Listview-Liste der Dateien  */
+static Object *s_files;               /* Liste der Dateien            */
+static Object *s_files_lv;            /* deren Listview (fuer Doppelklick) */
 static Object *s_logl;                /* Listview-Liste der Meldungen */
 static int     s_gui_up;              /* 1 = MUI-Objekte existieren  */
 
@@ -522,7 +523,7 @@ static int gui_build(void)
                     Child, btn_disconn = MUI_MakeObject(MUIO_Button, (IPTR)"Trennen", NULL),
                 End,
                 Child, HGroup,
-                    Child, ListviewObject,
+                    Child, s_files_lv = ListviewObject,
                         MUIA_Listview_List, s_files = ListObject,
                         End,
                     End,
@@ -545,6 +546,13 @@ static int gui_build(void)
      * MUIA_Pressed/FALSE loest beim Loslassen aus - das uebliche MUI-Muster. */
     DoMethod(s_win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
              s_app, 2, MUIM_Application_ReturnID, ID_QUIT);
+    /*
+     * 0.6: Doppelklick auf einen Listeneintrag wirkt wie "Abspielen" -
+     * Verzeichnis betreten oder Titel starten. Das war der Anwenderwunsch
+     * ("Verzeichniswechsel funktioniert nicht mit Doppelklick").
+     */
+    DoMethod(s_files_lv, MUIM_Notify, MUIA_Listview_DoubleClick, TRUE,
+             s_app, 2, MUIM_Application_ReturnID, ID_PLAY);
     DoMethod(btn_refresh, MUIM_Notify, MUIA_Pressed, FALSE,
              s_app, 2, MUIM_Application_ReturnID, ID_REFRESH);
     DoMethod(btn_up, MUIM_Notify, MUIA_Pressed, FALSE,
