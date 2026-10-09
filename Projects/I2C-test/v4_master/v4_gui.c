@@ -50,7 +50,7 @@
 #define IPTR ULONG
 #endif
 
-#define GUI_VERSION   "0.4"
+#define GUI_VERSION   "0.5"
 #define GUI_DATUM     "08.10.2026"
 #define GUI_VER_STR   "$VER: v4_gui " GUI_VERSION " (" GUI_DATUM ")"
 
@@ -86,6 +86,16 @@ static int     s_gui_up;              /* 1 = MUI-Objekte existieren  */
 
 static char   *s_loglines[GUI_LOG_MAX];
 static int     s_logcount;
+
+/*
+ * 0.5: Die Dateiliste braucht eigene Kopien. MUI speichert nur den ZEIGER auf
+ * den Eintrag - vorher habe ich einen lokalen Puffer eingetragen, also zeigten
+ * alle Zeilen auf denselben Speicher und damit auf den zuletzt geschriebenen
+ * Namen ("beim Anklicken wird der Eintrag mit dem letzten ueberschrieben").
+ */
+#define GUI_FILE_MAX  512
+static char   *s_filelines[GUI_FILE_MAX];
+static int     s_filecount;
 
 /* Pfad, den die Oberflaeche gerade zeigt ("" = Wurzel) */
 static char    s_path[256];
@@ -224,9 +234,16 @@ static void gui_status_refresh(void)
 
 static void gui_list_clear(void)
 {
+    int i;
+
     if (s_files != NULL) {
         DoMethod(s_files, MUIM_List_Clear);
     }
+    for (i = 0; i < s_filecount; i++) {
+        free(s_filelines[i]);
+        s_filelines[i] = NULL;
+    }
+    s_filecount = 0;
 }
 
 static void gui_files_refresh(void)
@@ -275,9 +292,20 @@ static void gui_files_refresh(void)
         }
         /* Verzeichnisse mit Schraegstrich kennzeichnen - so weiss der
          * Anwender, was ein Enter und was ein Abspielen ausloest. */
+        char *copy;
+
         (void)snprintf(line, sizeof(line), "%s%s", ent.name,
                        ((ent.attr & 0x10u) != 0u) ? "/" : "");
-        DoMethod(s_files, MUIM_List_InsertSingle, line, MUIV_List_Insert_Bottom);
+        if (s_filecount >= GUI_FILE_MAX) {
+            break;
+        }
+        copy = (char *)malloc(strlen(line) + 1u);
+        if (copy == NULL) {
+            break;
+        }
+        (void)strcpy(copy, line);
+        s_filelines[s_filecount++] = copy;          /* Kopie behaelt MUI */
+        DoMethod(s_files, MUIM_List_InsertSingle, copy, MUIV_List_Insert_Bottom);
         shown++;
     }
     (void)v4_dir_close(&M, handle);
@@ -461,7 +489,7 @@ static int gui_build(void)
     Object *btn_refresh, *btn_up, *btn_play, *btn_stop, *btn_conn, *btn_disconn;
 
     s_app = ApplicationObject,
-        MUIA_Application_Title,       (IPTR)"V4 Steuerung",
+        MUIA_Application_Title,       (IPTR)"V4 Steuerung v" GUI_VERSION,
         MUIA_Application_Version,     (IPTR)GUI_VER_STR,
         MUIA_Application_Copyright,   (IPTR)" ",
         MUIA_Application_Author,      (IPTR)" ",
@@ -469,7 +497,7 @@ static int gui_build(void)
         MUIA_Application_Base,        (IPTR)"V4GUI",
 
         MUIA_Application_Window, s_win = WindowObject,
-            MUIA_Window_Title, "V4 Steuerung",
+            MUIA_Window_Title, "V4 Steuerung v" GUI_VERSION,
             MUIA_Window_ID,    MAKE_ID('V', '4', 'G', 'I'),
             /*
              * Feste Anfangsgroesse (0.2). Ohne sie zieht MUI das Fenster auf
