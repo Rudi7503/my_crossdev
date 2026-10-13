@@ -117,9 +117,18 @@ static void print_failure(const char *what, uint8_t rc)
 {
     v4_msg("%s: %s (0x%02X)\n", what, v4_strerror(rc), (unsigned)rc);
     if (rc == V4_ERR_LINK) {
-        v4_msg("  Versuche=%lu, Wiederholungen=%lu, letzte Rahmenpruefung: %s\n",
-               (unsigned long)M.rx_frames, (unsigned long)M.retries,
-               v4_check_str(M.last_check));
+        /*
+         * Zaehler statt "letzter Rahmenpruefung": `M.last_check` ist ein
+         * haftenbleibender letzter Wert und sah nach EINEM Fehler wie ein
+         * Dauerzustand aus. Die Zaehler (geprueft/fehlerhaft/fehlerserie)
+         * sagen, ob ein einzelner Aussetzer vorliegt oder ein Dauerfehler --
+         * dieselbe Schreibweise wie in Herz- und Fehlerzeile der Ausgabe.
+         */
+        char rahmen[80];
+
+        v4_dbg_rahmen_text(rahmen, sizeof(rahmen));
+        v4_msg("  Versuche=%lu, Wiederholungen=%lu, %s\n",
+               (unsigned long)M.rx_frames, (unsigned long)M.retries, rahmen);
         v4_msg("  Busfehler: Code 0x%08lX (%s)\n",
                v4_plat_last_error(), v4_plat_error_text());
     }

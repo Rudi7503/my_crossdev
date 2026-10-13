@@ -294,6 +294,11 @@ demo: $(BUILD)/v4_console_demo
 	    || { echo "  FEHLER: der Abbruch nach dem PING fehlt"; fail=1; }; \
 	grep -q "Versuche=" $(BUILD)/demo12.txt \
 	    || { echo "  FEHLER: die Diagnosezeile (Versuche/Wiederholungen) fehlt"; fail=1; }; \
+	grep -q "geprueft=" $(BUILD)/demo12.txt \
+	    || { echo "  FEHLER: die Rahmenzaehler fehlen in der Fehlerzeile"; fail=1; }; \
+	if grep -q "letzte_Rahmenpruefung" $(BUILD)/demo12.txt; then \
+	    echo "  FEHLER: der haftenbleibende letzte Zustand steht noch da"; \
+	    fail=1; fi; \
 	echo "== Demo 8: Debugausgabe -- Transaktionszeilen und -quiet =="; \
 	sh -c "printf 's\nq\n' | ./$(BUILD)/v4_console_demo -n" \
 	    > $(BUILD)/demo13.txt 2>&1 || fail=1; \
@@ -310,6 +315,9 @@ demo: $(BUILD)/v4_console_demo
 	    || { echo "  FEHLER: die Buchsenmodi werden nicht gemeldet"; fail=1; }; \
 	grep -q "^\[ende\]" $(BUILD)/demo13.txt \
 	    || { echo "  FEHLER: die Schlusszeile fehlt"; fail=1; }; \
+	grep -q "^\[ende\].*geprueft=[0-9]* fehlerhaft=[0-9]* fehlerserie=[0-9]*" \
+	    $(BUILD)/demo13.txt \
+	    || { echo "  FEHLER: die Schlusszeile traegt die Rahmenzaehler nicht"; fail=1; }; \
 	sh -c "printf 's\nq\n' | ./$(BUILD)/v4_console_demo -n -quiet" \
 	    > $(BUILD)/demo14.txt 2>&1 || fail=1; \
 	if grep -q "^\[i2c\]" $(BUILD)/demo14.txt; then \

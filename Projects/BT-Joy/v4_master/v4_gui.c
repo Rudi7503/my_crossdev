@@ -258,6 +258,48 @@ static Object *s_port1;               /* Portgruppe 1                     */
 static Object *s_vergleich;           /* direkt <-> I2C, beide Buchsen    */
 static Object *s_mode0;               /* Cycle Betriebsart Buchse 0       */
 static Object *s_mode1;               /* Cycle Betriebsart Buchse 1       */
+
+/*
+ * Die Eintraege der beiden Cycle-Knoepfe hinter "Buchse 0:" / "Buchse 1:".
+ *
+ * MUI erwartet hier ein NULL-ABGESCHLOSSENES ARRAY von Zeichenketten
+ * (STRPTR *), KEINE mit '|' getrennte Zeichenkette. Belege:
+ *
+ *   Compilers/GCC-6.50-Latest/m68k-amigaos/include/libraries/mui.h:3098
+ *       #define MUIA_Cycle_Entries  0x80420629   -- Typ laut Kommentar dort:
+ *       "V4  is. STRPTR *"
+ *   Compilers/GCC-6.50-Latest/m68k-amigaos/doc/MUI_Cycle.doc,
+ *   MUIA_Cycle_Entries: "You must supply a pointer to a string array,
+ *   containing one entry for each item and terminated with a NULL."
+ *
+ * Stand dort eine Zeichenkette ("Aus|Joystick|Maus"), las MUI die ersten vier
+ * Bytes als Zeiger auf ein Array: es kamen keine Eintraege heraus. Das Feld
+ * war LEER und -- weil MUI seine Breite aus den Eintraegen rechnet -- ueber
+ * die ganze Spaltenbreite gezogen. Am Geraet gesehen am 13.10.2026.
+ *
+ * Die Reihenfolge ist die der Betriebsarten (V4P_PORT_OFF = 0,
+ * V4P_PORT_JOY = 1, V4P_PORT_MOUSE = 2) und damit genau der Wert, den
+ * GET_PORT_MODE liefert und den der Knopf ueber SET_PORT_MODE setzt. Die
+ * Namen sind dieselben wie in v4p_port_mode_name().
+ *
+ * Das Feld ist ABSICHTLICH ortsfest (static): MUI merkt sich den Zeiger auf
+ * das Array. Ein Puffer auf dem 4-KB-Stapel waere hier die klassische Falle.
+ */
+static const char *const gui_modus_eintraege[] = {
+    "aus", "Joystick", "Maus", NULL
+};
+
+/*
+ * Sicherung zur UEBERSETZUNGSZEIT: das Array muss mit NULL enden -- MUI liest
+ * die Eintraege bis NULL. Wer den Abschluss entfernt, bekommt hier einen
+ * Uebersetzungsfehler statt eines leeren Auswahlfelds auf der V4.
+ * (V4P_PORT_MODE_MAX ist die letzte Betriebsart "Maus"; dazu kommen die
+ * Betriebsart 0 "aus" und der NULL-Abschluss.)
+ */
+typedef char gui_modus_eintraege_mit_null[
+    (sizeof(gui_modus_eintraege) / sizeof(gui_modus_eintraege[0])
+     == (V4P_PORT_MODE_MAX + 2u)) ? 1 : -1];
+
 static Object *s_devs;                /* Listview-Liste der Geraete       */
 static Object *s_devs_lv;             /* deren Listview (Doppelklick)     */
 static Object *s_logl;                /* Listview-Liste der Meldungen     */
@@ -287,6 +329,15 @@ static unsigned s_connect_left;     /* verbleibende Takte fuer CONNECTED  */
 static unsigned s_tick;             /* Taktzaehler                        */
 static unsigned s_seit_versuch;     /* Takte seit dem letzten Buszugriff  */
 static int      s_live_on = 1;      /* Live-Aktualisierung an            */
+
+/*
+ * 1 = die Geraeteliste wurde fuer die LAUFENDE Verbindung schon automatisch
+ * geholt. Eine Verbindung, die der ESP32 von selbst aufbaut (BluePad32
+ * verbindet, sobald der Controller werbend auftritt), tauchte sonst in der
+ * Liste nie auf: die wurde nur vom Knopf "Neu suchen" gefuellt. Genau das war
+ * der zweite Teil des Befunds "die Auswahl-/Anzeigefelder bleiben leer".
+ */
+static int      s_liste_auto;
 
 static int      s_link_down_shown;  /* 0/1: was zuletzt im Log stand      */
 static int      s_sd_warned;        /* Audio-Firmware-Warnung einmalig    */
@@ -637,9 +688,16 @@ static void gui_show_hid(void)
                        (unsigned)hid.battery);
     }
 
+    /*
+     * Drei Zeilen, und die wichtigen Angaben stehen VORN: das Feld darf
+     * hoechstens 640 Pixel breit sein (Fensterbreite), und Name, Art,
+     * Transport und VID:PID sind die Aussage, die man beim Draufschauen
+     * braucht. Die Zaehler dahinter sind Beiwerk und duerfen am Rand
+     * abgeschnitten werden.
+     */
     (void)snprintf(buf, sizeof(buf),
                    "Controller: %s%s\n"
-                   "Art %s, Transport %s, VID:PID %04X:%04X, "
+                   "Art %s, Transport %s, VID:PID %04X:%04X\n"
                    "Report-ID %u, Reportlaenge %u Byte, Reports %u, %s",
                    (hid.name[0] != '\0') ? hid.name : "(ohne Namen)",
                    ((hid.flags & V4P_FLAG_NAME_TRUNCATED) != 0u)
@@ -1051,6 +1109,13 @@ static void gui_joy_aenderungen(void)
 }
 
 /*
+ * Vorwaertsdeklarationen: gui_poll (unten) meldet eine erkannte Verbindung an
+ * die Geraeteliste weiter, die Funktionen selbst stehen weiter unten.
+ */
+static void act_scan_start(int automatisch);
+static void gui_liste_auto(const v4p_status_t *st);
+
+/*
  * Ein vollstaendiger Durchlauf: GET_PORT_MODE + GET_INPUT, auf Wunsch
  * zusaetzlich GET_STATUS + GET_HID (jeder fuenfte Takt, rund 1 s).
  *
@@ -1110,6 +1175,9 @@ static void gui_poll(int slow)
             v4_state_put_status(&S, &st);
             v4_dbg_status(&st);
             v4_dbg_sitzung(&st);
+            /* Steht eine Verbindung und ist die Auswahlliste noch leer, wird
+             * sie genau einmal automatisch geholt (siehe gui_liste_auto). */
+            gui_liste_auto(&st);
         } else if (rc == V4P_ST_OK) {
             rc = rc2;
             v4_dbg_fehler("GET_STATUS", rc2, &M);
@@ -1144,8 +1212,11 @@ static void gui_poll(int slow)
  * "Neu suchen" startet nur den Scan. Das Einsammeln der Ergebnisse macht der
  * Takt (gui_scan_tick): der ESP32 scannt asynchron, und eine Warteschleife
  * wuerde das Fenster fuer Sekunden einfrieren.
+ *
+ * `automatisch` ist 1, wenn der Scan nicht vom Knopf kommt, sondern weil eine
+ * Verbindung erkannt wurde und die Geraeteliste noch leer ist (gui_liste_auto).
  */
-static void act_scan_start(void)
+static void act_scan_start(int automatisch)
 {
     uint8_t rc;
 
@@ -1156,10 +1227,51 @@ static void act_scan_start(void)
         gui_msg("[scan] SCAN_START: %s\n", v4_strerror(rc));
         return;
     }
-    gui_msg("[scan] Scan gestartet (bis zu %u s) -- die Liste fuellt "
-            "sich waehrend der Live-Aktualisierung\n",
-            (unsigned)(GUI_SCAN_TICKS * GUI_TICK_MS / 1000u));
+    if (automatisch != 0) {
+        gui_msg("[scan] Verbindung erkannt -- die Geraeteliste wird "
+                "automatisch geholt (bis zu %u s)\n",
+                (unsigned)(GUI_SCAN_TICKS * GUI_TICK_MS / 1000u));
+    } else {
+        gui_msg("[scan] Scan gestartet (bis zu %u s) -- die Liste fuellt "
+                "sich waehrend der Live-Aktualisierung\n",
+                (unsigned)(GUI_SCAN_TICKS * GUI_TICK_MS / 1000u));
+    }
     s_scan_left = GUI_SCAN_TICKS;
+}
+
+/*
+ * Eine erkannte Verbindung soll AUCH in der Geraeteliste stehen -- nicht nur
+ * in der Controller-Zeile. Ohne das blieb die Auswahlliste leer, solange
+ * niemand "Neu suchen" drueckte; im Mitschnitt vom 13.10.2026 gibt es keine
+ * einzige [scan]-Zeile der Oberflaeche, obwohl sich der Controller zweimal von
+ * selbst verbunden hat.
+ *
+ * Der Scan laeuft EINMAL je Verbindung und nur, wenn die Liste leer ist: das
+ * ist derselbe Verkehr wie ein Knopfdruck und keine Dauerlast auf dem Bus.
+ */
+static void gui_liste_auto(const v4p_status_t *st)
+{
+    int verbunden;
+
+    if (st == NULL) {
+        return;
+    }
+    verbunden = (st->state == V4P_STATE_CONNECTED
+                 || st->state == V4P_STATE_SUSPENDED) ? 1 : 0;
+    if (verbunden == 0) {
+        /* Fuer die naechste Verbindung wieder scharf schalten -- aber nur,
+         * wenn die Liste leer blieb. Sonst loeste jedes Ab- und Anmelden
+         * einen neuen Scan aus. */
+        if (s_devn == 0) {
+            s_liste_auto = 0;
+        }
+        return;
+    }
+    if (s_liste_auto != 0 || s_scan_left > 0u || s_devn > 0) {
+        return;
+    }
+    s_liste_auto = 1;
+    act_scan_start(1);
 }
 
 /* Eine Scan-Runde: DEV_COUNT; sind Geraete da, gleich die ganze Liste holen. */
@@ -1391,7 +1503,23 @@ static void gui_tick(void)
         return;
     }
     s_tick++;
-    slow = ((s_tick % GUI_SLOW_EVERY) == 0u || s_connect_left > 0u) ? 1 : 0;
+    /*
+     * Der ERSTE Takt ist immer ein VOLLSTAENDIGER Takt.
+     *
+     * Die Konsole holt und zeigt Status, Controller und Buchsen sofort beim
+     * Start (ihr "-- Anfangszustand --" mit act_status/act_hid/print_ports);
+     * die Oberflaeche tat das nicht: `slow' wurde allein aus
+     * s_tick % GUI_SLOW_EVERY gebildet, und s_tick startet bei 1 -- der
+     * erste langsame Takt kam also erst nach fuenf Takten. Solange standen in
+     * den Feldern nur die Anfangstexte (" " fuer den Zustand, "Controller:
+     * (wird gelesen)"), und genau das sieht wie ein leeres Anzeigefeld aus,
+     * obwohl ein Controller verbunden ist. Ist der ESP32 in dieser Zeit
+     * beschaeftigt (BluePad32 sucht fortlaufend), liegen zwischen Fenster und
+     * erster Statuszeile mehrere Sekunden -- im Mitschnitt vom 13.10.2026
+     * 25 s (17:37:49 -> 17:38:14).
+     */
+    slow = ((s_tick % GUI_SLOW_EVERY) == 0u || s_connect_left > 0u
+            || s_tick == 1u) ? 1 : 0;
 
     /* 1. Bus abfragen -- aber nur, wenn es der Abstand zulaesst.
      *
@@ -1656,55 +1784,103 @@ static int gui_build(void)
             MUIA_Window_SizeGadget, TRUE,
             WindowContents, VGroup,
                 /*
-                 * Verbindungszeile. Sie steht bewusst GANZ OBEN: wenn der
-                 * ESP32 nicht antwortet, ist das die erste Aussage, die man
-                 * sehen muss -- und die Werte darunter bleiben dabei stehen.
+                 * WARUM DIESE VIER FELDER GEWICHT 0 HABEN (und die Buchsen-
+                 * gruppen unten ebenfalls):
+                 *
+                 * MUI gibt jedem Objekt ohne MUIA_Weight das Vorgabegewicht
+                 * 100 und verteilt den Platz danach. Reicht der Platz im
+                 * Fenster nicht -- 640x400 ist fest, und der Inhalt ist mit
+                 * zwei Buchsengruppen, Vergleichsfeld, zwei Knopfreihen und
+                 * zwei Listen lang --, dann verkleinert MUI die Kinder nach
+                 * ihrem Gewicht. Ein Textobjekt mit Gewicht 100 kann dabei
+                 * unter seine Mindesthoehe gedrueckt werden und sieht dann
+                 * LEER aus, obwohl sein Inhalt laengst gesetzt ist.
+                 *
+                 * Die Autodokumentation der Area-Klasse sagt dazu eindeutig:
+                 * "An object with a weight of 0 will always stay at its
+                 * minimum size." Genau das ist hier gewollt: die Anzeige-
+                 * felder behalten immer ihre Mindestgroesse; den fehlenden
+                 * Platz bekommen die beiden Listen (Gewicht 30/40), die
+                 * scrollen koennen.
+                 *
+                 * MUIA_Text_SetMin, FALSE gehoert dazu: die Vorgabe TRUE
+                 * macht die Textbreite zur Mindestbreite des Fensterinhalts.
+                 * Die Controller-Zeile ist rund 100 Zeichen lang -- das waere
+                 * breiter als die zugesagten 640 Pixel und wuerde MUI das
+                 * Fenster aufziehen. Mit FALSE bleibt das Fenster 640 breit
+                 * und der Text wird am Rand abgeschnitten (die wichtigen
+                 * Angaben stehen am Zeilenanfang).
                  */
                 Child, s_link = TextObject,
                     MUIA_Text_Contents, (IPTR)"Oeffne i2c.library ...",
                     MUIA_Text_PreParse, (IPTR)"\33b",
+                    MUIA_Text_SetMin, FALSE,
+                    MUIA_Weight, 0,
                 End,
                 Child, s_info = TextObject,
                     MUIA_Text_Contents, (IPTR)"Verbinde mit dem ESP32 ...",
                     MUIA_Text_PreParse, (IPTR)"\33l",
+                    MUIA_Text_SetMin, FALSE,
+                    MUIA_Weight, 0,
                 End,
                 Child, s_state = TextObject,
                     MUIA_Text_Contents, (IPTR)" ",
                     MUIA_Text_PreParse, (IPTR)"\33l",
+                    MUIA_Text_SetMin, FALSE,
+                    MUIA_Weight, 0,
                 End,
                 Child, s_ctrl = TextObject,
                     MUIA_Text_Contents, (IPTR)"Controller: (wird gelesen)",
                     MUIA_Text_PreParse, (IPTR)"\33l",
+                    MUIA_Text_SetMin, FALSE,
+                    MUIA_Weight, 0,
                 End,
                 Child, HGroup,
+                    MUIA_Weight, 0,
                     Child, VGroup,
                         Child, HGroup,
                             Child, TextObject,
                                 MUIA_Text_Contents, (IPTR)"Buchse 0:",
+                                /* Auch die Beschriftung bleibt auf ihrer
+                                 * Mindestbreite. Sonst nimmt sie den Platz
+                                 * der Zeile fuer sich und schiebt den
+                                 * kompakten Auswahlknopf an den rechten
+                                 * Rand. */
+                                MUIA_Weight, 0,
                             End,
                             Child, s_mode0 = CycleObject,
                                 MUIA_Cycle_Entries,
-                                    (IPTR)"Aus|Joystick|Maus",
+                                    (IPTR)gui_modus_eintraege,
+                                /* Gewicht 0: der Knopf bleibt so breit wie
+                                 * sein laengster Eintrag ("Joystick") und
+                                 * wird nicht auf die Spaltenbreite gezogen
+                                 * (Area-Doku: "An object with a weight of 0
+                                 * will always stay at its minimum size"). */
+                                MUIA_Weight, 0,
                             End,
                         End,
                         Child, s_port0 = TextObject,
                             MUIA_Text_Contents, (IPTR)" ",
                             MUIA_Text_PreParse, (IPTR)"\33l",
+                            MUIA_Weight, 0,
                         End,
                     End,
                     Child, VGroup,
                         Child, HGroup,
                             Child, TextObject,
                                 MUIA_Text_Contents, (IPTR)"Buchse 1:",
+                                MUIA_Weight, 0,
                             End,
                             Child, s_mode1 = CycleObject,
                                 MUIA_Cycle_Entries,
-                                    (IPTR)"Aus|Joystick|Maus",
+                                    (IPTR)gui_modus_eintraege,
+                                MUIA_Weight, 0,
                             End,
                         End,
                         Child, s_port1 = TextObject,
                             MUIA_Text_Contents, (IPTR)" ",
                             MUIA_Text_PreParse, (IPTR)"\33l",
+                            MUIA_Weight, 0,
                         End,
                     End,
                 End,
@@ -1717,8 +1893,10 @@ static int gui_build(void)
                 Child, s_vergleich = TextObject,
                     MUIA_Text_Contents, (IPTR)"Vergleich direkt/I2C ...",
                     MUIA_Text_PreParse, (IPTR)"\33l",
+                    MUIA_Weight, 0,
                 End,
                 Child, HGroup,
+                    MUIA_Weight, 0,
                     Child, btn_scan    = MUI_MakeObject(MUIO_Button,
                                           (IPTR)"Neu suchen", NULL),
                     Child, btn_conn    = MUI_MakeObject(MUIO_Button,
@@ -1733,6 +1911,7 @@ static int gui_build(void)
                                           (IPTR)"Live (0,2 s)", NULL),
                 End,
                 Child, HGroup,
+                    MUIA_Weight, 0,
                     Child, btn_mode0 = MUI_MakeObject(MUIO_Button,
                                           (IPTR)"Port 0 Modus >", NULL),
                     Child, btn_mode1 = MUI_MakeObject(MUIO_Button,
@@ -1744,15 +1923,25 @@ static int gui_build(void)
                             "(Firmware), \"Pegel\" = am ESP32 gemessen",
                     End,
                 End,
+                /*
+                 * Die beiden Listen sind die EINZIGEN Kinder mit Gewicht: sie
+                 * bekommen den Platz, der nach den festen Anzeigefeldern
+                 * uebrig bleibt (Gewicht 30 fuer die Geraeteliste, 40 fuer das
+                 * Logfeld). MUIA_MinHeight haelt sie auch dann sichtbar, wenn
+                 * das Fenster kleiner gezogen wird -- sonst blieben von einer
+                 * Liste nur ein paar Pixel uebrig und sie saehe leer aus.
+                 */
                 Child, s_devs_lv = ListviewObject,
                     MUIA_Listview_List, s_devs = ListObject,
                     End,
                     MUIA_Weight, 30,
+                    MUIA_MinHeight, 36,
                 End,
                 Child, ListviewObject,
                     MUIA_Listview_List, s_logl = ListObject,
                     End,
                     MUIA_Weight, 40,
+                    MUIA_MinHeight, 36,
                 End,
             End,
         End,
@@ -2143,7 +2332,7 @@ int main(int argc, char **argv)
             running = FALSE;
             break;
         case ID_SCAN:
-            act_scan_start();
+            act_scan_start(0);      /* vom Knopf: kein Automatik-Hinweis */
             break;
         case ID_CONNECT:
             act_connect();

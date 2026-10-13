@@ -61,6 +61,10 @@ und daraus wird der Baum nachgebaut und geprueft:
   5. Jede Gruppe hat mindestens ein Kind.
   6. `WindowContents` kommt genau einmal vor und traegt ein Objekt.
   7. Die Wurzel ist genau eine Anwendung.
+  8. `MUIA_Cycle_Entries` bekommt ein NULL-abgeschlossenes Array von
+     Zeichenketten (`STRPTR *`), keine mit `|` getrennte Zeichenkette. Ein
+     Zeiger auf eine Zeichenkette liest MUI als Zeigerarray: der Cycle-Knopf
+     bleibt leer und wird ueber die ganze Breite gezogen.
 
 Aufruf:  python3 tools/check_mui_tree.py [v4_gui.c]
 Exit 0 = sauber, Exit 1 = Befund (mit Datei und Zeile), Exit 2 = Datei fehlt.
@@ -176,6 +180,16 @@ OBJ_RE = re.compile(r"\b(%s)\b" % "|".join(OBJEKTE))
 MAKE_RE = re.compile(r"\bMUI_MakeObject\s*\(")
 
 WURZEL_START = "s_app = ApplicationObject"
+
+# Nach entstringen() steht fuer JEDE Zeichenkette nur noch 'S'. Damit laesst
+# sich ein Wert, der eine Zeichenkette ist, eindeutig erkennen.
+IPTR_RE = re.compile(r"^\(\s*IPTR\s*\)")
+
+
+def ist_zeichenkette(text):
+    """1, wenn der Wert (nur) aus Zeichenketten besteht, also 'S' ist."""
+    t = IPTR_RE.sub("", text.strip()).strip()
+    return t != "" and set(t.split()) == {"S"}
 
 
 class Befund(Exception):
@@ -388,6 +402,20 @@ def pruefe(pfad, still=False):
                  % (erwarte_kind, text[:40]))
             erwarte_kind = None
         if erwarte_wert is not None:
+            # MUIA_Cycle_Entries ist ein STRPTR * -- ein NULL-abgeschlossenes
+            # ARRAY von Zeichenketten, KEINE mit '|' getrennte Zeichenkette.
+            # Beleg: libraries/mui.h ("V4 is. STRPTR *") und MUI_Cycle.doc
+            # ("You must supply a pointer to a string array ... terminated
+            # with a NULL"). Eine Zeichenkette hier liest MUI als Zeigerarray:
+            # der Cycle-Knopf bleibt leer und wird (weil MUI seine Breite aus
+            # den Eintraegen rechnet) viel zu gross. Genau dieser Fehler war
+            # am 13.10.2026 in v4_gui.c.
+            if (erwarte_wert[0] == "MUIA_Cycle_Entries"
+                    and ist_zeichenkette(text)):
+                melde(z, "MUIA_Cycle_Entries bekommt eine Zeichenkette "
+                         "(\"a|b|c\") -- MUI erwartet ein NULL-abgeschlossenes "
+                         "Array von Zeichenketten (STRPTR *, siehe "
+                         "libraries/mui.h und MUI_Cycle.doc)")
             erwarte_wert = None
 
     if erwarte_kind is not None:
@@ -439,7 +467,9 @@ def pruefe(pfad, still=False):
 # Geprueft wird gegen einen KLEINEN, kuenstlichen Baum. Damit haengt der
 # Selbsttest nicht an der Formatierung von v4_gui.c und kann jeden der Fehler
 # einzeln erzeugen, die er finden soll.
-BAUM_GUT = '''static int gui_build(void)
+BAUM_GUT = '''static const char *const cyc_entries[] = { "aus", "Joystick", "Maus", NULL };
+
+static int gui_build(void)
 {
     Object *btn;
 
@@ -460,7 +490,8 @@ BAUM_GUT = '''static int gui_build(void)
                 Child, HGroup,
                     Child, btn = MUI_MakeObject(MUIO_Button, (IPTR)"Knopf", NULL),
                     Child, s_cycle = CycleObject,
-                        MUIA_Cycle_Entries, (IPTR)"Aus|Joystick|Maus",
+                        MUIA_Cycle_Entries, (IPTR)cyc_entries,
+                        MUIA_Weight, 0,
                     End,
                 End,
                 Child, ListviewObject,
@@ -537,13 +568,20 @@ def selftest():
          BAUM_GUT.replace("""                Child, HGroup,
                     Child, btn = MUI_MakeObject(MUIO_Button, (IPTR)"Knopf", NULL),
                     Child, s_cycle = CycleObject,
-                        MUIA_Cycle_Entries, (IPTR)"Aus|Joystick|Maus",
+                        MUIA_Cycle_Entries, (IPTR)cyc_entries,
+                        MUIA_Weight, 0,
                     End,
                 End,
 """,
                           """                Child, HGroup,
                 End,
 """, 1)),
+        # Die Fehlerklasse, die am 13.10.2026 auf der V4 zu sehen war: der
+        # Cycle-Knopf blieb leer und wurde ueber die ganze Breite gezogen,
+        # weil MUIA_Cycle_Entries eine Zeichenkette statt eines Arrays bekam.
+        ("MUIA_Cycle_Entries als Zeichenkette statt NULL-Array",
+         BAUM_GUT.replace("MUIA_Cycle_Entries, (IPTR)cyc_entries,",
+                          'MUIA_Cycle_Entries, (IPTR)"Aus|Joystick|Maus",', 1)),
         ("WindowContents fehlt",
          BAUM_GUT.replace("WindowContents, VGroup,",
                           "MUIA_Window_RootObject, VGroup,", 1)),

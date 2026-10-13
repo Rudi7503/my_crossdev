@@ -68,6 +68,19 @@ static unsigned long s_wiederholungen = 0ul;   /* Wiederholungen            */
 static unsigned long s_herz_n         = 0ul;   /* Herzschlaege              */
 static char          s_letzter_status[64] = "noch keiner";
 
+/*
+ * Zaehler der Rahmenpruefung (siehe v4_debug.h).
+ *
+ * WARUM NICHT `last_check`: der ist ein haftenbleibender letzter Wert. Ein
+ * einzelner Fehler -- etwa beim Beenden des Programms -- erschien danach in
+ * jeder Fehlerzeile und sah wie ein Dauerzustand aus. Ein Zaehler mit Serie
+ * sagt, was wirklich los ist: ein Aussetzer (Serie 1, danach 0) oder ein
+ * Dauerfehler (Serie waechst).
+ */
+static unsigned long s_geprueft     = 0ul;     /* gepruefte READ-Rahmen     */
+static unsigned long s_rahmenfehler = 0ul;     /* davon fehlerhaft          */
+static unsigned long s_fehler_serie = 0ul;     /* Fehler in Folge           */
+
 /* Flankenerkennung fuer "nur bei Aenderung melden". */
 static int          s_st_valid = 0;
 static v4p_status_t s_st_alt;
@@ -170,6 +183,19 @@ void v4_dbg_init(const v4_dbg_cfg_t *cfg)
     s_datum   = (cfg->datum != NULL) ? cfg->datum : "?";
     s_logpfad = cfg->logdatei;
     s_addr7   = (cfg->addr7 != 0u) ? cfg->addr7 : (unsigned)V4_I2C_ADDR7;
+
+    /* Die Zaehler dieser Ausgabeschicht gehoeren zum Programmstart: hier auf
+     * 0. (Sonst wuerde ein Testlauf die Werte des vorigen mitschleppen, und
+     * auf der V4 ist v4_dbg_init der erste Aufruf ueberhaupt -- die Konsole
+     * ruft es zweimal VOR dem ersten Buszugriff.) */
+    s_zeilen         = 0ul;
+    s_verworfen      = 0ul;
+    s_wiederholungen = 0ul;
+    s_herz_n         = 0ul;
+    s_geprueft       = 0ul;
+    s_rahmenfehler   = 0ul;
+    s_fehler_serie   = 0ul;
+    (void)snprintf(s_letzter_status, sizeof(s_letzter_status), "noch keiner");
 
 #ifdef V4_PLAT_AMIGA
     if (s_uart != 0) {
@@ -476,15 +502,27 @@ void v4_dbg_trace(const v4_trace_t *ev, void *ctx)
         break;
 
     case V4_TR_CHECK:
+        /*
+         * Jeder READ-Rahmen, der geprueft wurde, zaehlt mit -- und jeder
+         * fehlerhafte zusaetzlich als Fehler IN FOLGE. Erst ein gueltiger
+         * Rahmen setzt die Serie zurueck: so ist ein einzelner Aussetzer
+         * (etwa beim Beenden des Programms) nicht von einem Dauerfehler zu
+         * verwechseln.
+         */
+        s_geprueft++;
         if (ev->rc != V4P_CHECK_OK) {
             /* Ein Rahmen, der die Pruefung nicht besteht: genau die
              * "verworfenen Rahmen" aus dem Herzschlag. Im Detailmodus steht
              * er schon als eigene Zeile. */
+            s_rahmenfehler++;
+            s_fehler_serie++;
             s_verworfen++;
             if (s_detail == 0) {
                 v4_dbg("[i2c] Rahmen verworfen: cmd=%s grund=%s (%d)\n",
                        v4_dbg_cmd_name(ev->cmd), v4_check_str(ev->rc), ev->rc);
             }
+        } else {
+            s_fehler_serie = 0ul;
         }
         break;
 
@@ -799,10 +837,21 @@ void v4_dbg_fehler(const char *was, uint8_t rc, const v4_master_t *m)
     v4_dbg("[fehler] %s: %s (rc=0x%02X)\n",
            (was != NULL) ? was : "?", v4_strerror(rc), (unsigned)rc);
     if (m != NULL) {
+        /*
+         * ZAEHLER STATT "LETZTER ZUSTAND": hier stand frueher
+         * `letzte_Rahmenpruefung=%s` aus m->last_check. Das war ein
+         * haftenbleibender letzter Wert: ein einzelner CRC-Fehler -- etwa der
+         * Rahmen, der beim Beenden noch auf dem Bus lag -- stand danach in
+         * JEDER Fehlerzeile und sah wie ein Dauerfehler aus. Jetzt stehen die
+         * Zaehler da: geprueft, fehlerhaft, und wie viele Fehler IN FOLGE.
+         */
+        char rahmen[80];
+
+        v4_dbg_rahmen_text(rahmen, sizeof(rahmen));
         v4_dbg("[fehler]   tx_frames=%lu rx_frames=%lu wiederholungen=%lu "
-               "letzte_Rahmenpruefung=%s busfehler=0x%08lX (%s)\n",
+               "%s busfehler=0x%08lX (%s)\n",
                (unsigned long)m->tx_frames, (unsigned long)m->rx_frames,
-               (unsigned long)m->retries, v4_check_str(m->last_check),
+               (unsigned long)m->retries, rahmen,
                v4_plat_last_error(), v4_plat_error_text());
     }
     (void)snprintf(s_letzter_status, sizeof(s_letzter_status),
@@ -824,42 +873,72 @@ void v4_dbg_herz_zusatz(const char *text)
     (void)snprintf(s_herz_zusatz, sizeof(s_herz_zusatz), "%s", text);
 }
 
+void v4_dbg_rahmen_zaehler(unsigned long *geprueft,
+                           unsigned long *fehlerhaft,
+                           unsigned long *serie)
+{
+    if (geprueft != NULL) {
+        *geprueft = s_geprueft;
+    }
+    if (fehlerhaft != NULL) {
+        *fehlerhaft = s_rahmenfehler;
+    }
+    if (serie != NULL) {
+        *serie = s_fehler_serie;
+    }
+}
+
+void v4_dbg_rahmen_text(char *out, size_t cap)
+{
+    if (out == NULL || cap == 0u) {
+        return;
+    }
+    (void)snprintf(out, cap, "geprueft=%lu fehlerhaft=%lu fehlerserie=%lu",
+                   (unsigned long)s_geprueft, (unsigned long)s_rahmenfehler,
+                   (unsigned long)s_fehler_serie);
+}
+
 void v4_dbg_herz(const v4_master_t *m)
 {
     const char *trenner = (s_herz_zusatz[0] != '\0') ? " | " : "";
     const char *text    = s_herz_zusatz;
+    char        rahmen[80];
 
+    v4_dbg_rahmen_text(rahmen, sizeof(rahmen));
     s_herz_n++;
     if (m != NULL) {
         v4_dbg("[herz] takt=%lus aufrufe=%lu tx_frames=%lu rx_frames=%lu "
-               "wiederholungen=%lu verworfene_rahmen=%lu letzter_status=%s%s%s\n",
+               "wiederholungen=%lu verworfene_rahmen=%lu %s letzter_status=%s%s%s\n",
                (unsigned long)s_herz_n, (unsigned long)s_zeilen,
                (unsigned long)m->tx_frames, (unsigned long)m->rx_frames,
                (unsigned long)m->retries, (unsigned long)s_verworfen,
-               s_letzter_status, trenner, text);
+               rahmen, s_letzter_status, trenner, text);
     } else {
         v4_dbg("[herz] takt=%lus aufrufe=%lu wiederholungen=%lu "
-               "verworfene_rahmen=%lu letzter_status=%s%s%s\n",
+               "verworfene_rahmen=%lu %s letzter_status=%s%s%s\n",
                (unsigned long)s_herz_n, (unsigned long)s_zeilen,
                (unsigned long)s_wiederholungen, (unsigned long)s_verworfen,
-               s_letzter_status, trenner, text);
+               rahmen, s_letzter_status, trenner, text);
     }
 }
 
 void v4_dbg_ende(const v4_master_t *m)
 {
+    char rahmen[80];
+
+    v4_dbg_rahmen_text(rahmen, sizeof(rahmen));
     if (m != NULL) {
         v4_dbg("[ende] %s %s beendet: i2c_zeilen=%lu tx_frames=%lu "
-               "rx_frames=%lu wiederholungen=%lu verworfene_rahmen=%lu "
+               "rx_frames=%lu wiederholungen=%lu verworfene_rahmen=%lu %s "
                "letzter_status=%s\n",
                s_prog, s_ver, (unsigned long)s_zeilen,
                (unsigned long)m->tx_frames, (unsigned long)m->rx_frames,
                (unsigned long)m->retries, (unsigned long)s_verworfen,
-               s_letzter_status);
+               rahmen, s_letzter_status);
     } else {
-        v4_dbg("[ende] %s %s beendet: i2c_zeilen=%lu verworfene_rahmen=%lu "
+        v4_dbg("[ende] %s %s beendet: i2c_zeilen=%lu verworfene_rahmen=%lu %s "
                "letzter_status=%s\n",
                s_prog, s_ver, (unsigned long)s_zeilen,
-               (unsigned long)s_verworfen, s_letzter_status);
+               (unsigned long)s_verworfen, rahmen, s_letzter_status);
     }
 }

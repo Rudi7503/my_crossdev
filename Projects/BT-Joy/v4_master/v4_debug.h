@@ -138,6 +138,37 @@ void v4_dbg_fehler(const char *was, uint8_t rc, const v4_master_t *m);
 /* Lebenszeichen: Zaehler, letzter Status, verworfene Rahmen. */
 void v4_dbg_herz(const v4_master_t *m);
 
+/*
+ * Zaehler der Rahmenpruefung -- sie ersetzen den "letzten Zustand".
+ *
+ * `v4_master_t.last_check` ist ein HAFTENBLEIBENDER Wert: ein einziger
+ * Prueffehler -- etwa der Rahmen, der beim Beenden des Programms noch auf dem
+ * Bus lag -- stand danach in JEDER Fehlerzeile ("letzte_Rahmenpruefung=
+ * CRC-Fehler") und sah wie ein Dauerzustand aus. Genau diese Fehldeutung hat
+ * es gegeben (Bericht vom 14.10.2026, Abschnitt 3).
+ *
+ * Deshalb zaehlt die Ausgabeschicht jetzt mit:
+ *
+ *   geprueft    -- READ-Rahmen, die durch die Rahmenpruefung liefen
+ *   fehlerhaft  -- davon ohne gueltige Pruefung (Magic/CRC/Echo/Laenge)
+ *   fehlerserie -- Fehler IN FOLGE; ein gueltiger Rahmen setzt sie auf 0
+ *
+ * Ein einzelner Aussetzer liest sich damit als "fehlerhaft=1 fehlerserie=1"
+ * und im naechsten Herzschlag als "fehlerserie=0"; ein Dauerfehler waechst.
+ * Der bestehende Zaehler "verworfene Rahmen" bleibt daneben stehen (er zaehlt
+ * dieselben Ereignisse, aber aus Sicht der Ausgabeschicht).
+ *
+ * v4_dbg_init() setzt die drei Zaehler auf 0 (Programmstart).
+ */
+void v4_dbg_rahmen_zaehler(unsigned long *geprueft,
+                           unsigned long *fehlerhaft,
+                           unsigned long *serie);
+
+/* Dieselben Zaehler als fertiger Text, z.B. "geprueft=12 fehlerhaft=1
+ * fehlerserie=0". Herz-, Fehler- und Schlusszeile benutzen NUR diese
+ * Schreibweise -- und die Konsole --, damit es keine zweite gibt. */
+void v4_dbg_rahmen_text(char *out, size_t cap);
+
 /* Zusatz fuer die NAECHSTE Herzzeile (z.B. der Vergleich direkt <-> I2C).
  * Wird als " | <text>" angehaengt, damit es bei EINER Zeile je Sekunde bleibt.
  * NULL oder "" schaltet den Zusatz wieder ab. Der Text wird kopiert. */

@@ -282,7 +282,35 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
 * Kopfzeile: Protokoll- und Firmware-Version, Rahmengroessen, Adresse,
   Faehigkeitsliste im Klartext. Zustandszeile: `GET_STATUS`.
 * Controller-Zeile: Name, Art (Pad/Maus/keine), Transport (BR/EDR/BLE),
-  VID:PID, Report-ID/-laenge, gezaehlte Reports, Batterie (`GET_HID`).
+  VID:PID, Report-ID/-laenge, gezaehlte Reports, Batterie (`GET_HID`) -- in
+  DREI Zeilen, damit Name, Art und VID:PID auch bei 640 Pixel Fensterbreite
+  sichtbar bleiben.
+* **Der erste Takt ist ein vollstaendiger Takt** (`GET_PORT_MODE`, `GET_INPUT`,
+  `GET_STATUS`, `GET_HID`), genau wie die Konsole ihren "Anfangszustand"
+  sofort holt. Vorher wurde `GET_STATUS`/`GET_HID` nur in jedem fuenften Takt
+  abgefragt, und der erste Takt war keiner: in der Zustands- und der
+  Controller-Zeile standen dann nur die Anfangstexte (`" "` und `"Controller:
+  (wird gelesen)"`) -- die Felder sahen leer aus, obwohl ein Controller
+  verbunden war. Im Mitschnitt vom 13.10.2026 lagen dazwischen 25 s
+  (`[mui] Fenster offen` 17:37:49 -> erste `[status]`-Zeile 17:38:14).
+* **Eine erkannte Verbindung fuellt die Geraeteliste mit.** Steht laut
+  `GET_STATUS` eine Verbindung und ist die Liste noch leer, holt der Takt sie
+  genau einmal automatisch (`gui_liste_auto`/`act_scan_start(1)`, dieselbe
+  Strecke wie der Knopf "Neu suchen"). Ohne das blieb die Auswahlliste leer,
+  solange niemand den Knopf drueckte -- ein Controller, der sich von selbst
+  verbindet (BluePad32 verbindet, sobald er werbend auftritt), tauchte dort nie
+  auf.
+* **Die Anzeigefelder koennen nicht weggedrueckt werden.** Sie haben
+  `MUIA_Weight, 0`; die Area-Autodokumentation sagt dazu: "An object with a
+  weight of 0 will always stay at its minimum size." Ohne das verteilt MUI den
+  fehlenden Platz bei einem zu kleinen Fenster nach Gewicht, und ein
+  Textobjekt mit dem Vorgabegewicht 100 kann unter seine Mindesthoehe gedrueckt
+  werden -- es sieht dann leer aus, obwohl der Inhalt gesetzt ist. Den Platz
+  bekommen stattdessen die beiden Listen (Gewicht 30/40, `MUIA_MinHeight 36`).
+  Die vier Kopffelder tragen zusaetzlich `MUIA_Text_SetMin, FALSE`: die
+  Controller-Zeile ist lang, und ohne das macht MUI ihre Breite zur
+  Mindestbreite des Fensterinhalts und zieht das Fenster ueber die zugesagten
+  640 Pixel auf.
 * Zwei Portgruppen (Buchse 0/1) mit Cycle fuer die Betriebsart und je Leitung
   `Zug` und `Pegel`; gezogene Leitungen sind fett gesetzt und mit
   `GND` markiert. Widersprueche stehen als `<- kein Pull-up!` bzw.
@@ -290,6 +318,20 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   Kein Farbcode: die Zuordnung der MUI-Stifte haengt an der Palette des
   Anwenders, und ein "aktives Rot", das auf einem anderen Screen unsichtbar ist,
   waere schlechter als Text.
+* **Die beiden Auswahlknopfe der Betriebsart** (`Buchse 0:` / `Buchse 1:`)
+  bekommen ihre Eintraege als **NULL-abgeschlossenes Array** von Zeichenketten
+  (`gui_modus_eintraege = { "aus", "Joystick", "Maus", NULL }`). `MUIA_Cycle_Entries`
+  ist laut SDK-Header `STRPTR *` (`libraries/mui.h:3098`, Kommentar
+  "V4 is. STRPTR *") und laut `MUI_Cycle.doc`: *"You must supply a pointer to a
+  string array, containing one entry for each item and terminated with a
+  NULL."* Eine mit `|` getrennte Zeichenkette liest MUI als Zeigerarray: der
+  Knopf bleibt **leer** und wird ueber die ganze Spaltenbreite gezogen -- genau
+  das war am 13.10.2026 auf der V4 zu sehen. `MUIA_Weight, 0` haelt ihn auf der
+  Breite seines laengsten Eintrags ("Joystick"); die Area-Doku sagt dazu "An
+  object with a weight of 0 will always stay at its minimum size". Der aktive
+  Eintrag kommt aus `GET_PORT_MODE` (jeder Takt), eine Bedienung des Knopfes
+  geht unveraendert ueber `SET_PORT_MODE`. Das Array ist `static` und traegt
+  eine Uebersetzungszeit-Sicherung auf den NULL-Abschluss.
 * **Vergleich direkt <-> I2C** in einem eigenen Feld ueber die volle
   Fensterbreite: eine Zeile je Buchse (`direkt: 0x11 VOR+BTN1 roh 0x0100` neben
   `I2C: state=0x11 level=0x6E`) mit `OK` bzw. `ABWEICHUNG (Differenz 0x..)`,
@@ -394,7 +436,7 @@ nicht.
 | Startbanner                                | Name, Version, Datum, Uhrzeit, Logdatei, I2C-Adresse | einmal |
 | Plattform                                  | `[plattform] v4_plat_open -> 0 (OK)`    | vor/nach dem Oeffnen |
 | Register beim Start                        | `[direkt] Register beim Start: JOY0DAT=0x085C JOY1DAT=0x0000 CIAAPRA=0x00F4 POTINP=0xFF02` | einmal (Grundzustand der Feuerleitungen) |
-| **Vergleich direkt <-> I2C (Ruhe)**        | `[herz] takt=12s aufrufe=144 tx_frames=... letzter_status=OK \| Buchse0 direkt=0x00 stabil=ja roh=0x085C I2C state=0x00 level=0x7F OK \| Buchse1 ... \| CIAAPRA=0x00F4 POTINP=0xFF02` | **einmal je Sekunde** (in der Herzzeile) |
+| **Vergleich direkt <-> I2C (Ruhe)**        | `[herz] takt=12s aufrufe=144 tx_frames=... geprueft=137 fehlerhaft=0 fehlerserie=0 letzter_status=OK \| Buchse0 direkt=0x00 stabil=ja roh=0x085C I2C state=0x00 level=0x7F OK \| Buchse1 ... \| CIAAPRA=0x00F4 POTINP=0xFF02` | **einmal je Sekunde** (in der Herzzeile) |
 | **Vergleich direkt <-> I2C (Aenderung)**   | `[vergleich] Buchse0 direkt=0x04 stabil=ja roh=0x085C I2C state=0x00 level=0x7F ABWEICHUNG(Diff 0x04) \| ...` | **sofort**, wenn sich Richtung, Feuerknopf oder Urteil aendern |
 | Erster PING                                | `[ping] ...`                            | einmal |
 | **Jede I2C-Transaktion**                   | `[i2c] cmd=GET_INPUT seq=12 status=OK len=12 dauer=2900us \| state0=... ` | je Transaktion -- **nur mit `-trace`** |
@@ -404,9 +446,29 @@ nicht.
 | Sitzvergabe                                | `[sitzung] Sitzung an Index 1 vergeben` | bei Wechsel |
 | Controller                                 | `[hid] ...`                             | bei Aenderung |
 | Scan                                       | `[scan] ...`                            | bei Scan/Liste |
-| Fehler                                     | `[fehler] GET_INPUT: LINK-Fehler ... rc=0xE0` | je Fehler |
-| Lebenszeichen                              | `[herz] takt=12s aufrufe=144 ... verworfene_rahmen=2 letzter_status=OK \| <Vergleich>` | jede Sekunde (MUI); in der Konsole, wenn seit der letzten eine Sekunde vergangen ist |
-| Schlusszeile                               | `[ende] ... beendet: i2c_zeilen=... `   | einmal |
+| Fehler                                     | `[fehler] GET_INPUT: LINK-Fehler ... rc=0xE0` + `[fehler]   tx_frames=... wiederholungen=... geprueft=... fehlerhaft=... fehlerserie=... busfehler=0x...` | je Fehler |
+| Lebenszeichen                              | `[herz] takt=12s aufrufe=144 ... verworfene_rahmen=2 geprueft=137 fehlerhaft=1 fehlerserie=0 letzter_status=OK \| <Vergleich>` | jede Sekunde (MUI); in der Konsole, wenn seit der letzten eine Sekunde vergangen ist |
+| Schlusszeile                               | `[ende] ... beendet: i2c_zeilen=... verworfene_rahmen=2 geprueft=137 fehlerhaft=1 fehlerserie=0 letzter_status=...` | einmal |
+
+**Die Rahmenpruefung wird GEZAEHLT, nicht als "letzter Zustand" gemeldet.**
+Vorher stand in der Fehlerzeile `letzte_Rahmenpruefung=CRC-Fehler` aus
+`v4_master_t.last_check`. Das ist ein haftenbleibender letzter Wert: ein
+einziger Aussetzer -- etwa der Rahmen, der beim Beenden des Programms noch auf
+dem Bus lag -- stand danach in JEDER Fehlerzeile und sah wie ein Dauerfehler
+aus. Genau diese Fehldeutung hat es gegeben. Jetzt zaehlt `v4_debug.c` mit:
+
+| Feld          | Bedeutung                                                     |
+|---------------|---------------------------------------------------------------|
+| `geprueft`    | READ-Rahmen, die durch die Rahmenpruefung liefen              |
+| `fehlerhaft`  | davon ohne gueltige Pruefung (Magic/CRC/Echo/Laenge)          |
+| `fehlerserie` | Fehler **in Folge**; ein gueltiger Rahmen setzt sie auf 0     |
+
+Ein einzelner Aussetzer liest sich damit als `fehlerhaft=1 fehlerserie=1` und im
+naechsten Herzschlag als `fehlerserie=0`; ein Dauerfehler waechst. Die drei
+Felder stehen in der Herzzeile, der Fehlerzeile und der Schlusszeile (und in der
+Konsole in ihrer Fehlerdiagnose) -- immer ueber `v4_dbg_rahmen_text()`, damit es
+nur EINE Schreibweise gibt. Der bestehende Zaehler `verworfene_rahmen` bleibt
+daneben stehen.
 
 Die Zeile je Transaktion nennt Befehl, Sequenznummer, Status, Nutzlastlaenge,
 Dauer in Mikrosekunden und in Kurzform den Inhalt der Antwort (z. B.
@@ -419,7 +481,7 @@ inklusive Wiederholungen.
 
 | Betrieb                        | Zeilen je Sekunde | was                                        |
 |--------------------------------|-------------------|---------------------------------------------|
-| Ruhezustand (nichts passiert)  | **1**             | die Herzzeile: Zaehler, letzter Status, verworfene Rahmen, Wiederholungen **und** der Vergleich direkt/I2C beider Buchsen mit `CIAAPRA`/`POTINP` |
+| Ruhezustand (nichts passiert)  | **1**             | die Herzzeile: Zaehler, letzter Status, verworfene Rahmen, die Rahmenpruefung (`geprueft`/`fehlerhaft`/`fehlerserie`), Wiederholungen **und** der Vergleich direkt/I2C beider Buchsen mit `CIAAPRA`/`POTINP` |
 | Aenderung                      | **+1 je Aenderung** | sofort eine fertige Zeile: Richtung, Feuerknopf, Buchsenmodus, Sitzvergabe, Fehler, Verbindungsverlust/-erholung, Abweichung direkt/I2C |
 | `-trace`                       | ~100 und mehr     | zusaetzlich jede Transaktion und jeden Schritt |
 
@@ -457,7 +519,7 @@ haengen daran und bleiben unveraendert. `-trace` hat Vorrang vor `-quiet`.
 | Registerzugriff im m68k-Code      | `move.w $dff00a`, `move.w $dff00c`, `move.b $bfe001`, `move.w $dff016` -- absolute Adressen, kein Umweg |
 | Debugausgabe im Demo              | Transaktionszeile mit Dauer + Kurzform, `-quiet` schaltet sie ab |
 | Ausgabeschicht (`tests/test_debug.c`) | Herzzeile traegt Zaehler, letzten Status, verworfene Rahmen, Wiederholungen UND den Vergleich mit `CIAAPRA`/`POTINP` -- und passt VOLLSTAENDIG in den Zeilenpuffer; ein Aufruf je Meldung; Aenderung wird gemeldet, Wiederholung nicht; Transaktionszeilen nur, wenn bestellt |
-| MUI-Objektbaum (`make mui-lint`)   | Klammerbalance, `Child`/Objekt, Tag/Wert, Klassenzugehoerigkeit, Gruppen mit Kindern -- dazu ein Selbsttest an einem kuenstlichen Baum, der jeden dieser Fehler einzeln erzeugt |
+| MUI-Objektbaum (`make mui-lint`)   | Klammerbalance, `Child`/Objekt, Tag/Wert, Klassenzugehoerigkeit, Gruppen mit Kindern, `MUIA_Cycle_Entries` als NULL-Array statt Zeichenkette -- dazu ein Selbsttest an einem kuenstlichen Baum, der jeden dieser Fehler einzeln erzeugt |
 | Protokollkonstanten gegen ESP32   | 66 gemeinsame `#define` identisch          |
 | `make test-m68k` (qemu, Big Endian)| **SKIP** -- `m68k-linux-gnu-gcc`/`qemu-m68k` fehlen |
 

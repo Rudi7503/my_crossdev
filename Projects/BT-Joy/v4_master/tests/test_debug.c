@@ -405,6 +405,109 @@ static void test_urteil_direkt_i2c(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* 6. Rahmenpruefung: Zaehler statt "letzter Zustand"                   */
+/* ------------------------------------------------------------------ */
+
+/*
+ * WOZU: im DebugUART stand `letzte_Rahmenpruefung=CRC-Fehler` in jeder
+ * Fehlerzeile -- ein haftenbleibender letzter Wert. Ein einzelner Aussetzer
+ * (etwa beim Beenden des Programms) sah danach wie ein Dauerfehler aus. Hier
+ * ist festgenagelt, dass die Ausgabe stattdessen ZAEHLT: wie viele Rahmen
+ * geprueft wurden, wie viele fehlerhaft waren und wie viele in Folge.
+ */
+static void test_rahmen_zaehler(void)
+{
+    v4_trace_t    ev;
+    v4_master_t   m;
+    unsigned long geprueft   = 0ul;
+    unsigned long fehlerhaft = 0ul;
+    unsigned long serie      = 0ul;
+
+    v4_test_case("Rahmenpruefung: geprueft/fehlerhaft/fehlerserie statt "
+                 "letztem Zustand");
+    ausgabe_still(1);           /* ohne -trace: genau eine Zeile je Fehler */
+
+    memset(&ev, 0, sizeof(ev));
+    ev.event = V4_TR_CHECK;
+    ev.cmd   = V4P_CMD_GET_STATUS;
+    ev.rc    = (int)V4P_CHECK_OK;
+
+    /* Ein gueltiger Rahmen: gezaehlt, kein Fehler, Serie 0. */
+    v4_dbg_trace(&ev, NULL);
+    v4_dbg_rahmen_zaehler(&geprueft, &fehlerhaft, &serie);
+    CHECK_EQ(geprueft, 1ul);
+    CHECK_EQ(fehlerhaft, 0ul);
+    CHECK_EQ(serie, 0ul);
+
+    /* Ein einzelner Aussetzer: Fehler 1, Serie 1 -- und genau EINE Zeile. */
+    fang_leeren();
+    ev.rc = (int)V4P_CHECK_CRC;
+    v4_dbg_trace(&ev, NULL);
+    CHECK_EQ(s_fang_n, 1);
+    CHECK(fang_hat("Rahmen verworfen"));
+    CHECK(fang_hat("CRC-Fehler"));
+    v4_dbg_rahmen_zaehler(&geprueft, &fehlerhaft, &serie);
+    CHECK_EQ(geprueft, 2ul);
+    CHECK_EQ(fehlerhaft, 1ul);
+    CHECK_EQ(serie, 1ul);
+
+    /* Noch einer in Folge: die Serie waechst. */
+    v4_dbg_trace(&ev, NULL);
+    v4_dbg_rahmen_zaehler(&geprueft, &fehlerhaft, &serie);
+    CHECK_EQ(geprueft, 3ul);
+    CHECK_EQ(fehlerhaft, 2ul);
+    CHECK_EQ(serie, 2ul);
+
+    /* Ein gueltiger Rahmen setzt NUR die Serie zurueck; die Summe bleibt. */
+    ev.rc = (int)V4P_CHECK_OK;
+    v4_dbg_trace(&ev, NULL);
+    v4_dbg_rahmen_zaehler(&geprueft, &fehlerhaft, &serie);
+    CHECK_EQ(geprueft, 4ul);
+    CHECK_EQ(fehlerhaft, 2ul);
+    CHECK_EQ(serie, 0ul);
+
+    /* EINE Schreibweise fuer alle Zeilen. */
+    {
+        char text[80];
+
+        v4_dbg_rahmen_text(text, sizeof(text));
+        CHECK_STR(text, "geprueft=4 fehlerhaft=2 fehlerserie=0");
+    }
+
+    /* Die Herzzeile traegt die Zaehler -- und der bestehende Zaehler
+     * "verworfene Rahmen" bleibt daneben stehen. */
+    fang_leeren();
+    memset(&m, 0, sizeof(m));
+    v4_dbg_herz(&m);
+    CHECK(fang_hat("geprueft=4"));
+    CHECK(fang_hat("fehlerhaft=2"));
+    CHECK(fang_hat("fehlerserie=0"));
+    CHECK(fang_hat("verworfene_rahmen=2"));
+
+    /* Die Fehlerzeile ebenfalls -- und OHNE den haftenbleibenden letzten
+     * Zustand. */
+    fang_leeren();
+    v4_dbg_fehler("GET_STATUS", (uint8_t)V4_ERR_LINK, &m);
+    CHECK(fang_hat("geprueft=4"));
+    CHECK(fang_hat("fehlerhaft=2"));
+    CHECK(fang_hat("fehlerserie=0"));
+    CHECK(!fang_hat("letzte_Rahmenpruefung"));
+
+    /* Und die Schlusszeile, damit nach dem Lauf dasselbe dasteht. */
+    fang_leeren();
+    v4_dbg_ende(&m);
+    CHECK(fang_hat("geprueft=4"));
+    CHECK(fang_hat("fehlerhaft=2"));
+    CHECK(fang_hat("letzter_status="));
+
+    /* Randfaelle: NULL-Puffer duerfen nichts tun. */
+    v4_dbg_rahmen_text(NULL, 0u);
+    v4_dbg_rahmen_zaehler(NULL, NULL, NULL);
+
+    v4_dbg_set_line_hook(NULL);
+}
+
+/* ------------------------------------------------------------------ */
 
 int test_debug(void)
 {
@@ -416,6 +519,7 @@ int test_debug(void)
     test_tastendruck_wird_gemeldet();
     test_transaktionszeilen();
     test_urteil_direkt_i2c();
+    test_rahmen_zaehler();
 
     return v4_test_failures;
 }
