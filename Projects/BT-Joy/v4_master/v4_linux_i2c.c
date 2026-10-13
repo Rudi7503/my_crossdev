@@ -1,0 +1,194 @@
+/*
+ * v4_linux_i2c.c -- Plattformschicht fuer den Linux-Harness (§1.5).
+ *
+ * Fuer den Fall, dass der Adapter an einem Linux-Rechner mit i2c-dev haengt
+ * (Makefile-Ziel `demo-i2c`). Die Test- und Vorfuehrlaeufe benutzen dagegen
+ * v4_mock.c -- dort braucht man keine Hardware.
+ *
+ * Zwei ioctls statt einem I2C_RDWR mit zwei Messages, weil zwischen Schreiben
+ * und Lesen die Pause t_wait liegen MUSS (§1.3/§1.4). Kein I2C_M_NOSTART: wir
+ * wollen getrennte Transaktionen mit STOP.
+ *
+ * Stolpersteine (§1.5): Kernel mit CONFIG_I2C_CHARDEV, Zugriff auf /dev/i2c-N,
+ * 3,3-V-Pegel, und USB-Bridges begrenzen die Nachrichtenlaenge oft auf 32 Byte.
+ * Fuer dieses Projekt ist das unkritisch: der Master schreibt genau 32 Byte und
+ * liest 128 -- die Leserichtung ist die kritische, und sie ist ein einzelner
+ * Empfang ohne Laengenverhandlung.
+ */
+
+#include "v4_master.h"
+
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <time.h>           /* clock_gettime fuer v4_plat_now_us */
+#include <unistd.h>
+
+#include <linux/i2c-dev.h>
+#include <linux/i2c.h>      /* struct i2c_msg, I2C_M_RD (i2c-dev.h inkludiert es nicht) */
+
+static int           s_fd = -1;
+static unsigned long s_last_error = 0;
+
+unsigned long v4_plat_last_error(void)
+{
+    return s_last_error;
+}
+
+const char *v4_plat_error_text(void)
+{
+    if (s_last_error == 0ul) {
+        return "kein Fehler";
+    }
+    return strerror((int)s_last_error);
+}
+
+/* Logdatei: im Harness gibt es keinen Standardpfad, nur einen ausdruecklichen
+ * (eine Datei oder ein Geraet wie /dev/ttyUSB0). "w" entspricht MODE_NEWFILE
+ * auf der Amiga-Seite: eine frische Datei je Lauf. */
+static FILE *s_log = NULL;
+
+int v4_plat_log_open(const char *path)
+{
+    if (path == NULL) {
+        return -1;
+    }
+    s_log = fopen(path, "w");
+    if (s_log == NULL) {
+        return -1;
+    }
+    setvbuf(s_log, NULL, _IONBF, 0);        /* ungepuffert: nichts haengen lassen */
+    return 0;
+}
+
+long v4_plat_log_write(const char *s, unsigned long len)
+{
+    size_t n;
+
+    if (s_log == NULL || len == 0ul) {
+        return 0;
+    }
+    n = fwrite(s, 1u, (size_t)len, s_log);
+    fflush(s_log);
+    return (long)n;
+}
+
+void v4_plat_log_settle(int ticks)
+{
+    (void)ticks;                        /* Dateisystem schreibt sofort */
+}
+
+void v4_plat_log_close(void)
+{
+    if (s_log != NULL) {
+        fclose(s_log);
+        s_log = NULL;
+    }
+}
+
+int v4_plat_open(const char *dev)
+{
+    if (dev == NULL) {
+        dev = "/dev/i2c-1";
+    }
+
+    s_fd = open(dev, O_RDWR);
+    if (s_fd < 0) {
+        perror("open i2c");
+        return -1;
+    }
+    /* 0x5E ist die Adresse des Bluetooth-Joystick-Adapters. Das Audio-Projekt
+     * benutzt 0x50 -- ein Adapter antwortet nur auf seine eigene Adresse, ein
+     * falscher Wert sieht wie ein toter Bus aus. */
+    if (ioctl(s_fd, I2C_SLAVE, (long)V4_I2C_ADDR7) < 0) {
+        perror("ioctl I2C_SLAVE");
+        close(s_fd);
+        s_fd = -1;
+        return -1;
+    }
+    return 0;
+}
+
+void v4_plat_close(void)
+{
+    if (s_fd >= 0) {
+        close(s_fd);
+        s_fd = -1;
+    }
+}
+
+int v4_plat_i2c_write(uint8_t addr7, const uint8_t *data, uint16_t len)
+{
+    struct i2c_msg msg;
+    struct i2c_rdwr_ioctl_data io;
+
+    if (s_fd < 0) {
+        return -1;
+    }
+    memset(&msg, 0, sizeof(msg));
+    msg.addr  = (unsigned short)addr7;
+    msg.flags = 0;
+    msg.len   = (unsigned short)len;
+    msg.buf   = (unsigned char *)(uintptr_t)data;
+
+    io.msgs  = &msg;
+    io.nmsgs = 1;
+
+    if (ioctl(s_fd, I2C_RDWR, &io) < 0) {
+        s_last_error = (unsigned long)errno;
+        return -1;
+    }
+    return 0;
+}
+
+int v4_plat_i2c_read(uint8_t addr7, uint8_t *data, uint16_t len)
+{
+    struct i2c_msg msg;
+    struct i2c_rdwr_ioctl_data io;
+
+    if (s_fd < 0) {
+        return -1;
+    }
+    memset(&msg, 0, sizeof(msg));
+    msg.addr  = (unsigned short)addr7;
+    msg.flags = I2C_M_RD;
+    msg.len   = (unsigned short)len;
+    msg.buf   = (unsigned char *)data;
+
+    io.msgs  = &msg;
+    io.nmsgs = 1;
+
+    if (ioctl(s_fd, I2C_RDWR, &io) < 0) {
+        s_last_error = (unsigned long)errno;
+        return -1;
+    }
+    return 0;
+}
+
+void v4_plat_delay_us(uint32_t us)
+{
+    /* usleep() ist nur bis 1 s spezifiziert; laengere Wartezeiten stueckeln. */
+    while (us > 100000u) {
+        usleep(100000u);
+        us -= 100000u;
+    }
+    if (us > 0u) {
+        usleep((useconds_t)us);
+    }
+}
+
+/* Mikrosekunden-Uhr fuer die Dauer einer Transaktion (DebugUART).
+ * CLOCK_MONOTONIC laeuft auch ueber; die Aufrufer bilden aber nur Differenzen
+ * als uint32_t -- genau dafuer ist die Uhr da (siehe v4_master.h). */
+uint32_t v4_plat_now_us(void)
+{
+    struct timespec ts;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+        return 0u;
+    }
+    return (uint32_t)((unsigned long)ts.tv_sec * 1000000ul
+                      + (unsigned long)(ts.tv_nsec / 1000L));
+}
