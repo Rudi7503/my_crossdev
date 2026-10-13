@@ -410,4 +410,17 @@ size_t v4_joy_vergleich_text(const v4_joy_t *st, const v4p_input_t *in,
  */
 size_t v4_joy_direkt_text(const v4_joy_t *st, int port, char *out, size_t cap);
 
+/*
+ * Die DIREKTEN Werte BEIDER Buchsen in EINER Zeile -- fuer das Protokoll
+ * (DebugUART/Logdatei) und die Herzzeile. AUSDRUECKLICH OHNE jeden I2C-Wert
+ * und ohne Urteil: die Oberflaeche fragt GET_INPUT nicht mehr ab, es gibt also
+ * nichts zu vergleichen. Form:
+ *
+ *   Buchse0 direkt=0x01 VOR stabil=ja roh=0x0100 | Buchse1 direkt=0x00 - stabil=ja roh=0x0000 | CIAAPRA=0x00F4 POTINP=0xFF02
+ *
+ * (kein Praefix -- der Aufrufer entscheidet, ob er "[direkt]" davorsetzt oder
+ * die Zeile an die Herzzeile haengt). Bleibt unter V4_JOY_TEXT_MAX.
+ */
+size_t v4_joy_direkt_protokoll_text(const v4_joy_t *st, char *out, size_t cap);
+
 #endif /* V4_JOYPORT_H */

@@ -14,10 +14,11 @@
  *                              Registerabfrage (JOY0DAT/JOY1DAT fuer die
  *                              Richtungen, CIAAPRA/POTINP fuer die Knoepfe)
  *                              samt Rohwerten und der WIRKSAMEN Betriebsart
- *                              daneben. Die Sicht des ESP32 (state/level) und
- *                              der Vergleich direkt <-> I2C stehen
- *                              AUSDRUECKLICH NICHT mehr im Fenster, sondern
- *                              nur im Protokoll (DebugUART/Logdatei).
+ *                              daneben. Controller-Eingabewerte kommen
+ *                              AUSSCHLIESSLICH von hier; GET_INPUT wird nicht
+ *                              mehr abgefragt, und es gibt keinen Vergleich
+ *                              "direkt <-> I2C" -- weder im Fenster noch im
+ *                              Protokoll.
  *       Seite "Konfiguration"  die Eingangsverteilung (fw_ver 4/5): je Buchse
  *                              Geraet (SET_DEVICE_PORT), Beitrag
  *                              analog/digital/beide (Bedienhilfe, setzt
@@ -34,7 +35,7 @@
  * so gewachsen, dass er bei 640x400 (auf dieser V4 sogar 640x360) nicht mehr
  * untereinander passt. MUI_Group.doc sagt zur Seitengruppe: "the minimum
  * width/height of a page group is the maximum minimum width/height of all its
- * children". Die Anzeigeseite ist durch den Wegfall des I2C-Vergleichs KLEINER
+ * children". Die Anzeigeseite ist durch den Wegfall der Eingangsabfrage KLEINER
  * geworden; die Konfigurationsseite bleibt durch die neue Zeile je Einstellung
  * in derselben Groessenordnung. Die Mindestgroesse des Fensters aendert sich
  * damit nicht nach oben, und nichts wird unter seine Mindesthoehe gedrueckt
@@ -57,26 +58,24 @@
  *
  * DIREKT GELESEN WIRD IM SELBEN TAKT UND IM SELBEN FADEN:
  * Die Registerabfrage (v4_joyport.c) kostet nichts und braucht keinen Bus. Sie
- * laeuft deshalb in jedem Takt -- aber NACH den beiden I2C-Abfragen, damit im
- * Mitschnitt die erste Buszeile vor der ersten Zeile der Direktabfrage steht
- * (siehe gui_poll). Das FENSTER zeigt seit dem 14.10.2026 ausschliesslich
- * diese direkten Werte; der Vergleich direkt <-> I2C bleibt als Diagnose im
- * PROTOKOLL -- er geht (a) in die EINE Herzzeile je Sekunde und (b) sofort,
- * wenn sich Richtung, Feuerknopf oder Urteil aendern. Genau das ist der Zweck:
- * am PC mitlesen, ob beide Quellen dasselbe sagen. Die Stabilitaet der Anzeige
- * kommt daher, dass jede Buchse aus ZWEI Abtastungen bewertet wird (siehe
- * v4_joyport.h).
+ * laeuft deshalb in JEDEM Takt -- und sie ist seit dem 14.10.2026 die EINZIGE
+ * Quelle fuer das, was der Controller tut. I2C wird nur noch im LANGSAMEN Takt
+ * gefragt (Status, HID, Verteilung, Maus), und zwar in gui_poll. Die
+ * Registerwerte gehen (a) in die EINE Herzzeile je Sekunde und (b) sofort als
+ * eigene Zeile, wenn sich Richtung oder Feuerknopf aendern. Einen Vergleich mit
+ * der ESP32-Sicht gibt es nicht mehr: GET_INPUT wird nicht mehr abgefragt.
+ * Die Stabilitaet der Anzeige kommt daher, dass jede Buchse aus ZWEI Abtastungen
+ * bewertet wird (siehe v4_joyport.h).
  *
  * DIE AUSGABEMENGE IST TEIL DER KONSTRUKTION:
  * Auf der V4 ist der DebugUART das einzige Fenster in das Programm -- aber
  * jedes Zeichen kostet Wartezeit. Deshalb:
  *
  *   - im Ruhezustand GENAU EINE Zeile je Sekunde: das Lebenszeichen [herz] mit
- *     Zaehlern, letztem Status, verworfenen Rahmen, Wiederholungen UND dem
- *     Vergleich direkt/I2C samt Rohwerten von CIAAPRA/POTINP,
+ *     Zaehlern, letztem Status, verworfenen Rahmen, Wiederholungen UND den
+ *     direkten Registerwerten beider Buchsen samt Rohwerten von CIAAPRA/POTINP,
  *   - SOFORT eine Zeile bei Aenderung: Richtung, Feuerknopf, Buchsenmodus,
- *     Sitzvergabe, Fehler, Verbindungsverlust und -erholung, Abweichung
- *     direkt/I2C,
+ *     Sitzvergabe, Fehler, Verbindungsverlust und -erholung,
  *   - Transaktionszeilen (eine je I2C-Befehl) NUR mit -trace. Ohne -trace
  *     entstehen bei 200 ms Takt keine Zeilen.
  *
@@ -84,20 +83,11 @@
  * heraus (v4_debug.c); kein Zeichen fuer Zeichen, kein Delay() in der Naehe des
  * Buszugs.
  *
- * "ZUG" UND "PEGEL" SIND ZWEI VERSCHIEDENE DINGE (nur noch im PROTOKOLL):
- * "Zug" ist die Zug-Maske aus GET_INPUT -- was die Firmware nach GND zieht
- * (Bit gesetzt = Taste/Richtung aktiv). "Pegel" ist der GEMESSENE Pegel, den
- * die Firmware seit der 12-Byte-Fassung im selben Befehl mitschickt (Bit
- * gesetzt = High, Ruhe 0x7F). Beides kann auseinandergehen, und dann ist der
- * Widerspruch die eigentliche Aussage: "losgelassen, liest aber 0" heisst, dass
- * der Pull-up der Vampire fehlt; "gezogen, liest High" kann elektrisch nicht
- * sein. Beides wird einmalig ins Log geschrieben -- im Fenster steht es nicht
- * mehr, weil dort nur die direkten Portdaten gezeigt werden.
- *
- * Antwortet die Gegenstelle noch mit der aelteren 10-Byte-Fassung, sind die
- * Pegel UNBEKANNT: dann nennt der Vergleich im Protokoll "level=unbekannt" und
- * KEINE Zahl. Eine abgeleitete Zahl waere von einer Messung nicht zu
- * unterscheiden -- genau diese Verwechslung darf es nicht geben.
+ * "ZUG" UND "PEGEL" GIBT ES NUR NOCH IN DER KONSOLE:
+ * Die MUI-Oberflaeche liest GET_INPUT nicht mehr und kennt deshalb weder
+ * state0/state1 noch level0/level1. Was sie zeigt, sind die direkt gelesenen
+ * Registerwerte. Die Konsole als Notfallweg und Diagnosewerkzeug behaelt
+ * GET_INPUT und damit die Zug-/Pegel-Spalten samt Widerspruchspruefung.
  *
  * I2C DIREKT IM HAUPTFADEN (MUI-Task):
  * Die Oberflaeche ruft v4_master -- und damit v4_plat_* und i2c.library --
@@ -107,9 +97,12 @@
  * 13.10.2026 nicht einmal durch ihren Start (die Oberflaeche blieb nach dem
  * Banner stehen), und ihr Forbid() hat zusaetzlich die Workbench eingefroren.
  *
- * Der Takt (200 ms) fragt GET_PORT_MODE und GET_INPUT ab, jeder fuenfte Takt
- * zusaetzlich GET_STATUS und GET_HID -- jeweils direkt, synchron, im
- * MUI-Task. i2c.library hat keinen Timeout: Antwortet der ESP32 nicht, steht
+ * Der Takt (200 ms) liest die Register der V4. I2C wird nur im LANGSAMEN Takt
+ * gefragt (jeder fuenfte, rund 1 s): GET_STATUS, GET_PORT_MODE, GET_HID,
+ * GET_PORT_CONFIG, GET_MOUSE_CFG -- alles Einstellungen, Verbindungszustand
+ * oder Geraeteinfos, KEINE Controller-Eingabewerte. Waehrend einer Suche kommt
+ * alle drei Takte DEV_COUNT dazu. Alles laeuft direkt, synchron, im MUI-Task.
+ * i2c.library hat keinen Timeout: Antwortet der ESP32 nicht, steht
  * das ausdruecklich in der obersten Zeile ("ESP32 antwortet nicht ..."), die
  * zuletzt gueltigen Werte bleiben stehen, und die Abfrage wiederholt sich mit
  * wachsendem Abstand (0,5 s -> 1 s -> 2 s -> 5 s). Dass ein wirklich
@@ -196,9 +189,25 @@
 #define GUI_SCHIRM_RAND_W 16
 #define GUI_SCHIRM_RAND_H 24
 
-/* Wie lange auf Scanergebnisse bzw. CONNECTED gewartet wird, in Takten. */
-#define GUI_SCAN_TICKS    40u     /* 8 s  */
-#define GUI_CONNECT_TICKS 30u     /* 6 s  */
+/*
+ * Wie lange auf Scanergebnisse bzw. CONNECTED gewartet wird, in Takten.
+ *
+ * WARUM DER SCAN 30 s BEKOMMT (vorher 8 s): eine BluePad32-Suche laeuft in
+ * eigenen Fenstern, und im Mitschnitt vom 13.10.2026 lagen zwischen SCAN_START
+ * und der ersten brauchbaren Statusantwort 25 s. Mit 40 Takten (8 s nominal)
+ * gab die Oberflaeche auf, bevor die Gegenstelle ueberhaupt Ergebnisse haben
+ * konnte -- die Meldung "keine Geraete gefunden" war dann keine Aussage ueber
+ * den Controller, sondern ueber die zu kurze Frist.
+ *
+ * GUI_SCAN_MAX_TICKS ist die HARTE Obergrenze: solange die Gegenstelle laut
+ * GET_STATUS noch sucht, wird nachgefasst, aber nie laenger als das.
+ * GUI_SCAN_POLL_EVERY haelt den Bus ruhig: DEV_COUNT wird nicht in jedem Takt
+ * gefragt, sondern nur alle drei (rund 1,7-mal je Sekunde statt 5-mal).
+ */
+#define GUI_SCAN_TICKS     150u   /* 30 s Regelwartezeit */
+#define GUI_SCAN_MAX_TICKS 300u   /* 60 s harte Obergrenze */
+#define GUI_SCAN_POLL_EVERY 3u    /* DEV_COUNT nur alle drei Takte */
+#define GUI_CONNECT_TICKS  30u    /* 6 s  */
 
 /* Sichtbare Breite der Portzeilen. Feste Breite, weil MUI die Mindestgroesse
  * eines Textes aus dem Inhalt rechnet: ungleiche Zeilenbreiten liessen die
@@ -261,19 +270,15 @@ static v4_master_t M;
 /*
  * Die DIREKT gelesenen Joystick-Anschluesse (v4_joyport.c).
  *
- * Sie stehen NEBEN dem Zustandsblock: S haelt, was der ESP32 ueber I2C
- * gemeldet hat, J haelt, was die V4 an ihren eigenen Registern sieht. Beides
- * wird im Takt gelesen und in der Anzeige gegenuebergestellt -- stimmen die
- * Quellen ueberein, ist die Kette ESP32 -> DB9 -> V4 in Ordnung.
+ * SIE SIND DIE EINZIGE QUELLE FUER DAS, WAS DER CONTROLLER TUT. Die
+ * Oberflaeche fragt seit dem 14.10.2026 kein GET_INPUT mehr ab: was auf den
+ * DB9-Leitungen ankommt, steht in den Registern der V4 (JOY0DAT/JOY1DAT,
+ * CIAAPRA/POTINP). S haelt daneben nur noch, was EINSTELLUNGEN und
+ * Verbindungszustand sind (Status, HID-Info, Buchsenverteilung, Maus-Werte).
  *
  * Auch J gehoert DIESEM Faden; es gibt keinen zweiten.
  */
 static v4_joy_t    J;
-
-/* 1 = die Werte in S.input stammen aus DIESEM Takt (GET_INPUT hat
- * geantwortet). Nur dann gibt es ein Urteil "OK"/"ABWEICHUNG": gegen eine
- * ALTE Antwort zu vergleichen waere keine Messung. */
-static int         s_input_frisch;
 
 /*
  * Eigene Logdatei der Oberflaeche.
@@ -541,7 +546,10 @@ static int     s_dev_eintraege_n = -1;
 /* v4_master direkt.                                                    */
 /* ------------------------------------------------------------------ */
 
-static unsigned s_scan_left;        /* verbleibende Takte fuer den Scan   */
+static unsigned s_scan_left;        /* Takte bis zur naechsten Entscheidung */
+static unsigned s_scan_hard;        /* harte Obergrenze des Scans, in Takten */
+static unsigned s_scan_poll;        /* Taktzaehler fuer DEV_COUNT          */
+static int      s_scan_nachgefasst; /* 1 = "fasse nach" schon gemeldet    */
 static unsigned s_connect_left;     /* verbleibende Takte fuer CONNECTED  */
 static unsigned s_tick;             /* Taktzaehler                        */
 static unsigned s_seit_versuch;     /* Takte seit dem letzten Buszugriff  */
@@ -559,17 +567,9 @@ static int      s_liste_auto;
 static int      s_link_down_shown;  /* 0/1: was zuletzt im Log stand      */
 static int      s_sd_warned;        /* Audio-Firmware-Warnung einmalig    */
 
-/* Zuletzt gemeldeter Widerspruch zwischen Zug und Pegel, je Maske. Damit die
- * Logliste nicht in jedem Takt dieselbe Warnung bekommt. 0xFF ist der
- * Sonderwert "Firmware liefert gar keine Pegel" -- die wird genau einmal
- * gemeldet. */
-static uint8_t  s_level_warn_missing;
-static uint8_t  s_level_warn_impossible;
-
-/* Zuletzt GEMELDETER Stand des Vergleichs direkt <-> I2C: je Buchse das
- * Abweichungsurteil und die direkte Maske. Nur wenn sich einer der beiden Werte
- * aendert, geht sofort eine Zeile heraus (gui_joy_aenderungen). */
-static uint8_t  s_joy_abw_alt[V4P_PORT_COUNT];
+/* Zuletzt GEMELDETER direkter Stand: je Buchse die Maske aus den Registern.
+ * Nur wenn sie sich aendert, geht sofort eine Zeile heraus
+ * (gui_joy_aenderungen). Einen I2C-Vergleich gibt es nicht mehr. */
 static uint8_t  s_joy_dir_alt[V4P_PORT_COUNT];
 static int      s_joy_stand_gueltig;
 
@@ -872,11 +872,11 @@ static void gui_show_hid(void)
  * Eine Portgruppe zusammensetzen -- AUSSCHLIESSLICH aus den eigenen Registern.
  *
  * WAS HIER NICHT MEHR STEHT: die Sicht des ESP32 (state0/state1, level0/level1
- * aus GET_INPUT) und der Vergleich samt ABWEICHUNG. Das Fenster zeigt, was an
- * den Anschlussleitungen ankommt -- das ist die direkte Abfrage
- * (JOY0DAT/JOY1DAT fuer die Richtungen, CIAAPRA/POTINP fuer die Knoepfe),
- * siehe v4_joy_direkt_text(). Der Vergleich bleibt als Diagnose im Protokoll
- * (DebugUART/Logdatei, v4_joy_debug_text/v4_joy_herz_text).
+ * aus GET_INPUT) und ein Vergleich. GET_INPUT wird nicht mehr abgefragt; das
+ * Fenster zeigt, was an den Anschlussleitungen ankommt -- das ist die direkte
+ * Abfrage (JOY0DAT/JOY1DAT fuer die Richtungen, CIAAPRA/POTINP fuer die
+ * Knoepfe), siehe v4_joy_direkt_text(). Ins Protokoll gehen dieselben
+ * Registerwerte (v4_joy_direkt_protokoll_text), kein Urteil.
  *
  * Die wirksame BETRIEBSART kommt weiterhin vom ESP32 (GET_PORT_MODE bzw.
  * GET_PORT_CONFIG.mode_ist): sie beschreibt, was der ESP32 an den Leitungen
@@ -904,12 +904,14 @@ static void gui_build_port_text(int port, uint8_t mode, int mode_gueltig,
 }
 
 /*
- * Die Rohwerte der Feuerregister ueber die volle Fensterbreite -- und der
- * Hinweis, wo der Vergleich direkt/I2C geblieben ist. Das steht in einem
- * EIGENEN Textobjekt, weil es in den beiden Portspalten zu breit waere.
+ * Die Rohwerte der Feuerregister ueber die volle Fensterbreite. Das steht in
+ * einem EIGENEN Textobjekt, weil es in den beiden Portspalten zu breit waere.
  *
  * Er wird IMMER gezeichnet: die direkte Abfrage haengt nicht am Bus und muss
  * auch dann sichtbar sein, wenn der ESP32 schweigt.
+ *
+ * Es gibt KEINEN Vergleich mehr -- weder hier noch im Protokoll. Die
+ * Oberflaeche liest GET_INPUT nicht mehr, die Registerwerte stehen fuer sich.
  */
 static void gui_show_regtext(void)
 {
@@ -922,9 +924,8 @@ static void gui_show_regtext(void)
     n = v4_joy_reg_text(&J, buf, sizeof(buf));
     if (n + 90u < sizeof(buf)) {
         (void)snprintf(buf + n, sizeof(buf) - n,
-                       "\nVergleich direkt/I2C nur im Protokoll "
-                       "(DebugUART/Logdatei) -- das Fenster zeigt die "
-                       "Portdaten.");
+                       "\nDirekt aus den Registern der V4 (JOY0DAT/JOY1DAT, "
+                       "CIAAPRA/POTINP) -- die einzige Eingangsquelle.");
     }
     set(s_regtext, MUIA_Text_Contents, (IPTR)buf);
 }
@@ -937,20 +938,16 @@ static uint8_t gui_mode_soll(int port);
 /*
  * Die Buchsen-Anzeige: NUR die eigenen Register.
  *
- * Bis zum 14.10.2026 stand hier zusaetzlich die Sicht des ESP32
- * (state0/state1/level0/level1) samt Urteil "OK"/"ABWEICHUNG". Der Benutzer
- * will im Fenster sehen, was UEBER DEN JOYSTICK-PORT KOMMT -- also die direkte
- * Registerabfrage. Der Vergleich bleibt im Protokoll (DebugUART/Logdatei), wo
- * er als Diagnose gebraucht wird.
+ * Das ist seit dem 14.10.2026 die EINZIGE Quelle fuer das, was der Controller
+ * tut. Die Oberflaeche fragt GET_INPUT nicht mehr ab -- weder fuer die Anzeige
+ * noch fuer einen Vergleich. Es gibt deshalb auch kein Abweichungsurteil
+ * mehr (weder im Fenster noch im Protokoll): ohne I2C-Eingang gibt es nichts zu
+ * vergleichen, die Registerwerte stehen fuer sich.
  *
- * Deshalb wird hier NICHT mehr abgebrochen, wenn keine I2C-Antwort da ist:
- * die Registerabfrage haengt nicht am Bus. Die wirksame Betriebsart kommt
- * weiterhin vom ESP32 und wird als "(ESP32)" gekennzeichnet; fehlt sie, steht
- * "Modus ?".
- *
- * Der Pegel-Widerspruch aus GET_INPUT wird weiterhin EINMAL je Aenderung ins
- * LOG geschrieben (nicht ins Fenster) -- das ist die elektrische Aussage
- * ("losgelassen, liest 0" = kein Pull-up) und gehoert zur Diagnose.
+ * Gezeichnet wird auch dann, wenn der ESP32 schweigt: die Registerabfrage haengt
+ * nicht am Bus. Die wirksame Betriebsart kommt weiterhin vom ESP32
+ * (GET_PORT_MODE/GET_PORT_CONFIG) und wird als "(ESP32)" gekennzeichnet; fehlt
+ * sie, steht "Modus ?".
  */
 static void gui_show_ports(void)
 {
@@ -971,55 +968,6 @@ static void gui_show_ports(void)
     if (s_port1 != NULL) {
         gui_build_port_text(1, mode[1], S.mode_valid, buf, sizeof(buf));
         set(s_port1, MUIA_Text_Contents, (IPTR)buf);
-    }
-
-    /* Den Widerspruch zusaetzlich in die Logliste -- man sieht ihn dort auch
-     * dann, wenn das Fenster nicht im Blick ist. Nur bei Aenderung, sonst
-     * liefe die Liste im Takt voll. */
-    if (S.input_valid) {
-        const v4p_input_t *in = &S.input;
-
-        if (in->level_valid) {
-            uint8_t fehlt   = (uint8_t)(v4p_level_missing_pullup(in->state[0],
-                                                                 in->level[0])
-                                        | v4p_level_missing_pullup(in->state[1],
-                                                                   in->level[1]));
-            uint8_t unmoegl = (uint8_t)(v4p_level_impossible(in->state[0],
-                                                             in->level[0])
-                                        | v4p_level_impossible(in->state[1],
-                                                               in->level[1]));
-
-            if (fehlt != s_level_warn_missing
-                || unmoegl != s_level_warn_impossible) {
-                char txt[64];
-
-                s_level_warn_missing    = fehlt;
-                s_level_warn_impossible = unmoegl;
-
-                if (unmoegl != 0u) {
-                    v4p_bits_text(unmoegl, txt, sizeof(txt));
-                    gui_msg("[warnung] %s wird nach GND gezogen, liest aber "
-                            "High -- elektrisch unmoeglich "
-                            "(Ausgangsstufe/Pinbelegung pruefen)\n", txt);
-                }
-                if (fehlt != 0u) {
-                    v4p_bits_text(fehlt, txt, sizeof(txt));
-                    gui_msg("[warnung] %s losgelassen, liest aber 0 -- kein "
-                            "Pull-up (Platine haengt nicht am Port?)\n", txt);
-                }
-                if (fehlt == 0u && unmoegl == 0u) {
-                    gui_msg("[pruefung] Pull-up wirkt: gezogene Leitungen Low, "
-                            "losgelassene High\n");
-                }
-            }
-        } else if (s_level_warn_missing != 0xFFu) {
-            /* Einmal melden, dann nicht jeden Takt wiederholen. */
-            s_level_warn_missing    = 0xFFu;
-            s_level_warn_impossible = 0xFFu;
-            gui_msg("[warnung] die Firmware liefert keine Pegel "
-                    "(10-Byte-Fassung von GET_INPUT) -- der Vergleich im "
-                    "Protokoll nennt deshalb 'level=unbekannt'\n");
-        }
     }
 
     /* Cycle-Knoepfe auf die zuletzt BESTAETIGTE VORGABE ziehen (aus dem
@@ -1101,55 +1049,67 @@ static int gui_bda_gleich(const uint8_t a[V4P_BDA_LEN],
  *
  * Ein Fehlschlag laesst die Anzeige auf dem LETZTEN gueltigen Stand stehen --
  * das ist dieselbe Zusage wie bei den uebrigen Feldern.
+ *
+ * `note` = 1: den Rueckgabewert selbst in die Verbindungslage eintragen
+ * (Einzelaufruf aus einer Aktion). `note` = 0: das macht der Aufrufer
+ * (gui_poll) EINMAL mit dem schlechtesten Wert der Runde, damit ein einziger
+ * Ausfall die Fehlerserie nicht mehrfach hochzaehlt.
  */
-static void gui_cfg_read(void)
+static uint8_t gui_cfg_read(int note)
 {
     v4p_portcfg_t c;
     uint8_t       rc;
 
     if (s_cfg_ok == 0) {
-        return;
+        return V4P_ST_BAD_CMD;
     }
     rc = v4_get_port_config(&M, &c);
-    (void)v4_state_note(&S, rc);
+    if (note != 0) {
+        (void)v4_state_note(&S, rc);
+    }
     if (rc != V4P_ST_OK) {
         v4_dbg_fehler("GET_PORT_CONFIG", rc, &M);
         gui_msg("[cfg] GET_PORT_CONFIG: %s -- die Felder bleiben auf dem "
                 "letzten gueltigen Stand\n", v4_strerror(rc));
-        return;
+        return rc;
     }
     v4_state_put_portcfg(&S, &c);
+    return rc;
 }
 
 /*
  * GET_MOUSE_CFG lesen und in den Zustandsblock uebernehmen (fw_ver 5).
  *
- * WARUM NICHT IM TAKT: die Maus-Einstellungen aendern sich nur, wenn jemand
- * sie AENDERT. Sie werden deshalb beim Start und nach jeder Aenderung gelesen
- * -- ein zusaetzlicher Busbefehl je 200-ms-Takt waere reiner Verkehr ohne
- * neue Aussage. gui_show_portcfg zeichnet nur aus dem Zustandsblock und macht
- * ausdruecklich KEIN I2C.
+ * Im langsamen Takt (rund einmal je Sekunde) sowie nach jeder Aenderung. Die
+ * Werte aendern sich nur, wenn jemand sie aendert -- haeufiger waere reiner
+ * Verkehr ohne neue Aussage. gui_show_portcfg zeichnet nur aus dem
+ * Zustandsblock und macht ausdruecklich KEIN I2C.
+ *
+ * `note` wie bei gui_cfg_read.
  *
  * Ist das Faehigkeitsbit nicht gesetzt, wird NICHTS gesendet; die Regler
  * bleiben gesperrt und der Hinweis darunter nennt den Grund.
  */
-static void gui_mouse_read(void)
+static uint8_t gui_mouse_read(int note)
 {
     v4p_mousecfg_t c;
     uint8_t        rc;
 
     if (s_mousecfg_ok == 0) {
-        return;
+        return V4P_ST_BAD_CMD;
     }
     rc = v4_get_mouse_cfg(&M, &c);
-    (void)v4_state_note(&S, rc);
+    if (note != 0) {
+        (void)v4_state_note(&S, rc);
+    }
     if (rc != V4P_ST_OK) {
         v4_dbg_fehler("GET_MOUSE_CFG", rc, &M);
         gui_msg("[cfg] GET_MOUSE_CFG: %s -- die Regler bleiben auf dem letzten "
                 "gueltigen Stand\n", v4_strerror(rc));
-        return;
+        return rc;
     }
     v4_state_put_mousecfg(&S, &c);
+    return rc;
 }
 
 /* Die Geraeteliste in die Eintraege der beiden Auswahlfelder uebernehmen.
@@ -1682,8 +1642,8 @@ static void gui_devices_fill(void)
 /*                                                                     */
 /* Die V4 liest ihre EIGENEN Register (JOY0DAT/JOY1DAT, CIAAPRA,       */
 /* POTINP) ueber v4_joyport.c -- ohne Bus, ohne Betriebssystemaufruf,   */
-/* im selben Faden. Das ist der Vergleichsmassstab zur I2C-Antwort:     */
-/* stimmen beide ueberein, ist die Kette ESP32 -> DB9 -> V4 in Ordnung. */
+/* im selben Faden. Sie sind seit dem 14.10.2026 die EINZIGE Quelle     */
+/* fuer das, was der Controller tut -- GET_INPUT wird nicht mehr gefragt.*/
 /* ------------------------------------------------------------------ */
 
 /*
@@ -1724,88 +1684,76 @@ static void gui_joy_abtasten(void)
 }
 
 /*
- * Die Vergleichszeile EINMAL auf den DebugUART -- und damit ueber v4_debug.c
+ * Die Direktzeile EINMAL auf den DebugUART -- und damit ueber v4_debug.c
  * zugleich auf stdout und in die Logdatei.
  *
  * Sie geht BEWUSST auch mit -quiet heraus: sie ist der Zweck der Direktabfrage.
  * -quiet schaltet die Zeile je I2C-Transaktion ab, nicht diese.
  *
- * Sie wird NICHT mehr in jedem Takt geschrieben (das waren 5 Zeilen je
- * Sekunde), sondern nur noch, wenn sich etwas geaendert hat: Richtung,
- * Feuerknopf oder das Urteil direkt <-> I2C. Im Ruhezustand traegt die eine
- * Herzzeile je Sekunde denselben Vergleich (gui_joy_herz_zusatz).
+ * Sie wird NICHT in jedem Takt geschrieben, sondern nur, wenn sich der direkte
+ * Stand (Richtung/Feuerknopf) geaendert hat. Im Ruhezustand traegt die eine
+ * Herzzeile je Sekunde dieselben Registerwerte (gui_joy_herz_zusatz).
+ *
+ * ES GIBT KEINEN I2C-VERGLEICH MEHR: die Oberflaeche liest GET_INPUT nicht
+ * mehr ab, es gibt also nichts zu vergleichen und kein Abweichungsurteil.
  */
-static void gui_joy_vergleich_zeile(void)
+static void gui_direkt_zeile(void)
 {
-    static char buf[V4_JOY_TEXT_MAX + 2u];   /* ortsfest (4-KB-Stapel) */
+    static char buf[V4_JOY_TEXT_MAX + 8u];   /* ortsfest (4-KB-Stapel) */
     size_t      n;
 
-    n = v4_joy_debug_text(&J, (S.input_valid != 0) ? &S.input : NULL,
-                          s_input_frisch, buf, sizeof(buf));
+    n = v4_joy_direkt_protokoll_text(&J, buf, sizeof(buf));
     /* Eine FERTIGE Zeile, ein Aufruf je Senke: der Umbruch gehoert dazu,
      * sonst waeren es zwei Ausgaben fuer eine Meldung. */
     if (n + 1u < sizeof(buf)) {
-        buf[n]     = '\n';
+        buf[n]      = '\n';
         buf[n + 1u] = '\0';
         v4_dbg_zeile(buf);
     }
 }
 
 /*
- * Denselben Vergleich OHNE Ausgabe an die naechste Herzzeile haengen: so bleibt
- * es bei EINER Zeile je Sekunde, und die enthaelt trotzdem beide Buchsen, das
- * Urteil und die Rohwerte von CIAAPRA/POTINP.
+ * Dieselben direkten Werte OHNE Ausgabe an die naechste Herzzeile haengen: so
+ * bleibt es bei EINER Zeile je Sekunde, und die enthaelt trotzdem beide
+ * Buchsen, die dekodierten Richtungen/Feuerknoepfe und die Rohwerte von
+ * CIAAPRA/POTINP.
  */
 static void gui_joy_herz_zusatz(void)
 {
     static char buf[V4_JOY_TEXT_MAX];   /* ortsfest (4-KB-Stapel) */
 
-    (void)v4_joy_herz_text(&J, (S.input_valid != 0) ? &S.input : NULL,
-                           s_input_frisch, buf, sizeof(buf));
+    (void)v4_joy_direkt_protokoll_text(&J, buf, sizeof(buf));
     v4_dbg_herz_zusatz(buf);
 }
 
 /*
  * SOFORT SCHREIBEN BEI AENDERUNG.
  *
- * Der Vergleich direkt <-> I2C ist der Zweck des Programms, und eine
- * Abweichung ist die Aussage, auf die es ankommt. Deshalb wird hier in JEDEM
- * Takt geprueft, ob sich der direkte Stand (Richtungen und Feuerknoepfe) oder
- * das Urteil einer Buchse geaendert hat -- und dann geht sofort EINE fertige
- * Zeile heraus, die beides nennt: den direkten Wert und den I2C-Wert samt
- * Rohwerten der Feuerregister.
+ * Geprueft wird in JEDEM Takt, ob sich der DIREKTE Stand (Richtungen und
+ * Feuerknoepfe aus den Registern der V4) einer Buchse geaendert hat -- und
+ * dann geht sofort EINE fertige Zeile heraus. Ohne Aenderung entsteht KEINE
+ * Zeile: die Ausgabe soll den Bus nicht bremsen.
  *
- * In dieselbe Zeile gehoert auch der Feuerknopf: welches Bit welche Taste ist,
- * steht nirgends fest (am Geraet bewegte sich beim Druecken nichts), es wird
- * also durch Draufschauen an den Rohwerten gefunden. Genau dafuer stehen
- * CIAAPRA und POTINP in der Zeile.
- *
- * Ohne Aenderung entsteht KEINE Zeile -- auch das ist eine Zusage: die
- * Ausgabe soll den Bus nicht bremsen.
+ * Einen I2C-Vergleich gibt es nicht mehr; die Zeile traegt ausschliesslich die
+ * Registerwerte (v4_joy_direkt_protokoll_text).
  */
 static void gui_joy_aenderungen(void)
 {
-    const v4p_input_t *in;
-    int                port;
-    int                neu = 0;
+    int port;
+    int neu = 0;
 
-    in = (S.input_valid != 0) ? &S.input : NULL;
     for (port = 0; port < (int)V4P_PORT_COUNT; port++) {
-        uint8_t abw = v4_joy_abweichung(&J, in, s_input_frisch, port);
         uint8_t dir = v4_joy_maske(&J, port);
 
-        if (s_joy_stand_gueltig == 0
-            || abw != s_joy_abw_alt[port]
-            || dir != s_joy_dir_alt[port]) {
+        if (s_joy_stand_gueltig == 0 || dir != s_joy_dir_alt[port]) {
             neu = 1;
         }
-        s_joy_abw_alt[port] = abw;
         s_joy_dir_alt[port] = dir;
     }
     s_joy_stand_gueltig = 1;
 
     if (neu != 0) {
-        gui_joy_vergleich_zeile();
+        gui_direkt_zeile();
     }
 }
 
@@ -1817,20 +1765,44 @@ static void act_scan_start(int automatisch);
 static void gui_liste_auto(const v4p_status_t *st);
 
 /*
- * Ein vollstaendiger Durchlauf: GET_PORT_MODE + GET_INPUT, auf Wunsch
- * zusaetzlich GET_STATUS + GET_HID (jeder fuenfte Takt, rund 1 s).
+ * Der I2C-Teil des Takts -- NUR im langsamen Takt (jeder fuenfte, rund 1 s).
+ *
+ * WAS HIER NICHT MEHR STEHT: GET_INPUT. Die Oberflaeche holt keine
+ * Controller-Eingabewerte mehr ueber I2C; die Quelle dafuer sind die
+ * Joyport-Register der V4 (gui_joy_abtasten, in JEDEM Takt, ohne Bus).
+ *
+ * WAS BLEIBT (alles Einstellungen, Verbindungszustand oder Geraeteinfos --
+ * keine Eingabewerte):
+ *   GET_STATUS    Verbindung/Scan  -- sonst weiss die Oberflaeche nicht, ob
+ *                                      ein Controller da ist
+ *   GET_PORT_MODE wirksame Betriebsart
+ *   GET_HID       Name/VID/PID/Batterie des Controllers
+ *   GET_PORT_CONFIG Verteilung (Geraet, Richtungen, Knopfquellen)
+ *   GET_MOUSE_CFG Tempo/Totzone je Buchse
+ * Dazu kommen ausserhalb dieses Takts SCAN/DEV_COUNT/DEV_GET (nur waehrend
+ * einer Suche) und alle SETZENDEN Befehle (auf Knopfdruck).
+ *
+ * WARUM ALLES IN DEN LANGSAMEN TAKT: der Bus soll ruhig bleiben. Vorher liefen
+ * GET_PORT_MODE UND GET_INPUT in JEDEM Takt (200 ms), zusammen rund zehn
+ * Transaktionen je Sekunde -- GET_INPUT war davon die haeufigste. Ohne die
+ * Eingangsabfrage und mit allen Abfragen im Sekundentakt sind es noch rund
+ * fuenf je Sekunde, und keine davon traegt Controller-Werte.
  *
  * Wichtig: der Verbindungszustand wird EINMAL mit dem schlechtesten
  * Rueckgabewert fortgeschrieben, nicht je Unterbefehl. Sonst zaehlte ein
- * einziger Ausfall die Fehlerserie dreifach hoch, und der Abstand waechst zu
+ * einziger Ausfall die Fehlerserie mehrfach hoch, und der Abstand waechst zu
  * schnell.
  */
 static void gui_poll(int slow)
 {
-    uint8_t     mode[V4P_PORT_COUNT];
-    v4p_input_t in;
-    uint8_t     rc  = V4P_ST_OK;
-    uint8_t     rc2;
+    uint8_t rc  = V4P_ST_OK;
+    uint8_t rc2;
+
+    if (slow == 0) {
+        /* Kein I2C im schnellen Takt. Die Registerabfrage macht der Takt
+         * selbst (gui_joy_abtasten), sie braucht keinen Bus. */
+        return;
+    }
 
     /*
      * Die EIGENE Hardware wird NICHT hier abgetastet, sondern im Takt
@@ -1842,34 +1814,8 @@ static void gui_poll(int slow)
      *      der neuen Direktabfrage. Stirbt das Programm im Takt, ist aus dem
      *      Log sofort zu sehen, WELCHER Teil es war.
      */
-    rc2 = v4_get_port_mode(&M, mode);
-    if (rc2 == V4P_ST_OK) {
-        v4_state_put_modes(&S, mode);
-        v4_dbg_modes(mode, "GET_PORT_MODE");
-    } else {
-        rc = rc2;
-        v4_dbg_fehler("GET_PORT_MODE", rc2, &M);
-    }
-
-    rc2 = v4_get_input(&M, &in);
-    if (rc2 == V4P_ST_OK) {
-        v4_state_put_input(&S, &in);
-        s_input_frisch = 1;
-        v4_dbg_input(&in);
-    } else {
-        /* Achtung: S.input behaelt die letzten gueltigen Werte (das ist die
-         * Zusage der Anzeige). "Frisch" sind sie damit NICHT -- der Vergleich
-         * zeigt dann ausdruecklich keine Bewertung. */
-        s_input_frisch = 0;
-        if (rc == V4P_ST_OK) {
-            rc = rc2;
-            v4_dbg_fehler("GET_INPUT", rc2, &M);
-        }
-    }
-
-    if (slow != 0) {
+    {
         v4p_status_t st;
-        v4p_hid_t    hid;
 
         rc2 = v4_get_status(&M, &st);
         if (rc2 == V4P_ST_OK) {
@@ -1879,10 +1825,25 @@ static void gui_poll(int slow)
             /* Steht eine Verbindung und ist die Auswahlliste noch leer, wird
              * sie genau einmal automatisch geholt (siehe gui_liste_auto). */
             gui_liste_auto(&st);
-        } else if (rc == V4P_ST_OK) {
+        } else {
             rc = rc2;
             v4_dbg_fehler("GET_STATUS", rc2, &M);
         }
+    }
+    {
+        uint8_t mode[V4P_PORT_COUNT];
+
+        rc2 = v4_get_port_mode(&M, mode);
+        if (rc2 == V4P_ST_OK) {
+            v4_state_put_modes(&S, mode);
+            v4_dbg_modes(mode, "GET_PORT_MODE");
+        } else if (rc == V4P_ST_OK) {
+            rc = rc2;
+            v4_dbg_fehler("GET_PORT_MODE", rc2, &M);
+        }
+    }
+    {
+        v4p_hid_t hid;
 
         rc2 = v4_get_hid(&M, &hid);
         if (rc2 == V4P_ST_OK) {
@@ -1892,27 +1853,23 @@ static void gui_poll(int slow)
             rc = rc2;
             v4_dbg_fehler("GET_HID", rc2, &M);
         }
-
-        /*
-         * Und die Eingangsverteilung (fw_ver 4): Vorgabe und wirksame
-         * Betriebsart, Richtungen und die drei Knopfquellen beider Buchsen.
-         * Einmal je Sekunde genuegt -- sie aendert sich nur, wenn jemand
-         * etwas einstellt (oder der ESP32 von sich aus, z.B. durch "duo").
-         */
-        gui_cfg_read();
     }
-
     /*
-     * Die Zeile je Takt gibt es nicht mehr. Was jetzt kommt, ist in
-     * gui_joy_aenderungen() bzw. in der Herzzeile enthalten:
-     *
-     *   - Aenderung von Richtung, Feuerknopf oder Urteil -> sofort EINE Zeile
-     *     (gui_joy_aenderungen im Takt),
-     *   - im Ruhezustand EINE Zeile je Sekunde mit demselben Vergleich
-     *     (gui_joy_herz_zusatz + v4_dbg_herz im Takt).
-     *
-     * Damit sind es im Ruhezustand eine Zeile je Sekunde statt zwanzig.
+     * Eingangsverteilung (fw_ver 4) und Maus-Einstellungen (fw_ver 5): Vorgabe
+     * und wirksame Betriebsart, Richtungen, Knopfquellen, Tempo/Totzone.
+     * Einmal je Sekunde genuegt -- sie aendern sich nur, wenn jemand etwas
+     * einstellt (oder der ESP32 von sich aus, z.B. durch "duo"). Die beiden
+     * Helfer notieren den Zustand hier NICHT selbst (note = 0); das macht
+     * dieser Durchlauf EINMAL mit dem schlechtesten Wert.
      */
+    rc2 = gui_cfg_read(0);
+    if (rc2 != V4P_ST_OK && rc == V4P_ST_OK) {
+        rc = rc2;
+    }
+    rc2 = gui_mouse_read(0);
+    if (rc2 != V4P_ST_OK && rc == V4P_ST_OK) {
+        rc = rc2;
+    }
 
     (void)v4_state_note(&S, rc);
 }
@@ -1922,15 +1879,22 @@ static void gui_poll(int slow)
  * Takt (gui_scan_tick): der ESP32 scannt asynchron, und eine Warteschleife
  * wuerde das Fenster fuer Sekunden einfrieren.
  *
+ * EIN Fenster, KEIN Dauerbetrieb: `continuous = 0`. Mit Dauerbetrieb scannte
+ * der ESP32 nach einem Knopfdruck endlos weiter (Funk und Strom), und
+ * GET_STATUS.scan_active taugte nicht mehr als "fertig"-Signal. Die Fensterlaenge
+ * wird aus der Wartezeit gerechnet: der Master schickt sie in 1,28-s-Einheiten.
+ *
  * `automatisch` ist 1, wenn der Scan nicht vom Knopf kommt, sondern weil eine
  * Verbindung erkannt wurde und die Geraeteliste noch leer ist (gui_liste_auto).
  */
 static void act_scan_start(int automatisch)
 {
-    uint8_t rc;
+    uint8_t  rc;
+    unsigned sek   = (unsigned)(GUI_SCAN_TICKS * GUI_TICK_MS / 1000u);
+    uint8_t  units = (uint8_t)((sek * 100u + 127u) / 128u);    /* aufrunden */
 
     gui_devices_clear();
-    rc = v4_scan_start(&M, 8u, 1);
+    rc = v4_scan_start(&M, units, 0);
     (void)v4_state_note(&S, rc);
     if (rc != V4P_ST_OK) {
         gui_msg("[scan] SCAN_START: %s\n", v4_strerror(rc));
@@ -1938,14 +1902,15 @@ static void act_scan_start(int automatisch)
     }
     if (automatisch != 0) {
         gui_msg("[scan] Verbindung erkannt -- die Geraeteliste wird "
-                "automatisch geholt (bis zu %u s)\n",
-                (unsigned)(GUI_SCAN_TICKS * GUI_TICK_MS / 1000u));
+                "automatisch geholt (Fenster %u s)\n", sek);
     } else {
-        gui_msg("[scan] Scan gestartet (bis zu %u s) -- die Liste fuellt "
-                "sich waehrend der Live-Aktualisierung\n",
-                (unsigned)(GUI_SCAN_TICKS * GUI_TICK_MS / 1000u));
+        gui_msg("[scan] Scan gestartet (Fenster %u s) -- die Liste fuellt "
+                "sich waehrend der Live-Aktualisierung\n", sek);
     }
-    s_scan_left = GUI_SCAN_TICKS;
+    s_scan_left        = GUI_SCAN_TICKS;
+    s_scan_hard        = GUI_SCAN_MAX_TICKS;
+    s_scan_poll        = 0u;
+    s_scan_nachgefasst = 0;
 }
 
 /*
@@ -1976,14 +1941,36 @@ static void gui_liste_auto(const v4p_status_t *st)
         }
         return;
     }
-    if (s_liste_auto != 0 || s_scan_left > 0u || s_devn > 0) {
+    if (s_liste_auto != 0 || s_scan_left > 0u || s_scan_hard > 0u
+        || s_devn > 0) {
         return;
     }
     s_liste_auto = 1;
     act_scan_start(1);
 }
 
-/* Eine Scan-Runde: DEV_COUNT; sind Geraete da, gleich die ganze Liste holen. */
+/*
+ * Sucht die Gegenstelle laut GET_STATUS noch? Dann darf die Oberflaeche nicht
+ * "keine Geraete" behaupten, sondern muss nachfassen (Auftrag vom 14.10.2026,
+ * Punkt 4).
+ */
+static int gui_scan_laeuft(void)
+{
+    return (S.status_valid != 0 && S.status.scan_active != 0u) ? 1 : 0;
+}
+
+/* Eine Scan-Runde: DEV_COUNT; sind Geraete da, gleich die ganze Liste holen.
+ *
+ * DEV_COUNT wird NICHT in jedem Takt gefragt (GUI_SCAN_POLL_EVERY): der Bus
+ * soll auch waehrend einer Suche ruhig bleiben.
+ *
+ * Ist das Fenster abgelaufen und die Liste noch leer, wird EINMAL nachgefasst,
+ * solange die Gegenstelle laut GET_STATUS noch sucht -- hoechstens bis
+ * GUI_SCAN_MAX_TICKS. Erst danach steht "keine Geraete gefunden", und zwar mit
+ * dem Stand der Gegenstelle (Scan beendet? Generation?) in der Zeile: damit ist
+ * aus dem Mitschnitt sofort zu sehen, ob wirklich nichts gefunden wurde oder
+ * die Gegenstelle noch mitten in der Suche war.
+ */
 static void gui_scan_tick(void)
 {
     static v4p_dev_t tab[V4P_MAX_DEVICES];  /* ortsfest (4-KB-Stapel) */
@@ -1992,23 +1979,56 @@ static void gui_scan_tick(void)
     uint8_t i;
     uint8_t rc;
 
-    if (s_scan_left == 0u) {
+    if (s_scan_left == 0u && s_scan_hard == 0u) {
         return;
     }
-    s_scan_left--;
+    if (s_scan_left > 0u) {
+        s_scan_left--;
+    }
+    if (s_scan_hard > 0u) {
+        s_scan_hard--;
+    }
+
+    s_scan_poll++;
+    if (s_scan_poll < GUI_SCAN_POLL_EVERY) {
+        return;
+    }
+    s_scan_poll = 0u;
 
     rc = v4_dev_count(&M, &count);
     (void)v4_state_note(&S, rc);
     if (rc != V4P_ST_OK) {
         gui_msg("[scan] DEV_COUNT: %s\n", v4_strerror(rc));
         s_scan_left = 0u;
+        s_scan_hard = 0u;
         return;
     }
     if (count == 0u) {
-        if (s_scan_left == 0u) {
-            gui_msg("[scan] keine Geraete gefunden. Ist der Controller "
-                    "eingeschaltet und in Reichweite?\n");
+        if (s_scan_left > 0u) {
+            return;                 /* das Fenster laeuft noch */
         }
+        if (s_scan_hard > 0u && gui_scan_laeuft() != 0) {
+            /* Nachfassen: die Gegenstelle sucht noch, ihre Antwort ist noch
+             * nicht die letzte. */
+            if (s_scan_nachgefasst == 0) {
+                s_scan_nachgefasst = 1;
+                gui_msg("[scan] noch keine Geraete, aber die Gegenstelle sucht "
+                        "weiter (Scan-Generation %u) -- es wird nachgefasst\n",
+                        S.status_valid ? (unsigned)S.status.scan_gen : 0u);
+            }
+            s_scan_left = GUI_SCAN_TICKS;
+            return;
+        }
+        gui_msg("[scan] keine Geraete gefunden (Scan der Gegenstelle %s, "
+                "Generation %u). Ist der Controller eingeschaltet und in "
+                "Reichweite?\n",
+                (gui_scan_laeuft() != 0) ? "laeuft noch" : "beendet",
+                S.status_valid ? (unsigned)S.status.scan_gen : 0u);
+        /* Sicher ist sicher: den Scan der Gegenstelle beenden, damit Funk und
+         * Strom nicht weiterlaufen. */
+        (void)v4_scan_stop(&M);
+        s_scan_left = 0u;
+        s_scan_hard = 0u;
         return;
     }
 
@@ -2038,6 +2058,7 @@ static void gui_scan_tick(void)
     gui_devices_fill();
     gui_msg("[scan] %u Geraet(e) in der Liste\n", (unsigned)s_devn);
     s_scan_left = 0u;
+    s_scan_hard = 0u;
 }
 
 /* Doppelklick in der Liste oder der Knopf: verbinden. */
@@ -2165,7 +2186,7 @@ static void act_set_mode(int port)
     /* Den echten Zustand nachlesen (die Vorgabe steht, die wirksame kann
      * zunaechst eine andere bleiben) und die Felder danach stellen. */
     if (s_cfg_ok != 0) {
-        gui_cfg_read();
+        gui_cfg_read(1);
         gui_show_portcfg();
     } else {
         v4_state_put_mode(&S, (uint8_t)port, bestaetigt);
@@ -2266,7 +2287,7 @@ static void act_set_dev(int port)
                 s_devtab[idx].bda[2], s_devtab[idx].bda[3],
                 s_devtab[idx].bda[4], s_devtab[idx].bda[5]);
     }
-    gui_cfg_read();
+    gui_cfg_read(1);
     gui_show_portcfg();
 }
 
@@ -2324,7 +2345,7 @@ static void act_set_dir(int port)
                     "%s -- nichts geaendert\n", port, dir, v4_strerror(rc));
         }
         /* Die Anzeige auf den ECHTEN Zustand zurueckziehen. */
-        gui_cfg_read();
+        gui_cfg_read(1);
         gui_show_portcfg();
         return;
     }
@@ -2334,7 +2355,7 @@ static void act_set_dir(int port)
         v4p_dir_text(maske, dir, sizeof(dir));
         gui_msg("[cfg] Buchse %d: Richtungen %s bestaetigt\n", port, dir);
     }
-    gui_cfg_read();
+    gui_cfg_read(1);
     gui_show_portcfg();
 }
 
@@ -2421,21 +2442,21 @@ static void act_set_btn(int port)
                     v4p_taste_name_short(btn[1]),
                     v4p_taste_name_short(btn[2]));
         }
-        gui_cfg_read();
+        gui_cfg_read(1);
         gui_show_portcfg();
         return;
     }
     if (rc != V4P_ST_OK) {
         gui_msg("[cfg] SET_PORT_ROUTING (Buchse %d): %s -- nichts geaendert\n",
                 port, v4_strerror(rc));
-        gui_cfg_read();
+        gui_cfg_read(1);
         gui_show_portcfg();
         return;
     }
     gui_msg("[cfg] Buchse %d: Pin6<-%s Pin9<-%s Pin5<-%s bestaetigt\n", port,
             v4p_taste_name(btn[0]), v4p_taste_name(btn[1]),
             v4p_taste_name(btn[2]));
-    gui_cfg_read();
+    gui_cfg_read(1);
     gui_show_portcfg();
 }
 
@@ -2487,7 +2508,7 @@ static void act_set_beitrag(int port)
         gui_msg("[cfg] SET_PORT_ROUTING (Buchse %d, Beitrag %s -> \"%s\"): "
                 "%s -- nichts geaendert\n", port, v4_beitrag_name((uint8_t)v),
                 dir, v4_strerror(rc));
-        gui_cfg_read();
+        gui_cfg_read(1);
         gui_show_portcfg();
         return;
     }
@@ -2508,7 +2529,7 @@ static void act_set_beitrag(int port)
                     "deshalb gesperrt; der Klartext nennt die Werte\n", port);
         }
     }
-    gui_cfg_read();
+    gui_cfg_read(1);
     gui_show_portcfg();
 }
 
@@ -2578,7 +2599,7 @@ static void act_set_maus(int port, int feld)
                 (unsigned)V4P_MOUSE_SPEED_MIN, (unsigned)V4P_MOUSE_SPEED_MAX,
                 (unsigned)V4P_MOUSE_TOTZONE_MIN,
                 (unsigned)V4P_MOUSE_TOTZONE_MAX);
-        gui_mouse_read();
+        gui_mouse_read(1);
         gui_show_portcfg();
         return;
     }
@@ -2592,14 +2613,14 @@ static void act_set_maus(int port, int feld)
                 (unsigned)V4P_MOUSE_SPEED_MIN, (unsigned)V4P_MOUSE_SPEED_MAX,
                 (unsigned)V4P_MOUSE_TOTZONE_MIN,
                 (unsigned)V4P_MOUSE_TOTZONE_MAX);
-        gui_mouse_read();
+        gui_mouse_read(1);
         gui_show_portcfg();
         return;
     }
     if (rc != V4P_ST_OK) {
         gui_msg("[cfg] SET_MOUSE_CFG (Buchse %d): %s -- nichts geaendert\n",
                 port, v4_strerror(rc));
-        gui_mouse_read();
+        gui_mouse_read(1);
         gui_show_portcfg();
         return;
     }
@@ -2608,7 +2629,7 @@ static void act_set_maus(int port, int feld)
      * Aenderung den echten Stand zeigen". */
     gui_msg("[cfg] Buchse %d: Maus Tempo %d/%u, Totzone %d %% bestaetigt\n",
             port, neu_speed, (unsigned)V4P_MOUSE_SPEED_MAX, neu_totzone);
-    gui_mouse_read();
+    gui_mouse_read(1);
     gui_show_portcfg();
 }
 
@@ -2654,7 +2675,7 @@ static void act_swap(void)
 }
 
 /* "Aktualisieren": einen vollstaendigen Durchlauf sofort. Auch die EIGENE
- * Hardware wird dabei neu abgetastet -- der Knopf soll einen frischen Vergleich
+ * Hardware wird dabei neu abgetastet -- der Knopf soll frische Registerwerte
  * zeigen und nicht den Stand des letzten Takts. Die Maus-Einstellungen werden
  * mitgelesen: sie aendern sich nur auf Wunsch, aber der Knopf soll auch sie
  * frisch zeigen. */
@@ -2664,7 +2685,6 @@ static void act_refresh(void)
     gui_joy_abtasten();
     gui_joy_aenderungen();
     gui_joy_herz_zusatz();
-    gui_mouse_read();
     gui_show_link();
     gui_show_info();
     gui_show_ports();
@@ -2689,8 +2709,9 @@ static void act_refresh(void)
  *                                Abstand es zulaesst
  *   2. Scan/Verbindung schieben
  *   3. eigene Register lesen  -- NACH dem Bus (siehe gui_poll)
- *   4. Aenderungen sofort melden, Vergleich fuer die Herzzeile bauen
- *   5. Lebenszeichen          -- GENAU EINE Zeile je Sekunde, mit dem Vergleich
+ *   4. Aenderungen sofort melden, Registerwerte fuer die Herzzeile bauen
+ *   5. Lebenszeichen          -- GENAU EINE Zeile je Sekunde, mit den
+ *                                Registerwerten
  *   6. Anzeige zeichnen
  *
  * Im Ruhezustand ergibt das eine Zeile je Sekunde. Jede Aenderung (Richtung,
@@ -2737,8 +2758,11 @@ static void gui_tick(void)
         }
     }
 
-    /* 2. Laufenden Scan weiterschieben. */
-    if (s_scan_left > 0u) {
+    /* 2. Laufenden Scan weiterschieben. Auch wenn das Regel-Fenster schon
+     *    abgelaufen ist (s_scan_left == 0), laeuft die harte Obergrenze
+     *    weiter: nur so kann bei noch suchender Gegenstelle nachgefasst
+     *    werden. */
+    if (s_scan_left > 0u || s_scan_hard > 0u) {
         gui_scan_tick();
     }
 
@@ -2773,12 +2797,12 @@ static void gui_tick(void)
     gui_joy_abtasten();
 
     /* 5. Sofort melden, was sich geaendert hat (eine fertige Zeile), und den
-     *    Vergleich fuer die Herzzeile bereitlegen. */
+     *    direkten Stand fuer die Herzzeile bereitlegen. */
     gui_joy_aenderungen();
     gui_joy_herz_zusatz();
 
     /* 6. Lebenszeichen: EINE Zeile je Sekunde. Sie traegt Zaehler, letzten
-     *    Status, verworfene Rahmen, Wiederholungen UND den Vergleich. */
+     *    Status, verworfene Rahmen, Wiederholungen UND die Registerwerte. */
     if (slow != 0) {
         v4_dbg_herz(&M);
     }
@@ -2998,7 +3022,7 @@ static int gui_build(void)
                  * sie saehen dann LEER aus.
                  *
                  * Deshalb eine SEITENGRUPPE (MUIA_Group_PageMode): Seite 0 ist
-                 * die gewohnte Anzeige (Buchsen, Vergleich), Seite 1 die neue
+                 * die gewohnte Anzeige (Buchsen, Direktwerte), Seite 1 die neue
                  * Konfiguration. Die Groesse einer Seitengruppe ist laut
                  * MUI_Group.doc "the maximum minimum width/height of all its
                  * children" -- die Konfigurationsseite ist KLEINER als die
@@ -3066,11 +3090,11 @@ static int gui_build(void)
                      *
                      * Die Buchsenfelder zeigen seit dem 14.10.2026
                      * ausschliesslich die direkte Registerabfrage
-                     * (JOY0DAT/JOY1DAT, CIAAPRA/POTINP); die Sicht des ESP32
-                     * (state/level) und der Vergleich/ABWEICHUNG sind aus dem
-                     * Fenster entfernt und stehen nur noch im Protokoll. Die
-                     * wirksame Betriebsart daneben kommt weiterhin vom ESP32
-                     * und ist als "(ESP32)" gekennzeichnet.
+                     * (JOY0DAT/JOY1DAT, CIAAPRA/POTINP). GET_INPUT wird nicht
+                     * mehr abgefragt; einen Vergleich "direkt <-> I2C" gibt es
+                     * weder hier noch im Protokoll. Die wirksame Betriebsart
+                     * daneben kommt weiterhin vom ESP32 (Einstellung, kein
+                     * Eingabewert) und ist als "(ESP32)" gekennzeichnet.
                      *
                      * WARUM DIESE FELDER GEWICHT 0 HABEN:
                      *
@@ -3165,10 +3189,10 @@ static int gui_build(void)
                         End,
                         /*
                          * Die Rohwerte der Feuerregister, volle Fensterbreite.
-                         * Hier steht NUR, was direkt gelesen wird -- der
-                         * Vergleich direkt/I2C ist bewusst nicht mehr im
-                         * Fenster, sondern nur im Protokoll (DebugUART/
-                         * Logdatei). Der Text darunter sagt das ausdruecklich.
+                         * Hier steht NUR, was direkt gelesen wird; einen
+                         * I2C-Vergleich gibt es nicht mehr (GET_INPUT wird
+                         * nicht mehr abgefragt). Der Text darunter sagt das
+                         * ausdruecklich.
                          */
                         Child, s_regtext = TextObject,
                             MUIA_Text_Contents,
@@ -3687,7 +3711,7 @@ static void usage(void)
                   "aenderbar)\n"
                   "Ohne -trace: im Ruhezustand EINE Zeile je Sekunde "
                   "(Lebenszeichen mit\n"
-                  "dem Vergleich direkt/I2C); jede Aenderung sofort.\n",
+                  "den Registerwerten beider Buchsen); jede Aenderung sofort.\n",
                   s_fenster_w, s_fenster_h);
     (void)fflush(stdout);
 }
@@ -3875,7 +3899,7 @@ int main(int argc, char **argv)
             if (s_mousecfg_ok != 0) {
                 /* Einmal beim Start lesen (nicht im Takt): die Werte aendern
                  * sich nur, wenn jemand sie aendert. */
-                gui_mouse_read();
+                gui_mouse_read(1);
             }
             if (check != V4P_ST_OK) {
                 gui_msg("[ping] %s: Slave meldet proto=%u write=%u read=%u; "
@@ -4149,10 +4173,10 @@ int main(int argc, char **argv)
         }
     }
 
-    /* Schlusszeile: erst der Vergleich direkt/I2C in seiner letzten Fassung,
-     * dann die verworfenen Abtastungen der Direktseite -- das Gegenstueck zu
+    /* Schlusszeile: erst die Registerwerte in ihrer letzten Fassung, dann die
+     * verworfenen Abtastungen der Direktseite -- das Gegenstueck zu
      * "verworfene Rahmen" auf der I2C-Seite. Dann die gemeinsame Schlusszeile. */
-    gui_joy_vergleich_zeile();
+    gui_direkt_zeile();
     gui_msg("v4_gui beendet (direkt verworfen: Zaehler %lu, Feuer %lu)\n",
             J.verworfen, J.verworfen_feuer);
     v4_dbg_ende(&M);

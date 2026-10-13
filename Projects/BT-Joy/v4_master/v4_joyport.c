@@ -673,3 +673,41 @@ size_t v4_joy_direkt_text(const v4_joy_t *st, int port, char *out, size_t cap)
            (unsigned)st->roh.ciaapra, (unsigned)st->roh.potinp);
     return n;
 }
+
+/*
+ * Beide Buchsen DIREKT, in EINER Zeile, ohne jeden I2C-Wert.
+ *
+ * Diese Zeile hat die alte Vergleichszeile (`vergleich_teil`) ersetzt: die
+ * Oberflaeche fragt GET_INPUT nicht mehr ab, es gibt also nichts zu
+ * vergleichen. Sie traegt dieselben direkten Werte wie die Fensteranzeige
+ * (dekodierte Richtungen/Feuerknoepfe, Stabilitaetsurteil, Rohzaehler) und die
+ * Rohwerte der Feuerregister -- mehr braucht das Mitschnittbild nicht.
+ */
+size_t v4_joy_direkt_protokoll_text(const v4_joy_t *st, char *out, size_t cap)
+{
+    size_t n = 0u;
+    int    port;
+
+    if (out == NULL || cap == 0u) {
+        return 0u;
+    }
+    out[0] = '\0';
+    if (st == NULL) {
+        return 0u;
+    }
+
+    for (port = 0; port < (int)V4P_PORT_COUNT; port++) {
+        char    namen[64];
+        uint8_t maske = v4_joy_maske(st, port);
+
+        (void)v4_joy_richtungen_text(maske, namen, sizeof(namen));
+        tx_add(out, cap, &n,
+               "%s Buchse%d direkt=0x%02X %s stabil=%s roh=0x%04X",
+               (port == 0) ? "" : " |", port, (unsigned)maske, namen,
+               (st->richtung_stabil[port] != 0u) ? "ja" : "nein",
+               (unsigned)st_zaehler_roh(st, port));
+    }
+    tx_add(out, cap, &n, " | CIAAPRA=0x%04X POTINP=0x%04X",
+           (unsigned)st->roh.ciaapra, (unsigned)st->roh.potinp);
+    return n;
+}
