@@ -17,6 +17,11 @@
  *   V4_DEMO_LEVEL1=n      Pegel-Maske Buchse 1
  *   V4_DEMO_LEGACY_INPUT=1  GET_INPUT antwortet mit der alten 10-Byte-Fassung
  *                         OHNE Pegel (Rueckfallweg der Anzeige)
+ *   V4_DEMO_LEGACY_FW3=1  Firmware OHNE Eingangsverteilung: fw_ver 3,
+ *                         Faehigkeiten 0x00FF, die Befehle 0x08..0x0A
+ *                         antworten BAD_CMD. Damit laesst sich pruefen, dass
+ *                         die V4 eine solche Firmware ANNIMMT (gleicher
+ *                         Rahmen) und die neuen Felder nicht blind setzt.
  *   V4_DEMO_MOUSE=1       Controller ist eine Maus, Buchse 1 auf Maus
  *   V4_DEMO_CONNECT_ROUNDS=n  so viele GET_STATUS-Runden CONNECTING
  *   V4_DEMO_BAD_ECHO=1    SET_PORT_MODE bestaetigt den falschen Modus
@@ -84,6 +89,9 @@ int main(int argc, char **argv)
     v4_mock.connect_rounds = env_num("V4_DEMO_CONNECT_ROUNDS");
     if (env_num("V4_DEMO_LEGACY_INPUT") != 0) {
         v4_mock.legacy_input10 = 1;
+    }
+    if (env_num("V4_DEMO_LEGACY_FW3") != 0) {
+        v4_mock.legacy_fw3 = 1;
     }
     if (env_num("V4_DEMO_BAD_ECHO") != 0) {
         v4_mock.bad_set_port_echo = 1;

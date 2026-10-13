@@ -30,6 +30,16 @@
  *      (level0@10, level1@11). Die aeltere 10-Byte-Fassung ohne Pegel wird
  *      weiter angenommen -- dann sind die Pegel UNBEKANNT und werden als
  *      solche angezeigt, nicht als 0 und nicht abgeleitet.
+ *   7. NEU mit fw_ver 4 sind die Befehle 0x08..0x0A: SET_DEVICE_PORT (BDA ->
+ *      Buchse), GET_PORT_CONFIG (Vorgabe und wirksame Betriebsart,
+ *      Richtungsquellen und die drei Knopfquellen beider Buchsen in EINER
+ *      Antwort) und SET_PORT_ROUTING (dieselben Felder einer Buchse setzen).
+ *      Der RAHMEN bleibt unveraendert (proto_ver 3). Eine Firmware mit
+ *      fw_ver 4 darf deshalb NICHT abgelehnt werden; ob die Befehle da sind,
+ *      sagen die Faehigkeitsbits V4P_CAP_PORT_ROUTING/V4P_CAP_DEVICE_PORT.
+ *   8. SET_PORT_MODE kennt jetzt mode = V4P_MODE_AUTO (0xFF) und setzt die
+ *      Vorgabe auf "nach Geraeteart" zurueck. GET_PORT_MODE meldet
+ *      unveraendert die WIRKSAME Betriebsart (nie 0xFF).
  *
  * PORTABILITAETSREGELN (PROTOCOL_V4_MASTER.md §0 und §2) -- diese Datei und
  * alle Dateien, die Frame-Bytes anfassen, halten sich ausnahmslos daran:
@@ -66,8 +76,19 @@
 #define V4P_PROTO_VER           3u
 
 /* Faehigkeitsstand der Firmware (V4P_FW_VERSION der ESP32-Seite). Er sagt
- * NICHTS ueber die Rahmengeometrie -- das tut proto_ver. */
-#define V4P_FW_VER              3u
+ * NICHTS ueber die Rahmengeometrie -- das tut proto_ver.
+ *
+ * fw_ver 4 bringt die Eingangsverteilung: GET_PORT_CONFIG (0x09),
+ * SET_PORT_ROUTING (0x0A) und SET_DEVICE_PORT (0x08). Rahmen und proto_ver
+ * bleiben dabei UNVERAENDERT (proto_ver 3, 32 -> 128 Byte) -- eine Firmware
+ * mit fw_ver 4 darf deshalb NICHT abgelehnt werden. v4_check_info() prueft
+ * ausschliesslich proto_ver und Rahmengroessen; wer wissen will, ob die neuen
+ * Befehle da sind, fragt die Faehigkeitsbits V4P_CAP_PORT_ROUTING /
+ * V4P_CAP_DEVICE_PORT ab (v4_info_has_caps). */
+#define V4P_FW_VER              4u
+/* Der Stand, ab dem es die Eingangsverteilung gibt (nur als Klartext/Pruefung
+ * gedacht -- die verbindliche Auskunft sind die Faehigkeitsbits). */
+#define V4P_FW_VER_ROUTING      4u
 
 #define V4P_MAGIC_WRITE         0xA5u   /* V4 -> ESP32, fest 32 Byte   */
 #define V4P_MAGIC_READ          0x5Au   /* ESP32 -> V4,  fest 128 Byte */
@@ -140,6 +161,12 @@ enum {
 #define V4P_CAP_MOUSE           0x0020u  /* Maus-Emulation (Quadratur)    */
 #define V4P_CAP_PAD             0x0040u  /* Gamepad-Emulation             */
 #define V4P_CAP_BATTERY         0x0080u  /* Batteriestand wird gemeldet   */
+/* fw_ver 4: Eingangsverteilung und Geraetezuordnung. Diese beiden Bits sind
+ * die VERBINDLICHE Auskunft darueber, ob die neuen Befehle vorhanden sind --
+ * nicht die Firmware-Version. Ein Master, der sie nicht kennt, liest sie
+ * nicht aus und schickt die Befehle ins Leere (BAD_CMD). */
+#define V4P_CAP_PORT_ROUTING    0x0100u  /* GET_PORT_CONFIG/SET_PORT_ROUTING */
+#define V4P_CAP_DEVICE_PORT     0x0200u  /* SET_DEVICE_PORT               */
 
 /* ------------------------------------------------------------------ */
 /* Die zwei DB9-Buchsen -- V4P_PORT_* / V4P_IN_* der ESP32-Seite        */
@@ -152,6 +179,56 @@ enum {
 #define V4P_PORT_JOY            1u
 #define V4P_PORT_MOUSE          2u
 #define V4P_PORT_MODE_MAX       V4P_PORT_MOUSE
+
+/*
+ * "nach Geraeteart" -- die VORGABE einer Buchse ist ungesetzt (fw_ver 4).
+ *
+ * Der Wert steht NUR in SET_PORT_MODE (Anfrage) und in GET_PORT_CONFIG
+ * (`mode_soll`), NIEMALS in GET_PORT_MODE: das meldet die WIRKSAME
+ * Betriebsart, und die ist immer 0..2. Wer die beiden Felder vermischt,
+ * zeigt "auto" an, obwohl gerade eine Maus laeuft.
+ */
+#define V4P_MODE_AUTO           0xFFu
+
+/* ------------------------------------------------------------------ */
+/* Eingangsverteilung je Buchse (GET_PORT_CONFIG / SET_PORT_ROUTING)   */
+/* ------------------------------------------------------------------ */
+
+/* Richtungsquellen (`dir`): ein Bit je Quelle. 0x00 = keine Richtung, die
+ * Buchse meldet dann nur Knoepfe. 0x07 = alle drei = Vorgabe. */
+#define V4P_DIR_STICK_L         0x01u   /* Analog-Stick links             */
+#define V4P_DIR_STICK_R         0x02u   /* Analog-Stick rechts            */
+#define V4P_DIR_DPAD            0x04u   /* digitales Steuerkreuz          */
+#define V4P_DIR_ALLE            0x07u   /* alle drei                      */
+#define V4P_DIR_STANDARD        V4P_DIR_ALLE
+#define V4P_DIR_MASK            0x07u   /* erlaubte Bits                  */
+
+/* Die drei Knopfleitungen einer Buchse: Pin 6, Pin 9, Pin 5 -- in DIESER
+ * Reihenfolge stehen sie in SET_PORT_ROUTING und in GET_PORT_CONFIG. */
+#define V4P_BTN_COUNT           3u
+
+/* Knopfquellen. Jede der drei Leitungen bekommt GENAU EINEN Code; 0 = die
+ * Leitung bleibt offen. 1..13 sind Einzeltasten, 14..16 die drei bisherigen
+ * Gruppen (Vorgabe -- sie reproduzieren das Verhalten vor dieser Erweiterung).
+ * Identisch zu V4P_TASTE_* der ESP32-Seite. */
+#define V4P_TASTE_KEINE         0u
+#define V4P_TASTE_A             1u
+#define V4P_TASTE_B             2u
+#define V4P_TASTE_X             3u
+#define V4P_TASTE_Y             4u
+#define V4P_TASTE_L1            5u
+#define V4P_TASTE_R1            6u
+#define V4P_TASTE_L2            7u
+#define V4P_TASTE_R2            8u
+#define V4P_TASTE_L3            9u
+#define V4P_TASTE_R3           10u
+#define V4P_TASTE_START        11u
+#define V4P_TASTE_SELECT       12u
+#define V4P_TASTE_HOME         13u
+#define V4P_TASTE_GRUPPE1      14u
+#define V4P_TASTE_GRUPPE2      15u
+#define V4P_TASTE_GRUPPE3      16u
+#define V4P_TASTE_ANZAHL       17u     /* Anzahl der Codes (0..16)       */
 
 /* Zustandsbits einer Buchse, identisch zu JOY_ST_* in joy_port.h.
  *
@@ -228,6 +305,34 @@ enum {
 #define V4P_GPM_OFF_MODE1       1u
 #define V4P_GPM_PAYLOAD_LEN     2u
 
+/* GET_PORT_CONFIG (0x09): alles, was eine Oberflaeche je Buchse braucht, in
+ * EINER Antwort (12 Byte). `mode_soll` ist die Vorgabe (0xFF = auto),
+ * `mode_ist` die wirksame Betriebsart -- dieselbe, die GET_PORT_MODE liefert.
+ * `btn?` sind die drei Knopfquellen in der Reihenfolge Pin 6, Pin 9, Pin 5. */
+#define V4P_GPC_OFF_MODE_SOLL0  0u
+#define V4P_GPC_OFF_MODE_SOLL1  1u
+#define V4P_GPC_OFF_MODE_IST0   2u
+#define V4P_GPC_OFF_MODE_IST1   3u
+#define V4P_GPC_OFF_DIR0        4u
+#define V4P_GPC_OFF_DIR1        5u
+#define V4P_GPC_OFF_BTN0        6u      /* 3 Byte: Pin6, Pin9, Pin5       */
+#define V4P_GPC_OFF_BTN1        9u
+#define V4P_GPC_PAYLOAD_LEN    12u
+
+/* SET_PORT_ROUTING (0x0A): Anfrage und Antwort haben dasselbe Layout. */
+#define V4P_SPR_OFF_PORT        0u
+#define V4P_SPR_OFF_DIR         1u
+#define V4P_SPR_OFF_BTN1        2u      /* Pin 6                          */
+#define V4P_SPR_OFF_BTN2        3u      /* Pin 9                          */
+#define V4P_SPR_OFF_BTN3        4u      /* Pin 5                          */
+#define V4P_SPR_PAYLOAD_LEN     5u
+
+/* SET_DEVICE_PORT (0x08): Anfrage und Antwort (7 Byte). */
+#define V4P_SDP_OFF_BDA         0u      /* Bluetooth-Adresse, 6 Byte      */
+#define V4P_SDP_OFF_PORT        6u      /* Zielbuchse 0 oder 1            */
+#define V4P_SDP_PAYLOAD_LEN     7u
+#define V4P_BDA_LEN             6u
+
 /* GET_INPUT: 12 Byte (mit Pegeln), 10 Byte (aeltere Fassung ohne).
  * Beschreibung: docs/PROTOKOLL.md der ESP32-Seite, "Eingangspayload". */
 #define V4P_IN_OFF_STATE0       0u      /* Zug-Maske V4P_IN_ST_*          */
@@ -303,6 +408,11 @@ enum {
     V4P_CMD_GET_PORT_MODE = 0x05,   /* -            -> [mode0 u8][mode1 u8]  */
     V4P_CMD_GET_INPUT     = 0x06,   /* -            -> v4p_input_t           */
     V4P_CMD_GET_HID       = 0x07,   /* -            -> v4p_hid_t             */
+
+    /* fw_ver 4: Eingangsverteilung -- siehe v4p_portcfg_t. */
+    V4P_CMD_SET_DEVICE_PORT  = 0x08, /* [bda 6][port u8] -> Echo (7 Byte)    */
+    V4P_CMD_GET_PORT_CONFIG  = 0x09, /* -  -> v4p_portcfg_t (12 Byte)        */
+    V4P_CMD_SET_PORT_ROUTING = 0x0A, /* [port][dir][b1][b2][b3] -> Echo (5)  */
 
     V4P_CMD_SCAN_START    = 0x10,   /* [len_s u8]   -> -                     */
     V4P_CMD_SCAN_STOP     = 0x11,   /* -            -> -                     */
@@ -407,6 +517,23 @@ typedef struct {
     char     name[V4P_NAME_BUF];
 } v4p_dev_t;
 
+/*
+ * Antwort auf GET_PORT_CONFIG -- die Eingangsverteilung BEIDER Buchsen
+ * (fw_ver 4). Das ist die eine Quelle, aus der die Oberflaeche ihre
+ * Auswahlfelder fuellt; GET_PORT_MODE bleibt daneben gueltig und liefert
+ * dieselbe wirksame Betriebsart wie mode_ist[].
+ *
+ * WICHTIG: `mode_soll[]` darf V4P_MODE_AUTO (0xFF) sein, `mode_ist[]` NIE.
+ * Wer sie in ein gemeinsames Feld schreibt, zeigt "auto", obwohl eine Maus
+ * laeuft -- die beiden Felder sind bewusst getrennt.
+ */
+typedef struct {
+    uint8_t  mode_soll[V4P_PORT_COUNT];             /* 0..2 oder AUTO      */
+    uint8_t  mode_ist[V4P_PORT_COUNT];              /* 0..2 (wirksam)      */
+    uint8_t  dir[V4P_PORT_COUNT];                   /* V4P_DIR_*           */
+    uint8_t  btn[V4P_PORT_COUNT][V4P_BTN_COUNT];    /* Pin6, Pin9, Pin5    */
+} v4p_portcfg_t;
+
 /* Geparster READ-Frame (128 Byte) */
 typedef struct {
     uint8_t cmd;
@@ -490,6 +617,24 @@ size_t v4p_enc_dev       (uint8_t *p, const v4p_dev_t    *in);
 size_t v4p_enc_get_port_mode(uint8_t *p, const uint8_t mode[V4P_PORT_COUNT]);
 size_t v4p_enc_set_port_mode(uint8_t *p, uint8_t port, uint8_t mode);
 
+/* fw_ver 4: Eingangsverteilung. Die Encoder liefern die Laenge, die Decoder 0
+ * bei Erfolg und -1, wenn `len` nicht reicht ODER ein Feld unzulaessig ist.
+ * Die Decoder sind damit zugleich die Pruefung der Echo-Antwort: was hier
+ * durchfaellt, darf der Master nicht als Bestaetigung ansehen. */
+size_t v4p_enc_get_port_config(uint8_t *p, const v4p_portcfg_t *in);
+int    v4p_dec_get_port_config(const uint8_t *p, uint8_t len,
+                               v4p_portcfg_t *out);
+
+size_t v4p_enc_set_port_routing(uint8_t *p, uint8_t port, uint8_t dir,
+                                const uint8_t btn[V4P_BTN_COUNT]);
+int    v4p_dec_set_port_routing(const uint8_t *p, uint8_t len, uint8_t *port,
+                                uint8_t *dir, uint8_t btn[V4P_BTN_COUNT]);
+
+size_t v4p_enc_set_device_port(uint8_t *p, const uint8_t bda[V4P_BDA_LEN],
+                               uint8_t port);
+int    v4p_dec_set_device_port(const uint8_t *p, uint8_t len,
+                               uint8_t bda[V4P_BDA_LEN], uint8_t *port);
+
 /* Decoder liefern 0 bei Erfolg, -1 wenn `len` nicht ausreicht bzw. ein Feld
  * unzulaessig ist. */
 int v4p_dec_get_info  (const uint8_t *p, uint8_t len, v4p_info_t   *out);
@@ -503,6 +648,29 @@ int v4p_dec_set_port_mode(const uint8_t *p, uint8_t len, uint8_t *port,
                           uint8_t *mode);
 
 /* ------------------------------------------------------------------ */
+/* Pruefungen der Eingangsverteilung                                   */
+/*                                                                     */
+/* Sie stehen hier und nicht nur im Master, weil der Mock (ESP32-Seite  */
+/* des Harness) DIESELBEN Regeln anwenden muss. Zwei Schreibweisen der   */
+/* Regel waeren genau die Doppelpflege, aus der "der Master laesst      */
+/* durch, was der Slave ablehnt" entsteht.                              */
+/* ------------------------------------------------------------------ */
+
+/* 1 = dir enthaelt kein unbekanntes Bit. */
+int v4p_dir_valid(uint8_t dir);
+
+/* 1 = mode ist eine gueltige VORGABE: 0..2 oder V4P_MODE_AUTO. */
+int v4p_mode_soll_valid(uint8_t mode);
+
+/* 1 = code ist eine bekannte Knopfquelle (0..V4P_TASTE_ANZAHL-1). */
+int v4p_taste_valid(uint8_t code);
+
+/* 1 = die drei Quellen sind zulaessig: alle bekannt, und eine NICHT-LEERE
+ * Quelle steht hoechstens einmal (V4P_TASTE_KEINE darf mehrfach vorkommen).
+ * Genau diese Regel lehnt der ESP32 mit BAD_ARG ab. */
+int v4p_btn_set_valid(const uint8_t btn[V4P_BTN_COUNT]);
+
+/* ------------------------------------------------------------------ */
 /* Klartexte und Auswertungen fuer die Oberflaechen                    */
 /*                                                                     */
 /* Sie stehen hier und nicht in jeder Anzeige neu, weil Konsole, MUI und */
@@ -513,9 +681,29 @@ int v4p_dec_set_port_mode(const uint8_t *p, uint8_t len, uint8_t *port,
 
 const char *v4p_port_mode_name(uint8_t mode);   /* "aus" / "Joystick" / "Maus" */
 
+/* Name einer VORGABE: wie v4p_port_mode_name(), aber 0xFF heisst "auto"
+ * ("nach Geraeteart"). GET_PORT_CONFIG.mode_soll und SET_PORT_MODE benutzen
+ * diesen Wertebereich. */
+const char *v4p_port_mode_soll_name(uint8_t mode);
+
 /* Naechste Betriebsart im Kreislauf aus -> Joystick -> Maus -> aus.
  * Genau das tun die Schaltknoepfe der Oberflaechen. */
 uint8_t v4p_port_mode_next(uint8_t mode);
+
+/* Richtungsquelle Bit 0..2 (0x01 Stick links, 0x02 Stick rechts, 0x04 D-Pad).
+ * Bitnummer, nicht Maske -- wie v4p_bit_name(). */
+const char *v4p_dir_name(unsigned bit);
+
+/* Maske in Klartext, z.B. "Stick links+D-Pad". 0 ergibt "keine".
+ * out ist immer nullterminiert. */
+void v4p_dir_text(uint8_t dir, char *out, size_t cap);
+
+/* Name einer Knopfquelle (V4P_TASTE_*), z.B. "L1" oder "Gruppe 1 (A,L1,L2,L3)".
+ * Der lange Name ist Absicht: die Gruppen sind sonst nicht zu unterscheiden. */
+const char *v4p_taste_name(uint8_t code);
+/* Derselbe Name, aber hoechstens `cap` Zeichen -- fuer enge Auswahlfelder.
+ * Aus "Gruppe 1 (A,L1,L2,L3)" wird "Gruppe 1". */
+const char *v4p_taste_name_short(uint8_t code);
 
 const char *v4p_bt_state_name(uint8_t state);   /* "IDLE" ... "CONNECTED" */
 const char *v4p_hid_kind_name(uint8_t kind);    /* "keine" / "Pad" / "Maus" ... */

@@ -193,3 +193,98 @@ void v4_state_put_devs(v4_state_t *s, const v4p_dev_t *tab, uint8_t n)
     }
     s->dev_n = n;
 }
+
+void v4_state_put_portcfg(v4_state_t *s, const v4p_portcfg_t *cfg)
+{
+    if (s == NULL || cfg == NULL) {
+        return;
+    }
+    s->portcfg       = *cfg;
+    s->portcfg_valid = 1;
+    /* mode_ist ist die WIRKSAME Betriebsart -- dieselbe, die GET_PORT_MODE
+     * liefert. Sie hier mitzufuehren ist Absicht: dann gibt es fuer die
+     * Anzeige nur EINE Quelle, und die beiden Abfragen koennen nicht
+     * auseinanderlaufen. mode_soll gehoert NICHT in mode[]: 0xFF ist keine
+     * Betriebsart, sondern die Vorgabe "nach Geraeteart". */
+    s->mode[0]    = cfg->mode_ist[0];
+    s->mode[1]    = cfg->mode_ist[1];
+    s->applied[0] = cfg->mode_ist[0];
+    s->applied[1] = cfg->mode_ist[1];
+    s->mode_valid = 1;
+}
+
+void v4_state_put_devport(v4_state_t *s, const uint8_t bda[V4P_BDA_LEN],
+                          uint8_t port)
+{
+    uint8_t i;
+    int     frei = -1;
+
+    if (s == NULL || bda == NULL || port >= V4P_PORT_COUNT) {
+        return;
+    }
+    for (i = 0u; i < s->devport_n; i++) {
+        uint8_t k;
+        int     gleich = 1;
+
+        for (k = 0u; k < V4P_BDA_LEN; k++) {
+            if (s->devport_bda[i][k] != bda[k]) {
+                gleich = 0;
+                break;
+            }
+        }
+        if (gleich != 0) {
+            s->devport_port[i] = port;      /* Zuordnung ersetzt */
+            return;
+        }
+    }
+    if (s->devport_n < (uint8_t)V4P_MAX_DEVICES) {
+        frei = (int)s->devport_n;
+        s->devport_n++;
+    } else {
+        frei = 0;                           /* aeltesten Eintrag ersetzen */
+    }
+    for (i = 0u; i < V4P_BDA_LEN; i++) {
+        s->devport_bda[frei][i] = bda[i];
+    }
+    s->devport_port[frei] = port;
+}
+
+uint8_t v4_state_devport(const v4_state_t *s, const uint8_t bda[V4P_BDA_LEN])
+{
+    uint8_t i;
+
+    if (s == NULL || bda == NULL) {
+        return 0xFFu;
+    }
+    for (i = 0u; i < s->devport_n; i++) {
+        uint8_t k;
+        int     gleich = 1;
+
+        for (k = 0u; k < V4P_BDA_LEN; k++) {
+            if (s->devport_bda[i][k] != bda[k]) {
+                gleich = 0;
+                break;
+            }
+        }
+        if (gleich != 0) {
+            return s->devport_port[i];
+        }
+    }
+    return 0xFFu;                           /* in dieser Sitzung nicht gesetzt */
+}
+
+uint8_t v4_state_devport_at(const v4_state_t *s, uint8_t i,
+                            uint8_t bda[V4P_BDA_LEN])
+{
+    uint8_t k;
+
+    if (s == NULL || i >= s->devport_n) {
+        return 0xFFu;
+    }
+    if (bda != NULL) {
+        for (k = 0u; k < V4P_BDA_LEN; k++) {
+            bda[k] = s->devport_bda[i][k];
+        }
+    }
+    return s->devport_port[i];
+}

@@ -66,6 +66,28 @@ typedef struct {
     uint8_t      mode[V4P_PORT_COUNT];      /* Betriebsart je Buchse      */
     uint8_t      applied[V4P_PORT_COUNT];   /* zuletzt bestaetigter Modus */
     int          mode_valid;
+    /*
+     * Die Eingangsverteilung aus GET_PORT_CONFIG (fw_ver 4): Vorgabe und
+     * wirksame Betriebsart, Richtungsquellen und die drei Knopfquellen beider
+     * Buchsen -- dazu Datei-Zuordnungen, die NUR diese Sitzung kennt (siehe
+     * v4_state_put_devport).
+     *
+     * portcfg_valid bleibt 0, solange keine gueltige Antwort vorliegt; die
+     * Anzeigen lassen dann die letzten Werte stehen, statt zu leeren.
+     */
+    v4p_portcfg_t portcfg;
+    int          portcfg_valid;
+    /*
+     * Geraet -> Buchse. Der ESP32 liefert diese Zuordnung ueber die Leitung
+     * NICHT zurueck (DEV_GET nennt nur Name und Adresse, GET_PORT_CONFIG nur
+     * die Buchsenfelder). Was hier steht, ist deshalb das, was in DIESER
+     * Sitzung per SET_DEVICE_PORT gesetzt und bestaetigt wurde -- mehr nicht.
+     * Ein Neustart des Programms leert es; die Zuordnung selbst liegt im NVS
+     * des ESP32 und bleibt dort.
+     */
+    uint8_t      devport_bda[V4P_MAX_DEVICES][V4P_BDA_LEN];
+    uint8_t      devport_port[V4P_MAX_DEVICES];
+    uint8_t      devport_n;
     uint8_t      count;                     /* Geraete laut DEV_COUNT     */
     v4p_dev_t    devs[V4P_MAX_DEVICES];     /* Liste fuer die Oberflaeche */
     uint8_t      dev_n;
@@ -114,5 +136,27 @@ void v4_state_put_modes (v4_state_t *s, const uint8_t mode[V4P_PORT_COUNT]);
 /* Eine einzelne bestaetigte Betriebsart (SET_PORT_MODE). */
 void v4_state_put_mode  (v4_state_t *s, uint8_t port, uint8_t mode);
 void v4_state_put_devs  (v4_state_t *s, const v4p_dev_t *tab, uint8_t n);
+
+/* Die Eingangsverteilung aus GET_PORT_CONFIG uebernehmen (nur bei gueltiger
+ * Antwort rufen). Setzt mode/applied mit: mode_ist ist dieselbe wirksame
+ * Betriebsart, die GET_PORT_MODE liefert -- so gibt es nur EINE Quelle. */
+void v4_state_put_portcfg(v4_state_t *s, const v4p_portcfg_t *cfg);
+
+/* Eine bestaetigte Geraetezuordnung merken (SET_DEVICE_PORT). Gleiche Adresse
+ * ersetzt den vorhandenen Eintrag, eine neue kommt dazu (bis
+ * V4P_MAX_DEVICES, danach wird der aelteste ersetzt). */
+void v4_state_put_devport(v4_state_t *s, const uint8_t bda[V4P_BDA_LEN],
+                          uint8_t port);
+
+/* Gemerkte Buchse einer Adresse: 0/1, oder 0xFF = in dieser Sitzung nicht
+ * gesetzt. Die Zuordnung ist ueber die Leitung NICHT lesbar -- das ist die
+ * einzige Quelle dafuer. */
+uint8_t v4_state_devport(const v4_state_t *s, const uint8_t bda[V4P_BDA_LEN]);
+
+/* Zugriff auf den i-ten gemerkten Eintrag (fuer Anzeigen, die ALLE
+ * Zuordnungen nennen wollen). Rueckgabe: Buchse 0/1, oder 0xFF = kein
+ * Eintrag an dieser Stelle. `bda` darf NULL sein. */
+uint8_t v4_state_devport_at(const v4_state_t *s, uint8_t i,
+                            uint8_t bda[V4P_BDA_LEN]);
 
 #endif /* V4_STATE_H */

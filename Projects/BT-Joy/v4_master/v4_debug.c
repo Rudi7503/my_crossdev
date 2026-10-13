@@ -295,6 +295,9 @@ const char *v4_dbg_cmd_name(uint8_t cmd)
     case V4P_CMD_GET_PORT_MODE: return "GET_PORT_MODE";
     case V4P_CMD_GET_INPUT:     return "GET_INPUT";
     case V4P_CMD_GET_HID:       return "GET_HID";
+    case V4P_CMD_SET_DEVICE_PORT:  return "SET_DEVICE_PORT";
+    case V4P_CMD_GET_PORT_CONFIG:  return "GET_PORT_CONFIG";
+    case V4P_CMD_SET_PORT_ROUTING: return "SET_PORT_ROUTING";
     case V4P_CMD_SCAN_START:    return "SCAN_START";
     case V4P_CMD_SCAN_STOP:     return "SCAN_STOP";
     case V4P_CMD_DEV_COUNT:     return "DEV_COUNT";
@@ -384,7 +387,63 @@ static void kurzform(uint8_t cmd, const uint8_t *p, uint16_t len,
 
         if (v4p_dec_set_port_mode(p, len, &port, &mode) == 0) {
             (void)snprintf(out, cap, "bestaetigt port=%u mode=%s",
-                           (unsigned)port, v4p_port_mode_name(mode));
+                           (unsigned)port, v4p_port_mode_soll_name(mode));
+        }
+        break;
+    }
+    /*
+     * Die drei Befehle der Eingangsverteilung. Die Kurzform ist die Zeile, die
+     * beim Mitlesen zaehlt -- sie nennt genau die Felder, die die Oberflaeche
+     * setzt, und die Knopfquellen als NAMEN (eine Zahl 14 sagt niemandem, dass
+     * es die Gruppe A/L1/L2/L3 ist).
+     */
+    case V4P_CMD_GET_PORT_CONFIG: {
+        v4p_portcfg_t c;
+
+        if (v4p_dec_get_port_config(p, len, &c) == 0) {
+            (void)snprintf(out, cap,
+                           "soll0=%s soll1=%s ist0=%s ist1=%s "
+                           "dir0=0x%02X dir1=0x%02X "
+                           "btn0=%s/%s/%s btn1=%s/%s/%s",
+                           v4p_port_mode_soll_name(c.mode_soll[0]),
+                           v4p_port_mode_soll_name(c.mode_soll[1]),
+                           v4p_port_mode_name(c.mode_ist[0]),
+                           v4p_port_mode_name(c.mode_ist[1]),
+                           (unsigned)c.dir[0], (unsigned)c.dir[1],
+                           v4p_taste_name_short(c.btn[0][0]),
+                           v4p_taste_name_short(c.btn[0][1]),
+                           v4p_taste_name_short(c.btn[0][2]),
+                           v4p_taste_name_short(c.btn[1][0]),
+                           v4p_taste_name_short(c.btn[1][1]),
+                           v4p_taste_name_short(c.btn[1][2]));
+        }
+        break;
+    }
+    case V4P_CMD_SET_PORT_ROUTING: {
+        uint8_t port = 0u;
+        uint8_t dir  = 0u;
+        uint8_t btn[V4P_BTN_COUNT];
+
+        if (v4p_dec_set_port_routing(p, len, &port, &dir, btn) == 0) {
+            (void)snprintf(out, cap,
+                           "bestaetigt port=%u dir=0x%02X btn=%s/%s/%s",
+                           (unsigned)port, (unsigned)dir,
+                           v4p_taste_name_short(btn[0]),
+                           v4p_taste_name_short(btn[1]),
+                           v4p_taste_name_short(btn[2]));
+        }
+        break;
+    }
+    case V4P_CMD_SET_DEVICE_PORT: {
+        uint8_t bda[V4P_BDA_LEN];
+        uint8_t port = 0u;
+
+        if (v4p_dec_set_device_port(p, len, bda, &port) == 0) {
+            (void)snprintf(out, cap,
+                           "bestaetigt bda=%02X:%02X:%02X:%02X:%02X:%02X "
+                           "port=%u",
+                           bda[0], bda[1], bda[2], bda[3], bda[4], bda[5],
+                           (unsigned)port);
         }
         break;
     }
@@ -575,14 +634,18 @@ static void dbg_caps_text(uint16_t caps, char *out, size_t cap)
         uint16_t    bit;
         const char *name;
     } tab[] = {
-        { V4P_CAP_PORT_MODE, "Port-Modus" },
-        { V4P_CAP_GET_INPUT, "Eingaenge" },
-        { V4P_CAP_GET_HID,   "HID-Info" },
-        { V4P_CAP_HID_BT,    "BT" },
-        { V4P_CAP_HID_BLE,   "BLE" },
-        { V4P_CAP_MOUSE,     "Maus" },
-        { V4P_CAP_PAD,       "Pad" },
-        { V4P_CAP_BATTERY,   "Batterie" }
+        { V4P_CAP_PORT_MODE,    "Port-Modus" },
+        { V4P_CAP_GET_INPUT,    "Eingaenge" },
+        { V4P_CAP_GET_HID,      "HID-Info" },
+        { V4P_CAP_HID_BT,       "BT" },
+        { V4P_CAP_HID_BLE,      "BLE" },
+        { V4P_CAP_MOUSE,        "Maus" },
+        { V4P_CAP_PAD,          "Pad" },
+        { V4P_CAP_BATTERY,      "Batterie" },
+        /* fw_ver 4: nur wenn diese beiden Bits stehen, sind
+         * GET_PORT_CONFIG/SET_PORT_ROUTING/SET_DEVICE_PORT vorhanden. */
+        { V4P_CAP_PORT_ROUTING, "Verteilung" },
+        { V4P_CAP_DEVICE_PORT,  "Geraetezuordnung" }
     };
     size_t   n     = 0u;
     int      first = 1;

@@ -294,7 +294,22 @@ uint8_t v4_check_info(const v4p_info_t *info)
         /* Andere Rahmengroessen: das ist genau die 64/128-Byte-Falle. */
         return V4_ERR_PROTO;
     }
+    /* fw_ver wird ABSICHTLICH nicht geprueft: fw_ver 4 (Eingangsverteilung)
+     * benutzt denselben Rahmen und dieselbe proto_ver 3. Wer hier auf 3
+     * bestuende, wuerde genau die Firmware ablehnen, fuer die diese Fassung
+     * gebaut ist. Ob die neuen Befehle da sind, sagt v4_info_has_caps(). */
     return V4P_ST_OK;
+}
+
+int v4_info_has_caps(const v4p_info_t *info, uint16_t bits)
+{
+    if (info == NULL) {
+        return 0;
+    }
+    if ((uint16_t)(info->caps & bits) != bits) {
+        return 0;
+    }
+    return 1;
 }
 
 uint8_t v4_get_status(v4_master_t *m, v4p_status_t *st)
@@ -330,10 +345,12 @@ uint8_t v4_set_port_mode(v4_master_t *m, uint8_t port, uint8_t mode,
     v4p_read_t r;
     uint8_t    rc;
 
-    if (port >= V4P_PORT_COUNT || mode > V4P_PORT_MODE_MAX) {
+    if (port >= V4P_PORT_COUNT || !v4p_mode_soll_valid(mode)) {
         /* Lokal abweisen, BEVOR gesendet wird: der Slave wuerde BAD_ARG
          * antworten, aber ein unnoetiger Busrahmen ist im Fehlerfall nur
-         * Rauschen im Log. Der Code ist derselbe, den der Slave schickt. */
+         * Rauschen im Log. Der Code ist derselbe, den der Slave schickt.
+         * V4P_MODE_AUTO (0xFF) ist seit fw_ver 4 ERLAUBT und setzt die
+         * Vorgabe auf "nach Geraeteart" zurueck. */
         return V4P_ST_BAD_ARG;
     }
 
@@ -348,6 +365,8 @@ uint8_t v4_set_port_mode(v4_master_t *m, uint8_t port, uint8_t mode,
      * und nicht nur quittiert: bei mode=MOUSE wechselt er die Betriebsart nur,
      * wenn er sie kennt, und ein "OK" auf einen anderen Port waere ein Hinweis
      * auf einen verschobenen Strom. Lieber hier auffallen als im Joystick.
+     * Bei V4P_MODE_AUTO kommt 0xFF zurueck (nicht die wirksame Betriebsart) --
+     * die steht in GET_PORT_MODE bzw. GET_PORT_CONFIG.mode_ist.
      */
     if (v4p_dec_set_port_mode(r.payload, r.len, &back_port, &back_mode) != 0) {
         return V4_ERR_FRAME;
@@ -420,6 +439,119 @@ uint8_t v4_get_hid(v4_master_t *m, v4p_hid_t *hid)
         return V4_ERR_FRAME;
     }
     hid->flags = r.flags;       /* NAME_TRUNCATED sichtbar machen */
+    return V4P_ST_OK;
+}
+
+/* ------------------------------------------------------------------ */
+/* §11: Eingangsverteilung und Geraetezuordnung (fw_ver 4, 0x08..0x0A)  */
+/* ------------------------------------------------------------------ */
+
+uint8_t v4_get_port_config(v4_master_t *m, v4p_portcfg_t *cfg)
+{
+    v4p_read_t r;
+    uint8_t    rc;
+
+    if (cfg == NULL) {
+        return V4_ERR_ARG;
+    }
+    memset(cfg, 0, sizeof(*cfg));
+
+    rc = v4_transact(m, V4P_CMD_GET_PORT_CONFIG, NULL, 0u, &r);
+    if (rc != V4P_ST_OK) {
+        return rc;
+    }
+    if (v4p_dec_get_port_config(r.payload, r.len, cfg) != 0) {
+        /* Zu kurz ODER ein unmoeglicher Wert (Betriebsart, Richtungsbit,
+         * Knopfcode, Doppelbelegung). Die Struktur bleibt genullt -- lieber
+         * keine Anzeige als eine erfundene. */
+        return V4_ERR_FRAME;
+    }
+    return V4P_ST_OK;
+}
+
+uint8_t v4_set_port_routing(v4_master_t *m, uint8_t port, uint8_t dir,
+                            const uint8_t btn[V4P_BTN_COUNT])
+{
+    uint8_t    p[V4P_SPR_PAYLOAD_LEN];
+    uint8_t    back_port = 0u;
+    uint8_t    back_dir  = 0u;
+    uint8_t    back_btn[V4P_BTN_COUNT];
+    unsigned   k;
+    v4p_read_t r;
+    uint8_t    rc;
+
+    if (btn == NULL) {
+        return V4_ERR_ARG;
+    }
+    /*
+     * Lokal dieselben Regeln wie der Slave: Port 0/1, nur bekannte
+     * Richtungsbits, nur bekannte Knopfcodes und keine doppelt vergebene
+     * (nicht-leere) Knopfquelle. Ein BAD_ARG ohne Busrahmen ist billiger als
+     * einer mit -- und der Code ist derselbe, den der Slave schickt.
+     */
+    if (port >= V4P_PORT_COUNT || !v4p_dir_valid(dir)
+        || !v4p_btn_set_valid(btn)) {
+        return V4P_ST_BAD_ARG;
+    }
+
+    (void)v4p_enc_set_port_routing(p, port, dir, btn);
+    rc = v4_transact(m, V4P_CMD_SET_PORT_ROUTING, p,
+                     (uint8_t)V4P_SPR_PAYLOAD_LEN, &r);
+    if (rc != V4P_ST_OK) {
+        return rc;
+    }
+    /* Das Echo Byte fuer Byte pruefen. Ein "OK" mit anderen Werten waere ein
+     * Hinweis auf einen verschobenen Strom -- und die Anzeige wuerde sonst
+     * eine Verteilung zeigen, die es nicht gibt. */
+    if (v4p_dec_set_port_routing(r.payload, r.len, &back_port, &back_dir,
+                                 back_btn) != 0) {
+        return V4_ERR_FRAME;
+    }
+    if (back_port != port || back_dir != dir) {
+        return V4_ERR_FRAME;
+    }
+    for (k = 0u; k < V4P_BTN_COUNT; k++) {
+        if (back_btn[k] != btn[k]) {
+            return V4_ERR_FRAME;
+        }
+    }
+    return V4P_ST_OK;
+}
+
+uint8_t v4_set_device_port(v4_master_t *m, const uint8_t bda[V4P_BDA_LEN],
+                           uint8_t port)
+{
+    uint8_t    p[V4P_SDP_PAYLOAD_LEN];
+    uint8_t    back_bda[V4P_BDA_LEN];
+    uint8_t    back_port = 0u;
+    unsigned   i;
+    v4p_read_t r;
+    uint8_t    rc;
+
+    if (bda == NULL) {
+        return V4_ERR_ARG;
+    }
+    if (port >= V4P_PORT_COUNT) {
+        return V4P_ST_BAD_ARG;
+    }
+
+    (void)v4p_enc_set_device_port(p, bda, port);
+    rc = v4_transact(m, V4P_CMD_SET_DEVICE_PORT, p,
+                     (uint8_t)V4P_SDP_PAYLOAD_LEN, &r);
+    if (rc != V4P_ST_OK) {
+        return rc;
+    }
+    if (v4p_dec_set_device_port(r.payload, r.len, back_bda, &back_port) != 0) {
+        return V4_ERR_FRAME;
+    }
+    if (back_port != port) {
+        return V4_ERR_FRAME;
+    }
+    for (i = 0u; i < V4P_BDA_LEN; i++) {
+        if (back_bda[i] != bda[i]) {
+            return V4_ERR_FRAME;
+        }
+    }
     return V4P_ST_OK;
 }
 

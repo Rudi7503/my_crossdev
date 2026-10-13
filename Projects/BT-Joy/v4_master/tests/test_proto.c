@@ -543,6 +543,227 @@ static void test_codec_port_mode(void)
     p[0] = 0u;
     p[1] = 3u;
     CHECK_EQ(v4p_dec_set_port_mode(p, V4P_SPM_PAYLOAD_LEN, &port, &back), -1);
+
+    /*
+     * fw_ver 4: mode = 0xFF ("nach Geraeteart") ist in SET_PORT_MODE ERLAUBT.
+     * GET_PORT_MODE meldet dagegen weiter nur die WIRKSAME Betriebsart 0..2 --
+     * ein 0xFF dort waere ein Hinweis auf einen verschobenen Strom und wird
+     * abgewiesen (oben schon geprueft).
+     */
+    v4_test_case("SET_PORT_MODE: mode 0xFF (auto) ist erlaubt, "
+                 "GET_PORT_MODE lehnt es ab");
+    CHECK_EQ(v4p_enc_set_port_mode(p, 0u, (uint8_t)V4P_MODE_AUTO),
+             V4P_SPM_PAYLOAD_LEN);
+    CHECK_EQ(p[1], V4P_MODE_AUTO);
+    port = 9u;
+    back = 0u;
+    CHECK_EQ(v4p_dec_set_port_mode(p, V4P_SPM_PAYLOAD_LEN, &port, &back), 0);
+    CHECK_EQ(port, 0u);
+    CHECK_EQ(back, V4P_MODE_AUTO);
+    p[1] = V4P_MODE_AUTO;
+    CHECK_EQ(v4p_dec_get_port_mode(p, V4P_GPM_PAYLOAD_LEN, mode), -1);
+}
+
+/* ------------------------------------------------------------------ */
+/* Eingangsverteilung (fw_ver 4)                                       */
+/* ------------------------------------------------------------------ */
+
+static void test_codec_port_config(void)
+{
+    v4p_portcfg_t c;
+    v4p_portcfg_t zurueck;
+    uint8_t       p[V4P_GPC_PAYLOAD_LEN];
+    uint8_t       dir = 0u;
+    uint8_t       port = 0u;
+    uint8_t       btn[V4P_BTN_COUNT];
+    uint8_t       bda[V4P_BDA_LEN];
+    unsigned      i;
+    unsigned      k;
+
+    v4_test_case("GET_PORT_CONFIG: 12 Byte, Vorgabe UND wirksame Betriebsart");
+    memset(&c, 0, sizeof(c));
+    c.mode_soll[0] = (uint8_t)V4P_MODE_AUTO;    /* "nach Geraeteart" */
+    c.mode_soll[1] = V4P_PORT_JOY;
+    c.mode_ist[0]  = V4P_PORT_MOUSE;            /* laeuft aber als Maus */
+    c.mode_ist[1]  = V4P_PORT_JOY;
+    c.dir[0]       = V4P_DIR_STICK_L;
+    c.dir[1]       = V4P_DIR_DPAD;
+    c.btn[0][0]    = V4P_TASTE_L1;
+    c.btn[0][1]    = V4P_TASTE_R1;
+    c.btn[0][2]    = V4P_TASTE_KEINE;
+    c.btn[1][0]    = V4P_TASTE_A;
+    c.btn[1][1]    = V4P_TASTE_B;
+    c.btn[1][2]    = V4P_TASTE_START;
+
+    CHECK_EQ(v4p_enc_get_port_config(p, &c), V4P_GPC_PAYLOAD_LEN);
+    CHECK_EQ(p[V4P_GPC_OFF_MODE_SOLL0], V4P_MODE_AUTO);
+    CHECK_EQ(p[V4P_GPC_OFF_MODE_SOLL1], V4P_PORT_JOY);
+    CHECK_EQ(p[V4P_GPC_OFF_MODE_IST0], V4P_PORT_MOUSE);
+    CHECK_EQ(p[V4P_GPC_OFF_MODE_IST1], V4P_PORT_JOY);
+    CHECK_EQ(p[V4P_GPC_OFF_DIR0], V4P_DIR_STICK_L);
+    CHECK_EQ(p[V4P_GPC_OFF_DIR1], V4P_DIR_DPAD);
+    CHECK_EQ(p[V4P_GPC_OFF_BTN0 + 0u], V4P_TASTE_L1);
+    CHECK_EQ(p[V4P_GPC_OFF_BTN0 + 1u], V4P_TASTE_R1);
+    CHECK_EQ(p[V4P_GPC_OFF_BTN0 + 2u], V4P_TASTE_KEINE);
+    CHECK_EQ(p[V4P_GPC_OFF_BTN1 + 0u], V4P_TASTE_A);
+    CHECK_EQ(p[V4P_GPC_OFF_BTN1 + 1u], V4P_TASTE_B);
+    CHECK_EQ(p[V4P_GPC_OFF_BTN1 + 2u], V4P_TASTE_START);
+
+    memset(&zurueck, 0, sizeof(zurueck));
+    CHECK_EQ(v4p_dec_get_port_config(p, V4P_GPC_PAYLOAD_LEN, &zurueck), 0);
+    for (i = 0u; i < V4P_PORT_COUNT; i++) {
+        CHECK_EQ(zurueck.mode_soll[i], c.mode_soll[i]);
+        CHECK_EQ(zurueck.mode_ist[i], c.mode_ist[i]);
+        CHECK_EQ(zurueck.dir[i], c.dir[i]);
+        for (k = 0u; k < V4P_BTN_COUNT; k++) {
+            CHECK_EQ(zurueck.btn[i][k], c.btn[i][k]);
+        }
+    }
+
+    v4_test_case("GET_PORT_CONFIG: zu kurz / unmoegliche Werte werden "
+                 "abgewiesen (nicht geraten)");
+    CHECK_EQ(v4p_dec_get_port_config(p, (uint8_t)(V4P_GPC_PAYLOAD_LEN - 1u),
+                                     &zurueck), -1);
+    CHECK_EQ(v4p_dec_get_port_config(NULL, V4P_GPC_PAYLOAD_LEN, &zurueck), -1);
+    CHECK_EQ(v4p_dec_get_port_config(p, V4P_GPC_PAYLOAD_LEN, NULL), -1);
+    /* Wirksame Betriebsart 3 gibt es nicht. */
+    p[V4P_GPC_OFF_MODE_IST1] = 3u;
+    CHECK_EQ(v4p_dec_get_port_config(p, V4P_GPC_PAYLOAD_LEN, &zurueck), -1);
+    p[V4P_GPC_OFF_MODE_IST1] = V4P_PORT_JOY;
+    /* Vorgabe 7 gibt es nicht (nur 0..2 und 0xFF). */
+    p[V4P_GPC_OFF_MODE_SOLL1] = 7u;
+    CHECK_EQ(v4p_dec_get_port_config(p, V4P_GPC_PAYLOAD_LEN, &zurueck), -1);
+    p[V4P_GPC_OFF_MODE_SOLL1] = V4P_PORT_JOY;
+    /* Unbekanntes Richtungsbit. */
+    p[V4P_GPC_OFF_DIR0] = 0x88u;
+    CHECK_EQ(v4p_dec_get_port_config(p, V4P_GPC_PAYLOAD_LEN, &zurueck), -1);
+    p[V4P_GPC_OFF_DIR0] = V4P_DIR_STICK_L;
+    /* Unbekannter Knopfcode. */
+    p[V4P_GPC_OFF_BTN0] = (uint8_t)V4P_TASTE_ANZAHL;
+    CHECK_EQ(v4p_dec_get_port_config(p, V4P_GPC_PAYLOAD_LEN, &zurueck), -1);
+    p[V4P_GPC_OFF_BTN0] = V4P_TASTE_L1;
+    /* Doppelte Knopfquelle: die kann der ESP32 gar nicht liefern. */
+    p[V4P_GPC_OFF_BTN0 + 1u] = V4P_TASTE_L1;
+    CHECK_EQ(v4p_dec_get_port_config(p, V4P_GPC_PAYLOAD_LEN, &zurueck), -1);
+
+    v4_test_case("SET_PORT_ROUTING: 5 Byte [port][dir][b1][b2][b3]");
+    btn[0] = V4P_TASTE_A;
+    btn[1] = V4P_TASTE_B;
+    btn[2] = V4P_TASTE_START;
+    CHECK_EQ(v4p_enc_set_port_routing(p, 1u, V4P_DIR_DPAD, btn),
+             V4P_SPR_PAYLOAD_LEN);
+    CHECK_EQ(p[V4P_SPR_OFF_PORT], 1u);
+    CHECK_EQ(p[V4P_SPR_OFF_DIR], V4P_DIR_DPAD);
+    CHECK_EQ(p[V4P_SPR_OFF_BTN1], V4P_TASTE_A);
+    CHECK_EQ(p[V4P_SPR_OFF_BTN2], V4P_TASTE_B);
+    CHECK_EQ(p[V4P_SPR_OFF_BTN3], V4P_TASTE_START);
+    CHECK_EQ(v4p_dec_set_port_routing(p, V4P_SPR_PAYLOAD_LEN, &port, &dir,
+                                      NULL), 0);
+    CHECK_EQ(port, 1u);
+    CHECK_EQ(dir, V4P_DIR_DPAD);
+
+    v4_test_case("SET_PORT_ROUTING: port 2, unbekannter Code und "
+                 "Doppelbelegung werden abgewiesen");
+    p[V4P_SPR_OFF_PORT] = 2u;
+    CHECK_EQ(v4p_dec_set_port_routing(p, V4P_SPR_PAYLOAD_LEN, &port, &dir,
+                                      NULL), -1);
+    p[V4P_SPR_OFF_PORT] = 1u;
+    p[V4P_SPR_OFF_DIR]  = 0x80u;
+    CHECK_EQ(v4p_dec_set_port_routing(p, V4P_SPR_PAYLOAD_LEN, &port, &dir,
+                                      NULL), -1);
+    p[V4P_SPR_OFF_DIR] = V4P_DIR_DPAD;
+    p[V4P_SPR_OFF_BTN2] = p[V4P_SPR_OFF_BTN1];      /* A doppelt */
+    CHECK_EQ(v4p_dec_set_port_routing(p, V4P_SPR_PAYLOAD_LEN, &port, &dir,
+                                      btn), -1);
+    p[V4P_SPR_OFF_BTN2] = V4P_TASTE_KEINE;
+    p[V4P_SPR_OFF_BTN3] = V4P_TASTE_KEINE;          /* "keine" mehrfach OK */
+    CHECK_EQ(v4p_dec_set_port_routing(p, V4P_SPR_PAYLOAD_LEN, &port, &dir,
+                                      btn), 0);
+    CHECK_EQ(v4p_dec_set_port_routing(p, (uint8_t)(V4P_SPR_PAYLOAD_LEN - 1u),
+                                      &port, &dir, btn), -1);
+
+    v4_test_case("SET_DEVICE_PORT: 7 Byte [bda 6][port]");
+    for (i = 0u; i < V4P_BDA_LEN; i++) {
+        bda[i] = (uint8_t)(0x10u + i);
+    }
+    CHECK_EQ(v4p_enc_set_device_port(p, bda, 0u), V4P_SDP_PAYLOAD_LEN);
+    CHECK_EQ(p[V4P_SDP_OFF_BDA], 0x10u);
+    CHECK_EQ(p[V4P_SDP_OFF_PORT], 0u);
+    for (i = 0u; i < V4P_BDA_LEN; i++) {
+        bda[i] = 0u;
+    }
+    port = 9u;
+    CHECK_EQ(v4p_dec_set_device_port(p, V4P_SDP_PAYLOAD_LEN, bda, &port), 0);
+    CHECK_EQ(bda[5], 0x15u);
+    CHECK_EQ(port, 0u);
+    p[V4P_SDP_OFF_PORT] = 2u;
+    CHECK_EQ(v4p_dec_set_device_port(p, V4P_SDP_PAYLOAD_LEN, bda, &port), -1);
+    p[V4P_SDP_OFF_PORT] = 0u;
+    CHECK_EQ(v4p_dec_set_device_port(p, (uint8_t)(V4P_SDP_PAYLOAD_LEN - 1u),
+                                     bda, &port), -1);
+
+    v4_test_case("Prueffunktionen: dir, mode_soll, taste, Knopfsatz");
+    CHECK_EQ(v4p_dir_valid(0u), 1);
+    CHECK_EQ(v4p_dir_valid((uint8_t)V4P_DIR_ALLE), 1);
+    CHECK_EQ(v4p_dir_valid(0x08u), 0);
+    CHECK_EQ(v4p_dir_valid(0xFFu), 0);
+    CHECK_EQ(v4p_mode_soll_valid(0u), 1);
+    CHECK_EQ(v4p_mode_soll_valid(V4P_PORT_MOUSE), 1);
+    CHECK_EQ(v4p_mode_soll_valid((uint8_t)V4P_MODE_AUTO), 1);
+    CHECK_EQ(v4p_mode_soll_valid(3u), 0);
+    CHECK_EQ(v4p_taste_valid(0u), 1);
+    CHECK_EQ(v4p_taste_valid((uint8_t)(V4P_TASTE_ANZAHL - 1u)), 1);
+    CHECK_EQ(v4p_taste_valid((uint8_t)V4P_TASTE_ANZAHL), 0);
+    btn[0] = V4P_TASTE_A;
+    btn[1] = V4P_TASTE_B;
+    btn[2] = V4P_TASTE_KEINE;
+    CHECK_EQ(v4p_btn_set_valid(btn), 1);
+    btn[1] = V4P_TASTE_A;
+    CHECK_EQ(v4p_btn_set_valid(btn), 0);
+    btn[0] = V4P_TASTE_KEINE;
+    btn[1] = V4P_TASTE_KEINE;
+    btn[2] = V4P_TASTE_KEINE;
+    CHECK_EQ(v4p_btn_set_valid(btn), 1);        /* "keine" mehrfach erlaubt */
+    CHECK_EQ(v4p_btn_set_valid(NULL), 0);
+
+    v4_test_case("Der Knopfsatz steht in der Reihenfolge Pin 6, Pin 9, Pin 5");
+    CHECK_STR(v4p_bit_pin(4u), "Pin 6");
+    CHECK_STR(v4p_bit_pin(5u), "Pin 9");
+    CHECK_STR(v4p_bit_pin(6u), "Pin 5");
+}
+
+static void test_names_routing(void)
+{
+    char txt[64];
+
+    v4_test_case("Klartexte der Eingangsverteilung");
+    CHECK_STR(v4p_port_mode_soll_name(V4P_PORT_OFF), "aus");
+    CHECK_STR(v4p_port_mode_soll_name(V4P_PORT_JOY), "Joystick");
+    CHECK_STR(v4p_port_mode_soll_name(V4P_PORT_MOUSE), "Maus");
+    CHECK_STR(v4p_port_mode_soll_name((uint8_t)V4P_MODE_AUTO), "auto");
+    CHECK_STR(v4p_dir_name(0u), "Stick links");
+    CHECK_STR(v4p_dir_name(1u), "Stick rechts");
+    CHECK_STR(v4p_dir_name(2u), "D-Pad");
+    CHECK_STR(v4p_taste_name(V4P_TASTE_KEINE), "keine");
+    CHECK_STR(v4p_taste_name(V4P_TASTE_L1), "L1");
+    CHECK_STR(v4p_taste_name(V4P_TASTE_HOME), "Home/Capture");
+    CHECK_STR(v4p_taste_name(V4P_TASTE_GRUPPE1), "Gruppe 1 (A,L1,L2,L3)");
+    CHECK_STR(v4p_taste_name_short(V4P_TASTE_GRUPPE1), "Gruppe 1");
+    CHECK_STR(v4p_taste_name_short(V4P_TASTE_A), "A");
+
+    v4_test_case("Richtungsmaske als Text");
+    v4p_dir_text((uint8_t)(V4P_DIR_STICK_L | V4P_DIR_DPAD), txt, sizeof(txt));
+    CHECK_STR(txt, "Stick links+D-Pad");
+    v4p_dir_text(0u, txt, sizeof(txt));
+    CHECK_STR(txt, "keine");
+    v4p_dir_text((uint8_t)V4P_DIR_ALLE, txt, sizeof(txt));
+    CHECK_STR(txt, "Stick links+Stick rechts+D-Pad");
+    /* Kleiner Puffer: immer nullterminiert, nie ueberlaufen. */
+    v4p_dir_text((uint8_t)V4P_DIR_ALLE, txt, 8u);
+    CHECK_EQ((int)strlen(txt) < 8, 1);
+    /* Unbekannte Bits erzeugen keinen erfundenen Namen. */
+    v4p_dir_text(0x80u, txt, sizeof(txt));
+    CHECK_STR(txt, "keine");
 }
 
 /* ------------------------------------------------------------------ */
@@ -626,6 +847,8 @@ int test_proto(void)
     test_codec_hid();
     test_codec_dev();
     test_codec_port_mode();
+    test_codec_port_config();
+    test_names_routing();
     test_display_helpers();
 
     return v4_test_failures;

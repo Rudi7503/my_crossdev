@@ -60,10 +60,18 @@ typedef struct {
     int bad_set_port_echo;      /* SET_PORT_MODE bestaetigt einen anderen
                                  * Modus -> der Master muss V4_ERR_FRAME
                                  * melden, statt der Bestaetigung zu glauben */
+    int bad_routing_echo;       /* SET_PORT_ROUTING bestaetigt andere Werte
+                                 * (einmalig) -> V4_ERR_FRAME erwartet */
     int legacy_input10;         /* GET_INPUT antwortet mit der alten
                                  * 10-Byte-Fassung OHNE Pegel. Damit laesst
                                  * sich der Rueckfallweg des Masters pruefen:
                                  * er darf dann keinen Pegel anzeigen. */
+    int legacy_fw3;             /* Firmware OHNE Eingangsverteilung: GET_INFO
+                                 * meldet fw_ver 3 und caps 0x00FF, und die
+                                 * Befehle 0x08..0x0A antworten BAD_CMD. Damit
+                                 * laesst sich pruefen, dass der Master fw_ver
+                                 * 3 annimmt (kein Abbruch) und die neuen
+                                 * Felder nicht blind setzt. */
 
     /* Diagnose */
     unsigned long writes;       /* verarbeitete WRITE-Frames               */
@@ -103,6 +111,20 @@ void v4_mock_set_port_mode (int port, uint8_t mode);
 void v4_mock_set_port_state(int port, uint8_t drive_bits);
 void v4_mock_set_port_level(int port, uint8_t level_bits);
 void v4_mock_set_steps     (uint32_t x, uint32_t y);
+
+/* Eingangsverteilung je Buchse (fw_ver 4). Die Vorgaben nach v4_mock_reset()
+ * sind die des ESP32: dir = V4P_DIR_STANDARD (0x07), Knopfquellen
+ * GRUPPE1/GRUPPE2/GRUPPE3 (14/15/16), mode_soll = V4P_MODE_AUTO (0xFF) --
+ * also "ohne neue Einstellung aendert sich nichts". */
+void v4_mock_set_routing (int port, uint8_t dir,
+                          const uint8_t btn[V4P_BTN_COUNT]);
+/* Nur die VORGABE setzen (mode_soll), die wirksame Betriebsart bleibt. So
+ * laesst sich der Unterschied zwischen GET_PORT_CONFIG.mode_soll und
+ * GET_PORT_CONFIG.mode_ist nachstellen. V4P_MODE_AUTO ist erlaubt. */
+void v4_mock_set_mode_soll(int port, uint8_t mode_soll);
+/* Geraet -> Buchse, wie SET_DEVICE_PORT es speichert. Liefert bei gueltigem
+ * Index 0/1, sonst 0xFF. */
+uint8_t v4_mock_dev_port(int idx);
 
 /* HID-Zustand, wie ihn GET_HID meldet. `name` darf NULL sein. */
 void v4_mock_set_hid(uint8_t kind, uint8_t transport, uint16_t vid,

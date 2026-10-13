@@ -299,8 +299,20 @@ uint8_t v4_get_info (v4_master_t *m, v4p_info_t *info);
  * die alte 64-Byte-Fassung) wuerde sonst stillschweigend Muell liefern --
  * deshalb ist das kein "nice to have", sondern die erste Pruefung nach PING.
  * `bulk_payload_max` wird NICHT verlangt: 0 ist hier die Aussage "kein
- * Dateiweg", ein spaeterer Stand darf dort etwas anderes melden. */
+ * Dateiweg", ein spaeterer Stand darf dort etwas anderes melden.
+ *
+ * Die FIRMWARE-Version wird absichtlich NICHT geprueft: fw_ver 4 (die
+ * Eingangsverteilung) benutzt denselben Rahmen und dieselbe proto_ver 3 und
+ * darf nicht abgelehnt werden. Ob die neuen Befehle vorhanden sind, sagt
+ * v4_info_has_caps() -- die Faehigkeitsbits sind die verbindliche Auskunft,
+ * nicht die Versionsnummer. */
 uint8_t v4_check_info(const v4p_info_t *info);
+
+/* 1, wenn die gemeldeten Faehigkeiten ALLE Bits aus `bits` enthalten.
+ *   v4_info_has_caps(&info, V4P_CAP_PORT_ROUTING) -> GET_PORT_CONFIG/
+ *                                                    SET_PORT_ROUTING da?
+ * Ohne gueltige INFO-Antwort (NULL) immer 0: raten waere hier falsch. */
+int v4_info_has_caps(const v4p_info_t *info, uint16_t bits);
 
 uint8_t v4_get_status(v4_master_t *m, v4p_status_t *st);            /* 0x02 */
 
@@ -315,6 +327,32 @@ uint8_t v4_get_port_mode(v4_master_t *m, uint8_t mode[V4P_PORT_COUNT]); /* 0x05 
  * und darf nicht als "keine Pegel" durchgehen. */
 uint8_t v4_get_input (v4_master_t *m, v4p_input_t *in);             /* 0x06 */
 uint8_t v4_get_hid   (v4_master_t *m, v4p_hid_t *hid);              /* 0x07 */
+
+/*
+ * fw_ver 4: Eingangsverteilung und Geraetezuordnung.
+ *
+ * Alle drei Wrapper pruefen die ECHO-Antwort feldweise, bevor sie dem Slave
+ * glauben. Der ESP32 lehnt eine Doppelbelegung der Knopfquellen mit BAD_ARG ab
+ * und aendert dabei nichts (siehe docs/PROTOKOLL.md) -- BAD_ARG kommt deshalb
+ * unveraendert beim Aufrufer an, und der Aufrufer laesst seine Anzeige auf dem
+ * letzten BESTAETIGTEN Stand stehen.
+ */
+
+/* 0x09: Vorgabe UND wirksame Betriebsart, Richtungsquellen und die drei
+ * Knopfquellen beider Buchsen in einer Antwort. */
+uint8_t v4_get_port_config(v4_master_t *m, v4p_portcfg_t *cfg);
+
+/* 0x0A: Richtungen und die drei Knopfquellen EINER Buchse setzen.
+ * `btn` ist in der Reihenfolge Pin 6, Pin 9, Pin 5 (V4P_BTN_COUNT Bytes).
+ * Rueckgabe V4P_ST_BAD_ARG (lokal oder vom Slave) = nichts geaendert. */
+uint8_t v4_set_port_routing(v4_master_t *m, uint8_t port, uint8_t dir,
+                            const uint8_t btn[V4P_BTN_COUNT]);
+
+/* 0x08: Geraeteadresse (6 Byte, aus DEV_GET) einer Buchse zuordnen. Die
+ * Zuordnung liegt im NVS des ESP32 und ueberlebt den Neustart; sie ist ueber
+ * die Leitung NICHT lesbar (DEV_GET liefert nur Name und Adresse). */
+uint8_t v4_set_device_port(v4_master_t *m, const uint8_t bda[V4P_BDA_LEN],
+                           uint8_t port);
 
 uint8_t v4_scan_start(v4_master_t *m, uint8_t inq_units, int continuous); /* 0x10 */
 uint8_t v4_scan_stop (v4_master_t *m);                              /* 0x11 */

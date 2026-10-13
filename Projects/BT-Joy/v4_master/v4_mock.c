@@ -37,6 +37,7 @@ typedef struct {
     char    name[MOCK_NAME_STORE];
     uint8_t bda[6];
     int     used;
+    uint8_t port;               /* 0/1 oder V4P_NO_INDEX = keine Zuordnung */
 } mock_dev_t;
 
 v4_mock_knobs_t v4_mock;
@@ -58,6 +59,13 @@ static uint8_t  s_port_state[V4P_PORT_COUNT];   /* Zug-Maske, 1 = GND  */
 static uint8_t  s_port_level[V4P_PORT_COUNT];   /* Pegel,     1 = High */
 static uint32_t s_steps_x;
 static uint32_t s_steps_y;
+
+/* Eingangsverteilung (fw_ver 4) -- wie sie im NVS des ESP32 liegt:
+ * s_mode_soll ist die VORGABE (V4P_MODE_AUTO = ungesetzt), s_dir/s_btn sind
+ * die wirksamen Quellen. s_port_mode[] oben ist die WIRKSAME Betriebsart. */
+static uint8_t  s_mode_soll[V4P_PORT_COUNT];
+static uint8_t  s_dir[V4P_PORT_COUNT];
+static uint8_t  s_btn[V4P_PORT_COUNT][V4P_BTN_COUNT];
 
 static v4p_hid_t s_hid;
 
@@ -143,7 +151,11 @@ static void mock_fill_info(v4p_info_t *in)
 {
     memset(in, 0, sizeof(*in));
     in->proto_ver        = (uint8_t)V4P_PROTO_VER;
-    in->fw_ver           = (uint8_t)V4P_FW_VER;
+    /* fw_ver 4 = Eingangsverteilung. Der Stoerknopf legacy_fw3 stellt die
+     * Fassung OHNE die neuen Befehle nach -- genau die Firmware, die der
+     * Master weiterhin annehmen muss (gleicher Rahmen, gleiche proto_ver). */
+    in->fw_ver           = v4_mock.legacy_fw3
+                               ? 3u : (uint8_t)V4P_FW_VER;
     in->write_frame_len  = (uint8_t)V4P_WRITE_FRAME_LEN;
     in->read_frame_len   = (uint8_t)V4P_READ_FRAME_LEN;
     /* 0 = "kein Dateiweg". Das ist eine Faehigkeitsaussage, kein Platzhalter:
@@ -158,6 +170,10 @@ static void mock_fill_info(v4p_info_t *in)
                                       | V4P_CAP_GET_HID  | V4P_CAP_HID_BT
                                       | V4P_CAP_HID_BLE  | V4P_CAP_MOUSE
                                       | V4P_CAP_PAD      | V4P_CAP_BATTERY);
+    if (!v4_mock.legacy_fw3) {
+        in->caps = (uint16_t)(in->caps | V4P_CAP_PORT_ROUTING
+                              | V4P_CAP_DEVICE_PORT);
+    }
 }
 
 static void mock_fill_status(v4p_status_t *st)
@@ -305,11 +321,26 @@ static void mock_dispatch(uint8_t cmd, uint8_t seq, const uint8_t *pay,
         }
         port = pay[V4P_SPM_OFF_PORT];
         mode = pay[V4P_SPM_OFF_MODE];
-        if (port >= V4P_PORT_COUNT || mode > V4P_PORT_MODE_MAX) {
+        if (port >= V4P_PORT_COUNT || !v4p_mode_soll_valid(mode)) {
             mock_answer_empty(cmd, seq, V4P_ST_BAD_ARG);
             return;
         }
-        s_port_mode[port] = mode;
+        /* V4P_MODE_AUTO ("nach Geraeteart") gibt es erst mit fw_ver 4. Die
+         * aeltere Fassung lehnt ihn mit BAD_ARG ab -- genau das muss der
+         * Master aushalten, ohne seine Anzeige zu verdrehen. */
+        if (v4_mock.legacy_fw3 && mode == (uint8_t)V4P_MODE_AUTO) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_ARG);
+            return;
+        }
+        if (mode == (uint8_t)V4P_MODE_AUTO) {
+            /* "nach Geraeteart": nur die VORGABE wird geloescht, die wirksame
+             * Betriebsart bleibt stehen (so macht es der ESP32). Die Bestaetigung
+             * ist das Echo mit 0xFF. */
+            s_mode_soll[port] = (uint8_t)V4P_MODE_AUTO;
+        } else {
+            s_port_mode[port] = mode;
+            s_mode_soll[port] = mode;
+        }
 
         (void)v4p_enc_set_port_mode(p, port, mode);
         if (v4_mock.bad_set_port_echo) {
@@ -328,6 +359,119 @@ static void mock_dispatch(uint8_t cmd, uint8_t seq, const uint8_t *pay,
         (void)v4p_enc_get_port_mode(p, s_port_mode);
         mock_answer(cmd, seq, V4P_ST_OK, V4P_FLAG_NONE, p,
                     (uint8_t)V4P_GPM_PAYLOAD_LEN);
+        return;
+    }
+
+    /*
+     * Eingangsverteilung (fw_ver 4). Die drei Befehle sind bei legacy_fw3
+     * NICHT vorhanden -- dann antwortet der Mock wie eine alte Firmware mit
+     * BAD_CMD und der Master darf sie nicht als Bestaetigung deuten.
+     */
+    case V4P_CMD_GET_PORT_CONFIG: {
+        v4p_portcfg_t c;
+        uint8_t       p[V4P_GPC_PAYLOAD_LEN];
+
+        if (v4_mock.legacy_fw3) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_CMD);
+            return;
+        }
+        memset(&c, 0, sizeof(c));
+        c.mode_soll[0] = s_mode_soll[0];
+        c.mode_soll[1] = s_mode_soll[1];
+        c.mode_ist[0]  = s_port_mode[0];
+        c.mode_ist[1]  = s_port_mode[1];
+        c.dir[0]       = s_dir[0];
+        c.dir[1]       = s_dir[1];
+        {
+            int port;
+
+            for (port = 0; port < (int)V4P_PORT_COUNT; port++) {
+                int k;
+
+                for (k = 0; k < (int)V4P_BTN_COUNT; k++) {
+                    c.btn[port][k] = s_btn[port][k];
+                }
+            }
+        }
+        (void)v4p_enc_get_port_config(p, &c);
+        mock_answer(cmd, seq, V4P_ST_OK, V4P_FLAG_NONE, p,
+                    (uint8_t)V4P_GPC_PAYLOAD_LEN);
+        return;
+    }
+
+    case V4P_CMD_SET_PORT_ROUTING: {
+        uint8_t port;
+        uint8_t dir;
+        uint8_t btn[V4P_BTN_COUNT];
+        uint8_t p[V4P_SPR_PAYLOAD_LEN];
+
+        if (v4_mock.legacy_fw3) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_CMD);
+            return;
+        }
+        if (plen < (uint8_t)V4P_SPR_PAYLOAD_LEN) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_ARG);
+            return;
+        }
+        port   = pay[V4P_SPR_OFF_PORT];
+        dir    = pay[V4P_SPR_OFF_DIR];
+        btn[0] = pay[V4P_SPR_OFF_BTN1];
+        btn[1] = pay[V4P_SPR_OFF_BTN2];
+        btn[2] = pay[V4P_SPR_OFF_BTN3];
+
+        /* ERST pruefen, DANN uebernehmen: ein abgelehnter Wert darf die
+         * laufende Ausgabe nicht anfassen. Genau so macht es der ESP32
+         * (v4_settings_set_routing vor joy_port_set_*). */
+        if (port >= V4P_PORT_COUNT || !v4p_dir_valid(dir)
+            || !v4p_btn_set_valid(btn)) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_ARG);
+            return;
+        }
+        s_dir[port]    = dir;
+        s_btn[port][0] = btn[0];
+        s_btn[port][1] = btn[1];
+        s_btn[port][2] = btn[2];
+
+        (void)v4p_enc_set_port_routing(p, port, dir, btn);
+        if (v4_mock.bad_routing_echo) {
+            v4_mock.bad_routing_echo = 0;
+            p[V4P_SPR_OFF_DIR] = (uint8_t)(dir ^ (uint8_t)V4P_DIR_DPAD);
+        }
+        mock_answer(cmd, seq, V4P_ST_OK, V4P_FLAG_NONE, p,
+                    (uint8_t)V4P_SPR_PAYLOAD_LEN);
+        return;
+    }
+
+    case V4P_CMD_SET_DEVICE_PORT: {
+        uint8_t port;
+        uint8_t p[V4P_SDP_PAYLOAD_LEN];
+        int     i;
+
+        if (v4_mock.legacy_fw3) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_CMD);
+            return;
+        }
+        if (plen < (uint8_t)V4P_SDP_PAYLOAD_LEN) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_ARG);
+            return;
+        }
+        port = pay[V4P_SDP_OFF_PORT];
+        if (port >= V4P_PORT_COUNT) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_ARG);
+            return;
+        }
+        /* Die Zuordnung liegt am Geraet; eine unbekannte Adresse wird trotzdem
+         * gespeichert (sie kann beim naechsten Auftreten greifen) -- wie beim
+         * ESP32. */
+        for (i = 0; i < s_dev_count; i++) {
+            if (memcmp(s_dev[i].bda, &pay[V4P_SDP_OFF_BDA], 6u) == 0) {
+                s_dev[i].port = port;
+                break;
+            }
+        }
+        memcpy(p, pay, (size_t)V4P_SDP_PAYLOAD_LEN);
+        mock_answer(cmd, seq, V4P_ST_OK, V4P_FLAG_NONE, p,
+                    (uint8_t)V4P_SDP_PAYLOAD_LEN);
         return;
     }
 
@@ -742,6 +886,21 @@ void v4_mock_reset(void)
     s_steps_x      = 0u;
     s_steps_y      = 0u;
 
+    /* Eingangsverteilung: die Vorgaben des ESP32. Ohne neue Einstellung
+     * aendert sich damit nichts -- dir = alle drei Richtungsquellen,
+     * Knopfquellen = die drei bisherigen Gruppen, Vorgabe = "nach
+     * Geraeteart". */
+    s_mode_soll[0] = (uint8_t)V4P_MODE_AUTO;
+    s_mode_soll[1] = (uint8_t)V4P_MODE_AUTO;
+    s_dir[0]       = (uint8_t)V4P_DIR_STANDARD;
+    s_dir[1]       = (uint8_t)V4P_DIR_STANDARD;
+    s_btn[0][0]    = (uint8_t)V4P_TASTE_GRUPPE1;
+    s_btn[0][1]    = (uint8_t)V4P_TASTE_GRUPPE2;
+    s_btn[0][2]    = (uint8_t)V4P_TASTE_GRUPPE3;
+    s_btn[1][0]    = (uint8_t)V4P_TASTE_GRUPPE1;
+    s_btn[1][1]    = (uint8_t)V4P_TASTE_GRUPPE2;
+    s_btn[1][2]    = (uint8_t)V4P_TASTE_GRUPPE3;
+
     memset(&s_hid, 0, sizeof(s_hid));
     s_hid.kind      = V4P_HID_KIND_NONE;
     s_hid.transport = V4P_HID_TR_BREDR;
@@ -774,6 +933,7 @@ int v4_mock_dev_add(const char *name, const uint8_t bda[6])
     for (i = 0; i < 6u; i++) {
         s_dev[s_dev_count].bda[i] = bda[i];
     }
+    s_dev[s_dev_count].port = V4P_NO_INDEX;
     s_dev[s_dev_count].used = 1;
     s_dev_count++;
     return 0;
@@ -788,6 +948,46 @@ void v4_mock_set_port_mode(int port, uint8_t mode)
         mode = (uint8_t)V4P_PORT_OFF;
     }
     s_port_mode[port] = mode;
+    /* Wie der Konsolenbefehl "portmode" und SET_PORT_MODE auf dem ESP32: die
+     * gesetzte Betriebsart ist zugleich die dauerhafte VORGABE der Buchse. */
+    s_mode_soll[port] = mode;
+}
+
+void v4_mock_set_mode_soll(int port, uint8_t mode_soll)
+{
+    if (port < 0 || port >= (int)V4P_PORT_COUNT) {
+        return;
+    }
+    if (!v4p_mode_soll_valid(mode_soll)) {
+        return;
+    }
+    s_mode_soll[port] = mode_soll;      /* die wirksame bleibt stehen */
+}
+
+void v4_mock_set_routing(int port, uint8_t dir,
+                         const uint8_t btn[V4P_BTN_COUNT])
+{
+    if (port < 0 || port >= (int)V4P_PORT_COUNT) {
+        return;
+    }
+    if (!v4p_dir_valid(dir) || !v4p_btn_set_valid(btn)) {
+        return;
+    }
+    s_dir[port]    = dir;
+    s_btn[port][0] = btn[0];
+    s_btn[port][1] = btn[1];
+    s_btn[port][2] = btn[2];
+}
+
+uint8_t v4_mock_dev_port(int idx)
+{
+    if (idx < 0 || idx >= s_dev_count) {
+        return V4P_NO_INDEX;
+    }
+    if (s_dev[idx].port >= V4P_PORT_COUNT) {
+        return V4P_NO_INDEX;
+    }
+    return s_dev[idx].port;
 }
 
 void v4_mock_set_port_state(int port, uint8_t drive_bits)
@@ -896,6 +1096,26 @@ void v4_mock_seed_default(void)
     v4_mock_set_port_state(0, 0u);
     v4_mock_set_port_state(1, 0u);
     v4_mock_set_steps(0u, 0u);
+
+    /* Eingangsverteilung wie ab Werk (siehe v4_mock_reset): alle drei
+     * Richtungsquellen, Knopfquellen = die drei bisherigen Gruppen. */
+    {
+        uint8_t ab_werk[V4P_BTN_COUNT];
+
+        ab_werk[0] = (uint8_t)V4P_TASTE_GRUPPE1;
+        ab_werk[1] = (uint8_t)V4P_TASTE_GRUPPE2;
+        ab_werk[2] = (uint8_t)V4P_TASTE_GRUPPE3;
+        v4_mock_set_routing(0, (uint8_t)V4P_DIR_STANDARD, ab_werk);
+        v4_mock_set_routing(1, (uint8_t)V4P_DIR_STANDARD, ab_werk);
+    }
+    /*
+     * Und die VORGABE ausdruecklich auf "nach Geraeteart" zuruecknehmen --
+     * so sieht der Bestand ab Werk aus (NVS ungesetzt), waehrend die
+     * wirksame Betriebsart aus der Geraeteart kommt. Genau dieser
+     * Unterschied ist der Grund, warum es mode_soll UND mode_ist gibt.
+     */
+    v4_mock_set_mode_soll(0, (uint8_t)V4P_MODE_AUTO);
+    v4_mock_set_mode_soll(1, (uint8_t)V4P_MODE_AUTO);
 
     v4_mock_set_hid(V4P_HID_KIND_PAD, V4P_HID_TR_BREDR, 0x2DC8u, 0x6100u,
                     78u, 3u, 10u, 1234u, "8BitDo Pro 2");

@@ -9,16 +9,44 @@
  * Was die Oberflaeche zeigt:
  *   - Kopfzeile: Protokoll- und Firmware-Version, Faehigkeiten, Zustand
  *   - Controller-Zeile: Name, VID/PID, Art, Transport, gezaehlte Reports
- *   - zwei Portgruppen (Buchse 0 und 1) mit Betriebsart als Cycle und den
- *     sieben Leitungen UP, DOWN, LEFT, RIGHT, BTN1 (Pin 6), BTN2 (Pin 9),
- *     BTN3 (Pin 5) -- je Leitung "Zug" und "Pegel"
- *   - VERGLEICH direkt <-> I2C: je Buchse das, was die V4 an ihren EIGENEN
- *     Registern liest (JOY0DAT/JOY1DAT/CIAAPRA/POTINP), neben dem, was der
- *     ESP32 ueber GET_INPUT meldet -- mit OK/ABWEICHUNG und den Rohwerten der
- *     Feuerregister
+ *   - Umschalter "Seite" mit ZWEI Seiten (MUIA_Group_PageMode):
+ *       Seite "Anzeige"        die beiden Buchsen (Betriebsart als Cycle mit
+ *                              auto/aus/Joystick/Maus und "wirkt: ..." daneben,
+ *                              die sieben Leitungen UP, DOWN, LEFT, RIGHT,
+ *                              BTN1 (Pin 6), BTN2 (Pin 9), BTN3 (Pin 5) mit
+ *                              "Zug" und "Pegel") und der Vergleich
+ *                              direkt <-> I2C
+ *       Seite "Konfiguration"  die Eingangsverteilung (fw_ver 4): je Buchse
+ *                              Geraet (SET_DEVICE_PORT), Richtungen (drei
+ *                              Schalter) und die drei Knopfquellen Pin 6,
+ *                              Pin 9, Pin 5 (SET_PORT_ROUTING), dazu der
+ *                              Klartext beider Buchsen
  *   - Knoepfe: Neu suchen, Geraeteliste/Verbinden, Trennen, Vergessen,
- *     Port 0/1 Modus weiterschalten, Buchsen tauschen
+ *     Port 0/1 Vorgabe weiterschalten, Buchsen tauschen
  *   - Logfeld mit allen Meldungen
+ *
+ * WARUM ZWEI SEITEN UND NICHT EINE LAENGERE LISTE: mit fw_ver 4 ist der Inhalt
+ * so gewachsen, dass er bei 640x400 (auf dieser V4 sogar 640x360) nicht mehr
+ * untereinander passt. MUI_Group.doc sagt zur Seitengruppe: "the minimum
+ * width/height of a page group is the maximum minimum width/height of all its
+ * children". Die Konfigurationsseite ist KLEINER als die Anzeigeseite -- die
+ * Mindestgroesse des Fensters aendert sich damit NICHT, und nichts wird unter
+ * seine Mindesthoehe gedrueckt (das war der Befund "leere Felder").
+ *
+ * DIE EINGANGSVERTEILUNG GEHT SOFORT ZUM ESP32: jede Aenderung an einem
+ * Auswahlfeld oder Schalter ruft direkt SET_DEVICE_PORT, SET_PORT_MODE oder
+ * SET_PORT_ROUTING -- im Hauptfaden, wie alles andere. Danach wird
+ * GET_PORT_CONFIG gelesen und die Felder werden auf den ECHTEN Zustand
+ * gestellt. Lehnt der ESP32 ab (BAD_ARG, z.B. eine doppelt vergebene
+ * Knopfquelle), steht der Grund im Klartext im Fenster und im Protokoll, und
+ * die Anzeige bleibt auf dem letzten bestaetigten Stand.
+ *
+ * WAS DIE GEGENSTELLE NICHT HERGIBT: welche BDA welcher Buchse zugeordnet ist,
+ * ist ueber die Leitung NICHT lesbar (DEV_GET liefert nur Name und Adresse,
+ * GET_PORT_CONFIG nur die Buchsenfelder). Die Oberflaeche zeigt deshalb die
+ * Zuordnungen, die in DIESER Sitzung per SET_DEVICE_PORT gesetzt und
+ * bestaetigt wurden -- die Zuordnung selbst liegt im NVS des ESP32 und bleibt
+ * dort. Ein "Loesen" gibt es nicht: der ESP32 kennt nur BDA -> Buchse.
  *
  * DIREKT GELESEN WIRD IM SELBEN TAKT UND IM SELBEN FADEN:
  * Die Registerabfrage (v4_joyport.c) kostet nichts und braucht keinen Bus. Sie
@@ -179,6 +207,23 @@
 #define ID_MODE1      7
 #define ID_SWAP       8
 #define ID_REFRESH    9
+/* Eingangsverteilung (fw_ver 4): je Buchse ein Ausloeser fuer Geraet,
+ * Richtungen und Knopfquellen. Die drei Richtungsschalter bzw. die drei
+ * Knopf-Auswahlfelder einer Buchse werden im Handler gemeinsam gelesen --
+ * ein ReturnID je EINZELNEM Feld waere nur mehr Buchhaltung. */
+#define ID_DEV0      10
+#define ID_DEV1      11
+#define ID_DIR0      12
+#define ID_DIR1      13
+#define ID_BTN0      14
+#define ID_BTN1      15
+/* Die beiden Knoepfe "Port N Modus >": sie schalten die VORGABE EINEN Schritt
+ * weiter. Das ist ein eigener ReturnID, weil das Auswahlfeld selbst schon auf
+ * ID_MODE0/ID_MODE1 hoert (dort wird der Wert direkt gesendet). */
+#define ID_MODE0_NEXT 16
+#define ID_MODE1_NEXT 17
+/* Der Umschalter "Seite" (Anzeige / Konfiguration). */
+#define ID_SEITE      18
 
 struct IntuitionBase *IntuitionBase;
 struct GfxBase       *GfxBase;
@@ -256,11 +301,33 @@ static Object *s_state;               /* Zustandszeile                    */
 static Object *s_port0;               /* Portgruppe 0                     */
 static Object *s_port1;               /* Portgruppe 1                     */
 static Object *s_vergleich;           /* direkt <-> I2C, beide Buchsen    */
-static Object *s_mode0;               /* Cycle Betriebsart Buchse 0       */
-static Object *s_mode1;               /* Cycle Betriebsart Buchse 1       */
+static Object *s_mode0;               /* Cycle Vorgabe Betriebsart Buchse 0 */
+static Object *s_mode1;               /* Cycle Vorgabe Betriebsart Buchse 1 */
 
 /*
- * Die Eintraege der beiden Cycle-Knoepfe hinter "Buchse 0:" / "Buchse 1:".
+ * Die Eingangsverteilung (fw_ver 4) in der Oberflaeche -- ein Satz Objekte je
+ * Buchse:
+ *
+ *   s_dev0/s_dev1        Geraet aus der Scanliste (SET_DEVICE_PORT)
+ *   s_dir0/s_dir1        die drei Richtungsschalter (SET_PORT_ROUTING.dir)
+ *   s_b0/s_b1            Pin 6, Pin 9, Pin 5 als Auswahlfeld
+ *   s_wirk0/s_wirk1      "wirkt: <Betriebsart>" neben dem Auswahlfeld
+ *   s_cfgtext            Kopf, Zusammenfassung und Meldungen im Klartext
+ */
+static Object *s_dev0, *s_dev1;
+static Object *s_dir0[3], *s_dir1[3];
+static Object *s_b0[3], *s_b1[3];
+static Object *s_wirk0, *s_wirk1;
+static Object *s_cfgtext;
+/*
+ * Seitenumschalter: s_seite ist das Auswahlfeld ("Anzeige"/"Konfiguration"),
+ * s_seiten die Seitengruppe (MUIA_Group_PageMode) mit den beiden Seiten.
+ */
+static Object *s_seite;
+static Object *s_seiten;
+
+/*
+ * Die Eintraege der beiden Cycle-Knoepfe hinter "Betriebsart".
  *
  * MUI erwartet hier ein NULL-ABGESCHLOSSENES ARRAY von Zeichenketten
  * (STRPTR *), KEINE mit '|' getrennte Zeichenkette. Belege:
@@ -277,28 +344,85 @@ static Object *s_mode1;               /* Cycle Betriebsart Buchse 1       */
  * war LEER und -- weil MUI seine Breite aus den Eintraegen rechnet -- ueber
  * die ganze Spaltenbreite gezogen. Am Geraet gesehen am 13.10.2026.
  *
- * Die Reihenfolge ist die der Betriebsarten (V4P_PORT_OFF = 0,
- * V4P_PORT_JOY = 1, V4P_PORT_MOUSE = 2) und damit genau der Wert, den
- * GET_PORT_MODE liefert und den der Knopf ueber SET_PORT_MODE setzt. Die
- * Namen sind dieselben wie in v4p_port_mode_name().
+ * Der ERSTE Eintrag ist "auto" (V4P_MODE_AUTO, 0xFF): das ist die VORGABE
+ * "nach Geraeteart" aus GET_PORT_CONFIG.mode_soll. Der Index im Auswahlfeld
+ * ist deshalb NICHT der Wert -- die Umrechnung machen gui_mode_index() und
+ * gui_mode_aus_index(). Die folgenden drei Eintraege sind die Betriebsarten
+ * 0/1/2 in der Reihenfolge von V4P_PORT_*.
  *
  * Das Feld ist ABSICHTLICH ortsfest (static): MUI merkt sich den Zeiger auf
  * das Array. Ein Puffer auf dem 4-KB-Stapel waere hier die klassische Falle.
  */
 static const char *const gui_modus_eintraege[] = {
-    "aus", "Joystick", "Maus", NULL
+    "auto", "aus", "Joystick", "Maus", NULL
 };
 
 /*
  * Sicherung zur UEBERSETZUNGSZEIT: das Array muss mit NULL enden -- MUI liest
  * die Eintraege bis NULL. Wer den Abschluss entfernt, bekommt hier einen
  * Uebersetzungsfehler statt eines leeren Auswahlfelds auf der V4.
- * (V4P_PORT_MODE_MAX ist die letzte Betriebsart "Maus"; dazu kommen die
- * Betriebsart 0 "aus" und der NULL-Abschluss.)
+ * (V4P_PORT_MODE_MAX ist die letzte Betriebsart "Maus"; dazu kommen "auto",
+ * die Betriebsart 0 "aus" und der NULL-Abschluss.)
  */
 typedef char gui_modus_eintraege_mit_null[
     (sizeof(gui_modus_eintraege) / sizeof(gui_modus_eintraege[0])
-     == (V4P_PORT_MODE_MAX + 2u)) ? 1 : -1];
+     == (V4P_PORT_MODE_MAX + 3u)) ? 1 : -1];
+
+/*
+ * Die Knopfquellen fuer die drei Leitungen Pin 6, Pin 9, Pin 5. Die Reihenfolge
+ * ist genau der Wert (V4P_TASTE_*): der Index im Auswahlfeld IST der Code.
+ *
+ * Kurzfassungen der drei Gruppen ("Gruppe 1" statt "Gruppe 1 (A,L1,L2,L3)")
+ * waeren ohne Erklaerung nicht zu verstehen; die Erklaerung steht als Hinweis
+ * unter den Zeilen und im Klartext in der Zusammenfassung (gui_show_portcfg).
+ * Das haelt die drei Auswahlfelder schmal genug fuer zwei Buchsen nebeneinander.
+ *
+ * "Home" statt "Home/Capture": MUI rechnet die Breite eines Auswahlfelds aus
+ * dem LAENGSTEN Eintrag, und drei Felder nebeneinander muessen in eine Spalte
+ * von rund 250 Pixeln passen. Der volle Name steht in der Zusammenfassung und
+ * im Hinweistext darunter.
+ */
+static const char *const gui_taste_eintraege[] = {
+    "keine", "A", "B", "X", "Y", "L1", "R1", "L2", "R2", "L3", "R3",
+    "Start", "Select", "Home", "Gruppe 1", "Gruppe 2", "Gruppe 3", NULL
+};
+
+/* Dieselbe Sicherung wie oben: 17 Codes + NULL. */
+typedef char gui_taste_eintraege_mit_null[
+    (sizeof(gui_taste_eintraege) / sizeof(gui_taste_eintraege[0])
+     == (V4P_TASTE_ANZAHL + 1u)) ? 1 : -1];
+
+/*
+ * Die beiden Seiten. Der Inhalt der Oberflaeche ist mit fw_ver 4 so gewachsen,
+ * dass er nicht mehr untereinander auf 640x400 passt; eine Seitengruppe
+ * (MUIA_Group_PageMode) zeigt immer nur eine Seite. Ihre Mindestgroesse ist
+ * laut MUI_Group.doc "the maximum minimum width/height of all its children" --
+ * die Konfigurationsseite ist kleiner als die Anzeigeseite, das Fenster wird
+ * also NICHT groesser als bisher.
+ */
+static const char *const gui_seiten_eintraege[] = {
+    "Anzeige", "Konfiguration", NULL
+};
+
+/*
+ * Die Geraeteauswahl je Buchse. Die Eintraege stehen NICHT fest: sie kommen aus
+ * der Scanliste (DEV_COUNT/DEV_GET) und werden bei jeder gefuellten Liste neu
+ * gebaut (gui_dev_eintraege_bauen). Der Zeiger muss deshalb ebenfalls ortsfest
+ * sein -- MUI behaelt ihn, ein Stapelpuffer waere hier ein Absturz.
+ *
+ * Index 0 = "(keines)": der ESP32 kennt nur "BDA -> Buchse", es gibt KEINEN
+ * Befehl zum Loesen einer Zuordnung. Die Auswahl von "(keines)" wird deshalb
+ * ausdruecklich abgefangen und als "nicht moeglich" gemeldet, statt eine
+ * Zuordnung vorzutaeuschen, die es nicht gibt.
+ */
+static const char *s_dev_eintraege[GUI_DEV_MAX + 2u] = { "(keines)", NULL };
+/*
+ * Gekuerzte Namen fuer die Auswahlfelder. Ein Name aus DEV_GET darf bis zu 49
+ * Zeichen lang sein; das waere (zweimal nebeneinander) breiter als das Fenster
+ * und wuerde die Spalten auseinanderziehen. Der VOLLE Name steht in der
+ * Zusammenfassung (gui_show_portcfg) und in der Geraeteliste.
+ */
+static char        s_dev_kurz[GUI_DEV_MAX + 2u][24];
 
 static Object *s_devs;                /* Listview-Liste der Geraete       */
 static Object *s_devs_lv;             /* deren Listview (Doppelklick)     */
@@ -314,6 +438,28 @@ static int     s_logcount;
 static char   *s_devlines[GUI_DEV_MAX];
 static v4p_dev_t s_devtab[GUI_DEV_MAX];
 static int     s_devn;
+
+/*
+ * 1 = die Gegenstelle kann die Eingangsverteilung (Faehigkeitsbit
+ * V4P_CAP_PORT_ROUTING). Das ist die VERBINDLICHE Auskunft -- nicht die
+ * Firmware-Version: fw_ver 4 benutzt denselben Rahmen und dieselbe proto_ver 3
+ * und wird von v4_check_info() angenommen.
+ *
+ * Ist das Bit nicht gesetzt (aeltere Firmware), bleiben GET_PORT_CONFIG und
+ * SET_PORT_ROUTING aus; die Auswahlfelder zeigen dann ausdruecklich einen
+ * Hinweis statt erfundener Werte, und "auto" ist nicht waehlbar (SET_PORT_MODE
+ * mit 0xFF kennt nur fw_ver 4).
+ */
+static int     s_cfg_ok;
+/* 1 = die Gegenstelle kann SET_DEVICE_PORT (Faehigkeitsbit
+ * V4P_CAP_DEVICE_PORT). Die beiden Bits sind unabhaengig voneinander -- die
+ * Doku nennt sie getrennt, deshalb werden sie auch getrennt geprueft. */
+static int     s_devport_ok;
+static int     s_cfg_warned;          /* Hinweis nur EINMAL ins Log         */
+static int     s_cfg_sperre;          /* 1 = gerade Anzeige nachziehen:
+                                       * Notifies nicht als Befehl deuten   */
+/* Anzahl der zuletzt in s_dev_eintraege gebauten Geraete (ohne NULL). */
+static int     s_dev_eintraege_n = -1;
 
 /* ------------------------------------------------------------------ */
 /* Laufende Vorgaenge                                                  */
@@ -793,11 +939,16 @@ static void gui_show_vergleich(void)
                                 s_input_frisch, buf, sizeof(buf));
     set(s_vergleich, MUIA_Text_Contents, (IPTR)buf);
 }
+/* Vorwaertsdeklarationen: gui_show_ports (unten) zieht die Betriebsart-Knoepfe
+ * auf die VORGABE aus GET_PORT_CONFIG; die beiden Helfer stehen im naechsten
+ * Abschnitt bei den uebrigen Funktionen der Eingangsverteilung. */
+static IPTR    gui_mode_index(uint8_t soll);
+static uint8_t gui_mode_soll(int port);
+
 /* Portmodi und Eingaenge aus dem Zustandsblock in die Anzeige uebernehmen. */
 static void gui_show_ports(void)
 {
     uint8_t     mode[V4P_PORT_COUNT];
-    uint8_t     applied[V4P_PORT_COUNT];
     v4p_input_t in;
     static char buf[800];               /* ortsfest (4-KB-Stapel!) */
 
@@ -811,11 +962,9 @@ static void gui_show_ports(void)
     if (!S.input_valid) {
         return;
     }
-    mode[0]    = S.mode[0];
-    mode[1]    = S.mode[1];
-    applied[0] = S.applied[0];
-    applied[1] = S.applied[1];
-    in         = S.input;
+    mode[0] = S.mode[0];
+    mode[1] = S.mode[1];
+    in      = S.input;
 
     if (s_port0 != NULL) {
         gui_build_port_text(0, mode[0], in.state[0], in.level[0],
@@ -872,26 +1021,401 @@ static void gui_show_ports(void)
                 "statt einer Zahl\n");
     }
 
-    /* Cycle-Knoepfe auf den zuletzt BESTAETIGTEN Modus ziehen (aus dem
+    /* Cycle-Knoepfe auf die zuletzt BESTAETIGTE VORGABE ziehen (aus dem
      * Zustandsblock, nicht aus der Anzeige) -- und nur bei echter Aenderung:
      * jedes set() loest sonst eine Notify und damit einen unnoetigen Befehl
-     * aus (klassische MUI-Rueckkopplung). */
+     * aus (klassische MUI-Rueckkopplung).
+     *
+     * Seit fw_ver 4 zeigt der Knopf die VORGABE aus GET_PORT_CONFIG
+     * (mode_soll, mit "auto"); die wirksame Betriebsart steht daneben in
+     * s_wirk0/s_wirk1. Kann die Gegenstelle die Verteilung nicht, gibt es
+     * kein mode_soll -- dann gilt weiter der bestaetigte Modus. */
     if (s_mode0 != NULL) {
         IPTR jetzt = 0;
+        IPTR soll  = gui_mode_index(gui_mode_soll(0));
 
         (void)get(s_mode0, MUIA_Cycle_Active, &jetzt);
-        if ((uint8_t)jetzt != applied[0]) {
-            set(s_mode0, MUIA_Cycle_Active, (IPTR)applied[0]);
+        if (jetzt != soll) {
+            set(s_mode0, MUIA_Cycle_Active, soll);
         }
     }
     if (s_mode1 != NULL) {
         IPTR jetzt = 0;
+        IPTR soll  = gui_mode_index(gui_mode_soll(1));
 
         (void)get(s_mode1, MUIA_Cycle_Active, &jetzt);
-        if ((uint8_t)jetzt != applied[1]) {
-            set(s_mode1, MUIA_Cycle_Active, (IPTR)applied[1]);
+        if (jetzt != soll) {
+            set(s_mode1, MUIA_Cycle_Active, soll);
         }
     }
+}
+
+/* ------------------------------------------------------------------ */
+/* Eingangsverteilung in der Oberflaeche (fw_ver 4)                    */
+/* ------------------------------------------------------------------ */
+
+/* Der Index im Betriebsart-Auswahlfeld: 0 = "auto", 1..3 = Betriebsart 0..2. */
+static IPTR gui_mode_index(uint8_t soll)
+{
+    return (soll == (uint8_t)V4P_MODE_AUTO) ? (IPTR)0 : (IPTR)(soll + 1u);
+}
+
+/* Umgekehrt: Auswahlfeld -> Wert fuer SET_PORT_MODE. */
+static uint8_t gui_mode_aus_index(IPTR idx)
+{
+    return (idx == 0) ? (uint8_t)V4P_MODE_AUTO : (uint8_t)(idx - 1u);
+}
+
+/* Die VORGABE einer Buchse: aus GET_PORT_CONFIG, sonst der bestaetigte Modus
+ * (aeltere Firmware ohne die neuen Befehle). */
+static uint8_t gui_mode_soll(int port)
+{
+    if (S.portcfg_valid != 0) {
+        return S.portcfg.mode_soll[port];
+    }
+    return (S.mode_valid != 0) ? S.applied[port] : (uint8_t)V4P_PORT_OFF;
+}
+
+static int gui_bda_gleich(const uint8_t a[V4P_BDA_LEN],
+                          const uint8_t b[V4P_BDA_LEN])
+{
+    unsigned i;
+
+    for (i = 0u; i < V4P_BDA_LEN; i++) {
+        if (a[i] != b[i]) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/*
+ * GET_PORT_CONFIG lesen und in den Zustandsblock uebernehmen.
+ *
+ * Das ist die eine Quelle fuer die Auswahlfelder: Vorgabe UND wirksame
+ * Betriebsart, Richtungsquellen und die drei Knopfquellen beider Buchsen. Sie
+ * wird beim Start (erster Takt), bei jeder Aenderung und dann im langsamen Takt
+ * (rund einmal je Sekunde) gelesen -- so aendert sich die Anzeige auch, wenn
+ * der ESP32 von sich aus etwas umstellt (z.B. "duo").
+ *
+ * Ein Fehlschlag laesst die Anzeige auf dem LETZTEN gueltigen Stand stehen --
+ * das ist dieselbe Zusage wie bei den uebrigen Feldern.
+ */
+static void gui_cfg_read(void)
+{
+    v4p_portcfg_t c;
+    uint8_t       rc;
+
+    if (s_cfg_ok == 0) {
+        return;
+    }
+    rc = v4_get_port_config(&M, &c);
+    (void)v4_state_note(&S, rc);
+    if (rc != V4P_ST_OK) {
+        v4_dbg_fehler("GET_PORT_CONFIG", rc, &M);
+        gui_msg("[cfg] GET_PORT_CONFIG: %s -- die Felder bleiben auf dem "
+                "letzten gueltigen Stand\n", v4_strerror(rc));
+        return;
+    }
+    v4_state_put_portcfg(&S, &c);
+}
+
+/* Die Geraeteliste in die Eintraege der beiden Auswahlfelder uebernehmen.
+ * Index 0 ist "(keines)" (siehe s_dev_eintraege). Die Namen werden auf 20
+ * Zeichen gekuerzt -- der volle Name steht in der Zusammenfassung. */
+static void gui_dev_eintraege_bauen(void)
+{
+    int i;
+
+    s_dev_eintraege[0] = "(keines)";
+    for (i = 0; i < s_devn && i < GUI_DEV_MAX; i++) {
+        const char *name = s_devtab[i].name;
+        size_t      n    = strlen(name);
+
+        if (n > 20u) {
+            size_t k;
+
+            for (k = 0u; k < 20u; k++) {
+                s_dev_kurz[i + 1][k] = name[k];
+            }
+            s_dev_kurz[i + 1][20] = '.';
+            s_dev_kurz[i + 1][21] = '.';
+            s_dev_kurz[i + 1][22] = '.';
+            s_dev_kurz[i + 1][23] = '\0';
+        } else {
+            size_t k;
+
+            for (k = 0u; k < n; k++) {
+                s_dev_kurz[i + 1][k] = name[k];
+            }
+            s_dev_kurz[i + 1][n] = '\0';
+        }
+        s_dev_eintraege[i + 1] = s_dev_kurz[i + 1];
+    }
+    s_dev_eintraege[i + 1] = NULL;
+    s_dev_eintraege_n      = s_devn;
+
+    if (s_dev0 != NULL) {
+        set(s_dev0, MUIA_Cycle_Entries, (IPTR)s_dev_eintraege);
+    }
+    if (s_dev1 != NULL) {
+        set(s_dev1, MUIA_Cycle_Entries, (IPTR)s_dev_eintraege);
+    }
+}
+
+/* Index im Geraete-Auswahlfeld der Buchse: 0 = "(keines)", sonst Geraet+1.
+ * Quelle ist die in DIESER Sitzung gemerkte Zuordnung -- ueber die Leitung ist
+ * sie nicht lesbar (siehe v4_state.h). */
+static IPTR gui_dev_active(int port)
+{
+    uint8_t i;
+    int     k;
+
+    for (i = 0u; i < S.devport_n; i++) {
+        uint8_t bda[V4P_BDA_LEN];
+
+        if (v4_state_devport_at(&S, i, bda) != (uint8_t)port) {
+            continue;
+        }
+        for (k = 0; k < s_devn; k++) {
+            if (gui_bda_gleich(bda, s_devtab[k].bda) != 0) {
+                return (IPTR)(k + 1);
+            }
+        }
+        /* Zugeordnet, aber (noch) nicht in der Liste: das Feld kann das nicht
+         * darstellen -- die Zusammenfassung nennt die Adresse. */
+    }
+    return 0;
+}
+
+/* Eine Checkmark lesen; 1 = gesetzt. */
+static int gui_check(Object *o)
+{
+    IPTR v = 0;
+
+    if (o == NULL) {
+        return 0;
+    }
+    (void)get(o, MUIA_Selected, &v);
+    return (v != 0) ? 1 : 0;
+}
+
+/* Eine Checkmark setzen -- nur bei echter Aenderung (MUI-Rueckkopplung). */
+static void gui_check_set(Object *o, int an)
+{
+    IPTR v = 0;
+
+    if (o == NULL) {
+        return;
+    }
+    (void)get(o, MUIA_Selected, &v);
+    if ((v != 0) != (an != 0)) {
+        set(o, MUIA_Selected, (IPTR)((an != 0) ? TRUE : FALSE));
+    }
+}
+
+/* Ein Auswahlfeld auf einen Wert ziehen -- nur bei echter Aenderung. */
+static void gui_cycle_set(Object *o, IPTR soll)
+{
+    IPTR jetzt = 0;
+
+    if (o == NULL) {
+        return;
+    }
+    (void)get(o, MUIA_Cycle_Active, &jetzt);
+    if (jetzt != soll) {
+        set(o, MUIA_Cycle_Active, soll);
+    }
+}
+
+/* Ein Auswahlfeld lesen. */
+static IPTR gui_cycle_get(Object *o)
+{
+    IPTR v = 0;
+
+    if (o == NULL) {
+        return 0;
+    }
+    (void)get(o, MUIA_Cycle_Active, &v);
+    return v;
+}
+
+/*
+ * Die Geraetezuordnung einer Buchse in Klartext: Name, wenn das Geraet in der
+ * Scanliste steht, sonst die Adresse. Quelle ist die gemerkte Zuordnung.
+ */
+static void gui_dev_text(int port, char *out, size_t cap)
+{
+    size_t  n     = 0u;
+    int     first = 1;
+    uint8_t i;
+
+    if (out == NULL || cap == 0u) {
+        return;
+    }
+    out[0] = '\0';
+    for (i = 0u; i < S.devport_n; i++) {
+        uint8_t     bda[V4P_BDA_LEN];
+        const char *name = NULL;
+        char        adresse[24];
+        int         k;
+
+        if (v4_state_devport_at(&S, i, bda) != (uint8_t)port) {
+            continue;
+        }
+        for (k = 0; k < s_devn; k++) {
+            if (gui_bda_gleich(bda, s_devtab[k].bda) != 0) {
+                name = (s_devtab[k].name[0] != '\0') ? s_devtab[k].name
+                                                     : "(ohne Namen)";
+                break;
+            }
+        }
+        if (name == NULL) {
+            (void)snprintf(adresse, sizeof(adresse),
+                           "%02X:%02X:%02X:%02X:%02X:%02X",
+                           bda[0], bda[1], bda[2], bda[3], bda[4], bda[5]);
+            name = adresse;
+        }
+        {
+            size_t len = strlen(name);
+            size_t j;
+
+            if (n + (first ? 0u : 2u) + len + 1u > cap) {
+                break;
+            }
+            if (!first) {
+                out[n++] = ',';
+                out[n++] = ' ';
+            }
+            for (j = 0u; j < len; j++) {
+                out[n++] = name[j];
+            }
+            first = 0;
+        }
+    }
+    if (first) {
+        const char *keine = "(keines)";
+
+        for (n = 0u; keine[n] != '\0' && n + 1u < cap; n++) {
+            out[n] = keine[n];
+        }
+    }
+    out[n] = '\0';
+}
+
+/*
+ * Die Felder der Eingangsverteilung aus dem Zustandsblock stellen und die
+ * Zusammenfassung schreiben. Das ist die Entsprechung zu gui_show_ports: LESEN
+ * und ANZEIGEN, kein I2C, kein Warten.
+ *
+ * Die Zusammenfassung nennt je Buchse genau das, was der Auftrag sehen will:
+ * Geraet, Vorgabe, wirksame Betriebsart, Richtungen und die drei Quellen --
+ * Letztere mit dem VOLLEN Namen ("Gruppe 1 (A,L1,L2,L3)"), damit die
+ * Kurzfassung im Auswahlfeld nicht im Unklaren laesst.
+ */
+static void gui_show_portcfg(void)
+{
+    static char buf[760];               /* ortsfest (4-KB-Stapel!) */
+    int         port;
+    size_t      n = 0u;
+
+    if (s_cfgtext == NULL) {
+        return;
+    }
+
+    if (s_cfg_ok == 0) {
+        (void)snprintf(buf, sizeof(buf),
+                       "Konfiguration: die Gegenstelle meldet das "
+                       "Faehigkeitsbit 0x%04X nicht -- sie kann die "
+                       "Eingangsverteilung nicht.\n"
+                       "  GET_PORT_CONFIG/SET_PORT_ROUTING/SET_DEVICE_PORT "
+                       "bleiben aus. Firmware des ESP32 auf fw_ver %u "
+                       "bringen.",
+                       (unsigned)V4P_CAP_PORT_ROUTING,
+                       (unsigned)V4P_FW_VER_ROUTING);
+        set(s_cfgtext, MUIA_Text_Contents, (IPTR)buf);
+        if (s_cfg_warned == 0) {
+            s_cfg_warned = 1;
+            gui_msg("[cfg] die Gegenstelle kann die Eingangsverteilung nicht "
+                    "(Faehigkeitsbit 0x%04X fehlt, gemeldet 0x%04X) -- die "
+                    "Felder Geraet/Richtungen/Knopfquellen bleiben untaetig\n",
+                    (unsigned)V4P_CAP_PORT_ROUTING,
+                    S.info_valid ? (unsigned)S.info.caps : 0u);
+        }
+        return;
+    }
+    if (S.portcfg_valid == 0) {
+        return;                 /* noch nichts empfangen: alte Anzeige bleibt */
+    }
+
+    /* Die Geraeteliste kann sich waehrend des Laufs fuellen. */
+    if (s_dev_eintraege_n != s_devn) {
+        gui_dev_eintraege_bauen();
+    }
+
+    n = (size_t)snprintf(buf, sizeof(buf),
+                         "Konfiguration (GET_PORT_CONFIG) -- Vorgabe = "
+                         "Auswahlfeld, wirkt = was gerade laeuft");
+    for (port = 0; port < (int)V4P_PORT_COUNT; port++) {
+        char dir[48];
+        char geraet[V4P_NAME_BUF + 16u];
+
+        v4p_dir_text(S.portcfg.dir[port], dir, sizeof(dir));
+        gui_dev_text(port, geraet, sizeof(geraet));
+        if (n + 220u >= sizeof(buf)) {
+            break;
+        }
+        n += (size_t)snprintf(buf + n, sizeof(buf) - n,
+                              "\nBuchse %d: %s -- Vorgabe %s, wirkt %s, "
+                              "Richtungen %s, Pin6<-%s, Pin9<-%s, Pin5<-%s",
+                              port, geraet,
+                              v4p_port_mode_soll_name(S.portcfg.mode_soll[port]),
+                              v4p_port_mode_name(S.portcfg.mode_ist[port]),
+                              dir,
+                              v4p_taste_name(S.portcfg.btn[port][0]),
+                              v4p_taste_name(S.portcfg.btn[port][1]),
+                              v4p_taste_name(S.portcfg.btn[port][2]));
+    }
+    set(s_cfgtext, MUIA_Text_Contents, (IPTR)buf);
+
+    /* Auswahlfelder und Schalter auf den BESTAETIGTEN Stand ziehen.
+     * s_cfg_sperre verhindert, dass das Nachziehen als Anwenderwunsch
+     * missdeutet wird -- die Handler vergleichen ohnehin gegen den
+     * Zustandsblock, aber so bleibt es auch bei einem Renntakt eindeutig. */
+    s_cfg_sperre = 1;
+
+    for (port = 0; port < (int)V4P_PORT_COUNT; port++) {
+        Object **dir3 = (port == 0) ? s_dir0 : s_dir1;
+        Object **b3   = (port == 0) ? s_b0 : s_b1;
+        Object  *dev  = (port == 0) ? s_dev0 : s_dev1;
+        Object  *mcyc = (port == 0) ? s_mode0 : s_mode1;
+        Object  *wirk = (port == 0) ? s_wirk0 : s_wirk1;
+        unsigned k;
+
+        for (k = 0u; k < 3u; k++) {
+            gui_check_set(dir3[k],
+                          (S.portcfg.dir[port] & (uint8_t)(1u << k)) != 0u);
+        }
+        for (k = 0u; k < V4P_BTN_COUNT; k++) {
+            uint8_t code = S.portcfg.btn[port][k];
+
+            gui_cycle_set(b3[k],
+                          (code < (uint8_t)V4P_TASTE_ANZAHL) ? (IPTR)code
+                                                             : (IPTR)0);
+        }
+        gui_cycle_set(dev, gui_dev_active(port));
+        gui_cycle_set(mcyc, gui_mode_index(S.portcfg.mode_soll[port]));
+
+        if (wirk != NULL) {
+            char w[48];
+
+            (void)snprintf(w, sizeof(w), "wirkt: %s",
+                           v4p_port_mode_name(S.portcfg.mode_ist[port]));
+            set(wirk, MUIA_Text_Contents, (IPTR)w);
+        }
+    }
+
+    s_cfg_sperre = 0;
 }
 
 /* Langsamer Takt: Zustand und Controller-Info stammen aus dem Zustandsblock --
@@ -1191,6 +1715,14 @@ static void gui_poll(int slow)
             rc = rc2;
             v4_dbg_fehler("GET_HID", rc2, &M);
         }
+
+        /*
+         * Und die Eingangsverteilung (fw_ver 4): Vorgabe und wirksame
+         * Betriebsart, Richtungen und die drei Knopfquellen beider Buchsen.
+         * Einmal je Sekunde genuegt -- sie aendert sich nur, wenn jemand
+         * etwas einstellt (oder der ESP32 von sich aus, z.B. durch "duo").
+         */
+        gui_cfg_read();
     }
 
     /*
@@ -1390,36 +1922,50 @@ static void act_forget(void)
 }
 
 /*
- * Betriebsart setzen -- ausgeloest vom Cycle-Knopf oder vom Schaltknopf.
+ * Betriebsart-VORGABE setzen -- ausgeloest vom Auswahlfeld oder vom
+ * Schaltknopf "Port N Modus >".
+ *
+ * Seit fw_ver 4 hat das Feld vier Eintraege (auto/aus/Joystick/Maus). "auto"
+ * heisst V4P_MODE_AUTO (0xFF): die Vorgabe wird geloescht, die WIRKSAME
+ * Betriebsart bleibt zunaechst stehen -- genau das sagt der ESP32 zu. Danach
+ * wird GET_PORT_CONFIG nachgelesen, damit die Anzeige den echten Zustand
+ * zeigt (mode_soll UND mode_ist).
  *
  * Die Rueckkopplung: jedes set(MUIA_Cycle_Active) loest die Notify aus, auch
  * wenn die Anzeige nur den vom Slave gemeldeten Wert nachzieht. Deshalb wird
- * hier gegen den BESTAETIGTEN Modus aus dem Zustandsblock verglichen: stimmt
- * der angezeigte Wert damit ueberein, gibt es nichts zu tun.
+ * hier gegen den BESTAETIGTEN Stand aus dem Zustandsblock verglichen: stimmt
+ * der angezeigte Wert damit ueberein, gibt es nichts zu tun. Zusaetzlich
+ * schuetzt s_cfg_sperre die Zeit, in der gui_show_portcfg die Felder stellt.
  */
 static void act_set_mode(int port)
 {
     Object *cyc = (port == 0) ? s_mode0 : s_mode1;
     IPTR    v   = 0;
     uint8_t want;
-    uint8_t applied;
+    uint8_t soll;
     uint8_t bestaetigt = 0u;
     uint8_t rc;
 
     if (cyc == NULL) {
         return;
     }
-    /* Ohne gueltige Antwort gibt es nichts zu vergleichen: der Wunsch wird
-     * trotzdem geschickt, der Slave bestaetigt oder lehnt ab. */
-    applied = (S.mode_valid != 0) ? S.applied[port] : (uint8_t)V4P_PORT_OFF;
-
     (void)get(cyc, MUIA_Cycle_Active, &v);
-    want = (uint8_t)v;
-    if (want > V4P_PORT_MODE_MAX) {
-        want = (uint8_t)V4P_PORT_OFF;
-    }
-    if (want == applied) {
+    want = gui_mode_aus_index(v);
+    soll = gui_mode_soll(port);
+
+    if (want == soll) {
         return;         /* nur die Anzeige hat sich nachgezogen */
+    }
+    if (want == (uint8_t)V4P_MODE_AUTO && s_cfg_ok == 0) {
+        /* SET_PORT_MODE mit 0xFF kennt nur fw_ver 4. Ohne das Faehigkeitsbit
+         * wird der Wert gar nicht erst geschickt -- und die Anzeige auf den
+         * bestaetigten Stand zurueckgezogen. */
+        gui_msg("[cfg] \"auto\" braucht fw_ver %u (Faehigkeitsbit 0x%04X); "
+                "die Gegenstelle meldet 0x%04X -- nichts geaendert\n",
+                (unsigned)V4P_FW_VER_ROUTING, (unsigned)V4P_CAP_PORT_ROUTING,
+                S.info_valid ? (unsigned)S.info.caps : 0u);
+        gui_cycle_set(cyc, gui_mode_index(soll));
+        return;
     }
 
     rc = v4_set_port_mode(&M, (uint8_t)port, want, &bestaetigt);
@@ -1428,15 +1974,317 @@ static void act_set_mode(int port)
         gui_msg("[port%d] SET_PORT_MODE: %s\n", port, v4_strerror(rc));
         /* Die Anzeige auf den bestaetigten Stand zurueckziehen -- sonst zeigt
          * der Knopf eine Betriebsart, die es nicht gibt. */
-        if (S.mode_valid != 0) {
-            set(cyc, MUIA_Cycle_Active, (IPTR)S.applied[port]);
-        }
+        gui_cycle_set(cyc, gui_mode_index(soll));
         return;
     }
-    v4_state_put_mode(&S, (uint8_t)port, bestaetigt);
-    v4_dbg_modes(S.mode, "SET_PORT_MODE");
-    gui_msg("[port%d] Modus %s bestaetigt\n", port,
-            v4p_port_mode_name(bestaetigt));
+    if (want == (uint8_t)V4P_MODE_AUTO) {
+        gui_msg("[port%d] Vorgabe auto (nach Geraeteart) bestaetigt -- die "
+                "wirksame Betriebsart wird beim naechsten Verbinden bzw. von "
+                "\"duo\" neu abgeleitet\n", port);
+    } else {
+        gui_msg("[port%d] Vorgabe %s bestaetigt\n", port,
+                v4p_port_mode_name(bestaetigt));
+    }
+    /* Den echten Zustand nachlesen (die Vorgabe steht, die wirksame kann
+     * zunaechst eine andere bleiben) und die Felder danach stellen. */
+    if (s_cfg_ok != 0) {
+        gui_cfg_read();
+        gui_show_portcfg();
+    } else {
+        v4_state_put_mode(&S, (uint8_t)port, bestaetigt);
+        v4_dbg_modes(S.mode, "SET_PORT_MODE");
+    }
+}
+
+/*
+ * Der Knopf "Port N Modus >": die VORGABE einen Schritt weiterschalten.
+ *
+ * Der Kreislauf ist auto -> aus -> Joystick -> Maus -> auto (die Reihenfolge
+ * des Auswahlfeldes). Das Auswahlfeld wird dabei MITGEZOGEN -- sein set()
+ * loest zwar dieselbe Notify aus, aber der anschliessende direkte Aufruf
+ * macht die Wirkung unabhaengig davon sofort.
+ */
+static void act_mode_weiter(int port)
+{
+    Object *cyc  = (port == 0) ? s_mode0 : s_mode1;
+    uint8_t soll = gui_mode_aus_index(gui_cycle_get(cyc));
+    uint8_t next;
+
+    if (soll == (uint8_t)V4P_MODE_AUTO) {
+        next = (uint8_t)V4P_PORT_OFF;
+    } else if (soll >= (uint8_t)V4P_PORT_MODE_MAX) {
+        next = (uint8_t)V4P_MODE_AUTO;
+    } else {
+        next = (uint8_t)(soll + 1u);
+    }
+    gui_cycle_set(cyc, gui_mode_index(next));
+    act_set_mode(port);
+}
+
+/*
+ * Geraet (BDA aus der Scanliste) einer Buchse zuordnen -- SET_DEVICE_PORT.
+ *
+ * "(keines)" ist NICHT setzbar: der ESP32 kennt nur "BDA -> Buchse", es gibt
+ * keinen Befehl zum Loesen. Statt eine Zuordnung vorzutaeuschen, wird die
+ * Auswahl zurueckgezogen und das ausdruecklich gemeldet.
+ */
+static void act_set_dev(int port)
+{
+    Object *cyc = (port == 0) ? s_dev0 : s_dev1;
+    IPTR    v;
+    int     idx;
+
+    if (cyc == NULL) {
+        return;
+    }
+    if (s_devport_ok == 0) {
+        gui_cycle_set(cyc, gui_dev_active(port));
+        gui_msg("[cfg] SET_DEVICE_PORT braucht fw_ver %u (Faehigkeitsbit "
+                "0x%04X; gemeldet 0x%04X) -- nichts gesendet\n",
+                (unsigned)V4P_FW_VER_ROUTING,
+                (unsigned)V4P_CAP_DEVICE_PORT,
+                S.info_valid ? (unsigned)S.info.caps : 0u);
+        return;
+    }
+    if (s_cfg_sperre != 0) {
+        return;
+    }
+    v = gui_cycle_get(cyc);
+    if (v == (IPTR)gui_dev_active(port)) {
+        return;                     /* nur die Anzeige hat sich nachgezogen */
+    }
+    if (v == 0) {
+        gui_cycle_set(cyc, gui_dev_active(port));
+        gui_msg("[cfg] Eine Zuordnung LAESST sich ueber I2C nicht loesen "
+                "(der ESP32 kennt nur BDA -> Buchse). Die Anzeige bleibt auf "
+                "dem bestaetigten Stand\n");
+        return;
+    }
+    idx = (int)v - 1;
+    if (idx < 0 || idx >= s_devn) {
+        gui_cycle_set(cyc, gui_dev_active(port));
+        return;
+    }
+    {
+        uint8_t rc = v4_set_device_port(&M, s_devtab[idx].bda, (uint8_t)port);
+
+        (void)v4_state_note(&S, rc);
+        if (rc != V4P_ST_OK) {
+            gui_msg("[cfg] SET_DEVICE_PORT (\"%s\" -> Buchse %d): %s -- die "
+                    "Anzeige bleibt auf dem bestaetigten Stand\n",
+                    (s_devtab[idx].name[0] != '\0') ? s_devtab[idx].name
+                                                    : "(ohne Namen)",
+                    port, v4_strerror(rc));
+            gui_cycle_set(cyc, gui_dev_active(port));
+            return;
+        }
+        v4_state_put_devport(&S, s_devtab[idx].bda, (uint8_t)port);
+        gui_msg("[cfg] Buchse %d: Geraet \"%s\" (%02X:%02X:%02X:%02X:%02X:%02X) "
+                "zugeordnet -- beim naechsten Verbinden, oder sofort wenn die "
+                "Buchse frei ist\n",
+                port,
+                (s_devtab[idx].name[0] != '\0') ? s_devtab[idx].name
+                                                : "(ohne Namen)",
+                s_devtab[idx].bda[0], s_devtab[idx].bda[1],
+                s_devtab[idx].bda[2], s_devtab[idx].bda[3],
+                s_devtab[idx].bda[4], s_devtab[idx].bda[5]);
+    }
+    gui_cfg_read();
+    gui_show_portcfg();
+}
+
+/* Die drei Richtungsschalter einer Buchse lesen. */
+static uint8_t gui_dir_aus_schaltern(int port)
+{
+    Object **d = (port == 0) ? s_dir0 : s_dir1;
+    uint8_t  maske = 0u;
+    unsigned k;
+
+    for (k = 0u; k < 3u; k++) {
+        if (gui_check(d[k]) != 0) {
+            maske = (uint8_t)(maske | (uint8_t)(1u << k));
+        }
+    }
+    return maske;
+}
+
+/*
+ * Richtungen setzen -- SET_PORT_ROUTING mit dem GANZEN Paket.
+ *
+ * Der ESP32 setzt Richtungen und Knopfquellen in EINEM Befehl. Deshalb werden
+ * die drei Knopfquellen mitgeschickt, wie sie zuletzt bestaetigt wurden: sonst
+ * wuerde ein Richtungsschalter die Knopfzuordnung ueberschreiben.
+ */
+static void act_set_dir(int port)
+{
+    uint8_t maske;
+    uint8_t rc;
+
+    if (s_cfg_ok == 0 || S.portcfg_valid == 0) {
+        gui_msg("[cfg] Richtungen brauchen GET_PORT_CONFIG (fw_ver %u) -- "
+                "noch keine gueltige Antwort\n", (unsigned)V4P_FW_VER_ROUTING);
+        return;
+    }
+    if (s_cfg_sperre != 0) {
+        return;
+    }
+    maske = gui_dir_aus_schaltern(port);
+    if (maske == S.portcfg.dir[port]) {
+        return;                     /* nur die Anzeige hat sich nachgezogen */
+    }
+    rc = v4_set_port_routing(&M, (uint8_t)port, maske, S.portcfg.btn[port]);
+    (void)v4_state_note(&S, rc);
+    if (rc != V4P_ST_OK) {
+        char dir[48];
+
+        v4p_dir_text(maske, dir, sizeof(dir));
+        if (rc == V4P_ST_BAD_ARG) {
+            gui_msg("[cfg] BAD_ARG: Richtungen \"%s\" auf Buchse %d wurden "
+                    "abgelehnt (unerlaubte Maske oder eine Knopfquelle doppelt) "
+                    "-- nichts geaendert\n", dir, port);
+        } else {
+            gui_msg("[cfg] SET_PORT_ROUTING (Buchse %d, Richtungen \"%s\"): "
+                    "%s -- nichts geaendert\n", port, dir, v4_strerror(rc));
+        }
+        /* Die Anzeige auf den ECHTEN Zustand zurueckziehen. */
+        gui_cfg_read();
+        gui_show_portcfg();
+        return;
+    }
+    {
+        char dir[48];
+
+        v4p_dir_text(maske, dir, sizeof(dir));
+        gui_msg("[cfg] Buchse %d: Richtungen %s bestaetigt\n", port, dir);
+    }
+    gui_cfg_read();
+    gui_show_portcfg();
+}
+
+/* Die drei Knopfquellen-Auswahlfelder einer Buchse lesen (Index = Code). */
+static void gui_btn_aus_cycles(int port, uint8_t btn[V4P_BTN_COUNT])
+{
+    Object **b = (port == 0) ? s_b0 : s_b1;
+    unsigned k;
+
+    for (k = 0u; k < V4P_BTN_COUNT; k++) {
+        IPTR v = gui_cycle_get(b[k]);
+
+        btn[k] = (v < (IPTR)V4P_TASTE_ANZAHL) ? (uint8_t)v
+                                             : (uint8_t)V4P_TASTE_KEINE;
+    }
+}
+
+/* Meldung, welche Quelle doppelt vergeben ist -- das ist der haeufigste
+ * BAD_ARG-Fall und ohne Klartext kaum zu finden. Rueckgabe 1 = gemeldet. */
+static int gui_btn_doppelt_melden(int port, const uint8_t btn[V4P_BTN_COUNT])
+{
+    unsigned i;
+    unsigned k;
+
+    for (i = 0u; i < V4P_BTN_COUNT; i++) {
+        if (btn[i] == (uint8_t)V4P_TASTE_KEINE) {
+            continue;
+        }
+        for (k = (unsigned)(i + 1u); k < V4P_BTN_COUNT; k++) {
+            if (btn[k] == btn[i]) {
+                gui_msg("[cfg] BAD_ARG: \"%s\" ist auf Buchse %d zweimal "
+                        "vergeben (Pin 6/Pin 9/Pin 5) -- eine nicht-leere "
+                        "Quelle darf nur auf EINER Leitung stehen; nichts "
+                        "geaendert\n", v4p_taste_name(btn[i]), port);
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/*
+ * Knopfquellen setzen -- SET_PORT_ROUTING mit dem ganzen Paket (Richtungen
+ * bleiben, wie sie bestaetigt wurden).
+ *
+ * BAD_ARG ist hier der Regelfall bei einer Doppelbelegung: der ESP32 lehnt ab
+ * und aendert NICHTS. Die Anzeige wird deshalb auf den echten Zustand
+ * zurueckgezogen und der Grund im Fenster und im Protokoll genannt.
+ */
+static void act_set_btn(int port)
+{
+    uint8_t btn[V4P_BTN_COUNT];
+    uint8_t rc;
+    unsigned k;
+    int gleich = 1;
+
+    if (s_cfg_ok == 0 || S.portcfg_valid == 0) {
+        gui_msg("[cfg] Knopfquellen brauchen GET_PORT_CONFIG (fw_ver %u) -- "
+                "noch keine gueltige Antwort\n", (unsigned)V4P_FW_VER_ROUTING);
+        return;
+    }
+    if (s_cfg_sperre != 0) {
+        return;
+    }
+    gui_btn_aus_cycles(port, btn);
+    for (k = 0u; k < V4P_BTN_COUNT; k++) {
+        if (btn[k] != S.portcfg.btn[port][k]) {
+            gleich = 0;
+        }
+    }
+    if (gleich != 0) {
+        return;                     /* nur die Anzeige hat sich nachgezogen */
+    }
+
+    rc = v4_set_port_routing(&M, (uint8_t)port, S.portcfg.dir[port], btn);
+    (void)v4_state_note(&S, rc);
+    if (rc == V4P_ST_BAD_ARG) {
+        if (gui_btn_doppelt_melden(port, btn) == 0) {
+            /* Sollte es nicht die Doppelbelegung sein (z.B. eine Maske, die
+             * der Slave nicht kennt): trotzdem im Klartext melden. */
+            gui_msg("[cfg] BAD_ARG: Buchse %d hat die Knopfquellen abgelehnt "
+                    "(Pin6<-%s Pin9<-%s Pin5<-%s) -- nichts geaendert\n",
+                    port, v4p_taste_name_short(btn[0]),
+                    v4p_taste_name_short(btn[1]),
+                    v4p_taste_name_short(btn[2]));
+        }
+        gui_cfg_read();
+        gui_show_portcfg();
+        return;
+    }
+    if (rc != V4P_ST_OK) {
+        gui_msg("[cfg] SET_PORT_ROUTING (Buchse %d): %s -- nichts geaendert\n",
+                port, v4_strerror(rc));
+        gui_cfg_read();
+        gui_show_portcfg();
+        return;
+    }
+    gui_msg("[cfg] Buchse %d: Pin6<-%s Pin9<-%s Pin5<-%s bestaetigt\n", port,
+            v4p_taste_name(btn[0]), v4p_taste_name(btn[1]),
+            v4p_taste_name(btn[2]));
+    gui_cfg_read();
+    gui_show_portcfg();
+}
+
+/*
+ * Seite umschalten: Seite 0 = Anzeige, Seite 1 = Konfiguration.
+ *
+ * Die verdeckte Seite wird im Takt trotzdem weiter gezeichnet; hier wird nur
+ * die Sichtbarkeit gesetzt und die neu sichtbare Seite einmal sofort
+ * aktualisiert -- sonst zeigt sie fuer bis zu 200 ms den Stand vom letzten
+ * Wechsel.
+ */
+static void act_seite(void)
+{
+    IPTR v = gui_cycle_get(s_seite);
+
+    if (v > (IPTR)1) {
+        v = 0;
+    }
+    if (s_seiten != NULL) {
+        set(s_seiten, MUIA_Group_ActivePage, v);
+    }
+    if (v == 1) {
+        gui_show_portcfg();
+    } else {
+        gui_show_ports();
+    }
 }
 
 static void act_swap(void)
@@ -1468,6 +2316,7 @@ static void act_refresh(void)
     gui_show_info();
     gui_show_ports();
     gui_show_slow();
+    gui_show_portcfg();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1588,6 +2437,7 @@ static void gui_tick(void)
     gui_show_info();
     gui_show_ports();
     gui_show_slow();
+    gui_show_portcfg();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1784,32 +2634,30 @@ static int gui_build(void)
             MUIA_Window_SizeGadget, TRUE,
             WindowContents, VGroup,
                 /*
-                 * WARUM DIESE VIER FELDER GEWICHT 0 HABEN (und die Buchsen-
-                 * gruppen unten ebenfalls):
+                 * WARUM ANZEIGE UND KONFIGURATION AUF ZWEI SEITEN LIEGEN:
                  *
-                 * MUI gibt jedem Objekt ohne MUIA_Weight das Vorgabegewicht
-                 * 100 und verteilt den Platz danach. Reicht der Platz im
-                 * Fenster nicht -- 640x400 ist fest, und der Inhalt ist mit
-                 * zwei Buchsengruppen, Vergleichsfeld, zwei Knopfreihen und
-                 * zwei Listen lang --, dann verkleinert MUI die Kinder nach
-                 * ihrem Gewicht. Ein Textobjekt mit Gewicht 100 kann dabei
-                 * unter seine Mindesthoehe gedrueckt werden und sieht dann
-                 * LEER aus, obwohl sein Inhalt laengst gesetzt ist.
+                 * Mit fw_ver 4 ist der Inhalt deutlich gewachsen -- je Buchse
+                 * kommen Geraet, Richtungen und drei Knopfquellen dazu. Bei
+                 * 640x400 (und auf dieser V4 sogar nur 640x360, siehe
+                 * gui_fenster_an_schirm) passt das nicht mehr untereinander:
+                 * der bisherige Inhalt war schon an der Grenze, und MUI
+                 * drueckt Textfelder ohne Gewicht unter ihre Mindesthoehe --
+                 * sie saehen dann LEER aus.
                  *
-                 * Die Autodokumentation der Area-Klasse sagt dazu eindeutig:
-                 * "An object with a weight of 0 will always stay at its
-                 * minimum size." Genau das ist hier gewollt: die Anzeige-
-                 * felder behalten immer ihre Mindestgroesse; den fehlenden
-                 * Platz bekommen die beiden Listen (Gewicht 30/40), die
-                 * scrollen koennen.
+                 * Deshalb eine SEITENGRUPPE (MUIA_Group_PageMode): Seite 0 ist
+                 * die gewohnte Anzeige (Buchsen, Vergleich), Seite 1 die neue
+                 * Konfiguration. Die Groesse einer Seitengruppe ist laut
+                 * MUI_Group.doc "the maximum minimum width/height of all its
+                 * children" -- die Konfigurationsseite ist KLEINER als die
+                 * Anzeigeseite, die Mindestgroesse des Fensters aendert sich
+                 * also NICHT. Genau das ist der Punkt: das Fenster bleibt so
+                 * gross wie bisher und wird nicht auf eine Groesse gezwungen,
+                 * die nicht auf den Schirm passt.
                  *
-                 * MUIA_Text_SetMin, FALSE gehoert dazu: die Vorgabe TRUE
-                 * macht die Textbreite zur Mindestbreite des Fensterinhalts.
-                 * Die Controller-Zeile ist rund 100 Zeichen lang -- das waere
-                 * breiter als die zugesagten 640 Pixel und wuerde MUI das
-                 * Fenster aufziehen. Mit FALSE bleibt das Fenster 640 breit
-                 * und der Text wird am Rand abgeschnitten (die wichtigen
-                 * Angaben stehen am Zeilenanfang).
+                 * Umgeschaltet wird mit dem Auswahlfeld "Seite"; der Inhalt
+                 * beider Seiten wird im Takt weiter gezeichnet (die verdeckte
+                 * Seite holt beim naechsten Wechsel sofort den aktuellen
+                 * Stand).
                  */
                 Child, s_link = TextObject,
                     MUIA_Text_Contents, (IPTR)"Oeffne i2c.library ...",
@@ -1829,72 +2677,330 @@ static int gui_build(void)
                     MUIA_Text_SetMin, FALSE,
                     MUIA_Weight, 0,
                 End,
-                Child, s_ctrl = TextObject,
-                    MUIA_Text_Contents, (IPTR)"Controller: (wird gelesen)",
-                    MUIA_Text_PreParse, (IPTR)"\33l",
-                    MUIA_Text_SetMin, FALSE,
-                    MUIA_Weight, 0,
-                End,
+                /*
+                 * Der Umschalter liegt NEBEN der dreizeiligen Controller-Zeile
+                 * und kostet damit KEINE zusaetzliche Hoehe: die Zeile ist
+                 * ohnehin drei Zeilen hoch, das Auswahlfeld ist flacher. Genau
+                 * darum geht es hier -- das Fenster darf nicht hoeher werden
+                 * als bisher, sonst passt es auf diesem Schirm nicht mehr.
+                 */
                 Child, HGroup,
                     MUIA_Weight, 0,
+                    Child, s_ctrl = TextObject,
+                        MUIA_Text_Contents, (IPTR)"Controller: (wird gelesen)",
+                        MUIA_Text_PreParse, (IPTR)"\33l",
+                        MUIA_Text_SetMin, FALSE,
+                        MUIA_Weight, 0,
+                    End,
                     Child, VGroup,
-                        Child, HGroup,
-                            Child, TextObject,
-                                MUIA_Text_Contents, (IPTR)"Buchse 0:",
-                                /* Auch die Beschriftung bleibt auf ihrer
-                                 * Mindestbreite. Sonst nimmt sie den Platz
-                                 * der Zeile fuer sich und schiebt den
-                                 * kompakten Auswahlknopf an den rechten
-                                 * Rand. */
-                                MUIA_Weight, 0,
-                            End,
-                            Child, s_mode0 = CycleObject,
-                                MUIA_Cycle_Entries,
-                                    (IPTR)gui_modus_eintraege,
-                                /* Gewicht 0: der Knopf bleibt so breit wie
-                                 * sein laengster Eintrag ("Joystick") und
-                                 * wird nicht auf die Spaltenbreite gezogen
-                                 * (Area-Doku: "An object with a weight of 0
-                                 * will always stay at its minimum size"). */
-                                MUIA_Weight, 0,
-                            End,
-                        End,
-                        Child, s_port0 = TextObject,
-                            MUIA_Text_Contents, (IPTR)" ",
+                        MUIA_Weight, 0,
+                        Child, TextObject,
+                            MUIA_Text_Contents, (IPTR)"Seite:",
                             MUIA_Text_PreParse, (IPTR)"\33l",
                             MUIA_Weight, 0,
                         End,
-                    End,
-                    Child, VGroup,
-                        Child, HGroup,
-                            Child, TextObject,
-                                MUIA_Text_Contents, (IPTR)"Buchse 1:",
-                                MUIA_Weight, 0,
-                            End,
-                            Child, s_mode1 = CycleObject,
-                                MUIA_Cycle_Entries,
-                                    (IPTR)gui_modus_eintraege,
-                                MUIA_Weight, 0,
-                            End,
-                        End,
-                        Child, s_port1 = TextObject,
-                            MUIA_Text_Contents, (IPTR)" ",
-                            MUIA_Text_PreParse, (IPTR)"\33l",
+                        Child, s_seite = CycleObject,
+                            MUIA_Cycle_Entries, (IPTR)gui_seiten_eintraege,
                             MUIA_Weight, 0,
                         End,
                     End,
                 End,
+                Child, s_seiten = VGroup,
+                    MUIA_Group_PageMode, TRUE,
+                    MUIA_Group_ActivePage, 0,
+                    /*
+                     * SEITE 0: die laufende Anzeige (unveraendert).
+                     *
+                     * WARUM DIESE FELDER GEWICHT 0 HABEN:
+                     *
+                     * MUI gibt jedem Objekt ohne MUIA_Weight das Vorgabegewicht
+                     * 100 und verteilt den Platz danach. Die Anzeigefelder
+                     * behalten mit Gewicht 0 immer ihre Mindestgroesse; den
+                     * Platz bekommen die Listen (Gewicht 30/40).
+                     *
+                     * MUIA_Text_SetMin, FALSE gehoert dazu: die Vorgabe TRUE
+                     * macht die Textbreite zur Mindestbreite des Fensterinhalts.
+                     * Die Controller-Zeile ist rund 100 Zeichen lang -- das
+                     * waere breiter als die zugesagten 640 Pixel und wuerde MUI
+                     * das Fenster aufziehen. Mit FALSE bleibt das Fenster 640
+                     * breit und der Text wird am Rand abgeschnitten (die
+                     * wichtigen Angaben stehen am Zeilenanfang).
+                     */
+                    Child, VGroup,
+                        MUIA_Weight, 0,
+                        Child, HGroup,
+                            MUIA_Weight, 0,
+                            Child, VGroup,
+                                Child, HGroup,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Buchse 0:",
+                                        /* Auch die Beschriftung bleibt auf ihrer
+                                         * Mindestbreite. Sonst nimmt sie den Platz
+                                         * der Zeile fuer sich und schiebt den
+                                         * kompakten Auswahlknopf an den rechten
+                                         * Rand. */
+                                        MUIA_Weight, 0,
+                                    End,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Vorgabe",
+                                        MUIA_Weight, 0,
+                                    End,
+                                    Child, s_mode0 = CycleObject,
+                                        MUIA_Cycle_Entries,
+                                            (IPTR)gui_modus_eintraege,
+                                        /* Gewicht 0: der Knopf bleibt so breit wie
+                                         * sein laengster Eintrag ("Joystick") und
+                                         * wird nicht auf die Spaltenbreite gezogen
+                                         * (Area-Doku: "An object with a weight of 0
+                                         * will always stay at its minimum size"). */
+                                        MUIA_Weight, 0,
+                                    End,
+                                    Child, s_wirk0 = TextObject,
+                                        MUIA_Text_Contents, (IPTR)"wirkt: ?",
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                        MUIA_Weight, 0,
+                                    End,
+                                End,
+                                Child, s_port0 = TextObject,
+                                    MUIA_Text_Contents, (IPTR)" ",
+                                    MUIA_Text_PreParse, (IPTR)"\33l",
+                                    MUIA_Weight, 0,
+                                End,
+                            End,
+                            Child, VGroup,
+                                Child, HGroup,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Buchse 1:",
+                                        MUIA_Weight, 0,
+                                    End,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Vorgabe",
+                                        MUIA_Weight, 0,
+                                    End,
+                                    Child, s_mode1 = CycleObject,
+                                        MUIA_Cycle_Entries,
+                                            (IPTR)gui_modus_eintraege,
+                                        MUIA_Weight, 0,
+                                    End,
+                                    Child, s_wirk1 = TextObject,
+                                        MUIA_Text_Contents, (IPTR)"wirkt: ?",
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                        MUIA_Weight, 0,
+                                    End,
+                                End,
+                                Child, s_port1 = TextObject,
+                                    MUIA_Text_Contents, (IPTR)" ",
+                                    MUIA_Text_PreParse, (IPTR)"\33l",
+                                    MUIA_Weight, 0,
+                                End,
+                            End,
+                        End,
+                        /*
+                         * Der Vergleich direkt <-> I2C, volle Fensterbreite: eine Zeile
+                         * je Buchse und darunter die Rohwerte der Feuerregister. Die
+                         * direkte Abfrage laeuft neben der I2C-Antwort -- stimmen beide
+                         * ueberein, ist die Kette ESP32 -> DB9 -> V4 in Ordnung.
+                         */
+                        Child, s_vergleich = TextObject,
+                            MUIA_Text_Contents, (IPTR)"Vergleich direkt/I2C ...",
+                            MUIA_Text_PreParse, (IPTR)"\33l",
+                            MUIA_Weight, 0,
+                        End,
+                    End,
+                    /*
+                     * SEITE 1: DIE KONFIGURATION JE BUCHSE (fw_ver 4).
+                     *
+                     * Die Betriebsart steht auf der Anzeigeseite bei den
+                     * Buchsen ("Vorgabe" + "wirkt"), hier stehen Geraet,
+                     * Richtungen und die drei Knopfquellen -- je Zeile eine
+                     * Angabe, links die Beschriftung, rechts die beiden
+                     * Buchsen. So bleiben es sieben Zeilen statt vierzehn, und
+                     * die beiden Spalten stehen untereinander deckungsgleich
+                     * (gleiche Fixbreiten).
+                     *
+                     * Der Klartext in s_cfgtext nennt den vollen Zustand beider
+                     * Buchsen -- genau die Zeile aus dem Auftragsbeispiel.
+                     */
+                    Child, VGroup,
+                        MUIA_Weight, 0,
+                        Child, s_cfgtext = TextObject,
+                            MUIA_Text_Contents,
+                                (IPTR)"Konfiguration: warte auf "
+                                     "GET_PORT_CONFIG ...",
+                            MUIA_Text_PreParse, (IPTR)"\33l",
+                            MUIA_Text_SetMin, FALSE,
+                            MUIA_Weight, 0,
+                        End,
+                                Child, HGroup,
+                                    MUIA_Weight, 0,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)" ",
+                                        MUIA_FixWidth, 80,
+                                    End,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Buchse 0",
+                                        MUIA_FixWidth, 250,
+                                        MUIA_Text_PreParse, (IPTR)"\33b",
+                                    End,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Buchse 1",
+                                        MUIA_FixWidth, 250,
+                                        MUIA_Text_PreParse, (IPTR)"\33b",
+                                    End,
+                                End,
+                                Child, HGroup,
+                                    MUIA_Weight, 0,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Geraet",
+                                        MUIA_FixWidth, 80,
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_dev0 = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)s_dev_eintraege,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_dev1 = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)s_dev_eintraege,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                End,
+                                Child, HGroup,
+                                    MUIA_Weight, 0,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Richtungen",
+                                        MUIA_FixWidth, 80,
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_dir0[0] = MUI_MakeObject(
+                                                  MUIO_Checkmark,
+                                                  (IPTR)"Stick l", NULL),
+                                        Child, s_dir0[1] = MUI_MakeObject(
+                                                  MUIO_Checkmark,
+                                                  (IPTR)"Stick r", NULL),
+                                        Child, s_dir0[2] = MUI_MakeObject(
+                                                  MUIO_Checkmark,
+                                                  (IPTR)"D-Pad", NULL),
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_dir1[0] = MUI_MakeObject(
+                                                  MUIO_Checkmark,
+                                                  (IPTR)"Stick l", NULL),
+                                        Child, s_dir1[1] = MUI_MakeObject(
+                                                  MUIO_Checkmark,
+                                                  (IPTR)"Stick r", NULL),
+                                        Child, s_dir1[2] = MUI_MakeObject(
+                                                  MUIO_Checkmark,
+                                                  (IPTR)"D-Pad", NULL),
+                                    End,
+                                End,
+                                Child, HGroup,
+                                    MUIA_Weight, 0,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Knopf Pin 6",
+                                        MUIA_FixWidth, 80,
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_b0[0] = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_taste_eintraege,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_b1[0] = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_taste_eintraege,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                End,
+                                Child, HGroup,
+                                    MUIA_Weight, 0,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Knopf Pin 9",
+                                        MUIA_FixWidth, 80,
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_b0[1] = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_taste_eintraege,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_b1[1] = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_taste_eintraege,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                End,
+                                Child, HGroup,
+                                    MUIA_Weight, 0,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Knopf Pin 5",
+                                        MUIA_FixWidth, 80,
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_b0[2] = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_taste_eintraege,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_b1[2] = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_taste_eintraege,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                End,
+                                Child, TextObject,
+                                    MUIA_Text_Contents,
+                                        (IPTR)"Gruppe 1 = A,L1,L2,L3 - "
+                                             "Gruppe 2 = B,R1,R2,R3 - "
+                                             "Gruppe 3 = X,Y,Start,Select; "
+                                             "Home/Capture ist in keiner "
+                                             "Gruppe. Im Mausbetrieb bleiben "
+                                             "L1 = links und R1 = rechts.",
+                                    MUIA_Text_PreParse, (IPTR)"\33l",
+                                    MUIA_Text_SetMin, FALSE,
+                                    MUIA_Weight, 0,
+                                End,
+                            End,
+                    End,
                 /*
-                 * Der Vergleich direkt <-> I2C, volle Fensterbreite: eine Zeile
-                 * je Buchse und darunter die Rohwerte der Feuerregister. Die
-                 * direkte Abfrage laeuft neben der I2C-Antwort -- stimmen beide
-                 * ueberein, ist die Kette ESP32 -> DB9 -> V4 in Ordnung.
+                 * Die beiden Knopfreihen und die Listen stehen AUSSERHALB der
+                 * Seitengruppe und sind damit auf beiden Seiten sichtbar.
+                 *
+                 * Die beiden Listen sind die einzigen Kinder mit Gewicht: sie
+                 * bekommen den Platz, der nach den festen Anzeigefeldern
+                 * uebrig bleibt (Gewicht 30 fuer die Geraeteliste, 40 fuer das
+                 * Logfeld). MUIA_MinHeight haelt sie auch dann sichtbar, wenn
+                 * das Fenster kleiner gezogen wird -- sonst blieben von einer
+                 * Liste nur ein paar Pixel uebrig und sie saehe leer aus.
                  */
-                Child, s_vergleich = TextObject,
-                    MUIA_Text_Contents, (IPTR)"Vergleich direkt/I2C ...",
-                    MUIA_Text_PreParse, (IPTR)"\33l",
-                    MUIA_Weight, 0,
-                End,
                 Child, HGroup,
                     MUIA_Weight, 0,
                     Child, btn_scan    = MUI_MakeObject(MUIO_Button,
@@ -1923,14 +3029,6 @@ static int gui_build(void)
                             "(Firmware), \"Pegel\" = am ESP32 gemessen",
                     End,
                 End,
-                /*
-                 * Die beiden Listen sind die EINZIGEN Kinder mit Gewicht: sie
-                 * bekommen den Platz, der nach den festen Anzeigefeldern
-                 * uebrig bleibt (Gewicht 30 fuer die Geraeteliste, 40 fuer das
-                 * Logfeld). MUIA_MinHeight haelt sie auch dann sichtbar, wenn
-                 * das Fenster kleiner gezogen wird -- sonst blieben von einer
-                 * Liste nur ein paar Pixel uebrig und sie saehe leer aus.
-                 */
                 Child, s_devs_lv = ListviewObject,
                     MUIA_Listview_List, s_devs = ListObject,
                     End,
@@ -1960,13 +3058,24 @@ static int gui_build(void)
      * main() HINTER set(s_win, MUIA_Window_Open, TRUE).
      */
     if (s_vergleich == NULL || s_port0 == NULL || s_port1 == NULL
-        || s_logl == NULL) {
+        || s_logl == NULL || s_cfgtext == NULL || s_dev0 == NULL
+        || s_dev1 == NULL || s_dir0[0] == NULL || s_dir0[1] == NULL
+        || s_dir0[2] == NULL || s_dir1[0] == NULL || s_dir1[1] == NULL
+        || s_dir1[2] == NULL || s_b0[0] == NULL || s_b0[1] == NULL
+        || s_b0[2] == NULL || s_b1[0] == NULL || s_b1[1] == NULL
+        || s_b1[2] == NULL || s_wirk0 == NULL || s_wirk1 == NULL
+        || s_seite == NULL || s_seiten == NULL) {
         /* Ein fehlendes Objekt ist kein Grund weiterzumachen: die Anzeige
          * waere unvollstaendig, und ein set() darauf wuerde MUI treffen. */
         gui_msg("MUI: Objektbaum unvollstaendig (vergleich=%d port0=%d "
-                "port1=%d log=%d) -- Abbruch\n",
+                "port1=%d log=%d cfg=%d dev=%d/%d dir=%d/%d btn=%d/%d "
+                "wirkt=%d/%d) -- Abbruch\n",
                 (s_vergleich != NULL), (s_port0 != NULL), (s_port1 != NULL),
-                (s_logl != NULL));
+                (s_logl != NULL), (s_cfgtext != NULL),
+                (s_dev0 != NULL), (s_dev1 != NULL),
+                (s_dir0[0] != NULL), (s_dir1[0] != NULL),
+                (s_b0[0] != NULL), (s_b1[0] != NULL),
+                (s_wirk0 != NULL), (s_wirk1 != NULL));
         return -1;
     }
 
@@ -1985,9 +3094,9 @@ static int gui_build(void)
     DoMethod(btn_refresh, MUIM_Notify, MUIA_Pressed, FALSE,
              s_app, 2, MUIM_Application_ReturnID, ID_REFRESH);
     DoMethod(btn_mode0, MUIM_Notify, MUIA_Pressed, FALSE,
-             s_app, 2, MUIM_Application_ReturnID, ID_MODE0);
+             s_app, 2, MUIM_Application_ReturnID, ID_MODE0_NEXT);
     DoMethod(btn_mode1, MUIM_Notify, MUIA_Pressed, FALSE,
-             s_app, 2, MUIM_Application_ReturnID, ID_MODE1);
+             s_app, 2, MUIM_Application_ReturnID, ID_MODE1_NEXT);
     DoMethod(btn_swap, MUIM_Notify, MUIA_Pressed, FALSE,
              s_app, 2, MUIM_Application_ReturnID, ID_SWAP);
     /* Doppelklick auf ein gefundenes Geraet verbindet es. */
@@ -2002,6 +3111,35 @@ static int gui_build(void)
      * laufen lassen; wer am Bus stoeren will, schaltet sie ab. */
     DoMethod(s_live, MUIM_Notify, MUIA_Selected, MUIV_EveryTime,
              s_app, 2, MUIM_Application_ReturnID, ID_REFRESH);
+
+    /*
+     * Die Eingangsverteilung (fw_ver 4): jedes Auswahlfeld und jeder Schalter
+     * schickt seinen Befehl SOFORT (SET_DEVICE_PORT bzw. SET_PORT_ROUTING).
+     * Ein ReturnID JE BUCHSE genuegt -- die drei Richtungsschalter bzw. die
+     * drei Knopfquellen werden im Handler gemeinsam gelesen und in EINEM
+     * SET_PORT_ROUTING geschickt (der ESP32 kennt nur das ganze Paket).
+     */
+    DoMethod(s_dev0, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
+             s_app, 2, MUIM_Application_ReturnID, ID_DEV0);
+    DoMethod(s_dev1, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
+             s_app, 2, MUIM_Application_ReturnID, ID_DEV1);
+    /* Seitenumschalter Anzeige/Konfiguration. */
+    DoMethod(s_seite, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
+             s_app, 2, MUIM_Application_ReturnID, ID_SEITE);
+    {
+        unsigned k;
+
+        for (k = 0u; k < 3u; k++) {
+            DoMethod(s_dir0[k], MUIM_Notify, MUIA_Selected, MUIV_EveryTime,
+                     s_app, 2, MUIM_Application_ReturnID, ID_DIR0);
+            DoMethod(s_dir1[k], MUIM_Notify, MUIA_Selected, MUIV_EveryTime,
+                     s_app, 2, MUIM_Application_ReturnID, ID_DIR1);
+            DoMethod(s_b0[k], MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
+                     s_app, 2, MUIM_Application_ReturnID, ID_BTN0);
+            DoMethod(s_b1[k], MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
+                     s_app, 2, MUIM_Application_ReturnID, ID_BTN1);
+        }
+    }
     return 0;
 }
 
@@ -2201,6 +3339,16 @@ int main(int argc, char **argv)
 
             v4_state_put_info(&S, &info, (check == V4P_ST_OK) ? 1 : 0);
             v4_dbg_info(&info);
+            /*
+             * Die Faehigkeitsbits sind die VERBINDLICHE Auskunft darueber, ob
+             * die Eingangsverteilung vorhanden ist -- nicht die
+             * Firmware-Version. Eine Firmware mit fw_ver 4 und unveraendertem
+             * Rahmen (proto_ver 3) wird von v4_check_info() angenommen; eine
+             * aeltere mit fw_ver 3 bleibt bedienbar, nur ohne die neuen
+             * Felder.
+             */
+            s_cfg_ok     = v4_info_has_caps(&info, V4P_CAP_PORT_ROUTING);
+            s_devport_ok = v4_info_has_caps(&info, V4P_CAP_DEVICE_PORT);
             if (check != V4P_ST_OK) {
                 gui_msg("[ping] %s: Slave meldet proto=%u write=%u read=%u; "
                         "erwartet proto=%u write=%u read=%u\n",
@@ -2216,6 +3364,25 @@ int main(int argc, char **argv)
                         (unsigned)info.proto_ver, (unsigned)info.fw_ver,
                         (unsigned)info.write_frame_len,
                         (unsigned)info.read_frame_len, (unsigned)info.caps);
+            }
+            if (s_cfg_ok != 0 && s_devport_ok != 0) {
+                gui_msg("[ping] Eingangsverteilung vorhanden "
+                        "(Faehigkeitsbits 0x%04X/0x%04X): Geraet, "
+                        "Betriebsart, Richtungen und drei Knopfquellen je "
+                        "Buchse\n",
+                        (unsigned)V4P_CAP_PORT_ROUTING,
+                        (unsigned)V4P_CAP_DEVICE_PORT);
+            } else {
+                gui_msg("[ping] WARNUNG: Faehigkeitsbit(s) 0x%04X fehlen "
+                        "(gemeldet 0x%04X) -- die Gegenstelle kann die "
+                        "Eingangsverteilung nicht vollstaendig. Die Felder "
+                        "dafuer bleiben untaetig; dafuer wird fw_ver %u "
+                        "gebraucht.\n",
+                        (unsigned)((s_cfg_ok ? 0u : V4P_CAP_PORT_ROUTING)
+                                   | (s_devport_ok ? 0u
+                                                   : V4P_CAP_DEVICE_PORT)),
+                        (unsigned)info.caps,
+                        (unsigned)V4P_FW_VER_ROUTING);
             }
         } else {
             gui_msg("[ping] %s\n", v4_strerror(rc));
@@ -2348,6 +3515,33 @@ int main(int argc, char **argv)
             break;
         case ID_MODE1:
             act_set_mode(1);
+            break;
+        case ID_MODE0_NEXT:
+            act_mode_weiter(0);
+            break;
+        case ID_MODE1_NEXT:
+            act_mode_weiter(1);
+            break;
+        case ID_DEV0:
+            act_set_dev(0);
+            break;
+        case ID_DEV1:
+            act_set_dev(1);
+            break;
+        case ID_DIR0:
+            act_set_dir(0);
+            break;
+        case ID_DIR1:
+            act_set_dir(1);
+            break;
+        case ID_BTN0:
+            act_set_btn(0);
+            break;
+        case ID_BTN1:
+            act_set_btn(1);
+            break;
+        case ID_SEITE:
+            act_seite();
             break;
         case ID_SWAP:
             act_swap();

@@ -612,6 +612,568 @@ static uint8_t act_swap(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* Eingangsverteilung: der Befehl "cfg"                                */
+/*                                                                     */
+/* Dieselben Moeglichkeiten wie die Auswahlfelder der MUI-Oberflaeche,  */
+/* nur als Text -- damit sich die neuen Kommandos OHNE Oberflaeche      */
+/* bedienen und pruefen lassen (und damit die Testmatrix sie fahren     */
+/* kann):                                                              */
+/*                                                                     */
+/*   cfg                                alles anzeigen (beide Buchsen) */
+/*   cfg <0|1>                          eine Buchse anzeigen           */
+/*   cfg <0|1> mode auto|aus|joystick|maus                             */
+/*   cfg <0|1> dir alle|keine|stick_l|stick_r|dpad[+...]|0xNN          */
+/*   cfg <0|1> btn1|btn2|btn3 <quelle>  Quelle: keine,a,b,x,y,l1,r1,   */
+/*                                      l2,r2,l3,r3,start,select,home, */
+/*                                      gruppe1..3 oder 0..16          */
+/*   cfg assign <index|BDA> <0|1>       Geraet einer Buchse zuordnen   */
+/*                                                                     */
+/* Nach JEDER Aenderung wird GET_PORT_CONFIG neu gelesen und angezeigt. */
+/* Ein abgelehnter Wert (BAD_ARG, z.B. doppelte Knopfquelle) aendert     */
+/* nichts, wird ausdruecklich gemeldet und die Anzeige bleibt auf dem    */
+/* echten Zustand -- genau die Zusage der Oberflaeche.                   */
+/* ------------------------------------------------------------------ */
+
+/* Sind die neuen Befehle da? Verbindlich sind die Faehigkeitsbits -- NICHT die
+ * Firmware-Version: fw_ver 4 benutzt denselben Rahmen und dieselbe proto_ver 3
+ * und wird von v4_check_info() angenommen. */
+static int cfg_verfuegbar(void)
+{
+    return (S.info_valid != 0
+            && v4_info_has_caps(&S.info, V4P_CAP_PORT_ROUTING) != 0) ? 1 : 0;
+}
+
+static int devport_verfuegbar(void)
+{
+    return (S.info_valid != 0
+            && v4_info_has_caps(&S.info, V4P_CAP_DEVICE_PORT) != 0) ? 1 : 0;
+}
+
+/* GET_PORT_CONFIG lesen und in den Zustandsblock uebernehmen. */
+static uint8_t cfg_lesen(void)
+{
+    v4p_portcfg_t c;
+    uint8_t       rc;
+
+    if (!cfg_verfuegbar()) {
+        v4_msg("Die Gegenstelle kann die Eingangsverteilung nicht "
+               "(Faehigkeitsbit 0x%04X fehlt).\n", (unsigned)V4P_CAP_PORT_ROUTING);
+        v4_msg("  Firmware %u meldet Faehigkeiten 0x%04X -- fuer "
+               "GET_PORT_CONFIG/SET_PORT_ROUTING\n"
+               "  wird fw_ver 4 mit Bit 0x0100 gebraucht.\n",
+               S.info_valid ? (unsigned)S.info.fw_ver : 0u,
+               S.info_valid ? (unsigned)S.info.caps : 0u);
+        return V4P_ST_BAD_CMD;
+    }
+    rc = v4_get_port_config(&M, &c);
+    (void)v4_state_note(&S, rc);
+    if (rc != V4P_ST_OK) {
+        print_failure("GET_PORT_CONFIG", rc);
+        return rc;
+    }
+    v4_state_put_portcfg(&S, &c);
+    return V4P_ST_OK;
+}
+
+/* Die gemerkte Geraetezuordnung einer Buchse als Text. Sie ist ueber die
+ * Leitung NICHT lesbar -- hier steht nur, was in DIESER Sitzung per
+ * SET_DEVICE_PORT gesetzt und bestaetigt wurde. Ist das Geraet in der
+ * Scanliste, steht sein Name; sonst wenigstens die Adresse (eine Zuordnung
+ * per BDA ist auch ohne Scan moeglich). */
+static void cfg_geraete_text(int port, char *out, size_t cap)
+{
+    size_t  n     = 0u;
+    int     first = 1;
+    uint8_t i;
+
+    if (out == NULL || cap == 0u) {
+        return;
+    }
+    out[0] = '\0';
+    for (i = 0u; i < S.devport_n; i++) {
+        uint8_t     bda[V4P_BDA_LEN];
+        const char *name = NULL;
+        char        adresse[24];
+        uint8_t     k;
+
+        if (v4_state_devport_at(&S, i, bda) != (uint8_t)port) {
+            continue;
+        }
+        for (k = 0u; k < S.dev_n; k++) {
+            if (S.devs[k].bda[0] == bda[0] && S.devs[k].bda[1] == bda[1]
+                && S.devs[k].bda[2] == bda[2] && S.devs[k].bda[3] == bda[3]
+                && S.devs[k].bda[4] == bda[4] && S.devs[k].bda[5] == bda[5]) {
+                name = (S.devs[k].name[0] != '\0') ? S.devs[k].name
+                                                   : "(ohne Namen)";
+                break;
+            }
+        }
+        if (name == NULL) {
+            (void)snprintf(adresse, sizeof(adresse), "%02X:%02X:%02X:%02X:%02X:%02X",
+                           bda[0], bda[1], bda[2], bda[3], bda[4], bda[5]);
+            name = adresse;
+        }
+        {
+            size_t len = strlen(name);
+            size_t j;
+
+            if (n + (first ? 0u : 2u) + len + 1u > cap) {
+                break;
+            }
+            if (!first) {
+                out[n++] = ',';
+                out[n++] = ' ';
+            }
+            for (j = 0u; j < len; j++) {
+                out[n++] = name[j];
+            }
+            first = 0;
+        }
+    }
+    if (first) {
+        const char *keine = "(keines)";
+
+        for (n = 0u; keine[n] != '\0' && n + 1u < cap; n++) {
+            out[n] = keine[n];
+        }
+    }
+    out[n] = '\0';
+}
+
+/* Eine Zeile je Buchse -- die Entsprechung zur Konfigurationszeile im Fenster. */
+static void cfg_zeile(int port, const v4p_portcfg_t *c, char *buf, size_t cap)
+{
+    char dir[48];
+    char geraet[V4P_NAME_BUF + 16u];
+
+    v4p_dir_text(c->dir[port], dir, sizeof(dir));
+    cfg_geraete_text(port, geraet, sizeof(geraet));
+
+    (void)snprintf(buf, cap,
+                   "Buchse %d: Geraet %-24s Vorgabe %-8s wirkt %-8s "
+                   "Richtungen %-22s Pin6<-%s Pin9<-%s Pin5<-%s",
+                   port, geraet,
+                   v4p_port_mode_soll_name(c->mode_soll[port]),
+                   v4p_port_mode_name(c->mode_ist[port]),
+                   dir,
+                   v4p_taste_name_short(c->btn[port][0]),
+                   v4p_taste_name_short(c->btn[port][1]),
+                   v4p_taste_name_short(c->btn[port][2]));
+}
+
+/* Alles (port < 0) oder eine Buchse anzeigen. Liest die Gegenstelle. */
+static uint8_t act_cfg_show(int port)
+{
+    static char buf[512];               /* ortsfest (4-KB-Stapel) */
+    uint8_t     rc = cfg_lesen();
+
+    if (rc != V4P_ST_OK) {
+        return rc;
+    }
+    if (port < 0 || port >= (int)V4P_PORT_COUNT) {
+        int p;
+
+        for (p = 0; p < (int)V4P_PORT_COUNT; p++) {
+            cfg_zeile(p, &S.portcfg, buf, sizeof(buf));
+            v4_msg("%s\n", buf);
+        }
+    } else {
+        cfg_zeile(port, &S.portcfg, buf, sizeof(buf));
+        v4_msg("%s\n", buf);
+    }
+    v4_msg("  Vorgabe = GET_PORT_CONFIG.mode_soll (auto = nach Geraeteart), "
+           "wirkt = mode_ist\n"
+           "  Die Geraetezuordnung ist ueber die Leitung nicht lesbar: hier "
+           "steht, was in dieser\n"
+           "  Sitzung per SET_DEVICE_PORT gesetzt und bestaetigt wurde.\n");
+    return V4P_ST_OK;
+}
+
+/* "auto"/"aus"/"joystick"/"maus" -> Vorgabewert. -1 = unbekannt. */
+static int cfg_mode_parse(const char *s)
+{
+    if (s == NULL) {
+        return -1;
+    }
+    if (strcmp(s, "auto") == 0 || strcmp(s, "0xFF") == 0) {
+        return (int)V4P_MODE_AUTO;
+    }
+    if (strcmp(s, "aus") == 0 || strcmp(s, "off") == 0 || strcmp(s, "0") == 0) {
+        return (int)V4P_PORT_OFF;
+    }
+    if (strcmp(s, "joystick") == 0 || strcmp(s, "joy") == 0
+        || strcmp(s, "1") == 0) {
+        return (int)V4P_PORT_JOY;
+    }
+    if (strcmp(s, "maus") == 0 || strcmp(s, "mouse") == 0
+        || strcmp(s, "2") == 0) {
+        return (int)V4P_PORT_MOUSE;
+    }
+    return -1;
+}
+
+/* Eine Knopfquelle: Name oder Zahl 0..16. -1 = unbekannt. */
+static int cfg_taste_parse(const char *s)
+{
+    static const struct {
+        const char *name;
+        uint8_t     code;
+    } tab[] = {
+        { "keine",   V4P_TASTE_KEINE  }, { "a",      V4P_TASTE_A      },
+        { "b",       V4P_TASTE_B      }, { "x",      V4P_TASTE_X      },
+        { "y",       V4P_TASTE_Y      }, { "l1",     V4P_TASTE_L1     },
+        { "r1",      V4P_TASTE_R1     }, { "l2",     V4P_TASTE_L2     },
+        { "r2",      V4P_TASTE_R2     }, { "l3",     V4P_TASTE_L3     },
+        { "r3",      V4P_TASTE_R3     }, { "start",  V4P_TASTE_START  },
+        { "select",  V4P_TASTE_SELECT }, { "home",   V4P_TASTE_HOME   },
+        { "gruppe1", V4P_TASTE_GRUPPE1 }, { "g1",    V4P_TASTE_GRUPPE1 },
+        { "gruppe2", V4P_TASTE_GRUPPE2 }, { "g2",    V4P_TASTE_GRUPPE2 },
+        { "gruppe3", V4P_TASTE_GRUPPE3 }, { "g3",    V4P_TASTE_GRUPPE3 }
+    };
+    unsigned i;
+    char     *ende = NULL;
+    long      zahl;
+
+    if (s == NULL || s[0] == '\0') {
+        return -1;
+    }
+    for (i = 0u; i < (unsigned)(sizeof(tab) / sizeof(tab[0])); i++) {
+        if (strcmp(s, tab[i].name) == 0) {
+            return (int)tab[i].code;
+        }
+    }
+    zahl = strtol(s, &ende, 0);
+    if (ende != NULL && *ende == '\0' && zahl >= 0
+        && zahl < (long)V4P_TASTE_ANZAHL) {
+        return (int)zahl;
+    }
+    return -1;
+}
+
+/*
+ * Richtungen: "alle", "keine", eine Bitfolge aus stick_l/stick_r/dpad (mit
+ * '+' getrennt) oder eine Zahl 0..7. Rueckgabe 0 = erkannt.
+ */
+static int cfg_dir_parse(const char *s, uint8_t *out)
+{
+    uint8_t maske = 0u;
+    char    kopie[64];
+    char   *teil;
+    size_t  i;
+
+    if (s == NULL || out == NULL || s[0] == '\0') {
+        return 0;
+    }
+    if (strcmp(s, "alle") == 0) {
+        *out = (uint8_t)V4P_DIR_ALLE;
+        return 1;
+    }
+    if (strcmp(s, "keine") == 0) {
+        *out = 0u;
+        return 1;
+    }
+    if (s[0] >= '0' && s[0] <= '9') {
+        char *ende = NULL;
+        long  zahl = strtol(s, &ende, 0);
+
+        if (ende != NULL && *ende == '\0' && zahl >= 0
+            && (zahl & ~(long)V4P_DIR_MASK) == 0) {
+            *out = (uint8_t)zahl;
+            return 1;
+        }
+        return 0;
+    }
+    /* Namen, durch '+' getrennt. */
+    for (i = 0u; i + 1u < sizeof(kopie) && s[i] != '\0'; i++) {
+        kopie[i] = s[i];
+    }
+    kopie[i] = '\0';
+    for (teil = kopie; teil != NULL && *teil != '\0'; ) {
+        char *plus = strchr(teil, '+');
+
+        if (plus != NULL) {
+            *plus = '\0';
+        }
+        if (strcmp(teil, "stick_l") == 0 || strcmp(teil, "stick-links") == 0) {
+            maske = (uint8_t)(maske | V4P_DIR_STICK_L);
+        } else if (strcmp(teil, "stick_r") == 0
+                   || strcmp(teil, "stick-rechts") == 0) {
+            maske = (uint8_t)(maske | V4P_DIR_STICK_R);
+        } else if (strcmp(teil, "dpad") == 0 || strcmp(teil, "d-pad") == 0) {
+            maske = (uint8_t)(maske | V4P_DIR_DPAD);
+        } else {
+            return 0;
+        }
+        teil = (plus != NULL) ? (plus + 1) : NULL;
+    }
+    *out = maske;
+    return 1;
+}
+
+/* Eine BDA aus "AA:BB:CC:DD:EE:FF" (auch ohne Doppelpunkte). 0 = erkannt. */
+static int cfg_bda_parse(const char *s, uint8_t bda[V4P_BDA_LEN])
+{
+    unsigned i;
+    unsigned ziffern = 0u;
+
+    if (s == NULL || bda == NULL) {
+        return 0;
+    }
+    for (i = 0u; i < V4P_BDA_LEN; i++) {
+        unsigned wert = 0u;
+        unsigned k;
+
+        for (k = 0u; k < 2u; k++) {
+            char c = *s;
+            unsigned v;
+
+            if (c >= '0' && c <= '9') {
+                v = (unsigned)(c - '0');
+            } else if (c >= 'a' && c <= 'f') {
+                v = (unsigned)(c - 'a' + 10);
+            } else if (c >= 'A' && c <= 'F') {
+                v = (unsigned)(c - 'A' + 10);
+            } else {
+                return 0;
+            }
+            wert = (wert << 4) | v;
+            s++;
+            ziffern++;
+        }
+        bda[i] = (uint8_t)wert;
+        if (*s == ':' || *s == '-' || *s == '.') {
+            s++;
+        } else if (*s != '\0') {
+            return 0;
+        }
+    }
+    return (*s == '\0' && ziffern == 12u) ? 1 : 0;
+}
+
+/*
+ * Eine Kommandozeile nach "cfg" auswerten. `line` ist der Rest der Zeile
+ * (ohne "cfg"). Die Geraeteliste kommt aus dem Zustandsblock (Befehl 'a').
+ */
+static void act_cfg(char *line)
+{
+    char  *arg[4];
+    int    narg = 0;
+    char  *p;
+
+    for (p = strtok(line, " \t\r\n"); p != NULL && narg < 4;
+         p = strtok(NULL, " \t\r\n")) {
+        arg[narg++] = p;
+    }
+
+    /* "cfg" bzw. "cfg <port>" -- anzeigen. */
+    if (narg == 0) {
+        (void)act_cfg_show(-1);
+        return;
+    }
+    if (strcmp(arg[0], "assign") == 0) {
+        int port;
+
+        if (narg < 3) {
+            v4_msg("Aufruf: cfg assign <index|BDA> <0|1>\n");
+            return;
+        }
+        port = atoi(arg[2]);
+        if (port < 0 || port >= (int)V4P_PORT_COUNT) {
+            v4_msg("Es gibt nur Buchse 0 und Buchse 1.\n");
+            return;
+        }
+        if (!devport_verfuegbar()) {
+            v4_msg("Die Gegenstelle kann SET_DEVICE_PORT nicht "
+                   "(Faehigkeitsbit 0x%04X fehlt).\n",
+                   (unsigned)V4P_CAP_DEVICE_PORT);
+            return;
+        }
+        if (arg[1][0] >= '0' && arg[1][0] <= '9'
+            && strlen(arg[1]) <= 2) {
+            /* Index in die Geraeteliste aus dem Zustandsblock. */
+            int idx = atoi(arg[1]);
+
+            if (idx < 0 || idx >= (int)S.dev_n) {
+                v4_msg("Index %d liegt nicht in der Geraeteliste (%u "
+                       "Eintraege). Erst 'a' (Scan) ausfuehren.\n",
+                       idx, (unsigned)S.dev_n);
+                return;
+            }
+            {
+                uint8_t rc = v4_set_device_port(&M, S.devs[idx].bda,
+                                                (uint8_t)port);
+
+                (void)v4_state_note(&S, rc);
+                if (rc != V4P_ST_OK) {
+                    v4_msg("SET_DEVICE_PORT: %s -- nichts geaendert.\n",
+                           v4_strerror(rc));
+                    return;
+                }
+                v4_state_put_devport(&S, S.devs[idx].bda, (uint8_t)port);
+                v4_msg("Geraet [%d] \"%s\" -> Buchse %d (bestaetigt).\n",
+                       idx,
+                       (S.devs[idx].name[0] != '\0') ? S.devs[idx].name
+                                                     : "(ohne Namen)",
+                       port);
+            }
+        } else {
+            uint8_t bda[V4P_BDA_LEN];
+            uint8_t rc;
+
+            if (!cfg_bda_parse(arg[1], bda)) {
+                v4_msg("\"%s\" ist keine Adresse (AA:BB:CC:DD:EE:FF) und kein "
+                       "Index.\n", arg[1]);
+                return;
+            }
+            rc = v4_set_device_port(&M, bda, (uint8_t)port);
+            (void)v4_state_note(&S, rc);
+            if (rc != V4P_ST_OK) {
+                v4_msg("SET_DEVICE_PORT: %s -- nichts geaendert.\n",
+                       v4_strerror(rc));
+                return;
+            }
+            v4_state_put_devport(&S, bda, (uint8_t)port);
+            v4_msg("Adresse %02X:%02X:%02X:%02X:%02X:%02X -> Buchse %d "
+                   "(bestaetigt).\n",
+                   bda[0], bda[1], bda[2], bda[3], bda[4], bda[5], port);
+        }
+        /* Wie bei jeder anderen Aenderung: den echten Zustand nachlesen und
+         * die Zeile zeigen (der Geraetename steht darin). */
+        (void)act_cfg_show(port);
+        return;
+    }
+
+    /* Ab hier: cfg <port> ... */
+    {
+        int port = atoi(arg[0]);
+
+        if (port < 0 || port >= (int)V4P_PORT_COUNT) {
+            v4_msg("Es gibt nur Buchse 0 und Buchse 1 (oder 'cfg assign').\n");
+            return;
+        }
+        if (narg == 1) {
+            (void)act_cfg_show(port);
+            return;
+        }
+        if (narg < 3) {
+            v4_msg("Aufruf: cfg <0|1> mode|dir|btn1|btn2|btn3 <wert>\n");
+            return;
+        }
+        if (!cfg_verfuegbar()) {
+            (void)cfg_lesen();          /* gibt den Klartext aus */
+            return;
+        }
+
+        if (strcmp(arg[1], "mode") == 0) {
+            int     m = cfg_mode_parse(arg[2]);
+            uint8_t applied = 0u;
+            uint8_t rc;
+
+            if (m < 0) {
+                v4_msg("\"%s\" ist keine Betriebsart (auto, aus, Joystick, "
+                       "Maus).\n", arg[2]);
+                return;
+            }
+            rc = v4_set_port_mode(&M, (uint8_t)port, (uint8_t)m, &applied);
+            (void)v4_state_note(&S, rc);
+            if (rc != V4P_ST_OK) {
+                v4_msg("SET_PORT_MODE: %s -- nichts geaendert.\n",
+                       v4_strerror(rc));
+                return;
+            }
+            if ((uint8_t)m == (uint8_t)V4P_MODE_AUTO) {
+                v4_msg("Buchse %d: Vorgabe auto (nach Geraeteart) "
+                       "bestaetigt; die wirksame Betriebsart wird beim "
+                       "naechsten Verbinden bzw. von 'duo' neu abgeleitet.\n",
+                       port);
+            } else {
+                v4_msg("Buchse %d: Betriebsart %s bestaetigt.\n", port,
+                       v4p_port_mode_name(applied));
+            }
+        } else if (strcmp(arg[1], "dir") == 0) {
+            uint8_t neu;
+            uint8_t rc;
+
+            if (!cfg_dir_parse(arg[2], &neu)) {
+                v4_msg("\"%s\" ist keine Richtungsangabe (alle, keine, "
+                       "stick_l, stick_r, dpad, mit '+' verbunden, oder "
+                       "0x00..0x07).\n", arg[2]);
+                return;
+            }
+            rc = cfg_lesen();
+            if (rc != V4P_ST_OK) {
+                return;
+            }
+            rc = v4_set_port_routing(&M, (uint8_t)port, neu,
+                                     S.portcfg.btn[port]);
+            (void)v4_state_note(&S, rc);
+            if (rc != V4P_ST_OK) {
+                v4_msg("SET_PORT_ROUTING: %s -- nichts geaendert.\n",
+                       v4_strerror(rc));
+                return;
+            }
+            v4_msg("Buchse %d: Richtungen gesetzt.\n", port);
+        } else if (strcmp(arg[1], "btn1") == 0
+                   || strcmp(arg[1], "btn2") == 0
+                   || strcmp(arg[1], "btn3") == 0) {
+            int     idx = (arg[1][3] == '1') ? 0 : ((arg[1][3] == '2') ? 1 : 2);
+            int     code = cfg_taste_parse(arg[2]);
+            uint8_t btn[V4P_BTN_COUNT];
+            uint8_t rc;
+            unsigned k;
+
+            if (code < 0) {
+                v4_msg("\"%s\" ist keine Knopfquelle (keine, a, b, x, y, l1, "
+                       "r1, l2, r2, l3, r3, start, select, home, gruppe1..3 "
+                       "oder 0..16).\n", arg[2]);
+                return;
+            }
+            rc = cfg_lesen();
+            if (rc != V4P_ST_OK) {
+                return;
+            }
+            for (k = 0u; k < V4P_BTN_COUNT; k++) {
+                btn[k] = S.portcfg.btn[port][k];
+            }
+            btn[idx] = (uint8_t)code;
+            rc = v4_set_port_routing(&M, (uint8_t)port, S.portcfg.dir[port],
+                                     btn);
+            (void)v4_state_note(&S, rc);
+            if (rc == V4P_ST_BAD_ARG) {
+                /* Der haeufigste Fall: die Quelle steht schon auf einer anderen
+                 * Leitung. Das gehoert im Klartext gesagt, sonst sucht man den
+                 * Fehler im Kabel. */
+                v4_msg("SET_PORT_ROUTING: BAD_ARG -- \"%s\" ist auf dieser "
+                       "Buchse schon einer anderen Leitung zugeordnet\n"
+                       "  (Pin6<-%s Pin9<-%s Pin5<-%s). Eine nicht-leere "
+                       "Quelle darf nur auf EINER Leitung stehen; nichts "
+                       "geaendert.\n",
+                       v4p_taste_name((uint8_t)code),
+                       v4p_taste_name_short(S.portcfg.btn[port][0]),
+                       v4p_taste_name_short(S.portcfg.btn[port][1]),
+                       v4p_taste_name_short(S.portcfg.btn[port][2]));
+                return;
+            }
+            if (rc != V4P_ST_OK) {
+                v4_msg("SET_PORT_ROUTING: %s -- nichts geaendert.\n",
+                       v4_strerror(rc));
+                return;
+            }
+            v4_msg("Buchse %d: %s <- %s bestaetigt.\n", port,
+                   (idx == 0) ? "Pin 6" : ((idx == 1) ? "Pin 9" : "Pin 5"),
+                   v4p_taste_name_short((uint8_t)code));
+        } else {
+            v4_msg("Unbekannt: 'cfg %d %s ...' (mode, dir, btn1, btn2, "
+                   "btn3).\n", port, arg[1]);
+            return;
+        }
+
+        /* Nach JEDER Aenderung den echten Zustand nachlesen und zeigen. */
+        (void)act_cfg_show(port);
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /* Schalter                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -792,6 +1354,11 @@ static int console_run(const char *dev)
     (void)act_status();
     (void)act_hid();
     (void)print_ports();
+    /* Die Eingangsverteilung (fw_ver 4) gleich mit -- so stehen die Felder,
+     * die die Oberflaeche als Auswahlfelder zeigt, auch hier von Anfang an da. */
+    if (cfg_verfuegbar()) {
+        (void)act_cfg_show(-1);
+    }
 
     /*
      * Hauptmenue. Jede Zeile ist ein Befehl; das Programm beendet sich auch bei
@@ -801,7 +1368,9 @@ static int console_run(const char *dev)
     v4_msg("\n-- Menue --  s Zustand, h HID, i Eingaenge, p Portmodus, "
            "t tauschen,\n"
            "             a Scan/Liste, c verbinden, d trennen, f vergessen, "
-           "r RESET, q Ende\n");
+           "r RESET, q Ende\n"
+           "             cfg [<0|1> mode|dir|btn1|btn2|btn3 <wert>] | "
+           "cfg assign <index|BDA> <0|1>\n");
 
     while (beenden == 0) {
         console_herz_maybe();
@@ -809,6 +1378,17 @@ static int console_run(const char *dev)
         if (fgets(line, sizeof(line), stdin) == NULL) {
             v4_msg("\n(Eingabe zu Ende -- Programm beendet)\n");
             beenden = 1;
+            continue;
+        }
+        /*
+         * "cfg" beginnt mit 'c' -- das ist unten der Befehl "verbinden".
+         * Deshalb wird es VOR dem Schalter abgefangen; nur "cfg" mit
+         * Wortgrenze, damit "c" allein weiter verbindet.
+         */
+        if (strncmp(line, "cfg", 3) == 0
+            && (line[3] == '\0' || line[3] == ' ' || line[3] == '\t'
+                || line[3] == '\n' || line[3] == '\r')) {
+            act_cfg(line + 3);
             continue;
         }
         switch (line[0]) {

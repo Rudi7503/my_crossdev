@@ -567,6 +567,181 @@ static void test_wait_backoff(void)
 
 /* ------------------------------------------------------------------ */
 
+/*
+ * Eingangsverteilung und Geraetezuordnung (fw_ver 4): GET_PORT_CONFIG (0x09),
+ * SET_PORT_ROUTING (0x0A), SET_DEVICE_PORT (0x08) und SET_PORT_MODE mit
+ * 0xFF ("nach Geraeteart").
+ *
+ * Die Faelle sind wieder die unangenehmen: Doppelbelegung (BAD_ARG, NICHTS
+ * geaendert), unbekannte Werte, falsches Echo -- und eine aeltere Firmware
+ * (fw_ver 3) ohne die neuen Befehle, die trotzdem ANGENOMMEN werden muss.
+ */
+static void test_routing(void)
+{
+    v4_master_t   m;
+    v4p_info_t    info;
+    v4p_portcfg_t c;
+    uint8_t       btn[V4P_BTN_COUNT];
+    uint8_t       bda[6];
+    uint8_t       applied = 0u;
+    unsigned      k;
+
+    v4_test_case("PING: fw_ver 4 wird angenommen, die neuen Faehigkeitsbits "
+                 "sind da");
+    setup(&m);
+    CHECK_EQ(v4_ping(&m, &info), V4P_ST_OK);
+    CHECK_EQ(info.fw_ver, V4P_FW_VER);
+    CHECK_EQ(v4_check_info(&info), V4P_ST_OK);      /* KEIN Abbruch! */
+    CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_PORT_ROUTING), 1);
+    CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_DEVICE_PORT), 1);
+    CHECK_EQ(v4_info_has_caps(&info,
+                              (uint16_t)(V4P_CAP_PORT_ROUTING
+                                         | V4P_CAP_DEVICE_PORT)), 1);
+    CHECK_EQ(v4_info_has_caps(&info,
+                              (uint16_t)(V4P_CAP_PORT_ROUTING | 0x8000u)), 0);
+    CHECK_EQ(v4_info_has_caps(NULL, V4P_CAP_PORT_ROUTING), 0);
+    teardown();
+
+    v4_test_case("GET_PORT_CONFIG: Vorgaben ab Werk (dir 0x07, "
+                 "Knopfquellen = die drei Gruppen)");
+    setup(&m);
+    memset(&c, 0, sizeof(c));
+    CHECK_EQ(v4_get_port_config(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.mode_soll[0], V4P_MODE_AUTO);        /* Vorgabe ungesetzt */
+    CHECK_EQ(c.mode_soll[1], V4P_MODE_AUTO);
+    CHECK_EQ(c.mode_ist[0], V4P_PORT_JOY);          /* wirksam: Geraeteart */
+    CHECK_EQ(c.mode_ist[1], V4P_PORT_OFF);
+    CHECK_EQ(c.dir[0], V4P_DIR_STANDARD);
+    CHECK_EQ(c.dir[1], V4P_DIR_STANDARD);
+    for (k = 0u; k < V4P_BTN_COUNT; k++) {
+        CHECK_EQ(c.btn[0][k], (uint8_t)(V4P_TASTE_GRUPPE1 + k));
+        CHECK_EQ(c.btn[1][k], (uint8_t)(V4P_TASTE_GRUPPE1 + k));
+    }
+    CHECK_EQ(v4_get_port_config(&m, NULL), V4_ERR_ARG);
+    teardown();
+
+    v4_test_case("SET_PORT_ROUTING: gueltige Verteilung wird gesetzt und "
+                 "bestaetigt");
+    setup(&m);
+    btn[0] = V4P_TASTE_L1;
+    btn[1] = V4P_TASTE_R1;
+    btn[2] = V4P_TASTE_KEINE;
+    CHECK_EQ(v4_set_port_routing(&m, 0u, V4P_DIR_STICK_L, btn), V4P_ST_OK);
+    CHECK_EQ(v4_get_port_config(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.dir[0], V4P_DIR_STICK_L);
+    CHECK_EQ(c.btn[0][0], V4P_TASTE_L1);
+    CHECK_EQ(c.btn[0][1], V4P_TASTE_R1);
+    CHECK_EQ(c.btn[0][2], V4P_TASTE_KEINE);
+    /* Buchse 1 bleibt unberuehrt. */
+    CHECK_EQ(c.dir[1], V4P_DIR_STANDARD);
+    teardown();
+
+    v4_test_case("SET_PORT_ROUTING: doppelte Knopfquelle -> BAD_ARG, "
+                 "NICHTS geaendert, kein Rahmen");
+    setup(&m);
+    btn[0] = V4P_TASTE_L1;
+    btn[1] = V4P_TASTE_L1;                          /* doppelt! */
+    btn[2] = V4P_TASTE_KEINE;
+    {
+        unsigned long vorher = v4_mock.writes;
+
+        CHECK_EQ(v4_set_port_routing(&m, 0u, V4P_DIR_ALLE, btn),
+                 V4P_ST_BAD_ARG);
+        CHECK_EQ(v4_mock.writes, vorher);           /* lokal abgewiesen */
+    }
+    CHECK_EQ(v4_get_port_config(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.btn[0][0], V4P_TASTE_GRUPPE1);       /* unveraendert */
+    CHECK_EQ(c.btn[0][1], V4P_TASTE_GRUPPE2);
+    teardown();
+
+    v4_test_case("SET_PORT_ROUTING: unbekannter Code, unbekanntes "
+                 "Richtungsbit, port 2 -> BAD_ARG");
+    setup(&m);
+    btn[0] = (uint8_t)V4P_TASTE_ANZAHL;
+    btn[1] = V4P_TASTE_KEINE;
+    btn[2] = V4P_TASTE_KEINE;
+    CHECK_EQ(v4_set_port_routing(&m, 0u, V4P_DIR_ALLE, btn), V4P_ST_BAD_ARG);
+    btn[0] = V4P_TASTE_A;
+    CHECK_EQ(v4_set_port_routing(&m, 0u, 0x80u, btn), V4P_ST_BAD_ARG);
+    CHECK_EQ(v4_set_port_routing(&m, 2u, V4P_DIR_ALLE, btn), V4P_ST_BAD_ARG);
+    CHECK_EQ(v4_set_port_routing(&m, 0u, V4P_DIR_ALLE, NULL), V4_ERR_ARG);
+    teardown();
+
+    v4_test_case("SET_PORT_ROUTING: falsches Echo -> V4_ERR_FRAME");
+    setup(&m);
+    v4_mock.bad_routing_echo = 1;
+    btn[0] = V4P_TASTE_A;
+    btn[1] = V4P_TASTE_B;
+    btn[2] = V4P_TASTE_START;
+    CHECK_EQ(v4_set_port_routing(&m, 0u, V4P_DIR_DPAD, btn), V4_ERR_FRAME);
+    teardown();
+
+    v4_test_case("SET_PORT_MODE 0xFF: Vorgabe zurueck auf \"nach "
+                 "Geraeteart\", wirksame Betriebsart bleibt");
+    setup(&m);
+    /* Erst eine Vorgabe setzen ... */
+    CHECK_EQ(v4_set_port_mode(&m, 0u, V4P_PORT_MOUSE, &applied), V4P_ST_OK);
+    CHECK_EQ(applied, V4P_PORT_MOUSE);
+    CHECK_EQ(v4_get_port_config(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.mode_soll[0], V4P_PORT_MOUSE);
+    CHECK_EQ(c.mode_ist[0], V4P_PORT_MOUSE);
+    /* ... dann zuruecknehmen. Das Echo ist 0xFF, NICHT die wirksame
+     * Betriebsart -- das ist die Zusage der ESP32-Seite. */
+    CHECK_EQ(v4_set_port_mode(&m, 0u, (uint8_t)V4P_MODE_AUTO, &applied),
+             V4P_ST_OK);
+    CHECK_EQ(applied, V4P_MODE_AUTO);
+    CHECK_EQ(v4_get_port_config(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.mode_soll[0], V4P_MODE_AUTO);
+    CHECK_EQ(c.mode_ist[0], V4P_PORT_MOUSE);        /* laeuft weiter */
+    /* Und GET_PORT_MODE meldet weiter die WIRKSAME Betriebsart. */
+    {
+        uint8_t mode[V4P_PORT_COUNT];
+
+        CHECK_EQ(v4_get_port_mode(&m, mode), V4P_ST_OK);
+        CHECK_EQ(mode[0], V4P_PORT_MOUSE);
+    }
+    /* Unfug bleibt Unfug: mode 3 wird lokal abgewiesen. */
+    CHECK_EQ(v4_set_port_mode(&m, 0u, 3u, NULL), V4P_ST_BAD_ARG);
+    teardown();
+
+    v4_test_case("SET_DEVICE_PORT: BDA -> Buchse, Echo geprueft");
+    setup(&m);
+    bda[0] = 0x00u; bda[1] = 0x1Bu; bda[2] = 0xDCu;
+    bda[3] = 0x44u; bda[4] = 0x55u; bda[5] = 0x66u;     /* Index 1 */
+    CHECK_EQ(v4_set_device_port(&m, bda, 0u), V4P_ST_OK);
+    CHECK_EQ(v4_mock_dev_port(1), 0u);
+    CHECK_EQ(v4_mock_dev_port(0), V4P_NO_INDEX);        /* unberuehrt */
+    CHECK_EQ(v4_set_device_port(&m, bda, 2u), V4P_ST_BAD_ARG);
+    CHECK_EQ(v4_set_device_port(&m, NULL, 0u), V4_ERR_ARG);
+    teardown();
+
+    v4_test_case("fw_ver 3 (ohne die neuen Befehle): PING wird ANGENOMMEN, "
+                 "die neuen Befehle melden BAD_CMD");
+    v4_mock_reset();
+    v4_mock_seed_default();
+    v4_mock.legacy_fw3 = 1;
+    CHECK_EQ(v4_open(&m, NULL), 0);
+    CHECK_EQ(v4_ping(&m, &info), V4P_ST_OK);
+    CHECK_EQ(info.fw_ver, 3u);
+    CHECK_EQ(v4_check_info(&info), V4P_ST_OK);      /* gleicher Rahmen! */
+    CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_PORT_ROUTING), 0);
+    CHECK_EQ(v4_get_port_config(&m, &c), V4P_ST_BAD_CMD);
+    btn[0] = V4P_TASTE_A;
+    btn[1] = V4P_TASTE_B;
+    btn[2] = V4P_TASTE_START;
+    CHECK_EQ(v4_set_port_routing(&m, 0u, V4P_DIR_DPAD, btn), V4P_ST_BAD_CMD);
+    CHECK_EQ(v4_set_device_port(&m, s_bda[0], 0u), V4P_ST_BAD_CMD);
+    /* SET_PORT_MODE mit 0xFF kennt nur fw_ver 4. */
+    CHECK_EQ(v4_set_port_mode(&m, 0u, (uint8_t)V4P_MODE_AUTO, &applied),
+             V4P_ST_BAD_ARG);
+    /* Die alten Befehle arbeiten weiter. */
+    CHECK_EQ(v4_set_port_mode(&m, 0u, V4P_PORT_MOUSE, &applied), V4P_ST_OK);
+    CHECK_EQ(applied, V4P_PORT_MOUSE);
+    teardown();
+}
+
+/* ------------------------------------------------------------------ */
+
 int test_master(void)
 {
     v4_test_begin("Transaktionskern und Wrapper gegen den Mock");
@@ -575,6 +750,7 @@ int test_master(void)
     test_ping_and_info();
     test_status_and_hid();
     test_ports();
+    test_routing();
     test_devices_and_connect();
     test_link_failures();
     test_seq_discipline();

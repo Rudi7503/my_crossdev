@@ -44,7 +44,8 @@ Deshalb wird genau so zerlegt: an Kommas der Tiefe 0. Jedes Element ist dann
 eindeutig eines von
 
     Objekt-Anfang   (ApplicationObject, WindowObject, TextObject, VGroup,
-                     HGroup, CycleObject, ListviewObject, ListObject)
+                     HGroup, CycleObject, ListviewObject, ListObject,
+                     MUI_MakeObject)
     Kind-Marke      (Child)
     Fensterinhalt   (WindowContents)
     Ende            (End)
@@ -507,6 +508,38 @@ static int gui_build(void)
 '''
 
 
+# Derselbe Baum mit einer SEITENGRUPPE (MUIA_Group_PageMode) -- genau die
+# Konstruktion, mit der v4_gui.c den gewachsenen Inhalt (fw_ver 4) auf 640x400
+# unterbringt: Anzeige und Konfiguration liegen auf zwei Seiten, und die
+# Mindestgroesse der Gruppe ist das Maximum ueber die Seiten (MUI_Group.doc),
+# das Fenster wird also nicht groesser als die groesste Seite.
+BAUM_GUT_SEITE = BAUM_GUT.replace(
+    """                Child, ListviewObject,
+                    MUIA_Listview_List, s_list = ListObject,
+                    End,
+                End,""",
+    """                Child, VGroup,
+                    MUIA_Group_PageMode, TRUE,
+                    MUIA_Group_ActivePage, 0,
+                    Child, VGroup,
+                        Child, TextObject,
+                            MUIA_Text_Contents, (IPTR)"Seite 1",
+                        End,
+                    End,
+                    Child, VGroup,
+                        Child, TextObject,
+                            MUIA_Text_Contents, (IPTR)"Seite 2",
+                        End,
+                    End,
+                End,
+                Child, ListviewObject,
+                    MUIA_Listview_List, s_list = ListObject,
+                    End,
+                End,""", 1)
+
+assert BAUM_GUT_SEITE != BAUM_GUT, \
+    "Selbsttestanker fuer die Seitengruppe passt nicht mehr"
+
 _SELFTEST_N = [0]
 
 
@@ -538,6 +571,8 @@ def _selftest_ein(name, quelle, erwarte_sauber):
 def selftest():
     print("Selbsttest des MUI-Baumpruefers (kuenstlicher Baum):")
     gut = _selftest_ein("unveraenderter Baum bleibt sauber", BAUM_GUT, True)
+    gut = _selftest_ein("Seitengruppe (MUIA_Group_PageMode) bleibt sauber",
+                        BAUM_GUT_SEITE, True) and gut
 
     faelle = [
         ("fehlendes End am TextObject",
@@ -585,9 +620,16 @@ def selftest():
         ("WindowContents fehlt",
          BAUM_GUT.replace("WindowContents, VGroup,",
                           "MUIA_Window_RootObject, VGroup,", 1)),
+        # Die Seitengruppe (fw_ver 4): MUIA_Group_PageMode gehoert an eine
+        # GRUPPE. An einem TextObject ist es ein Tag der falschen Klasse und
+        # laesst MUI beim Aufbau sterben -- genau die Fehlerklasse, die der
+        # Pruefer finden soll.
+        ("MUIA_Group_PageMode am TextObject",
+         BAUM_GUT_SEITE.replace('MUIA_Text_Contents, (IPTR)"Seite 1",',
+                                "MUIA_Group_PageMode, TRUE,", 1)),
     ]
     for name, quelle in faelle:
-        if quelle == BAUM_GUT:
+        if quelle in (BAUM_GUT, BAUM_GUT_SEITE):
             print("  FEHLER : Selbsttestfall '%s' hat nichts veraendert" % name)
             gut = False
             continue

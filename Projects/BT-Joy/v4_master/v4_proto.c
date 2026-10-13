@@ -501,7 +501,7 @@ int v4p_dec_set_port_mode(const uint8_t *p, uint8_t len, uint8_t *port,
         return -1;
     }
     if (p[V4P_SPM_OFF_PORT] >= V4P_PORT_COUNT
-        || p[V4P_SPM_OFF_MODE] > V4P_PORT_MODE_MAX) {
+        || !v4p_mode_soll_valid(p[V4P_SPM_OFF_MODE])) {
         return -1;
     }
     if (port != NULL) {
@@ -509,6 +509,208 @@ int v4p_dec_set_port_mode(const uint8_t *p, uint8_t len, uint8_t *port,
     }
     if (mode != NULL) {
         *mode = p[V4P_SPM_OFF_MODE];
+    }
+    return 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Eingangsverteilung (fw_ver 4)                                       */
+/* ------------------------------------------------------------------ */
+
+int v4p_dir_valid(uint8_t dir)
+{
+    return ((dir & (uint8_t)(~V4P_DIR_MASK)) == 0u) ? 1 : 0;
+}
+
+int v4p_mode_soll_valid(uint8_t mode)
+{
+    return (mode <= V4P_PORT_MODE_MAX || mode == V4P_MODE_AUTO) ? 1 : 0;
+}
+
+int v4p_taste_valid(uint8_t code)
+{
+    return (code < (uint8_t)V4P_TASTE_ANZAHL) ? 1 : 0;
+}
+
+int v4p_btn_set_valid(const uint8_t btn[V4P_BTN_COUNT])
+{
+    unsigned i;
+    unsigned k;
+
+    if (btn == NULL) {
+        return 0;
+    }
+    for (i = 0u; i < V4P_BTN_COUNT; i++) {
+        if (!v4p_taste_valid(btn[i])) {
+            return 0;
+        }
+    }
+    /* Eine NICHT-LEERE Quelle darf nur auf EINER Leitung stehen. 0 ("keine")
+     * darf mehrfach vorkommen -- das ist der Ruhezustand von Leitungen, an
+     * denen nichts haengt. */
+    for (i = 0u; i < V4P_BTN_COUNT; i++) {
+        if (btn[i] == (uint8_t)V4P_TASTE_KEINE) {
+            continue;
+        }
+        for (k = (unsigned)(i + 1u); k < V4P_BTN_COUNT; k++) {
+            if (btn[k] == btn[i]) {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+size_t v4p_enc_get_port_config(uint8_t *p, const v4p_portcfg_t *in)
+{
+    unsigned port;
+    unsigned k;
+
+    p[V4P_GPC_OFF_MODE_SOLL0] = in->mode_soll[0];
+    p[V4P_GPC_OFF_MODE_SOLL1] = in->mode_soll[1];
+    p[V4P_GPC_OFF_MODE_IST0]  = in->mode_ist[0];
+    p[V4P_GPC_OFF_MODE_IST1]  = in->mode_ist[1];
+    p[V4P_GPC_OFF_DIR0]       = in->dir[0];
+    p[V4P_GPC_OFF_DIR1]       = in->dir[1];
+    for (port = 0u; port < V4P_PORT_COUNT; port++) {
+        for (k = 0u; k < V4P_BTN_COUNT; k++) {
+            p[V4P_GPC_OFF_BTN0 + (3u * port) + k] = in->btn[port][k];
+        }
+    }
+    return V4P_GPC_PAYLOAD_LEN;
+}
+
+int v4p_dec_get_port_config(const uint8_t *p, uint8_t len, v4p_portcfg_t *out)
+{
+    unsigned port;
+    unsigned k;
+
+    if (p == NULL || out == NULL) {
+        return -1;
+    }
+    if (len < (uint8_t)V4P_GPC_PAYLOAD_LEN) {
+        return -1;
+    }
+    /* Erst pruefen, dann uebernehmen: eine halb gefuellte Struktur waere
+     * schlimmer als gar keine, weil die Anzeige sie fuer gueltig hielte. */
+    for (port = 0u; port < V4P_PORT_COUNT; port++) {
+        if (!v4p_mode_soll_valid(p[V4P_GPC_OFF_MODE_SOLL0 + port])
+            || p[V4P_GPC_OFF_MODE_IST0 + port] > V4P_PORT_MODE_MAX
+            || !v4p_dir_valid(p[V4P_GPC_OFF_DIR0 + port])) {
+            return -1;
+        }
+        for (k = 0u; k < V4P_BTN_COUNT; k++) {
+            if (!v4p_taste_valid(p[V4P_GPC_OFF_BTN0 + (3u * port) + k])) {
+                return -1;
+            }
+        }
+    }
+    /* Eine Doppelbelegung in der ANTWORT ist kein Grund zu raten: sie kann der
+     * ESP32 gar nicht liefern (er lehnt sie beim Setzen ab). Also ist sie ein
+     * Hinweis auf einen verschobenen Strom. */
+    for (port = 0u; port < V4P_PORT_COUNT; port++) {
+        uint8_t btn[V4P_BTN_COUNT];
+
+        for (k = 0u; k < V4P_BTN_COUNT; k++) {
+            btn[k] = p[V4P_GPC_OFF_BTN0 + (3u * port) + k];
+        }
+        if (!v4p_btn_set_valid(btn)) {
+            return -1;
+        }
+    }
+
+    for (port = 0u; port < V4P_PORT_COUNT; port++) {
+        out->mode_soll[port] = p[V4P_GPC_OFF_MODE_SOLL0 + port];
+        out->mode_ist[port]  = p[V4P_GPC_OFF_MODE_IST0 + port];
+        out->dir[port]       = p[V4P_GPC_OFF_DIR0 + port];
+        for (k = 0u; k < V4P_BTN_COUNT; k++) {
+            out->btn[port][k] = p[V4P_GPC_OFF_BTN0 + (3u * port) + k];
+        }
+    }
+    return 0;
+}
+
+size_t v4p_enc_set_port_routing(uint8_t *p, uint8_t port, uint8_t dir,
+                                const uint8_t btn[V4P_BTN_COUNT])
+{
+    p[V4P_SPR_OFF_PORT] = port;
+    p[V4P_SPR_OFF_DIR]  = dir;
+    p[V4P_SPR_OFF_BTN1] = btn[0];
+    p[V4P_SPR_OFF_BTN2] = btn[1];
+    p[V4P_SPR_OFF_BTN3] = btn[2];
+    return V4P_SPR_PAYLOAD_LEN;
+}
+
+int v4p_dec_set_port_routing(const uint8_t *p, uint8_t len, uint8_t *port,
+                             uint8_t *dir, uint8_t btn[V4P_BTN_COUNT])
+{
+    uint8_t  tmp[V4P_BTN_COUNT];
+    unsigned k;
+
+    if (p == NULL) {
+        return -1;
+    }
+    if (len < (uint8_t)V4P_SPR_PAYLOAD_LEN) {
+        return -1;
+    }
+    if (p[V4P_SPR_OFF_PORT] >= V4P_PORT_COUNT
+        || !v4p_dir_valid(p[V4P_SPR_OFF_DIR])) {
+        return -1;
+    }
+    tmp[0] = p[V4P_SPR_OFF_BTN1];
+    tmp[1] = p[V4P_SPR_OFF_BTN2];
+    tmp[2] = p[V4P_SPR_OFF_BTN3];
+    if (!v4p_btn_set_valid(tmp)) {
+        return -1;
+    }
+
+    if (port != NULL) {
+        *port = p[V4P_SPR_OFF_PORT];
+    }
+    if (dir != NULL) {
+        *dir = p[V4P_SPR_OFF_DIR];
+    }
+    if (btn != NULL) {
+        for (k = 0u; k < V4P_BTN_COUNT; k++) {
+            btn[k] = tmp[k];
+        }
+    }
+    return 0;
+}
+
+size_t v4p_enc_set_device_port(uint8_t *p, const uint8_t bda[V4P_BDA_LEN],
+                               uint8_t port)
+{
+    unsigned i;
+
+    for (i = 0u; i < V4P_BDA_LEN; i++) {
+        p[V4P_SDP_OFF_BDA + i] = bda[i];
+    }
+    p[V4P_SDP_OFF_PORT] = port;
+    return V4P_SDP_PAYLOAD_LEN;
+}
+
+int v4p_dec_set_device_port(const uint8_t *p, uint8_t len,
+                            uint8_t bda[V4P_BDA_LEN], uint8_t *port)
+{
+    if (p == NULL) {
+        return -1;
+    }
+    if (len < (uint8_t)V4P_SDP_PAYLOAD_LEN) {
+        return -1;
+    }
+    if (p[V4P_SDP_OFF_PORT] >= V4P_PORT_COUNT) {
+        return -1;
+    }
+    if (bda != NULL) {
+        unsigned i;
+
+        for (i = 0u; i < V4P_BDA_LEN; i++) {
+            bda[i] = p[V4P_SDP_OFF_BDA + i];
+        }
+    }
+    if (port != NULL) {
+        *port = p[V4P_SDP_OFF_PORT];
     }
     return 0;
 }
@@ -524,6 +726,118 @@ const char *v4p_port_mode_name(uint8_t mode)
     case V4P_PORT_JOY:   return "Joystick";
     case V4P_PORT_MOUSE: return "Maus";
     default:             return "?";
+    }
+}
+
+const char *v4p_port_mode_soll_name(uint8_t mode)
+{
+    if (mode == V4P_MODE_AUTO) {
+        return "auto";
+    }
+    return v4p_port_mode_name(mode);
+}
+
+const char *v4p_dir_name(unsigned bit)
+{
+    switch (bit) {
+    case 0u: return "Stick links";
+    case 1u: return "Stick rechts";
+    case 2u: return "D-Pad";
+    default: return "?";
+    }
+}
+
+/*
+ * Richtungsmaske als Text. Die drei Namen sind laenger als "UP"/"BTN1", deshalb
+ * wird hier -- anders als bei v4p_bits_text -- mit "+" getrennt und die
+ * Ausgabe NICHT auf ein festes Format gebogen: ein abgeschnittener Name
+ * ("Stick li") waere schlimmer als ein sichtbares "...".
+ */
+void v4p_dir_text(uint8_t dir, char *out, size_t cap)
+{
+    size_t   n         = 0u;
+    unsigned bit;
+    int      first     = 1;
+    int      truncated = 0;
+
+    if (out == NULL || cap == 0u) {
+        return;
+    }
+    out[0] = '\0';
+
+    for (bit = 0u; bit < 3u; bit++) {
+        const char *name;
+        size_t      len;
+        size_t      k;
+
+        if ((dir & (uint8_t)(1u << bit)) == 0u) {
+            continue;
+        }
+        name = v4p_dir_name(bit);
+        len  = strlen(name);
+        if (n + (first ? 0u : 1u) + len + 1u > cap) {
+            truncated = 1;
+            break;
+        }
+        if (!first) {
+            out[n++] = '+';
+        }
+        for (k = 0u; k < len; k++) {
+            out[n++] = name[k];
+        }
+        first = 0;
+    }
+
+    if (first) {
+        const char *keine = "keine";
+        size_t      k;
+
+        for (k = 0u; keine[k] != '\0' && n + 1u < cap; k++) {
+            out[n++] = keine[k];
+        }
+    } else if (truncated && n + 4u <= cap) {
+        out[n++] = '.';
+        out[n++] = '.';
+        out[n++] = '.';
+    }
+    out[n] = '\0';
+}
+
+/*
+ * Knopfquellen. Der lange Name der drei Gruppen nennt die enthaltenen Tasten --
+ * "Gruppe 1" allein sagt am Port niemandem etwas.
+ */
+const char *v4p_taste_name(uint8_t code)
+{
+    switch (code) {
+    case V4P_TASTE_KEINE:   return "keine";
+    case V4P_TASTE_A:       return "A";
+    case V4P_TASTE_B:       return "B";
+    case V4P_TASTE_X:       return "X";
+    case V4P_TASTE_Y:       return "Y";
+    case V4P_TASTE_L1:      return "L1";
+    case V4P_TASTE_R1:      return "R1";
+    case V4P_TASTE_L2:      return "L2";
+    case V4P_TASTE_R2:      return "R2";
+    case V4P_TASTE_L3:      return "L3";
+    case V4P_TASTE_R3:      return "R3";
+    case V4P_TASTE_START:   return "Start";
+    case V4P_TASTE_SELECT:  return "Select";
+    case V4P_TASTE_HOME:    return "Home/Capture";
+    case V4P_TASTE_GRUPPE1: return "Gruppe 1 (A,L1,L2,L3)";
+    case V4P_TASTE_GRUPPE2: return "Gruppe 2 (B,R1,R2,R3)";
+    case V4P_TASTE_GRUPPE3: return "Gruppe 3 (X,Y,Start,Select)";
+    default:                return "?";
+    }
+}
+
+const char *v4p_taste_name_short(uint8_t code)
+{
+    switch (code) {
+    case V4P_TASTE_GRUPPE1: return "Gruppe 1";
+    case V4P_TASTE_GRUPPE2: return "Gruppe 2";
+    case V4P_TASTE_GRUPPE3: return "Gruppe 3";
+    default:                return v4p_taste_name(code);
     }
 }
 

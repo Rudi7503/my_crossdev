@@ -184,10 +184,16 @@ demo: $(BUILD)/v4_console_demo
 	printf 's\nh\ni\nq\n' | ./$(BUILD)/v4_console_demo -n > $(BUILD)/demo1.txt 2>&1 || fail=1; \
 	grep -q "Adresse 0x5E" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: Adresse 0x5E steht nicht im Kopf"; fail=1; }; \
-	grep -q "PING ok: proto=3 fw=3 write=32 read=128" $(BUILD)/demo1.txt \
+	grep -q "PING ok: proto=3 fw=4 write=32 read=128" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: PING-Zeile fehlt oder nennt andere Rahmengroessen"; fail=1; }; \
-	grep -q "Faehigkeiten: 0x00FF" $(BUILD)/demo1.txt \
+	grep -q "Faehigkeiten: 0x03FF" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: Faehigkeiten fehlen"; fail=1; }; \
+	grep -q "Verteilung,Geraetezuordnung" $(BUILD)/demo1.txt \
+	    || { echo "  FEHLER: die Faehigkeitsbits der Eingangsverteilung fehlen"; fail=1; }; \
+	grep -q "Buchse 0: Geraet (keines)" $(BUILD)/demo1.txt \
+	    || { echo "  FEHLER: die Eingangsverteilung steht nicht im Anfangszustand"; fail=1; }; \
+	grep -q "Vorgabe auto" $(BUILD)/demo1.txt \
+	    || { echo "  FEHLER: die VORGABE (mode_soll) fehlt -- sie ist nicht die wirksame Betriebsart"; fail=1; }; \
 	grep -q "Bulk-Weg: nein" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: der fehlende Bulk-Weg wird nicht gemeldet"; fail=1; }; \
 	grep -q "Controller: 8BitDo Pro 2" $(BUILD)/demo1.txt \
@@ -326,8 +332,40 @@ demo: $(BUILD)/v4_console_demo
 	    || { echo "  FEHLER: -quiet verschluckt auch die Startzeilen"; fail=1; }; \
 	grep -q "^\[ende\]" $(BUILD)/demo14.txt \
 	    || { echo "  FEHLER: -quiet verschluckt die Schlusszeile"; fail=1; }; \
+	echo "== Demo 9: Eingangsverteilung (fw_ver 4) -- das Abnahmebeispiel =="; \
+	printf 'a\ncfg 0 mode maus\ncfg 1 mode joystick\ncfg 0 dir stick_l\ncfg 0 btn1 l1\ncfg 0 btn2 r1\ncfg 0 btn3 keine\ncfg 1 dir dpad\ncfg 1 btn1 a\ncfg 1 btn2 b\ncfg 1 btn3 start\ncfg\ncfg 0 btn2 l1\ncfg assign 1 0\ncfg assign F4:17:D8:11:22:33 1\ncfg\nq\n' \
+	    | ./$(BUILD)/v4_console_demo -n > $(BUILD)/demo15.txt 2>&1 || fail=1; \
+	grep -q "cmd=GET_PORT_CONFIG" $(BUILD)/demo15.txt \
+	    || { echo "  FEHLER: GET_PORT_CONFIG wird nicht abgesetzt"; fail=1; }; \
+	grep -q "cmd=SET_PORT_ROUTING" $(BUILD)/demo15.txt \
+	    || { echo "  FEHLER: SET_PORT_ROUTING wird nicht abgesetzt"; fail=1; }; \
+	grep -q "cmd=SET_DEVICE_PORT" $(BUILD)/demo15.txt \
+	    || { echo "  FEHLER: SET_DEVICE_PORT wird nicht abgesetzt"; fail=1; }; \
+	grep -q "bestaetigt port=0 dir=0x01 btn=L1/R1/keine" $(BUILD)/demo15.txt \
+	    || { echo "  FEHLER: die Echo-Zeile der Verteilung fehlt"; fail=1; }; \
+	grep -qE "Buchse 0: Geraet Logitech MX Anywhere +Vorgabe Maus +wirkt Maus +Richtungen Stick links +Pin6<-L1 Pin9<-R1 Pin5<-keine" $(BUILD)/demo15.txt \
+	    || { echo "  FEHLER: Buchse 0 zeigt nicht das Abnahmebeispiel"; fail=1; }; \
+	grep -qE "Buchse 1: Geraet F4:17:D8:11:22:33 +Vorgabe Joystick +wirkt Joystick +Richtungen D-Pad +Pin6<-A Pin9<-B Pin5<-Start" $(BUILD)/demo15.txt \
+	    || { echo "  FEHLER: Buchse 1 zeigt nicht das Abnahmebeispiel"; fail=1; }; \
+	grep -q "SET_PORT_ROUTING: BAD_ARG -- \"L1\" ist auf dieser Buchse schon einer anderen Leitung zugeordnet" $(BUILD)/demo15.txt \
+	    || { echo "  FEHLER: die doppelte Knopfquelle wird nicht im Klartext gemeldet"; fail=1; }; \
+	grep -q 'Geraet \[1\] "Logitech MX Anywhere" -> Buchse 0 (bestaetigt).' $(BUILD)/demo15.txt \
+	    || { echo "  FEHLER: SET_DEVICE_PORT ueber den Listenindex fehlt"; fail=1; }; \
+	grep -q "Adresse F4:17:D8:11:22:33 -> Buchse 1 (bestaetigt)." $(BUILD)/demo15.txt \
+	    || { echo "  FEHLER: SET_DEVICE_PORT ueber die Adresse fehlt"; fail=1; }; \
+	echo "== Demo 10: fw_ver 3 -- die V4 nimmt sie an, die neuen Felder bleiben aus =="; \
+	V4_DEMO_LEGACY_FW3=1 sh -c "printf 'cfg\ncfg 0 mode auto\nq\n' | ./$(BUILD)/v4_console_demo -n -quiet" \
+	    > $(BUILD)/demo16.txt 2>&1 || fail=1; \
+	grep -q "PING ok: proto=3 fw=3 write=32 read=128" $(BUILD)/demo16.txt \
+	    || { echo "  FEHLER: fw_ver 3 wird nicht angenommen (gleicher Rahmen!)"; fail=1; }; \
+	grep -q "Faehigkeiten: 0x00FF" $(BUILD)/demo16.txt \
+	    || { echo "  FEHLER: die alten Faehigkeiten fehlen"; fail=1; }; \
+	grep -q "Die Gegenstelle kann die Eingangsverteilung nicht" $(BUILD)/demo16.txt \
+	    || { echo "  FEHLER: der fehlende Befehl wird nicht gemeldet"; fail=1; }; \
+	if grep -q "^\[i2c\] cmd=GET_PORT_CONFIG" $(BUILD)/demo16.txt; then \
+	    echo "  FEHLER: GET_PORT_CONFIG wurde trotz fehlendem Faehigkeitsbit gesendet"; fail=1; fi; \
 	if [ "$$fail" -eq 0 ]; then \
-	    echo "Demo: OK (8 Durchlaeufe, Mock, ohne Hardware)"; \
+	    echo "Demo: OK (10 Durchlaeufe, Mock, ohne Hardware)"; \
 	else echo "Demo: FEHLGESCHLAGEN"; exit 1; fi
 
 # Dasselbe Programm fuer einen echten i2c-dev-Bus. Laeuft nur, wenn dort auch

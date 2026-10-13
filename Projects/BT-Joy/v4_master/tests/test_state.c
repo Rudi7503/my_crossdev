@@ -353,6 +353,95 @@ static void test_state_erster_ausfall_ist_kein_wechsel(void)
     teardown(&m);
 }
 
+static void test_state_eingangsverteilung(void)
+{
+    v4_state_t    s;
+    v4_master_t   m;
+    v4p_portcfg_t c;
+    uint8_t       btn[V4P_BTN_COUNT];
+
+    v4_test_case("GET_PORT_CONFIG uebernommen: mode_soll UND mode_ist "
+                 "getrennt, mode[] traegt die WIRKSAME Betriebsart");
+    setup(&s, &m);
+    CHECK(!s.portcfg_valid);
+
+    /* Vorgabe "auto", wirksam Maus -- die beiden duerfen sich NICHT
+     * vermischen: 0xFF ist keine Betriebsart. */
+    v4_mock_set_mode_soll(0, (uint8_t)V4P_MODE_AUTO);
+    v4_mock_set_port_mode(0, (uint8_t)V4P_PORT_MOUSE);
+    v4_mock_set_mode_soll(0, (uint8_t)V4P_MODE_AUTO);   /* wieder auto */
+    CHECK_EQ(v4_get_port_config(&m, &c), V4P_ST_OK);
+    v4_state_put_portcfg(&s, &c);
+
+    CHECK(s.portcfg_valid);
+    CHECK_EQ(s.portcfg.mode_soll[0], (uint8_t)V4P_MODE_AUTO);
+    CHECK_EQ(s.portcfg.mode_ist[0], (uint8_t)V4P_PORT_MOUSE);
+    CHECK_EQ(s.mode[0], (uint8_t)V4P_PORT_MOUSE);
+    CHECK_EQ(s.applied[0], (uint8_t)V4P_PORT_MOUSE);
+    CHECK(s.mode_valid);
+
+    v4_test_case("Der falsche Slave antwortet nicht mit 0xFF in mode_ist");
+    /* Das ist keine echte Antwort, sondern eine Gegenprobe der Regel: der
+     * Decoder lehnt 0xFF in mode_ist ab. */
+    CHECK_EQ(v4p_mode_soll_valid((uint8_t)V4P_MODE_AUTO), 1);
+    CHECK_EQ(v4p_mode_soll_valid(3u), 0);
+
+    v4_test_case("Geraetezuordnung: merken, ersetzen, nachlesen");
+    {
+        /* Zwei ausgedachte Adressen: die Zuordnung haengt NICHT an der
+         * Scanliste (sie kommt aus SET_DEVICE_PORT). */
+        static const uint8_t a0[V4P_BDA_LEN] = { 0xE4u, 0x17u, 0xD8u,
+                                                 0x11u, 0x22u, 0x33u };
+        static const uint8_t a1[V4P_BDA_LEN] = { 0x00u, 0x1Bu, 0xDCu,
+                                                 0x44u, 0x55u, 0x66u };
+
+        CHECK_EQ(v4_state_devport(&s, a0), 0xFFu);
+        v4_state_put_devport(&s, a0, 1u);
+        CHECK_EQ(v4_state_devport(&s, a0), 1u);
+        CHECK_EQ(s.devport_n, 1u);
+        /* Gleiche Adresse: der Eintrag wird ERSETZT, nicht doppelt angelegt. */
+        v4_state_put_devport(&s, a0, 0u);
+        CHECK_EQ(s.devport_n, 1u);
+        CHECK_EQ(v4_state_devport(&s, a0), 0u);
+        /* Ein zweites Geraet kommt dazu. */
+        v4_state_put_devport(&s, a1, 1u);
+        CHECK_EQ(s.devport_n, 2u);
+        CHECK_EQ(v4_state_devport(&s, a1), 1u);
+        /* Zugriff ueber den Index. */
+        {
+            uint8_t bda[V4P_BDA_LEN];
+
+            CHECK_EQ(v4_state_devport_at(&s, 0u, bda), 0u);
+            CHECK_MEM(bda, a0, V4P_BDA_LEN);
+            CHECK_EQ(v4_state_devport_at(&s, 9u, bda), 0xFFu);
+        }
+        /* Unbekannte Adresse: 0xFF = "in dieser Sitzung nicht gesetzt". */
+        {
+            static const uint8_t fremd[V4P_BDA_LEN] = { 1u, 2u, 3u,
+                                                        4u, 5u, 6u };
+
+            CHECK_EQ(v4_state_devport(&s, fremd), 0xFFu);
+        }
+        /* Und die Tabelle laeuft nicht ueber. */
+        {
+            uint8_t i;
+
+            for (i = 0u; i < (uint8_t)(V4P_MAX_DEVICES + 4u); i++) {
+                uint8_t bda[V4P_BDA_LEN];
+
+                bda[0] = (uint8_t)(0xA0u + i);
+                bda[1] = 0u; bda[2] = 0u;
+                bda[3] = 0u; bda[4] = 0u; bda[5] = 0u;
+                v4_state_put_devport(&s, bda, (uint8_t)(i & 1u));
+            }
+            CHECK_EQ(s.devport_n, (uint8_t)V4P_MAX_DEVICES);
+        }
+    }
+
+    (void)btn;
+    teardown(&m);
+}
+
 /* ------------------------------------------------------------------ */
 
 int test_state(void)
@@ -369,6 +458,7 @@ int test_state(void)
     test_state_erster_ausfall_ist_kein_wechsel();
     test_state_befehle();
     test_state_scan();
+    test_state_eingangsverteilung();
 
     return v4_test_failures;
 }
