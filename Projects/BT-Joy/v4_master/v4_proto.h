@@ -40,6 +40,12 @@
  *   8. SET_PORT_MODE kennt jetzt mode = V4P_MODE_AUTO (0xFF) und setzt die
  *      Vorgabe auf "nach Geraeteart" zurueck. GET_PORT_MODE meldet
  *      unveraendert die WIRKSAME Betriebsart (nie 0xFF).
+ *   9. NEU mit fw_ver 5 sind die Befehle 0x0B/0x0C: GET_MOUSE_CFG (Tempo und
+ *      Totzone BEIDER Buchsen in einer 4-Byte-Antwort) und SET_MOUSE_CFG
+ *      ([port][speed][totzone], 3 Byte, Echo). Auch hier bleibt der Rahmen
+ *      unveraendert (proto_ver 3); verbindlich ist das Faehigkeitsbit
+ *      V4P_CAP_MOUSE_CFG, nicht die Versionsnummer. Die Oberflaeche rechnet
+ *      NICHTS um -- sie zeigt und setzt Stufe (1..10) und Prozent (0..100).
  *
  * PORTABILITAETSREGELN (PROTOCOL_V4_MASTER.md §0 und §2) -- diese Datei und
  * alle Dateien, die Frame-Bytes anfassen, halten sich ausnahmslos daran:
@@ -79,16 +85,21 @@
  * NICHTS ueber die Rahmengeometrie -- das tut proto_ver.
  *
  * fw_ver 4 bringt die Eingangsverteilung: GET_PORT_CONFIG (0x09),
- * SET_PORT_ROUTING (0x0A) und SET_DEVICE_PORT (0x08). Rahmen und proto_ver
- * bleiben dabei UNVERAENDERT (proto_ver 3, 32 -> 128 Byte) -- eine Firmware
- * mit fw_ver 4 darf deshalb NICHT abgelehnt werden. v4_check_info() prueft
- * ausschliesslich proto_ver und Rahmengroessen; wer wissen will, ob die neuen
- * Befehle da sind, fragt die Faehigkeitsbits V4P_CAP_PORT_ROUTING /
- * V4P_CAP_DEVICE_PORT ab (v4_info_has_caps). */
-#define V4P_FW_VER              4u
+ * SET_PORT_ROUTING (0x0A) und SET_DEVICE_PORT (0x08). fw_ver 5 bringt die
+ * Maus-Einstellungen: GET_MOUSE_CFG (0x0B) und SET_MOUSE_CFG (0x0C). Rahmen und
+ * proto_ver bleiben in BEIDEN Faellen UNVERAENDERT (proto_ver 3, 32 -> 128
+ * Byte) -- eine Firmware mit fw_ver 4 oder 5 darf deshalb NICHT abgelehnt
+ * werden. v4_check_info() prueft ausschliesslich proto_ver und Rahmengroessen;
+ * wer wissen will, ob die Befehle da sind, fragt die Faehigkeitsbits
+ * V4P_CAP_PORT_ROUTING / V4P_CAP_DEVICE_PORT / V4P_CAP_MOUSE_CFG ab
+ * (v4_info_has_caps). */
+#define V4P_FW_VER              5u
 /* Der Stand, ab dem es die Eingangsverteilung gibt (nur als Klartext/Pruefung
  * gedacht -- die verbindliche Auskunft sind die Faehigkeitsbits). */
 #define V4P_FW_VER_ROUTING      4u
+/* Der Stand, ab dem es die Maus-Einstellungen (Tempo/Totzone) gibt. Auch hier
+ * gilt: verbindlich ist das Faehigkeitsbit V4P_CAP_MOUSE_CFG, nicht die Zahl. */
+#define V4P_FW_VER_MOUSE        5u
 
 #define V4P_MAGIC_WRITE         0xA5u   /* V4 -> ESP32, fest 32 Byte   */
 #define V4P_MAGIC_READ          0x5Au   /* ESP32 -> V4,  fest 128 Byte */
@@ -167,6 +178,16 @@ enum {
  * nicht aus und schickt die Befehle ins Leere (BAD_CMD). */
 #define V4P_CAP_PORT_ROUTING    0x0100u  /* GET_PORT_CONFIG/SET_PORT_ROUTING */
 #define V4P_CAP_DEVICE_PORT     0x0200u  /* SET_DEVICE_PORT               */
+/*
+ * Maus-Einstellungen (Geschwindigkeit, Totzone): GET/SET_MOUSE_CFG (fw_ver 5).
+ *
+ * BESTAETIGT mit der ESP32-Seite (14.10.2026): Befehl 0x0B/0x0C, Faehigkeitsbit
+ * 0x0400, speed 1..10 (Vorgabe 7), totzone 0..100 Prozent (Vorgabe 12). Sie
+ * stehen -- wie alle Nummern dieses Vertrags -- NUR HIER; der Mock benutzt
+ * dieselben Makros, damit die beiden Seiten nicht auseinanderlaufen koennen.
+ * Vorhandene Bits 0x0001..0x0200 sind belegt, 0x0400 ist frei.
+ */
+#define V4P_CAP_MOUSE_CFG       0x0400u  /* GET_MOUSE_CFG/SET_MOUSE_CFG   */
 
 /* ------------------------------------------------------------------ */
 /* Die zwei DB9-Buchsen -- V4P_PORT_* / V4P_IN_* der ESP32-Seite        */
@@ -333,6 +354,45 @@ enum {
 #define V4P_SDP_PAYLOAD_LEN     7u
 #define V4P_BDA_LEN             6u
 
+/* ------------------------------------------------------------------ */
+/* Maus-Einstellungen (GET_MOUSE_CFG 0x0B / SET_MOUSE_CFG 0x0C)        */
+/*                                                                     */
+/* WAS DIE FIRMWARE MACHT UND WAS NICHT: `speed` ist eine STUFE 1..10   */
+/* (1 = langsamste, 10 = schnellste, Vorgabe 7). Die Umrechnung in      */
+/* wirkliche Schritte je Sekunde macht AUSSCHLIESSLICH die Firmware;    */
+/* die Oberflaeche zeigt und setzt nur die Stufe und rechnet nichts um. */
+/* `totzone` ist ein PROZENTWERT 0..100 (Vorgabe 12) -- die Firmware     */
+/* rechnet ihn in ihre Rohwerte um (prozent * 512 / 100), auch das      */
+/* macht NICHT die Oberflaeche.                                         */
+/*                                                                     */
+/* PRO BUCHSE: GET_MOUSE_CFG liefert in EINER Antwort beide Buchsen (4  */
+/* Byte), SET_MOUSE_CFG setzt EINE Buchse (3 Byte mit Port). Das ist    */
+/* dieselbe Aufteilung wie GET_PORT_CONFIG gegen SET_PORT_MODE.         */
+/*                                                                     */
+/* BESTAETIGT mit der ESP32-Seite (14.10.2026). Die Nummern, Laengen    */
+/* und Grenzen stehen NUR HIER, damit eine Korrektur eine Zeile ist;    */
+/* der Mock benutzt dieselben Makros und kann nicht auseinanderlaufen.  */
+/* ------------------------------------------------------------------ */
+#define V4P_MCFG_OFF_SPEED0     0u      /* Stufe Buchse 0, 1..10          */
+#define V4P_MCFG_OFF_TOTZONE0   1u      /* Prozent Buchse 0, 0..100       */
+#define V4P_MCFG_OFF_SPEED1     2u      /* Stufe Buchse 1, 1..10          */
+#define V4P_MCFG_OFF_TOTZONE1   3u      /* Prozent Buchse 1, 0..100       */
+#define V4P_MCFG_PAYLOAD_LEN    4u      /* GET-Antwort: beide Buchsen     */
+
+#define V4P_SMC_OFF_PORT        0u      /* Zielbuchse 0 oder 1            */
+#define V4P_SMC_OFF_SPEED       1u      /* Stufe 1..10                    */
+#define V4P_SMC_OFF_TOTZONE     2u      /* Prozent 0..100                 */
+#define V4P_SMC_PAYLOAD_LEN     3u      /* SET-Anfrage und Echo           */
+
+#define V4P_MOUSE_SPEED_MIN     1u
+#define V4P_MOUSE_SPEED_MAX     10u
+/* Die Vorgaben der Firmware -- hier nur als Klartext/Pruefung. Wer sie
+ * anzeigt, zeigt die Vorgabe; gesetzt wird immer der bestaetigte Wert. */
+#define V4P_MOUSE_SPEED_VORGABE   7u
+#define V4P_MOUSE_TOTZONE_VORGABE 12u
+#define V4P_MOUSE_TOTZONE_MIN   0u
+#define V4P_MOUSE_TOTZONE_MAX   100u
+
 /* GET_INPUT: 12 Byte (mit Pegeln), 10 Byte (aeltere Fassung ohne).
  * Beschreibung: docs/PROTOKOLL.md der ESP32-Seite, "Eingangspayload". */
 #define V4P_IN_OFF_STATE0       0u      /* Zug-Maske V4P_IN_ST_*          */
@@ -413,6 +473,15 @@ enum {
     V4P_CMD_SET_DEVICE_PORT  = 0x08, /* [bda 6][port u8] -> Echo (7 Byte)    */
     V4P_CMD_GET_PORT_CONFIG  = 0x09, /* -  -> v4p_portcfg_t (12 Byte)        */
     V4P_CMD_SET_PORT_ROUTING = 0x0A, /* [port][dir][b1][b2][b3] -> Echo (5)  */
+
+    /* Maus-Einstellungen. BESTAETIGTE Nummern (siehe V4P_CAP_MOUSE_CFG): der
+     * ESP32 kann eine Maus emulieren, aber Tempo und Totzone erst ab fw_ver 5
+     * einstellen. GET_MOUSE_CFG liefert in EINER Antwort BEIDE Buchsen
+     * (speed0/totzone0/speed1/totzone1), SET_MOUSE_CFG setzt EINE Buchse
+     * ([port][speed][totzone]) -- dieselbe Aufteilung wie GET_PORT_CONFIG
+     * gegen SET_PORT_MODE. */
+    V4P_CMD_GET_MOUSE_CFG    = 0x0B, /* - -> 4 Byte (beide Buchsen)         */
+    V4P_CMD_SET_MOUSE_CFG    = 0x0C, /* [port][speed][totzone] -> Echo (3)  */
 
     V4P_CMD_SCAN_START    = 0x10,   /* [len_s u8]   -> -                     */
     V4P_CMD_SCAN_STOP     = 0x11,   /* -            -> -                     */
@@ -534,6 +603,20 @@ typedef struct {
     uint8_t  btn[V4P_PORT_COUNT][V4P_BTN_COUNT];    /* Pin6, Pin9, Pin5    */
 } v4p_portcfg_t;
 
+/*
+ * Antwort auf GET_MOUSE_CFG (4 Byte) -- die Maus-Einstellungen BEIDER Buchsen.
+ * SET_MOUSE_CFG setzt daraus EINEN Eintrag (siehe v4p_enc_set_mouse_cfg); das
+ * Echo traegt Port, Stufe und Prozentwert dieser einen Buchse.
+ *
+ * Die Werte sind STUFEN, keine physikalischen Groessen: die Firmware rechnet
+ * `speed` in Schritte je Sekunde und `totzone` (Prozent) in ihre Rohwerte um.
+ * Wer hier etwas umrechnet, zeigt etwas anderes an, als am Port gilt.
+ */
+typedef struct {
+    uint8_t speed[V4P_PORT_COUNT];      /* V4P_MOUSE_SPEED_MIN..MAX (1..10) */
+    uint8_t totzone[V4P_PORT_COUNT];    /* V4P_MOUSE_TOTZONE_MIN..MAX, %    */
+} v4p_mousecfg_t;
+
 /* Geparster READ-Frame (128 Byte) */
 typedef struct {
     uint8_t cmd;
@@ -635,6 +718,21 @@ size_t v4p_enc_set_device_port(uint8_t *p, const uint8_t bda[V4P_BDA_LEN],
 int    v4p_dec_set_device_port(const uint8_t *p, uint8_t len,
                                uint8_t bda[V4P_BDA_LEN], uint8_t *port);
 
+/* Maus-Einstellungen. GET_MOUSE_CFG liefert BEIDE Buchsen in 4 Byte (Encoder
+ * liefert 4, Decoder prueft Laenge UND beide Wertebereiche). SET_MOUSE_CFG
+ * setzt EINE Buchse in 3 Byte ([port][speed][totzone]); der Encoder liefert 3,
+ * der Decoder gibt Port und die beiden Werte dieser Buchse aus und liefert -1,
+ * wenn `len` nicht reicht, der Port unzulaessig ist ODER ein Wert ausserhalb
+ * der Grenzen liegt -- damit ist der Decoder zugleich die Pruefung der
+ * Echo-Antwort. `out` wird beim GET-Decoder nur bei Erfolg beschrieben. */
+size_t v4p_enc_get_mouse_cfg(uint8_t *p, const v4p_mousecfg_t *in);
+int    v4p_dec_get_mouse_cfg(const uint8_t *p, uint8_t len,
+                             v4p_mousecfg_t *out);
+size_t v4p_enc_set_mouse_cfg(uint8_t *p, uint8_t port,
+                             const v4p_mousecfg_t *in);
+int    v4p_dec_set_mouse_cfg(const uint8_t *p, uint8_t len, uint8_t *port,
+                             uint8_t *speed, uint8_t *totzone);
+
 /* Decoder liefern 0 bei Erfolg, -1 wenn `len` nicht ausreicht bzw. ein Feld
  * unzulaessig ist. */
 int v4p_dec_get_info  (const uint8_t *p, uint8_t len, v4p_info_t   *out);
@@ -670,6 +768,14 @@ int v4p_taste_valid(uint8_t code);
  * Genau diese Regel lehnt der ESP32 mit BAD_ARG ab. */
 int v4p_btn_set_valid(const uint8_t btn[V4P_BTN_COUNT]);
 
+/* 1 = speed liegt in V4P_MOUSE_SPEED_MIN..MAX. */
+int v4p_mouse_speed_valid(uint8_t speed);
+/* 1 = totzone (Prozent) liegt in V4P_MOUSE_TOTZONE_MIN..MAX. */
+int v4p_mouse_totzone_valid(uint8_t totzone);
+/* 1 = die Werte BEIDER Buchsen sind zulaessig. `c` darf nicht NULL sein --
+ * ein fehlender Wert ist kein gueltiger Wert. */
+int v4p_mouse_cfg_valid(const v4p_mousecfg_t *c);
+
 /* ------------------------------------------------------------------ */
 /* Klartexte und Auswertungen fuer die Oberflaechen                    */
 /*                                                                     */
@@ -697,6 +803,12 @@ const char *v4p_dir_name(unsigned bit);
 /* Maske in Klartext, z.B. "Stick links+D-Pad". 0 ergibt "keine".
  * out ist immer nullterminiert. */
 void v4p_dir_text(uint8_t dir, char *out, size_t cap);
+
+/* Maus-Einstellungen EINER Buchse in Klartext, z.B. "Tempo 7/10, Totzone 12%".
+ * EINE Schreibweise fuer Konsole, Oberflaeche und Debugausgabe. out ist immer
+ * nullterminiert. */
+void v4p_mousecfg_text(const v4p_mousecfg_t *c, uint8_t port,
+                       char *out, size_t cap);
 
 /* Name einer Knopfquelle (V4P_TASTE_*), z.B. "L1" oder "Gruppe 1 (A,L1,L2,L3)".
  * Der lange Name ist Absicht: die Gruppen sind sonst nicht zu unterscheiden. */

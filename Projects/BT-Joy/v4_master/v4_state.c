@@ -213,6 +213,15 @@ void v4_state_put_portcfg(v4_state_t *s, const v4p_portcfg_t *cfg)
     s->mode_valid = 1;
 }
 
+void v4_state_put_mousecfg(v4_state_t *s, const v4p_mousecfg_t *cfg)
+{
+    if (s == NULL || cfg == NULL) {
+        return;
+    }
+    s->mousecfg       = *cfg;
+    s->mousecfg_valid = 1;
+}
+
 void v4_state_put_devport(v4_state_t *s, const uint8_t bda[V4P_BDA_LEN],
                           uint8_t port)
 {

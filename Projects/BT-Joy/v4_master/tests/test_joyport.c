@@ -401,7 +401,7 @@ static void test_joy_port_text_ok(void)
 {
     v4_joy_t     st;
     v4p_input_t  in;
-    char         t[V4_JOY_TEXT_MAX];
+    char         t[V4_JOY_DIREKT_MAX];
 
     v4_test_case("Vergleichszeile: gleiche Werte ergeben OK");
     memset(&in, 0, sizeof(in));
@@ -423,7 +423,7 @@ static void test_joy_port_text_abweichung(void)
 {
     v4_joy_t     st;
     v4p_input_t  in;
-    char         t[V4_JOY_TEXT_MAX];
+    char         t[V4_JOY_DIREKT_MAX];
 
     v4_test_case("Vergleichszeile: Abweichung wird ausdruecklich gemeldet");
     memset(&in, 0, sizeof(in));
@@ -458,7 +458,7 @@ static void test_joy_port_text_feuer(void)
 {
     v4_joy_t     st;
     v4p_input_t  in;
-    char         t[V4_JOY_TEXT_MAX];
+    char         t[V4_JOY_DIREKT_MAX];
 
     v4_test_case("Vergleichszeile: Feuerknopf aus CIAAPRA/POTINP erscheint in "
                  "der Maske");
@@ -536,7 +536,7 @@ static void test_joy_reg_text(void)
 {
     v4_joy_t     st;
     v4_joy_roh_t r = roh(0x085Cu, 0x0000u, CIA_BASIS, POT_BASIS);
-    char         t[V4_JOY_TEXT_MAX];
+    char         t[V4_JOY_DIREKT_MAX];
 
     v4_test_case("Rohwertzeile: CIAAPRA und POTINP in vier Hexziffern");
     v4_joy_init(&st);
@@ -614,6 +614,50 @@ static void test_joy_vergleich_text(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* Die Fensterzeile: NUR direkte Register                              */
+/* ------------------------------------------------------------------ */
+
+static void test_joy_direkt_text(void)
+{
+    v4_joy_t     st;
+    v4_joy_roh_t ruh   = roh(0x0000u, 0x0000u, CIA_BASIS, POT_BASIS);
+    v4_joy_roh_t jetzt = roh(0x0000u, 0x0100u, 0x74u, POT_BASIS);
+    char         t[V4_JOY_DIREKT_MAX];
+
+    v4_test_case("Direktzeile: nur Register, KEIN I2C-Wert, kein Urteil");
+    v4_joy_init(&st);
+    v4_joy_basis(&st, &ruh);            /* Loslassen ist der Grundzustand */
+    stabil(&st, &jetzt);                /* Buchse 1: VOR, BTN1 gezogen */
+
+    (void)v4_joy_direkt_text(&st, 1, t, sizeof(t));
+    CHECK(strstr(t, "direkt aus den Registern") != NULL);
+    CHECK(strstr(t, "Leitung  Pin   Pegel    direkt") != NULL);
+    /* Buchse 1: VOR aktiv, BTN1 gedrueckt -- die Zeile nennt beides. */
+    CHECK(strstr(t, "VOR") != NULL);
+    CHECK(strstr(t, "gedrueckt") != NULL);
+    CHECK(strstr(t, "gedrueckt (direkt): VOR+BTN1") != NULL);
+    CHECK(strstr(t, "Roh: Zaehler=0x0100 (stabil=ja)") != NULL);
+    CHECK(strstr(t, "CIAAPRA=0x0074 POTINP=0xFF02") != NULL);   /* Rohwert */
+    CHECK(strstr(t, "0 (Low)") != NULL);        /* Pegel Bit 7 liegt auf 0 */
+    CHECK(strstr(t, "nicht lesbar") != NULL);   /* BTN3/Pin 5 */
+    /* Und AUSDRUECKLICH nichts aus der I2C-Sicht: das Fenster zeigt nur die
+     * Portdaten, der Vergleich steht im Protokoll. */
+    CHECK(strstr(t, "I2C") == NULL);
+    CHECK(strstr(t, "state=") == NULL);
+    CHECK(strstr(t, "level=") == NULL);
+    CHECK(strstr(t, "ABWEICHUNG") == NULL);
+    CHECK(strlen(t) < V4_JOY_DIREKT_MAX);
+
+    v4_test_case("Direktzeile: leere Buchse zeigt keine erfundene Aktivitaet");
+    v4_joy_init(&st);
+    v4_joy_basis(&st, &ruh);
+    stabil(&st, &ruh);
+    (void)v4_joy_direkt_text(&st, 0, t, sizeof(t));
+    CHECK(strstr(t, "aktiv") == NULL);
+    CHECK(strstr(t, "gedrueckt (direkt): -") != NULL);
+}
+
+/* ------------------------------------------------------------------ */
 /* Randfaelle                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -640,6 +684,11 @@ static void test_joy_randfaelle(void)
     CHECK_EQ(v4_joy_port_text(&st, NULL, 0, 0, NULL, 100u), 0u);
     CHECK_EQ(v4_joy_port_text(&st, NULL, 0, 0, t, 0u), 0u);
     CHECK_EQ(v4_joy_reg_text(NULL, t, sizeof(t)), 0u);
+    CHECK_EQ(v4_joy_direkt_text(NULL, 0, t, sizeof(t)), 0u);
+    CHECK_EQ(v4_joy_direkt_text(&st, -1, t, sizeof(t)), 0u);
+    CHECK_EQ(v4_joy_direkt_text(&st, 2, t, sizeof(t)), 0u);
+    CHECK_EQ(v4_joy_direkt_text(&st, 0, NULL, 100u), 0u);
+    CHECK_EQ(v4_joy_direkt_text(&st, 0, t, 0u), 0u);
     CHECK_EQ(v4_joy_debug_text(NULL, NULL, 0, t, sizeof(t)), 0u);
     CHECK_EQ(v4_joy_vergleich_text(NULL, NULL, 0, t, sizeof(t)), 0u);
 
@@ -685,6 +734,7 @@ int test_joyport(void)
     test_joy_reg_text();
     test_joy_debug_text();
     test_joy_vergleich_text();
+    test_joy_direkt_text();
 
     test_joy_randfaelle();
 

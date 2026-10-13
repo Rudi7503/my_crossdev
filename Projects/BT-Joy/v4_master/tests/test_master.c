@@ -594,6 +594,7 @@ static void test_routing(void)
     CHECK_EQ(v4_check_info(&info), V4P_ST_OK);      /* KEIN Abbruch! */
     CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_PORT_ROUTING), 1);
     CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_DEVICE_PORT), 1);
+    CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_MOUSE_CFG), 1);
     CHECK_EQ(v4_info_has_caps(&info,
                               (uint16_t)(V4P_CAP_PORT_ROUTING
                                          | V4P_CAP_DEVICE_PORT)), 1);
@@ -741,6 +742,195 @@ static void test_routing(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* Bedienhilfe "Beitrag" -- KEIN Protokollbefehl                       */
+/* ------------------------------------------------------------------ */
+
+static void test_beitrag(void)
+{
+    v4_master_t   m;
+    v4p_portcfg_t c;
+    uint8_t       btn[V4P_BTN_COUNT];
+    uint8_t       dir;
+
+    v4_test_case("Beitrag: Tabelle Variante -> Richtungen und Knopfquellen");
+    CHECK_EQ(v4_beitrag_dir(V4P_BEITRAG_ANALOG), V4P_DIR_STICK_L);
+    CHECK_EQ(v4_beitrag_dir(V4P_BEITRAG_DIGITAL), V4P_DIR_DPAD);
+    CHECK_EQ(v4_beitrag_dir(V4P_BEITRAG_BEIDE), V4P_DIR_ALLE);
+    CHECK_EQ(v4_beitrag_dir(V4P_BEITRAG_EIGENE), 0u);   /* keine Variante */
+    CHECK_EQ(v4_beitrag_dir(200u), 0u);
+
+    v4_beitrag_btn(V4P_BEITRAG_ANALOG, btn);
+    CHECK_EQ(btn[0], V4P_TASTE_L1);                 /* Pin 6  links  */
+    CHECK_EQ(btn[1], V4P_TASTE_R1);                 /* Pin 9  rechts */
+    CHECK_EQ(btn[2], V4P_TASTE_KEINE);              /* Pin 5  offen  */
+    v4_beitrag_btn(V4P_BEITRAG_DIGITAL, btn);
+    CHECK_EQ(btn[0], V4P_TASTE_A);
+    CHECK_EQ(btn[1], V4P_TASTE_B);
+    CHECK_EQ(btn[2], V4P_TASTE_START);
+    v4_beitrag_btn(V4P_BEITRAG_BEIDE, btn);
+    CHECK_EQ(btn[0], V4P_TASTE_GRUPPE1);            /* zusammen alle Tasten */
+    CHECK_EQ(btn[1], V4P_TASTE_GRUPPE2);
+    CHECK_EQ(btn[2], V4P_TASTE_GRUPPE3);
+    CHECK_EQ(v4p_btn_set_valid(btn), 1);            /* keine Doppelbelegung */
+    v4_beitrag_btn(V4P_BEITRAG_EIGENE, btn);
+    CHECK_EQ(btn[0], V4P_TASTE_KEINE);
+    CHECK_EQ(btn[1], V4P_TASTE_KEINE);
+    CHECK_EQ(btn[2], V4P_TASTE_KEINE);
+    v4_beitrag_btn(V4P_BEITRAG_ANALOG, NULL);       /* darf nicht stuerzen */
+
+    v4_test_case("Beitrag: Richtungsmaske -> Variante (alle acht Masken)");
+    CHECK_EQ(v4_beitrag_aus_dir(0x00u), V4P_BEITRAG_EIGENE);
+    CHECK_EQ(v4_beitrag_aus_dir(V4P_DIR_STICK_L), V4P_BEITRAG_ANALOG);
+    CHECK_EQ(v4_beitrag_aus_dir(V4P_DIR_STICK_R), V4P_BEITRAG_ANALOG);
+    CHECK_EQ(v4_beitrag_aus_dir((uint8_t)(V4P_DIR_STICK_L
+                                          | V4P_DIR_STICK_R)),
+             V4P_BEITRAG_ANALOG);
+    CHECK_EQ(v4_beitrag_aus_dir(V4P_DIR_DPAD), V4P_BEITRAG_DIGITAL);
+    CHECK_EQ(v4_beitrag_aus_dir((uint8_t)(V4P_DIR_STICK_L | V4P_DIR_DPAD)),
+             V4P_BEITRAG_BEIDE);
+    CHECK_EQ(v4_beitrag_aus_dir((uint8_t)(V4P_DIR_STICK_R | V4P_DIR_DPAD)),
+             V4P_BEITRAG_BEIDE);
+    CHECK_EQ(v4_beitrag_aus_dir(V4P_DIR_ALLE), V4P_BEITRAG_BEIDE);
+
+    v4_test_case("Beitrag: Klartext");
+    CHECK_STR(v4_beitrag_name(V4P_BEITRAG_ANALOG), "analog");
+    CHECK_STR(v4_beitrag_name(V4P_BEITRAG_DIGITAL), "digital");
+    CHECK_STR(v4_beitrag_name(V4P_BEITRAG_BEIDE), "beide");
+    CHECK_STR(v4_beitrag_name(V4P_BEITRAG_EIGENE), "eigene");
+
+    v4_test_case("Beitrag analog/digital/beide setzen nur SET_PORT_ROUTING");
+    setup(&m);
+    CHECK_EQ(v4_set_port_beitrag(&m, 0u, V4P_BEITRAG_ANALOG), V4P_ST_OK);
+    CHECK_EQ(v4_get_port_config(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.dir[0], V4P_DIR_STICK_L);
+    CHECK_EQ(c.btn[0][0], V4P_TASTE_L1);
+    CHECK_EQ(c.btn[0][1], V4P_TASTE_R1);
+    CHECK_EQ(c.btn[0][2], V4P_TASTE_KEINE);
+    CHECK_EQ(v4_beitrag_aus_dir(c.dir[0]), V4P_BEITRAG_ANALOG);
+
+    CHECK_EQ(v4_set_port_beitrag(&m, 1u, V4P_BEITRAG_DIGITAL), V4P_ST_OK);
+    CHECK_EQ(v4_get_port_config(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.dir[1], V4P_DIR_DPAD);
+    CHECK_EQ(c.btn[1][0], V4P_TASTE_A);
+    CHECK_EQ(c.btn[1][1], V4P_TASTE_B);
+    CHECK_EQ(c.btn[1][2], V4P_TASTE_START);
+    CHECK_EQ(v4_beitrag_aus_dir(c.dir[1]), V4P_BEITRAG_DIGITAL);
+
+    CHECK_EQ(v4_set_port_beitrag(&m, 0u, V4P_BEITRAG_BEIDE), V4P_ST_OK);
+    CHECK_EQ(v4_get_port_config(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.dir[0], V4P_DIR_ALLE);
+    CHECK_EQ(c.btn[0][0], V4P_TASTE_GRUPPE1);
+    CHECK_EQ(c.btn[0][1], V4P_TASTE_GRUPPE2);
+    CHECK_EQ(c.btn[0][2], V4P_TASTE_GRUPPE3);
+    CHECK_EQ(v4_beitrag_aus_dir(c.dir[0]), V4P_BEITRAG_BEIDE);
+    /* Buchse 1 bleibt bei ihrem digitalen Stand. */
+    CHECK_EQ(c.dir[1], V4P_DIR_DPAD);
+    teardown();
+
+    v4_test_case("Beitrag \"eigene\"/unbekannt -> V4_ERR_ARG, kein Rahmen");
+    setup(&m);
+    {
+        unsigned long vorher = v4_mock.writes;
+
+        CHECK_EQ(v4_set_port_beitrag(&m, 0u, V4P_BEITRAG_EIGENE), V4_ERR_ARG);
+        CHECK_EQ(v4_set_port_beitrag(&m, 0u, 200u), V4_ERR_ARG);
+        CHECK_EQ(v4_set_port_beitrag(&m, 2u, V4P_BEITRAG_ANALOG),
+                 V4P_ST_BAD_ARG);
+        CHECK_EQ(v4_mock.writes, vorher);
+    }
+    /* Die Vorgabe ab Werk ist "beide" -- sie bleibt unberuehrt. */
+    CHECK_EQ(v4_get_port_config(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.dir[0], V4P_DIR_STANDARD);
+    dir = v4_beitrag_aus_dir(c.dir[0]);
+    CHECK_EQ(dir, V4P_BEITRAG_BEIDE);
+    teardown();
+}
+
+/* ------------------------------------------------------------------ */
+/* Maus-Einstellungen (fw_ver 5)                                       */
+/* ------------------------------------------------------------------ */
+
+static void test_mousecfg(void)
+{
+    v4_master_t    m;
+    v4p_info_t     info;
+    v4p_mousecfg_t c;
+
+    v4_test_case("GET_MOUSE_CFG: Vorgaben der Firmware (Tempo 7, Totzone 12)");
+    setup(&m);
+    memset(&c, 0, sizeof(c));
+    CHECK_EQ(v4_get_mouse_cfg(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.speed[0], V4P_MOUSE_SPEED_VORGABE);
+    CHECK_EQ(c.speed[1], V4P_MOUSE_SPEED_VORGABE);
+    CHECK_EQ(c.totzone[0], V4P_MOUSE_TOTZONE_VORGABE);
+    CHECK_EQ(c.totzone[1], V4P_MOUSE_TOTZONE_VORGABE);
+    CHECK_EQ(v4_get_mouse_cfg(&m, NULL), V4_ERR_ARG);
+    teardown();
+
+    v4_test_case("SET_MOUSE_CFG: eine Buchse wird gesetzt, die andere bleibt");
+    setup(&m);
+    CHECK_EQ(v4_set_mouse_cfg(&m, 0u, 3u, 40u), V4P_ST_OK);
+    CHECK_EQ(v4_get_mouse_cfg(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.speed[0], 3u);
+    CHECK_EQ(c.totzone[0], 40u);
+    CHECK_EQ(c.speed[1], V4P_MOUSE_SPEED_VORGABE);      /* unberuehrt */
+    CHECK_EQ(c.totzone[1], V4P_MOUSE_TOTZONE_VORGABE);
+    CHECK_EQ(v4_set_mouse_cfg(&m, 1u, 10u, 100u), V4P_ST_OK);
+    CHECK_EQ(v4_get_mouse_cfg(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.speed[1], 10u);
+    CHECK_EQ(c.totzone[1], 100u);
+    teardown();
+
+    v4_test_case("SET_MOUSE_CFG: unzulaessige Werte lokal -> BAD_ARG, "
+                 "kein Rahmen, nichts geaendert");
+    setup(&m);
+    {
+        unsigned long vorher = v4_mock.writes;
+
+        CHECK_EQ(v4_set_mouse_cfg(&m, 0u, 0u, 12u), V4P_ST_BAD_ARG);
+        CHECK_EQ(v4_set_mouse_cfg(&m, 0u, 11u, 12u), V4P_ST_BAD_ARG);
+        CHECK_EQ(v4_set_mouse_cfg(&m, 0u, 5u, 101u), V4P_ST_BAD_ARG);
+        CHECK_EQ(v4_set_mouse_cfg(&m, 2u, 5u, 12u), V4P_ST_BAD_ARG);
+        CHECK_EQ(v4_mock.writes, vorher);
+    }
+    CHECK_EQ(v4_get_mouse_cfg(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.speed[0], V4P_MOUSE_SPEED_VORGABE);
+    teardown();
+
+    v4_test_case("SET_MOUSE_CFG: BAD_ARG des Slaves kommt durch, nichts "
+                 "geaendert");
+    setup(&m);
+    v4_mock.force_status = V4P_ST_BAD_ARG;
+    CHECK_EQ(v4_set_mouse_cfg(&m, 0u, 4u, 30u), V4P_ST_BAD_ARG);
+    CHECK_EQ(v4_get_mouse_cfg(&m, &c), V4P_ST_OK);
+    CHECK_EQ(c.speed[0], V4P_MOUSE_SPEED_VORGABE);
+    CHECK_EQ(c.totzone[0], V4P_MOUSE_TOTZONE_VORGABE);
+    teardown();
+
+    v4_test_case("SET_MOUSE_CFG: falsches Echo -> V4_ERR_FRAME");
+    setup(&m);
+    v4_mock.bad_mousecfg_echo = 1;
+    CHECK_EQ(v4_set_mouse_cfg(&m, 0u, 4u, 30u), V4_ERR_FRAME);
+    teardown();
+
+    v4_test_case("fw_ver 4 (ohne Maus-Einstellungen): PING wird ANGENOMMEN, "
+                 "0x0B/0x0C melden BAD_CMD");
+    v4_mock_reset();
+    v4_mock_seed_default();
+    v4_mock.legacy_fw4 = 1;
+    CHECK_EQ(v4_open(&m, NULL), 0);
+    CHECK_EQ(v4_ping(&m, &info), V4P_ST_OK);
+    CHECK_EQ(info.fw_ver, 4u);
+    CHECK_EQ(v4_check_info(&info), V4P_ST_OK);      /* gleicher Rahmen! */
+    CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_MOUSE_CFG), 0);
+    /* Die Eingangsverteilung ist bei fw_ver 4 sehr wohl da. */
+    CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_PORT_ROUTING), 1);
+    CHECK_EQ(v4_get_mouse_cfg(&m, &c), V4P_ST_BAD_CMD);
+    CHECK_EQ(v4_set_mouse_cfg(&m, 0u, 4u, 30u), V4P_ST_BAD_CMD);
+    teardown();
+}
+
+/* ------------------------------------------------------------------ */
 
 int test_master(void)
 {
@@ -751,6 +941,8 @@ int test_master(void)
     test_status_and_hid();
     test_ports();
     test_routing();
+    test_beitrag();
+    test_mousecfg();
     test_devices_and_connect();
     test_link_failures();
     test_seq_discipline();

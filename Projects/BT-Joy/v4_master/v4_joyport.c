@@ -609,3 +609,67 @@ size_t v4_joy_vergleich_text(const v4_joy_t *st, const v4p_input_t *in,
     }
     return n;
 }
+
+/*
+ * Die Anzeige EINER Buchse NUR aus den eigenen Registern. Siehe v4_joyport.h:
+ * hier steht KEIN I2C-Wert -- der Vergleich gehoert ins Protokoll.
+ *
+ * `Pegel` ist der ROHWERT des Feuerregisters (1 = High). Fuer die vier
+ * Richtungsleitungen gibt es keine einzelne Pegelleitung; sie kommen aus dem
+ * Zaehler (JOY0DAT/JOY1DAT), dessen Rohwert darunter steht. BTN3 (Pin 5) ist
+ * direkt nicht lesbar -- das wird gesagt, nicht geraten.
+ */
+size_t v4_joy_direkt_text(const v4_joy_t *st, int port, char *out, size_t cap)
+{
+    size_t   n = 0u;
+    uint8_t  maske;
+    char     namen[64];
+    unsigned bit;
+
+    if (out == NULL || cap == 0u) {
+        return 0u;
+    }
+    out[0] = '\0';
+    if (st == NULL || port < 0 || port >= (int)V4P_PORT_COUNT) {
+        return 0u;
+    }
+
+    maske = v4_joy_maske(st, port);
+
+    tx_add(out, cap, &n, "direkt aus den Registern:\n");
+    tx_add(out, cap, &n, "Leitung  Pin   Pegel    direkt\n");
+    for (bit = 0u; bit < V4P_IN_ST_COUNT; bit++) {
+        uint8_t     m     = (uint8_t)(1u << bit);
+        int         aktiv = ((maske & m) != 0u);
+        const char *pegel;
+        const char *urteil;
+
+        if (bit < 4u) {
+            /* Richtung: kommt aus dem Zaehler, keine einzelne Pegelleitung. */
+            pegel  = "-";
+            urteil = aktiv ? "aktiv" : "-";
+        } else if (bit < 6u) {
+            /* BTN1/BTN2: der Rohwert des Feuerregisters ist der Pegel. */
+            unsigned k   = bit - 4u;
+            int      roh = (int)feuer_bit(&st->roh, s_feuer[port][k].quelle,
+                                          s_feuer[port][k].bit);
+
+            pegel  = roh ? "1 (High)" : "0 (Low)";
+            urteil = aktiv ? "gedrueckt" : "-";
+        } else {
+            pegel  = "-";
+            urteil = "nicht lesbar";
+        }
+        tx_add(out, cap, &n, "%-7s %-5s %-8s %s\n",
+               v4p_bit_name(bit), v4p_bit_pin(bit), pegel, urteil);
+    }
+
+    (void)v4_joy_richtungen_text(maske, namen, sizeof(namen));
+    tx_add(out, cap, &n, "gedrueckt (direkt): %s\n", namen);
+    tx_add(out, cap, &n, "Roh: Zaehler=0x%04X (stabil=%s)\n",
+           (unsigned)st_zaehler_roh(st, port),
+           (st->richtung_stabil[port] != 0u) ? "ja" : "nein");
+    tx_add(out, cap, &n, "CIAAPRA=0x%04X POTINP=0x%04X",
+           (unsigned)st->roh.ciaapra, (unsigned)st->roh.potinp);
+    return n;
+}

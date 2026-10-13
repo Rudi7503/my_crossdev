@@ -78,6 +78,14 @@ typedef struct {
     v4p_portcfg_t portcfg;
     int          portcfg_valid;
     /*
+     * Die Maus-Einstellungen aus GET_MOUSE_CFG (fw_ver 5): Tempo und Totzone
+     * JE BUCHSE. mousecfg_valid bleibt 0, solange keine gueltige Antwort
+     * vorliegt -- die Regler zeigen dann die Vorgabe der Firmware an, aber
+     * keinen erfundenen "bestaetigten" Wert.
+     */
+    v4p_mousecfg_t mousecfg;
+    int            mousecfg_valid;
+    /*
      * Geraet -> Buchse. Der ESP32 liefert diese Zuordnung ueber die Leitung
      * NICHT zurueck (DEV_GET nennt nur Name und Adresse, GET_PORT_CONFIG nur
      * die Buchsenfelder). Was hier steht, ist deshalb das, was in DIESER
@@ -141,6 +149,11 @@ void v4_state_put_devs  (v4_state_t *s, const v4p_dev_t *tab, uint8_t n);
  * Antwort rufen). Setzt mode/applied mit: mode_ist ist dieselbe wirksame
  * Betriebsart, die GET_PORT_MODE liefert -- so gibt es nur EINE Quelle. */
 void v4_state_put_portcfg(v4_state_t *s, const v4p_portcfg_t *cfg);
+
+/* Die Maus-Einstellungen beider Buchsen aus GET_MOUSE_CFG uebernehmen (nur bei
+ * gueltiger Antwort rufen). Die Werte sind STUFEN/Prozent, keine
+ * physikalischen Groessen -- es wird hier nichts umgerechnet. */
+void v4_state_put_mousecfg(v4_state_t *s, const v4p_mousecfg_t *cfg);
 
 /* Eine bestaetigte Geraetezuordnung merken (SET_DEVICE_PORT). Gleiche Adresse
  * ersetzt den vorhandenen Eintrag, eine neue kommt dazu (bis

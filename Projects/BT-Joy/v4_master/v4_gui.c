@@ -10,17 +10,22 @@
  *   - Kopfzeile: Protokoll- und Firmware-Version, Faehigkeiten, Zustand
  *   - Controller-Zeile: Name, VID/PID, Art, Transport, gezaehlte Reports
  *   - Umschalter "Seite" mit ZWEI Seiten (MUIA_Group_PageMode):
- *       Seite "Anzeige"        die beiden Buchsen (Betriebsart als Cycle mit
- *                              auto/aus/Joystick/Maus und "wirkt: ..." daneben,
- *                              die sieben Leitungen UP, DOWN, LEFT, RIGHT,
- *                              BTN1 (Pin 6), BTN2 (Pin 9), BTN3 (Pin 5) mit
- *                              "Zug" und "Pegel") und der Vergleich
- *                              direkt <-> I2C
- *       Seite "Konfiguration"  die Eingangsverteilung (fw_ver 4): je Buchse
- *                              Geraet (SET_DEVICE_PORT), Richtungen (drei
- *                              Schalter) und die drei Knopfquellen Pin 6,
- *                              Pin 9, Pin 5 (SET_PORT_ROUTING), dazu der
- *                              Klartext beider Buchsen
+ *       Seite "Anzeige"        die beiden Buchsen -- NUR die direkte
+ *                              Registerabfrage (JOY0DAT/JOY1DAT fuer die
+ *                              Richtungen, CIAAPRA/POTINP fuer die Knoepfe)
+ *                              samt Rohwerten und der WIRKSAMEN Betriebsart
+ *                              daneben. Die Sicht des ESP32 (state/level) und
+ *                              der Vergleich direkt <-> I2C stehen
+ *                              AUSDRUECKLICH NICHT mehr im Fenster, sondern
+ *                              nur im Protokoll (DebugUART/Logdatei).
+ *       Seite "Konfiguration"  die Eingangsverteilung (fw_ver 4/5): je Buchse
+ *                              Geraet (SET_DEVICE_PORT), Beitrag
+ *                              analog/digital/beide (Bedienhilfe, setzt
+ *                              SET_PORT_ROUTING), Richtungen (drei Schalter),
+ *                              die drei Knopfquellen Pin 6/Pin 9/Pin 5 sowie
+ *                              Maus-Tempo und Maus-Totzone
+ *                              (GET/SET_MOUSE_CFG), dazu der Klartext beider
+ *                              Buchsen
  *   - Knoepfe: Neu suchen, Geraeteliste/Verbinden, Trennen, Vergessen,
  *     Port 0/1 Vorgabe weiterschalten, Buchsen tauschen
  *   - Logfeld mit allen Meldungen
@@ -29,9 +34,11 @@
  * so gewachsen, dass er bei 640x400 (auf dieser V4 sogar 640x360) nicht mehr
  * untereinander passt. MUI_Group.doc sagt zur Seitengruppe: "the minimum
  * width/height of a page group is the maximum minimum width/height of all its
- * children". Die Konfigurationsseite ist KLEINER als die Anzeigeseite -- die
- * Mindestgroesse des Fensters aendert sich damit NICHT, und nichts wird unter
- * seine Mindesthoehe gedrueckt (das war der Befund "leere Felder").
+ * children". Die Anzeigeseite ist durch den Wegfall des I2C-Vergleichs KLEINER
+ * geworden; die Konfigurationsseite bleibt durch die neue Zeile je Einstellung
+ * in derselben Groessenordnung. Die Mindestgroesse des Fensters aendert sich
+ * damit nicht nach oben, und nichts wird unter seine Mindesthoehe gedrueckt
+ * (das war der Befund "leere Felder").
  *
  * DIE EINGANGSVERTEILUNG GEHT SOFORT ZUM ESP32: jede Aenderung an einem
  * Auswahlfeld oder Schalter ruft direkt SET_DEVICE_PORT, SET_PORT_MODE oder
@@ -52,8 +59,9 @@
  * Die Registerabfrage (v4_joyport.c) kostet nichts und braucht keinen Bus. Sie
  * laeuft deshalb in jedem Takt -- aber NACH den beiden I2C-Abfragen, damit im
  * Mitschnitt die erste Buszeile vor der ersten Zeile der Direktabfrage steht
- * (siehe gui_poll). Der Vergleich geht NICHT mehr als eigene Zeile je Takt auf
- * den DebugUART, sondern (a) in die EINE Herzzeile je Sekunde und (b) sofort,
+ * (siehe gui_poll). Das FENSTER zeigt seit dem 14.10.2026 ausschliesslich
+ * diese direkten Werte; der Vergleich direkt <-> I2C bleibt als Diagnose im
+ * PROTOKOLL -- er geht (a) in die EINE Herzzeile je Sekunde und (b) sofort,
  * wenn sich Richtung, Feuerknopf oder Urteil aendern. Genau das ist der Zweck:
  * am PC mitlesen, ob beide Quellen dasselbe sagen. Die Stabilitaet der Anzeige
  * kommt daher, dass jede Buchse aus ZWEI Abtastungen bewertet wird (siehe
@@ -76,18 +84,18 @@
  * heraus (v4_debug.c); kein Zeichen fuer Zeichen, kein Delay() in der Naehe des
  * Buszugs.
  *
- * "ZUG" UND "PEGEL" SIND ZWEI VERSCHIEDENE DINGE:
+ * "ZUG" UND "PEGEL" SIND ZWEI VERSCHIEDENE DINGE (nur noch im PROTOKOLL):
  * "Zug" ist die Zug-Maske aus GET_INPUT -- was die Firmware nach GND zieht
  * (Bit gesetzt = Taste/Richtung aktiv). "Pegel" ist der GEMESSENE Pegel, den
  * die Firmware seit der 12-Byte-Fassung im selben Befehl mitschickt (Bit
  * gesetzt = High, Ruhe 0x7F). Beides kann auseinandergehen, und dann ist der
  * Widerspruch die eigentliche Aussage: "losgelassen, liest aber 0" heisst, dass
  * der Pull-up der Vampire fehlt; "gezogen, liest High" kann elektrisch nicht
- * sein. Beides wird je Leitung in der Zeile benannt und einmalig ins Log
- * geschrieben.
+ * sein. Beides wird einmalig ins Log geschrieben -- im Fenster steht es nicht
+ * mehr, weil dort nur die direkten Portdaten gezeigt werden.
  *
  * Antwortet die Gegenstelle noch mit der aelteren 10-Byte-Fassung, sind die
- * Pegel UNBEKANNT: dann steht in der Spalte ein Hinweis ("neu flashen") und
+ * Pegel UNBEKANNT: dann nennt der Vergleich im Protokoll "level=unbekannt" und
  * KEINE Zahl. Eine abgeleitete Zahl waere von einer Messung nicht zu
  * unterscheiden -- genau diese Verwechslung darf es nicht geben.
  *
@@ -224,6 +232,16 @@
 #define ID_MODE1_NEXT 17
 /* Der Umschalter "Seite" (Anzeige / Konfiguration). */
 #define ID_SEITE      18
+/* Die Beitrags-Auswahl je Buchse (analog / digital / beide / eigene). */
+#define ID_BEITRAG0   19
+#define ID_BEITRAG1   20
+/* Die Maus-Einstellungen je Buchse: Tempo-Auswahl und Totzone -/+ . */
+#define ID_MSPEED0    21
+#define ID_MSPEED1    22
+#define ID_MTOT0M     23
+#define ID_MTOT0P     24
+#define ID_MTOT1M     25
+#define ID_MTOT1P     26
 
 struct IntuitionBase *IntuitionBase;
 struct GfxBase       *GfxBase;
@@ -300,7 +318,7 @@ static Object *s_ctrl;                /* Controller-Zeile                 */
 static Object *s_state;               /* Zustandszeile                    */
 static Object *s_port0;               /* Portgruppe 0                     */
 static Object *s_port1;               /* Portgruppe 1                     */
-static Object *s_vergleich;           /* direkt <-> I2C, beide Buchsen    */
+static Object *s_regtext;           /* direkt <-> I2C, beide Buchsen    */
 static Object *s_mode0;               /* Cycle Vorgabe Betriebsart Buchse 0 */
 static Object *s_mode1;               /* Cycle Vorgabe Betriebsart Buchse 1 */
 
@@ -319,6 +337,18 @@ static Object *s_dir0[3], *s_dir1[3];
 static Object *s_b0[3], *s_b1[3];
 static Object *s_wirk0, *s_wirk1;
 static Object *s_cfgtext;
+/*
+ * Beitrag je Buchse (Bedienhilfe analog/digital/beide) und die
+ * Maus-Einstellungen je Buchse (Tempo als Cycle 1..10, Totzone als Text mit
+ * "-"/"+"-Knoepfen). s_cfghint ist der dynamische Hinweis unter der Tabelle:
+ * er nennt die Beitrags-Bedeutung, den "gegenstandslos"-Fall und -- wenn das
+ * Faehigkeitsbit fehlt -- dass die Maus-Regler nicht verfuegbar sind.
+ */
+static Object *s_beitrag0, *s_beitrag1;
+static Object *s_mspeed0, *s_mspeed1;
+static Object *s_mtotal0, *s_mtotal1;
+static Object *s_mtot0m, *s_mtot0p, *s_mtot1m, *s_mtot1p;
+static Object *s_cfghint;
 /*
  * Seitenumschalter: s_seite ist das Auswahlfeld ("Anzeige"/"Konfiguration"),
  * s_seiten die Seitengruppe (MUIA_Group_PageMode) mit den beiden Seiten.
@@ -393,6 +423,42 @@ typedef char gui_taste_eintraege_mit_null[
      == (V4P_TASTE_ANZAHL + 1u)) ? 1 : -1];
 
 /*
+ * Der "Beitrag" je Buchse -- die drei Varianten und der Anzeigezustand
+ * "eigene".
+ *
+ * Der Index IST der Wert (V4P_BEITRAG_*): 0 analog, 1 digital, 2 beide,
+ * 3 eigene. "eigene" ist KEINE waehlbare Variante, sondern die ehrliche
+ * Anzeige fuer eine Verteilung, die zu keiner der drei passt (z.B. keine
+ * Richtung oder eine Handbelegung) -- ohne diesen Eintrag muesste das Feld
+ * eine Variante behaupten, die es nicht gibt.
+ *
+ * Wie bei gui_modus_eintraege gilt: MUI erwartet ein NULL-ABGESCHLOSSENES
+ * Zeigerarray (STRPTR *), keine mit '|' getrennte Zeichenkette. Das Feld ist
+ * ortsfest, weil MUI den Zeiger behaelt.
+ */
+static const char *const gui_beitrag_eintraege[] = {
+    "analog", "digital", "beide", "eigene", NULL
+};
+
+/* Uebersetzungszeit-Sicherung: 3 waehlbare Varianten + "eigene" + NULL. */
+typedef char gui_beitrag_eintraege_mit_null[
+    (sizeof(gui_beitrag_eintraege) / sizeof(gui_beitrag_eintraege[0])
+     == (V4P_BEITRAG_ANZAHL + 2u)) ? 1 : -1];
+
+/*
+ * Das Maus-Tempo als Stufe ("1".."10"). Der Index im Auswahlfeld ist
+ * Stufe-1, weil es keine Stufe 0 gibt. Auch hier: ortsfest und
+ * NULL-abgeschlossen.
+ */
+static const char *const gui_speed_eintraege[] = {
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", NULL
+};
+
+typedef char gui_speed_eintraege_mit_null[
+    (sizeof(gui_speed_eintraege) / sizeof(gui_speed_eintraege[0])
+     == ((V4P_MOUSE_SPEED_MAX - V4P_MOUSE_SPEED_MIN) + 2u)) ? 1 : -1];
+
+/*
  * Die beiden Seiten. Der Inhalt der Oberflaeche ist mit fw_ver 4 so gewachsen,
  * dass er nicht mehr untereinander auf 640x400 passt; eine Seitengruppe
  * (MUIA_Group_PageMode) zeigt immer nur eine Seite. Ihre Mindestgroesse ist
@@ -455,6 +521,11 @@ static int     s_cfg_ok;
  * V4P_CAP_DEVICE_PORT). Die beiden Bits sind unabhaengig voneinander -- die
  * Doku nennt sie getrennt, deshalb werden sie auch getrennt geprueft. */
 static int     s_devport_ok;
+/* 1 = die Gegenstelle kann die Maus-Einstellungen (Faehigkeitsbit
+ * V4P_CAP_MOUSE_CFG, GET/SET_MOUSE_CFG 0x0B/0x0C, fw_ver 5). Auch das ist eine
+ * EIGENE Faehigkeit -- fehlt sie, bleiben die Regler sichtbar gesperrt, statt
+ * sinnlos zu senden. */
+static int     s_mousecfg_ok;
 static int     s_cfg_warned;          /* Hinweis nur EINMAL ins Log         */
 static int     s_cfg_sperre;          /* 1 = gerade Anzeige nachziehen:
                                        * Notifies nicht als Befehl deuten   */
@@ -566,72 +637,8 @@ static void gui_msg(const char *fmt, ...)
  * genau das tut der Zeilen-Haken oben. */
 
 /* ------------------------------------------------------------------ */
-/* Textbausteine fuer die Anzeige                                      */
+/* Klartext der Faehigkeiten (fuer die Kopfzeile)                      */
 /* ------------------------------------------------------------------ */
-
-/* Kleiner Puffer fuer mehrzeilige MUI-Texte. */
-typedef struct {
-    char  *buf;
-    size_t cap;
-    size_t len;
-} gui_tb_t;
-
-static void tb_init(gui_tb_t *t, char *buf, size_t cap)
-{
-    t->buf = buf;
-    t->cap = cap;
-    t->len = 0u;
-    if (cap > 0u) {
-        buf[0] = '\0';
-    }
-}
-
-static void tb_add(gui_tb_t *t, const char *s)
-{
-    size_t n;
-
-    if (t->buf == NULL || t->cap == 0u) {
-        return;
-    }
-    n = strlen(s);
-    if (t->len + n + 1u > t->cap) {
-        return;                     /* lieber nichts als ein halber Text */
-    }
-    memmove(t->buf + t->len, s, n);
-    t->len += n;
-    t->buf[t->len] = '\0';
-}
-
-/* Eine Zeile: sichtbarer Text wird auf feste Breite aufgefuellt und bekommt
- * den Stil vorangestellt. */
-static void tb_line(gui_tb_t *t, int bold, const char *fmt, ...)
-{
-    char    tmp[GUI_LINE_W + 24u];
-    va_list ap;
-    int     n;
-    size_t  fill;
-
-    va_start(ap, fmt);
-    n = vsnprintf(tmp, sizeof(tmp), fmt, ap);
-    va_end(ap);
-    if (n < 0) {
-        return;
-    }
-    if ((size_t)n > sizeof(tmp) - 1u) {
-        n = (int)sizeof(tmp) - 1u;
-    }
-    /* Auf feste Sichtbreite auffuellen: MUI rechnet die Mindestgroesse des
-     * Textes aus dem Inhalt, ungleiche Zeilen liessen die Gruppe zappeln. */
-    fill = (size_t)n;
-    while (fill < (size_t)GUI_LINE_W && fill + 1u < sizeof(tmp)) {
-        tmp[fill++] = ' ';
-    }
-    tmp[fill] = '\0';
-
-    tb_add(t, bold ? "\33b" : "\33n");
-    tb_add(t, tmp);
-    tb_add(t, "\n");
-}
 
 static void caps_text(uint16_t caps, char *out, size_t cap)
 {
@@ -646,7 +653,10 @@ static void caps_text(uint16_t caps, char *out, size_t cap)
         { V4P_CAP_HID_BLE,   "BLE" },
         { V4P_CAP_MOUSE,     "Maus" },
         { V4P_CAP_PAD,       "Pad" },
-        { V4P_CAP_BATTERY,   "Batterie" }
+        { V4P_CAP_BATTERY,   "Batterie" },
+        { V4P_CAP_PORT_ROUTING, "Verteilung" },
+        { V4P_CAP_DEVICE_PORT,  "Geraetezuordnung" },
+        { V4P_CAP_MOUSE_CFG,    "Maus-Einstellungen" }
     };
     size_t   n     = 0u;
     int      first = 1;
@@ -859,85 +869,64 @@ static void gui_show_hid(void)
 }
 
 /*
- * Eine Portgruppe zusammensetzen.
+ * Eine Portgruppe zusammensetzen -- AUSSCHLIESSLICH aus den eigenen Registern.
  *
- * `drive` ist die Zug-Maske, `level` der GEMESSENE Pegel aus GET_INPUT,
- * `level_valid` sagt, ob die Firmware ihn ueberhaupt geliefert hat. Ohne Pegel
- * (10-Byte-Fassung) steht in der Spalte ein Hinweis und KEINE Zahl -- eine
- * abgeleitete Zahl waere von einer Messung nicht zu unterscheiden.
+ * WAS HIER NICHT MEHR STEHT: die Sicht des ESP32 (state0/state1, level0/level1
+ * aus GET_INPUT) und der Vergleich samt ABWEICHUNG. Das Fenster zeigt, was an
+ * den Anschlussleitungen ankommt -- das ist die direkte Abfrage
+ * (JOY0DAT/JOY1DAT fuer die Richtungen, CIAAPRA/POTINP fuer die Knoepfe),
+ * siehe v4_joy_direkt_text(). Der Vergleich bleibt als Diagnose im Protokoll
+ * (DebugUART/Logdatei, v4_joy_debug_text/v4_joy_herz_text).
  *
- * Der Widerspruch je Leitung ("losgelassen, liest aber 0" = kein Pull-up)
- * wird direkt in der Zeile benannt: das ist am Port die Aussage, auf die es
- * ankommt, und ohne sie sieht der Befund wie "nichts gedrueckt" aus.
+ * Die wirksame BETRIEBSART kommt weiterhin vom ESP32 (GET_PORT_MODE bzw.
+ * GET_PORT_CONFIG.mode_ist): sie beschreibt, was der ESP32 an den Leitungen
+ * TUT, und gehoert deshalb zur Anzeige -- ausdruecklich als "(ESP32)"
+ * gekennzeichnet, damit die Herkunft klar bleibt.
+ *
+ * Gezeichnet wird AUCH OHNE gueltige I2C-Antwort: die Registerabfrage haengt
+ * nicht am Bus. Fehlt die Betriebsart, steht "Modus ?" da -- kein alter Wert.
  */
-static void gui_build_port_text(int port, uint8_t mode, uint8_t drive,
-                                uint8_t level, int level_valid,
+static void gui_build_port_text(int port, uint8_t mode, int mode_gueltig,
                                 char *buf, size_t cap)
 {
-    gui_tb_t  t;
-    char      gezogen[64];
-    unsigned  bit;
+    char direkt[V4_JOY_DIREKT_MAX];
+    char kopf[64];
 
-    v4p_bits_text(drive, gezogen, sizeof(gezogen));
-
-    tb_init(&t, buf, cap);
-    tb_line(&t, 0, "Buchse %d  Modus %s", port, v4p_port_mode_name(mode));
-    tb_line(&t, 0, "Leitung DB9   Zug  Pegel  Bewertung");
-    if (!level_valid) {
-        tb_line(&t, 0, "Pegel: Firmware ohne Pegel -- neu flashen");
-    }
-    for (bit = 0u; bit < V4P_IN_ST_COUNT; bit++) {
-        uint8_t maske = (uint8_t)(1u << bit);
-        int     z     = (drive & maske) != 0u;
-        int     p     = (level & maske) != 0u;
-        const char *urteil;
-
-        if (!level_valid) {
-            urteil = "";
-        } else if (z && !p) {
-            urteil = "ok";
-        } else if (!z && p) {
-            urteil = "ok";
-        } else if (!z && !p) {
-            urteil = "<- kein Pull-up!";
-        } else {
-            urteil = "<- unmoeglich!";
-        }
-
-        tb_line(&t, z, "%-7s %-5s %-4s %-6s %s",
-                v4p_bit_name(bit), v4p_bit_pin(bit),
-                z ? "GND" : "frei",
-                level_valid ? (p ? "High" : "Low") : "-",
-                urteil);
-    }
-    tb_line(&t, 0, "gezogen: %s", gezogen);
-    if (level_valid) {
-        tb_line(&t, 0, "Pegel = gemessen (ESP32, GET_INPUT)");
+    if (mode_gueltig != 0) {
+        (void)snprintf(kopf, sizeof(kopf), "Buchse %d  Modus %s (ESP32)",
+                       port, v4p_port_mode_name(mode));
     } else {
-        tb_line(&t, 0, "Pegel = unbekannt (10-Byte-Fassung)");
+        (void)snprintf(kopf, sizeof(kopf),
+                       "Buchse %d  Modus ? (ESP32 antwortet nicht)", port);
     }
+    (void)v4_joy_direkt_text(&J, port, direkt, sizeof(direkt));
+    (void)snprintf(buf, cap, "%s\n%s", kopf, direkt);
 }
 
 /*
- * Der Vergleich direkt <-> I2C in der Anzeige: eine Zeile je Buchse und die
- * Rohwerte der Feuerregister. Er steht in einem EIGENEN Textobjekt ueber die
- * volle Fensterbreite -- in den beiden Portspalten waere die Zeile zu breit und
- * wuerde das Fenster auseinanderziehen.
+ * Die Rohwerte der Feuerregister ueber die volle Fensterbreite -- und der
+ * Hinweis, wo der Vergleich direkt/I2C geblieben ist. Das steht in einem
+ * EIGENEN Textobjekt, weil es in den beiden Portspalten zu breit waere.
  *
- * Er wird IMMER gezeichnet, sobald irgendetwas vorliegt: die direkte Abfrage
- * haengt nicht am Bus und muss auch dann sichtbar sein, wenn der ESP32
- * schweigt. Fehlt eine Quelle, steht das ausdruecklich in der Zeile.
+ * Er wird IMMER gezeichnet: die direkte Abfrage haengt nicht am Bus und muss
+ * auch dann sichtbar sein, wenn der ESP32 schweigt.
  */
-static void gui_show_vergleich(void)
+static void gui_show_regtext(void)
 {
-    static char buf[3u * V4_JOY_TEXT_MAX];  /* ortsfest (4-KB-Stapel!) */
+    static char buf[V4_JOY_TEXT_MAX + 128u];    /* ortsfest (4-KB-Stapel!) */
+    size_t      n;
 
-    if (s_vergleich == NULL) {
+    if (s_regtext == NULL) {
         return;
     }
-    (void)v4_joy_vergleich_text(&J, (S.input_valid != 0) ? &S.input : NULL,
-                                s_input_frisch, buf, sizeof(buf));
-    set(s_vergleich, MUIA_Text_Contents, (IPTR)buf);
+    n = v4_joy_reg_text(&J, buf, sizeof(buf));
+    if (n + 90u < sizeof(buf)) {
+        (void)snprintf(buf + n, sizeof(buf) - n,
+                       "\nVergleich direkt/I2C nur im Protokoll "
+                       "(DebugUART/Logdatei) -- das Fenster zeigt die "
+                       "Portdaten.");
+    }
+    set(s_regtext, MUIA_Text_Contents, (IPTR)buf);
 }
 /* Vorwaertsdeklarationen: gui_show_ports (unten) zieht die Betriebsart-Knoepfe
  * auf die VORGABE aus GET_PORT_CONFIG; die beiden Helfer stehen im naechsten
@@ -945,80 +934,92 @@ static void gui_show_vergleich(void)
 static IPTR    gui_mode_index(uint8_t soll);
 static uint8_t gui_mode_soll(int port);
 
-/* Portmodi und Eingaenge aus dem Zustandsblock in die Anzeige uebernehmen. */
+/*
+ * Die Buchsen-Anzeige: NUR die eigenen Register.
+ *
+ * Bis zum 14.10.2026 stand hier zusaetzlich die Sicht des ESP32
+ * (state0/state1/level0/level1) samt Urteil "OK"/"ABWEICHUNG". Der Benutzer
+ * will im Fenster sehen, was UEBER DEN JOYSTICK-PORT KOMMT -- also die direkte
+ * Registerabfrage. Der Vergleich bleibt im Protokoll (DebugUART/Logdatei), wo
+ * er als Diagnose gebraucht wird.
+ *
+ * Deshalb wird hier NICHT mehr abgebrochen, wenn keine I2C-Antwort da ist:
+ * die Registerabfrage haengt nicht am Bus. Die wirksame Betriebsart kommt
+ * weiterhin vom ESP32 und wird als "(ESP32)" gekennzeichnet; fehlt sie, steht
+ * "Modus ?".
+ *
+ * Der Pegel-Widerspruch aus GET_INPUT wird weiterhin EINMAL je Aenderung ins
+ * LOG geschrieben (nicht ins Fenster) -- das ist die elektrische Aussage
+ * ("losgelassen, liest 0" = kein Pull-up) und gehoert zur Diagnose.
+ */
 static void gui_show_ports(void)
 {
     uint8_t     mode[V4P_PORT_COUNT];
-    v4p_input_t in;
-    static char buf[800];               /* ortsfest (4-KB-Stapel!) */
+    static char buf[900];               /* ortsfest (4-KB-Stapel!) */
 
-    /* Zuerst der Vergleich: er haengt NICHT daran, ob schon eine gueltige
+    /* Zuerst die Rohregister: sie haengen NICHT daran, ob eine gueltige
      * I2C-Antwort da ist. */
-    gui_show_vergleich();
+    gui_show_regtext();
 
-    if (!S.mode_valid) {
-        return;                 /* noch nichts empfangen: alte Anzeige bleibt */
-    }
-    if (!S.input_valid) {
-        return;
-    }
-    mode[0] = S.mode[0];
-    mode[1] = S.mode[1];
-    in      = S.input;
+    mode[0] = S.mode_valid ? S.mode[0] : 0u;
+    mode[1] = S.mode_valid ? S.mode[1] : 0u;
 
     if (s_port0 != NULL) {
-        gui_build_port_text(0, mode[0], in.state[0], in.level[0],
-                            in.level_valid, buf, sizeof(buf));
+        gui_build_port_text(0, mode[0], S.mode_valid, buf, sizeof(buf));
         set(s_port0, MUIA_Text_Contents, (IPTR)buf);
     }
     if (s_port1 != NULL) {
-        gui_build_port_text(1, mode[1], in.state[1], in.level[1],
-                            in.level_valid, buf, sizeof(buf));
+        gui_build_port_text(1, mode[1], S.mode_valid, buf, sizeof(buf));
         set(s_port1, MUIA_Text_Contents, (IPTR)buf);
     }
 
     /* Den Widerspruch zusaetzlich in die Logliste -- man sieht ihn dort auch
      * dann, wenn das Fenster nicht im Blick ist. Nur bei Aenderung, sonst
      * liefe die Liste im Takt voll. */
-    if (in.level_valid) {
-        uint8_t fehlt   = (uint8_t)(v4p_level_missing_pullup(in.state[0],
-                                                             in.level[0])
-                                    | v4p_level_missing_pullup(in.state[1],
-                                                               in.level[1]));
-        uint8_t unmoegl = (uint8_t)(v4p_level_impossible(in.state[0],
-                                                         in.level[0])
-                                    | v4p_level_impossible(in.state[1],
-                                                           in.level[1]));
+    if (S.input_valid) {
+        const v4p_input_t *in = &S.input;
 
-        if (fehlt != s_level_warn_missing || unmoegl != s_level_warn_impossible) {
-            char txt[64];
+        if (in->level_valid) {
+            uint8_t fehlt   = (uint8_t)(v4p_level_missing_pullup(in->state[0],
+                                                                 in->level[0])
+                                        | v4p_level_missing_pullup(in->state[1],
+                                                                   in->level[1]));
+            uint8_t unmoegl = (uint8_t)(v4p_level_impossible(in->state[0],
+                                                             in->level[0])
+                                        | v4p_level_impossible(in->state[1],
+                                                               in->level[1]));
 
-            s_level_warn_missing    = fehlt;
-            s_level_warn_impossible = unmoegl;
+            if (fehlt != s_level_warn_missing
+                || unmoegl != s_level_warn_impossible) {
+                char txt[64];
 
-            if (unmoegl != 0u) {
-                v4p_bits_text(unmoegl, txt, sizeof(txt));
-                gui_msg("[warnung] %s wird nach GND gezogen, liest aber High "
-                        "-- elektrisch unmoeglich (Ausgangsstufe/Pinbelegung "
-                        "pruefen)\n", txt);
+                s_level_warn_missing    = fehlt;
+                s_level_warn_impossible = unmoegl;
+
+                if (unmoegl != 0u) {
+                    v4p_bits_text(unmoegl, txt, sizeof(txt));
+                    gui_msg("[warnung] %s wird nach GND gezogen, liest aber "
+                            "High -- elektrisch unmoeglich "
+                            "(Ausgangsstufe/Pinbelegung pruefen)\n", txt);
+                }
+                if (fehlt != 0u) {
+                    v4p_bits_text(fehlt, txt, sizeof(txt));
+                    gui_msg("[warnung] %s losgelassen, liest aber 0 -- kein "
+                            "Pull-up (Platine haengt nicht am Port?)\n", txt);
+                }
+                if (fehlt == 0u && unmoegl == 0u) {
+                    gui_msg("[pruefung] Pull-up wirkt: gezogene Leitungen Low, "
+                            "losgelassene High\n");
+                }
             }
-            if (fehlt != 0u) {
-                v4p_bits_text(fehlt, txt, sizeof(txt));
-                gui_msg("[warnung] %s losgelassen, liest aber 0 -- kein "
-                        "Pull-up (Platine haengt nicht am Port?)\n", txt);
-            }
-            if (fehlt == 0u && unmoegl == 0u) {
-                gui_msg("[pruefung] Pull-up wirkt: gezogene Leitungen Low, "
-                        "losgelassene High\n");
-            }
+        } else if (s_level_warn_missing != 0xFFu) {
+            /* Einmal melden, dann nicht jeden Takt wiederholen. */
+            s_level_warn_missing    = 0xFFu;
+            s_level_warn_impossible = 0xFFu;
+            gui_msg("[warnung] die Firmware liefert keine Pegel "
+                    "(10-Byte-Fassung von GET_INPUT) -- der Vergleich im "
+                    "Protokoll nennt deshalb 'level=unbekannt'\n");
         }
-    } else if (s_level_warn_missing != 0xFFu) {
-        /* Einmal melden, dann nicht jeden Takt wiederholen. */
-        s_level_warn_missing    = 0xFFu;
-        s_level_warn_impossible = 0xFFu;
-        gui_msg("[warnung] die Firmware liefert keine Pegel (10-Byte-Fassung "
-                "von GET_INPUT) -- im Spaltenkopf steht deshalb ein Hinweis "
-                "statt einer Zahl\n");
     }
 
     /* Cycle-Knoepfe auf die zuletzt BESTAETIGTE VORGABE ziehen (aus dem
@@ -1118,6 +1119,37 @@ static void gui_cfg_read(void)
         return;
     }
     v4_state_put_portcfg(&S, &c);
+}
+
+/*
+ * GET_MOUSE_CFG lesen und in den Zustandsblock uebernehmen (fw_ver 5).
+ *
+ * WARUM NICHT IM TAKT: die Maus-Einstellungen aendern sich nur, wenn jemand
+ * sie AENDERT. Sie werden deshalb beim Start und nach jeder Aenderung gelesen
+ * -- ein zusaetzlicher Busbefehl je 200-ms-Takt waere reiner Verkehr ohne
+ * neue Aussage. gui_show_portcfg zeichnet nur aus dem Zustandsblock und macht
+ * ausdruecklich KEIN I2C.
+ *
+ * Ist das Faehigkeitsbit nicht gesetzt, wird NICHTS gesendet; die Regler
+ * bleiben gesperrt und der Hinweis darunter nennt den Grund.
+ */
+static void gui_mouse_read(void)
+{
+    v4p_mousecfg_t c;
+    uint8_t        rc;
+
+    if (s_mousecfg_ok == 0) {
+        return;
+    }
+    rc = v4_get_mouse_cfg(&M, &c);
+    (void)v4_state_note(&S, rc);
+    if (rc != V4P_ST_OK) {
+        v4_dbg_fehler("GET_MOUSE_CFG", rc, &M);
+        gui_msg("[cfg] GET_MOUSE_CFG: %s -- die Regler bleiben auf dem letzten "
+                "gueltigen Stand\n", v4_strerror(rc));
+        return;
+    }
+    v4_state_put_mousecfg(&S, &c);
 }
 
 /* Die Geraeteliste in die Eintraege der beiden Auswahlfelder uebernehmen.
@@ -1241,6 +1273,29 @@ static IPTR gui_cycle_get(Object *o)
 }
 
 /*
+ * Ein Objekt sperren oder freigeben -- nur bei echter Aenderung.
+ *
+ * MUIA_Disabled ist ein Area-Attribut (ISG) und damit an jedem Gadget
+ * erlaubt; MUI zeichnet ein gesperrtes Gadget mit einem Raster ("ghost
+ * pattern") und nimmt keine Eingaben mehr an. Genau das ist die Kennzeichnung
+ * "gegenstandslos" fuer die Einzelschalter bei Beitrag "beide" und fuer die
+ * Maus-Regler ohne Faehigkeitsbit -- sichtbar UND nicht bedienbar, statt eine
+ * Schalterstellung zu zeigen, die nichts bewirkt.
+ */
+static void gui_disabled_set(Object *o, int aus)
+{
+    IPTR v = 0;
+
+    if (o == NULL) {
+        return;
+    }
+    (void)get(o, MUIA_Disabled, &v);
+    if ((v != 0) != (aus != 0)) {
+        set(o, MUIA_Disabled, (IPTR)((aus != 0) ? TRUE : FALSE));
+    }
+}
+
+/*
  * Die Geraetezuordnung einer Buchse in Klartext: Name, wenn das Geraet in der
  * Scanliste steht, sonst die Adresse. Quelle ist die gemerkte Zuordnung.
  */
@@ -1311,11 +1366,20 @@ static void gui_dev_text(int port, char *out, size_t cap)
  * Die Zusammenfassung nennt je Buchse genau das, was der Auftrag sehen will:
  * Geraet, Vorgabe, wirksame Betriebsart, Richtungen und die drei Quellen --
  * Letztere mit dem VOLLEN Namen ("Gruppe 1 (A,L1,L2,L3)"), damit die
- * Kurzfassung im Auswahlfeld nicht im Unklaren laesst.
+ * Kurzfassung im Auswahlfeld nicht im Unklaren laesst. Dazu kommen der
+ * abgeleitete Beitrag und -- sofern vorhanden -- Tempo/Totzone der Buchse.
+ *
+ * DER BEITRAG "beide" SPERRT DIE EINZELSCHALTER: sind alle Richtungsquellen
+ * aktiv, haben die drei Richtungsschalter und die drei Knopfquellen keine
+ * eigene Aussage mehr. Sie werden deshalb gesperrt (MUIA_Disabled) -- MUI
+ * zeichnet sie dann gerastert -- UND im Hinweistext benannt. Beim Wechsel auf
+ * "analog"/"digital" werden sie wieder bedienbar. Damit gibt es keine
+ * Schalterstellung, die einer anderen Anzeige widerspricht.
  */
 static void gui_show_portcfg(void)
 {
-    static char buf[760];               /* ortsfest (4-KB-Stapel!) */
+    static char buf[900];               /* ortsfest (4-KB-Stapel!) */
+    static char hint[640];              /* ortsfest (4-KB-Stapel!) */
     int         port;
     size_t      n = 0u;
 
@@ -1334,6 +1398,24 @@ static void gui_show_portcfg(void)
                        (unsigned)V4P_CAP_PORT_ROUTING,
                        (unsigned)V4P_FW_VER_ROUTING);
         set(s_cfgtext, MUIA_Text_Contents, (IPTR)buf);
+        /* Ohne Verteilung sind auch die Beitrags-Auswahl und die Maus-Regler
+         * ohne Wirkung -- sie werden gesperrt gezeichnet, statt Befehle
+         * anzubieten, die der Slave mit BAD_CMD abweist. */
+        gui_disabled_set(s_beitrag0, 1);
+        gui_disabled_set(s_beitrag1, 1);
+        gui_disabled_set(s_mspeed0, 1);
+        gui_disabled_set(s_mspeed1, 1);
+        gui_disabled_set(s_mtotal0, 1);
+        gui_disabled_set(s_mtotal1, 1);
+        gui_disabled_set(s_mtot0m, 1);
+        gui_disabled_set(s_mtot0p, 1);
+        gui_disabled_set(s_mtot1m, 1);
+        gui_disabled_set(s_mtot1p, 1);
+        if (s_cfghint != NULL) {
+            set(s_cfghint, MUIA_Text_Contents,
+                (IPTR)"Beitrag und Maus-Regler bleiben untaetig, bis die "
+                      "Gegenstelle die Eingangsverteilung kann.");
+        }
         if (s_cfg_warned == 0) {
             s_cfg_warned = 1;
             gui_msg("[cfg] die Gegenstelle kann die Eingangsverteilung nicht "
@@ -1357,24 +1439,35 @@ static void gui_show_portcfg(void)
                          "Konfiguration (GET_PORT_CONFIG) -- Vorgabe = "
                          "Auswahlfeld, wirkt = was gerade laeuft");
     for (port = 0; port < (int)V4P_PORT_COUNT; port++) {
-        char dir[48];
-        char geraet[V4P_NAME_BUF + 16u];
+        char    dir[48];
+        char    geraet[V4P_NAME_BUF + 16u];
+        char    maus[48];
+        uint8_t beitrag = v4_beitrag_aus_dir(S.portcfg.dir[port]);
 
         v4p_dir_text(S.portcfg.dir[port], dir, sizeof(dir));
         gui_dev_text(port, geraet, sizeof(geraet));
-        if (n + 220u >= sizeof(buf)) {
+        if (s_mousecfg_ok != 0 && S.mousecfg_valid != 0) {
+            v4p_mousecfg_text(&S.mousecfg, (uint8_t)port, maus, sizeof(maus));
+        } else if (s_mousecfg_ok == 0) {
+            (void)snprintf(maus, sizeof(maus), "Maus nicht verfuegbar");
+        } else {
+            (void)snprintf(maus, sizeof(maus), "Maus: ?");
+        }
+        if (n + 260u >= sizeof(buf)) {
             break;
         }
         n += (size_t)snprintf(buf + n, sizeof(buf) - n,
                               "\nBuchse %d: %s -- Vorgabe %s, wirkt %s, "
-                              "Richtungen %s, Pin6<-%s, Pin9<-%s, Pin5<-%s",
+                              "Richtungen %s, Pin6<-%s, Pin9<-%s, Pin5<-%s, "
+                              "Beitrag %s, %s",
                               port, geraet,
                               v4p_port_mode_soll_name(S.portcfg.mode_soll[port]),
                               v4p_port_mode_name(S.portcfg.mode_ist[port]),
                               dir,
                               v4p_taste_name(S.portcfg.btn[port][0]),
                               v4p_taste_name(S.portcfg.btn[port][1]),
-                              v4p_taste_name(S.portcfg.btn[port][2]));
+                              v4p_taste_name(S.portcfg.btn[port][2]),
+                              v4_beitrag_name(beitrag), maus);
     }
     set(s_cfgtext, MUIA_Text_Contents, (IPTR)buf);
 
@@ -1385,16 +1478,27 @@ static void gui_show_portcfg(void)
     s_cfg_sperre = 1;
 
     for (port = 0; port < (int)V4P_PORT_COUNT; port++) {
-        Object **dir3 = (port == 0) ? s_dir0 : s_dir1;
-        Object **b3   = (port == 0) ? s_b0 : s_b1;
-        Object  *dev  = (port == 0) ? s_dev0 : s_dev1;
-        Object  *mcyc = (port == 0) ? s_mode0 : s_mode1;
-        Object  *wirk = (port == 0) ? s_wirk0 : s_wirk1;
+        Object **dir3  = (port == 0) ? s_dir0 : s_dir1;
+        Object **b3    = (port == 0) ? s_b0 : s_b1;
+        Object  *dev   = (port == 0) ? s_dev0 : s_dev1;
+        Object  *mcyc  = (port == 0) ? s_mode0 : s_mode1;
+        Object  *wirk  = (port == 0) ? s_wirk0 : s_wirk1;
+        Object  *bcyc  = (port == 0) ? s_beitrag0 : s_beitrag1;
+        Object  *speed = (port == 0) ? s_mspeed0 : s_mspeed1;
+        Object  *tot   = (port == 0) ? s_mtotal0 : s_mtotal1;
+        Object  *tmin  = (port == 0) ? s_mtot0m : s_mtot1m;
+        Object  *tplus = (port == 0) ? s_mtot0p : s_mtot1p;
+        uint8_t  beitrag = v4_beitrag_aus_dir(S.portcfg.dir[port]);
+        int      sperre  = (beitrag == (uint8_t)V4P_BEITRAG_BEIDE) ? 1 : 0;
+        int      maus_aus;
         unsigned k;
 
         for (k = 0u; k < 3u; k++) {
             gui_check_set(dir3[k],
                           (S.portcfg.dir[port] & (uint8_t)(1u << k)) != 0u);
+            /* Bei "beide" sind die Einzelschalter gegenstandslos: sichtbar
+             * gesperrt statt scheinbar widerspruechlich. */
+            gui_disabled_set(dir3[k], sperre);
         }
         for (k = 0u; k < V4P_BTN_COUNT; k++) {
             uint8_t code = S.portcfg.btn[port][k];
@@ -1402,9 +1506,11 @@ static void gui_show_portcfg(void)
             gui_cycle_set(b3[k],
                           (code < (uint8_t)V4P_TASTE_ANZAHL) ? (IPTR)code
                                                              : (IPTR)0);
+            gui_disabled_set(b3[k], sperre);
         }
         gui_cycle_set(dev, gui_dev_active(port));
         gui_cycle_set(mcyc, gui_mode_index(S.portcfg.mode_soll[port]));
+        gui_cycle_set(bcyc, (IPTR)beitrag);
 
         if (wirk != NULL) {
             char w[48];
@@ -1413,9 +1519,80 @@ static void gui_show_portcfg(void)
                            v4p_port_mode_name(S.portcfg.mode_ist[port]));
             set(wirk, MUIA_Text_Contents, (IPTR)w);
         }
+
+        /* Maus-Regler: ohne Faehigkeitsbit (oder bevor eine gueltige Antwort
+         * da ist) gesperrt; sonst auf den BESTAETIGTEN Stand gezogen. */
+        maus_aus = (s_mousecfg_ok == 0 || S.mousecfg_valid == 0) ? 1 : 0;
+        gui_disabled_set(speed, maus_aus);
+        gui_disabled_set(tot, maus_aus);
+        gui_disabled_set(tmin, maus_aus);
+        gui_disabled_set(tplus, maus_aus);
+        if (S.mousecfg_valid != 0) {
+            unsigned sp = S.mousecfg.speed[port];
+            unsigned tz = S.mousecfg.totzone[port];
+
+            gui_cycle_set(speed,
+                          (sp >= (unsigned)V4P_MOUSE_SPEED_MIN
+                           && sp <= (unsigned)V4P_MOUSE_SPEED_MAX)
+                              ? (IPTR)(sp - (unsigned)V4P_MOUSE_SPEED_MIN)
+                              : (IPTR)0);
+            if (tot != NULL) {
+                char mm[24];
+
+                (void)snprintf(mm, sizeof(mm), "%u %%", tz);
+                set(tot, MUIA_Text_Contents, (IPTR)mm);
+            }
+        }
     }
 
     s_cfg_sperre = 0;
+
+    /* Der Hinweis unter der Tabelle: Bedeutung der Varianten, der
+     * "gegenstandslos"-Fall und die fehlende Maus-Faehigkeit. EIN Text, damit
+     * es nicht zwei Stellen gibt, die dasselbe erklaeren. */
+    if (s_cfghint != NULL) {
+        size_t m = (size_t)snprintf(
+            hint, sizeof(hint),
+            "Beitrag: analog = Stick links + L1/R1 (Maus-Buchse); "
+            "digital = D-Pad + A/B/Start (Joystick-Buchse); "
+            "beide = alle Richtungen + Gruppe 1/2/3. "
+            "Gruppe 1 = A,L1,L2,L3 - Gruppe 2 = B,R1,R2,R3 - Gruppe 3 = "
+            "X,Y,Start,Select; im Mausbetrieb bleiben L1 = links und "
+            "R1 = rechts.");
+
+        if (m >= sizeof(hint)) {
+            m = sizeof(hint) - 1u;
+        }
+        for (port = 0; port < (int)V4P_PORT_COUNT; port++) {
+            if (v4_beitrag_aus_dir(S.portcfg.dir[port])
+                    == (uint8_t)V4P_BEITRAG_BEIDE
+                && (sizeof(hint) - m) > 2u) {
+                int k = snprintf(hint + m, sizeof(hint) - m,
+                                 "\nBuchse %d: analog+digital -- die "
+                                 "Einzelschalter (Richtungen und "
+                                 "Knopfquellen) sind gegenstandslos und "
+                                 "deshalb ausgegraut.", port);
+
+                if (k > 0) {
+                    size_t add = (size_t)k;
+
+                    if (add >= sizeof(hint) - m) {
+                        add = sizeof(hint) - m - 1u;
+                    }
+                    m += add;
+                }
+            }
+        }
+        if (s_mousecfg_ok == 0 && (sizeof(hint) - m) > 2u) {
+            (void)snprintf(hint + m, sizeof(hint) - m,
+                           "\nMaus: Tempo und Totzone sind nicht verfuegbar "
+                           "-- die Gegenstelle meldet das Faehigkeitsbit "
+                           "0x%04X nicht (fw_ver %u noetig); es wird nichts "
+                           "gesendet.", (unsigned)V4P_CAP_MOUSE_CFG,
+                           (unsigned)V4P_FW_VER_MOUSE);
+        }
+        set(s_cfghint, MUIA_Text_Contents, (IPTR)hint);
+    }
 }
 
 /* Langsamer Takt: Zustand und Controller-Info stammen aus dem Zustandsblock --
@@ -2263,6 +2440,179 @@ static void act_set_btn(int port)
 }
 
 /*
+ * Eine Beitrags-Variante setzen (analog / digital / beide).
+ *
+ * Die Variante ist NUR eine Bedienhilfe: sie uebersetzt sich in
+ * SET_PORT_ROUTING (siehe v4_set_port_beitrag in v4_master.c) und erfindet
+ * keinen Befehl. Danach wird wie ueberall GET_PORT_CONFIG gelesen und die
+ * Felder werden auf den bestaetigten Stand gestellt.
+ *
+ * "eigene" (Index 3) ist keine waehlbare Variante -- es beschreibt nur eine
+ * Verteilung, die zu keiner der drei passt. Wird es dennoch angeklickt, wird
+ * nichts gesendet und das Feld auf den echten Zustand zurueckgezogen.
+ */
+static void act_set_beitrag(int port)
+{
+    Object *cyc = (port == 0) ? s_beitrag0 : s_beitrag1;
+    IPTR    v;
+    uint8_t beitrag_ist;
+    uint8_t rc;
+
+    if (s_cfg_ok == 0 || S.portcfg_valid == 0) {
+        gui_msg("[cfg] Der Beitrag braucht GET_PORT_CONFIG (fw_ver %u) -- "
+                "noch keine gueltige Antwort\n", (unsigned)V4P_FW_VER_ROUTING);
+        return;
+    }
+    if (s_cfg_sperre != 0) {
+        return;
+    }
+    v = gui_cycle_get(cyc);
+    beitrag_ist = v4_beitrag_aus_dir(S.portcfg.dir[port]);
+    if (v == (IPTR)beitrag_ist) {
+        return;                     /* nur die Anzeige hat sich nachgezogen */
+    }
+    if (v >= (IPTR)V4P_BEITRAG_ANZAHL) {
+        gui_cycle_set(cyc, (IPTR)beitrag_ist);
+        gui_msg("[cfg] \"eigene\" ist keine Variante, sondern die Anzeige "
+                "fuer eine Verteilung, die zu keiner der drei passt -- es "
+                "wird nichts gesendet\n");
+        return;
+    }
+    rc = v4_set_port_beitrag(&M, (uint8_t)port, (uint8_t)v);
+    (void)v4_state_note(&S, rc);
+    if (rc != V4P_ST_OK) {
+        char dir[48];
+
+        v4p_dir_text(v4_beitrag_dir((uint8_t)v), dir, sizeof(dir));
+        gui_msg("[cfg] SET_PORT_ROUTING (Buchse %d, Beitrag %s -> \"%s\"): "
+                "%s -- nichts geaendert\n", port, v4_beitrag_name((uint8_t)v),
+                dir, v4_strerror(rc));
+        gui_cfg_read();
+        gui_show_portcfg();
+        return;
+    }
+    {
+        char dir[48];
+        uint8_t btn[V4P_BTN_COUNT];
+
+        v4_beitrag_btn((uint8_t)v, btn);
+        v4p_dir_text(v4_beitrag_dir((uint8_t)v), dir, sizeof(dir));
+        gui_msg("[cfg] Buchse %d: Beitrag %s bestaetigt -- Richtungen %s, "
+                "Pin6<-%s Pin9<-%s Pin5<-%s\n",
+                port, v4_beitrag_name((uint8_t)v), dir,
+                v4p_taste_name(btn[0]), v4p_taste_name(btn[1]),
+                v4p_taste_name(btn[2]));
+        if ((uint8_t)v == (uint8_t)V4P_BEITRAG_BEIDE) {
+            gui_msg("[cfg] Buchse %d: analog+digital -- die Einzelschalter "
+                    "(Richtungen und Knopfquellen) sind gegenstandslos und "
+                    "deshalb gesperrt; der Klartext nennt die Werte\n", port);
+        }
+    }
+    gui_cfg_read();
+    gui_show_portcfg();
+}
+
+/*
+ * Eine Maus-Einstellung setzen (fw_ver 5). `feld`:
+ *   0 = Tempo (Index in s_mspeedN, 0-basiert), 1 = Totzone -1, 2 = Totzone +1.
+ *
+ * Das jeweils ANDERE Feld wird aus dem bestaetigten Zustand mitgeschickt --
+ * SET_MOUSE_CFG setzt Tempo UND Totzone einer Buchse, es gibt keinen Befehl
+ * fuer ein einzelnes Feld. Ist das Faehigkeitsbit nicht gesetzt, wird NICHTS
+ * gesendet und das Feld zurueckgezogen.
+ */
+static void act_set_maus(int port, int feld)
+{
+    Object *speed = (port == 0) ? s_mspeed0 : s_mspeed1;
+    int     neu_speed;
+    int     neu_totzone;
+    uint8_t rc;
+
+    if (s_mousecfg_ok == 0) {
+        gui_msg("[cfg] Die Gegenstelle kann die Maus-Einstellungen nicht "
+                "(Faehigkeitsbit 0x%04X fehlt) -- es wird nichts gesendet\n",
+                (unsigned)V4P_CAP_MOUSE_CFG);
+        gui_show_portcfg();
+        return;
+    }
+    if (S.mousecfg_valid == 0) {
+        gui_msg("[cfg] Maus-Einstellungen brauchen GET_MOUSE_CFG (fw_ver %u) "
+                "-- noch keine gueltige Antwort\n",
+                (unsigned)V4P_FW_VER_MOUSE);
+        return;
+    }
+    if (s_cfg_sperre != 0) {
+        return;
+    }
+
+    neu_speed   = (int)S.mousecfg.speed[port];
+    neu_totzone = (int)S.mousecfg.totzone[port];
+    if (feld == 0) {
+        IPTR v = gui_cycle_get(speed);
+
+        neu_speed = (int)v + (int)V4P_MOUSE_SPEED_MIN;
+        if (neu_speed == (int)S.mousecfg.speed[port]) {
+            return;                 /* nur die Anzeige hat sich nachgezogen */
+        }
+    } else if (feld == 1) {
+        if (neu_totzone <= (int)V4P_MOUSE_TOTZONE_MIN) {
+            gui_msg("[cfg] Buchse %d: Totzone ist schon am unteren Ende "
+                    "(%u %%)\n", port, (unsigned)V4P_MOUSE_TOTZONE_MIN);
+            return;
+        }
+        neu_totzone--;
+    } else {
+        if (neu_totzone >= (int)V4P_MOUSE_TOTZONE_MAX) {
+            gui_msg("[cfg] Buchse %d: Totzone ist schon am oberen Ende "
+                    "(%u %%)\n", port, (unsigned)V4P_MOUSE_TOTZONE_MAX);
+            return;
+        }
+        neu_totzone++;
+    }
+
+    if (!v4p_mouse_speed_valid((uint8_t)neu_speed)
+        || !v4p_mouse_totzone_valid((uint8_t)neu_totzone)) {
+        gui_msg("[cfg] Buchse %d: Tempo %d, Totzone %d %% liegen ausserhalb "
+                "(Tempo %u..%u, Totzone %u..%u) -- nichts geaendert\n",
+                port, neu_speed, neu_totzone,
+                (unsigned)V4P_MOUSE_SPEED_MIN, (unsigned)V4P_MOUSE_SPEED_MAX,
+                (unsigned)V4P_MOUSE_TOTZONE_MIN,
+                (unsigned)V4P_MOUSE_TOTZONE_MAX);
+        gui_mouse_read();
+        gui_show_portcfg();
+        return;
+    }
+
+    rc = v4_set_mouse_cfg(&M, (uint8_t)port, (uint8_t)neu_speed,
+                          (uint8_t)neu_totzone);
+    (void)v4_state_note(&S, rc);
+    if (rc == V4P_ST_BAD_ARG) {
+        gui_msg("[cfg] SET_MOUSE_CFG: BAD_ARG -- der Wert wurde abgelehnt "
+                "(Tempo %u..%u, Totzone %u..%u Prozent); nichts geaendert\n",
+                (unsigned)V4P_MOUSE_SPEED_MIN, (unsigned)V4P_MOUSE_SPEED_MAX,
+                (unsigned)V4P_MOUSE_TOTZONE_MIN,
+                (unsigned)V4P_MOUSE_TOTZONE_MAX);
+        gui_mouse_read();
+        gui_show_portcfg();
+        return;
+    }
+    if (rc != V4P_ST_OK) {
+        gui_msg("[cfg] SET_MOUSE_CFG (Buchse %d): %s -- nichts geaendert\n",
+                port, v4_strerror(rc));
+        gui_mouse_read();
+        gui_show_portcfg();
+        return;
+    }
+    /* Der Wrapper hat das Echo feldweise geprueft -- auf V4P_ST_OK stehen die
+     * Werte fest. Danach wird trotzdem gelesen: das ist die Zusage "nach jeder
+     * Aenderung den echten Stand zeigen". */
+    gui_msg("[cfg] Buchse %d: Maus Tempo %d/%u, Totzone %d %% bestaetigt\n",
+            port, neu_speed, (unsigned)V4P_MOUSE_SPEED_MAX, neu_totzone);
+    gui_mouse_read();
+    gui_show_portcfg();
+}
+
+/*
  * Seite umschalten: Seite 0 = Anzeige, Seite 1 = Konfiguration.
  *
  * Die verdeckte Seite wird im Takt trotzdem weiter gezeichnet; hier wird nur
@@ -2305,13 +2655,16 @@ static void act_swap(void)
 
 /* "Aktualisieren": einen vollstaendigen Durchlauf sofort. Auch die EIGENE
  * Hardware wird dabei neu abgetastet -- der Knopf soll einen frischen Vergleich
- * zeigen und nicht den Stand des letzten Takts. */
+ * zeigen und nicht den Stand des letzten Takts. Die Maus-Einstellungen werden
+ * mitgelesen: sie aendern sich nur auf Wunsch, aber der Knopf soll auch sie
+ * frisch zeigen. */
 static void act_refresh(void)
 {
     gui_poll(1);
     gui_joy_abtasten();
     gui_joy_aenderungen();
     gui_joy_herz_zusatz();
+    gui_mouse_read();
     gui_show_link();
     gui_show_info();
     gui_show_ports();
@@ -2709,7 +3062,15 @@ static int gui_build(void)
                     MUIA_Group_PageMode, TRUE,
                     MUIA_Group_ActivePage, 0,
                     /*
-                     * SEITE 0: die laufende Anzeige (unveraendert).
+                     * SEITE 0: die laufende Anzeige -- NUR die Portdaten.
+                     *
+                     * Die Buchsenfelder zeigen seit dem 14.10.2026
+                     * ausschliesslich die direkte Registerabfrage
+                     * (JOY0DAT/JOY1DAT, CIAAPRA/POTINP); die Sicht des ESP32
+                     * (state/level) und der Vergleich/ABWEICHUNG sind aus dem
+                     * Fenster entfernt und stehen nur noch im Protokoll. Die
+                     * wirksame Betriebsart daneben kommt weiterhin vom ESP32
+                     * und ist als "(ESP32)" gekennzeichnet.
                      *
                      * WARUM DIESE FELDER GEWICHT 0 HABEN:
                      *
@@ -2764,6 +3125,12 @@ static int gui_build(void)
                                 Child, s_port0 = TextObject,
                                     MUIA_Text_Contents, (IPTR)" ",
                                     MUIA_Text_PreParse, (IPTR)"\33l",
+                                    /* Die Portdaten sind die einzige Aussage
+                                     * im Fenster; SetMin FALSE haelt die
+                                     * Spaltenbreite bei der Aufteilung und
+                                     * verhindert, dass ein langer Rohwert das
+                                     * Fenster ueber 640 px zieht. */
+                                    MUIA_Text_SetMin, FALSE,
                                     MUIA_Weight, 0,
                                 End,
                             End,
@@ -2791,19 +3158,23 @@ static int gui_build(void)
                                 Child, s_port1 = TextObject,
                                     MUIA_Text_Contents, (IPTR)" ",
                                     MUIA_Text_PreParse, (IPTR)"\33l",
+                                    MUIA_Text_SetMin, FALSE,
                                     MUIA_Weight, 0,
                                 End,
                             End,
                         End,
                         /*
-                         * Der Vergleich direkt <-> I2C, volle Fensterbreite: eine Zeile
-                         * je Buchse und darunter die Rohwerte der Feuerregister. Die
-                         * direkte Abfrage laeuft neben der I2C-Antwort -- stimmen beide
-                         * ueberein, ist die Kette ESP32 -> DB9 -> V4 in Ordnung.
+                         * Die Rohwerte der Feuerregister, volle Fensterbreite.
+                         * Hier steht NUR, was direkt gelesen wird -- der
+                         * Vergleich direkt/I2C ist bewusst nicht mehr im
+                         * Fenster, sondern nur im Protokoll (DebugUART/
+                         * Logdatei). Der Text darunter sagt das ausdruecklich.
                          */
-                        Child, s_vergleich = TextObject,
-                            MUIA_Text_Contents, (IPTR)"Vergleich direkt/I2C ...",
+                        Child, s_regtext = TextObject,
+                            MUIA_Text_Contents,
+                                (IPTR)"Rohregister (direkt) ...",
                             MUIA_Text_PreParse, (IPTR)"\33l",
+                            MUIA_Text_SetMin, FALSE,
                             MUIA_Weight, 0,
                         End,
                     End,
@@ -2868,6 +3239,42 @@ static int gui_build(void)
                                         Child, s_dev1 = CycleObject,
                                             MUIA_Cycle_Entries,
                                                 (IPTR)s_dev_eintraege,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                End,
+                                /*
+                                 * Der "Beitrag" JE BUCHSE -- die Bedienhilfe
+                                 * analog/digital/beide. Sie setzt NUR die
+                                 * bestehenden Routing-Werte (SET_PORT_ROUTING);
+                                 * der ESP32 kennt keinen eigenen Befehl dafuer.
+                                 *
+                                 * Das Feld steht direkt unter der
+                                 * Geraeteauswahl, weil es dieselbe Frage
+                                 * beantwortet: WELCHE Art von Geraet haengt an
+                                 * dieser Buchse (Maus -> analog, Joystick ->
+                                 * digital, beides -> analog+digital).
+                                 */
+                                Child, HGroup,
+                                    MUIA_Weight, 0,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Beitrag",
+                                        MUIA_FixWidth, 80,
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_beitrag0 = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_beitrag_eintraege,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_beitrag1 = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_beitrag_eintraege,
                                             MUIA_Weight, 0,
                                         End,
                                     End,
@@ -2976,14 +3383,97 @@ static int gui_build(void)
                                         End,
                                     End,
                                 End,
-                                Child, TextObject,
+                                /*
+                                 * MAUS-EINSTELLUNGEN JE BUCHSE (GET/SET_MOUSE_CFG,
+                                 * fw_ver 5). Die Werte sind STUFEN bzw. PROZENT;
+                                 * die Umrechnung in Schritte je Sekunde und
+                                 * Rohwerte macht AUSSCHLIESSLICH die Firmware.
+                                 *
+                                 * Tempo als Cycle "1".."10" (Index = Stufe-1),
+                                 * Totzone als Text mit "-"/"+"-Knoepfen -- 101
+                                 * Prozentwerte waeren als Cycle unbrauchbar, und
+                                 * ein Zahlenfeld waere auf der V4 mehr Tipparbeit
+                                 * als Nutzen. Ist das Faehigkeitsbit nicht
+                                 * gesetzt, sind alle vier Objekte gesperrt
+                                 * (MUIA_Disabled) und der Hinweis darunter nennt
+                                 * den Grund.
+                                 */
+                                Child, HGroup,
+                                    MUIA_Weight, 0,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Maus Tempo",
+                                        MUIA_FixWidth, 80,
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_mspeed0 = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_speed_eintraege,
+                                            MUIA_Disabled, TRUE,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_mspeed1 = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_speed_eintraege,
+                                            MUIA_Disabled, TRUE,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                End,
+                                Child, HGroup,
+                                    MUIA_Weight, 0,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"Totzone",
+                                        MUIA_FixWidth, 80,
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_mtotal0 = TextObject,
+                                            MUIA_Text_Contents, (IPTR)"? %",
+                                            MUIA_Disabled, TRUE,
+                                            MUIA_Weight, 0,
+                                        End,
+                                        Child, s_mtot0m = MUI_MakeObject(
+                                                  MUIO_Button,
+                                                  (IPTR)"-", NULL),
+                                        Child, s_mtot0p = MUI_MakeObject(
+                                                  MUIO_Button,
+                                                  (IPTR)"+", NULL),
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_mtotal1 = TextObject,
+                                            MUIA_Text_Contents, (IPTR)"? %",
+                                            MUIA_Disabled, TRUE,
+                                            MUIA_Weight, 0,
+                                        End,
+                                        Child, s_mtot1m = MUI_MakeObject(
+                                                  MUIO_Button,
+                                                  (IPTR)"-", NULL),
+                                        Child, s_mtot1p = MUI_MakeObject(
+                                                  MUIO_Button,
+                                                  (IPTR)"+", NULL),
+                                    End,
+                                End,
+                                /*
+                                 * Der dynamische Hinweis: Bedeutung der
+                                 * Beitrags-Varianten, der "gegenstandslos"-Fall
+                                 * (bei "beide" sind die Einzelschalter gesperrt)
+                                 * und die fehlende Maus-Faehigkeit. Er wird in
+                                 * gui_show_portcfg gesetzt -- EIN Text, damit es
+                                 * nicht zwei Stellen gibt, die dasselbe erklaeren.
+                                 */
+                                Child, s_cfghint = TextObject,
                                     MUIA_Text_Contents,
-                                        (IPTR)"Gruppe 1 = A,L1,L2,L3 - "
-                                             "Gruppe 2 = B,R1,R2,R3 - "
-                                             "Gruppe 3 = X,Y,Start,Select; "
-                                             "Home/Capture ist in keiner "
-                                             "Gruppe. Im Mausbetrieb bleiben "
-                                             "L1 = links und R1 = rechts.",
+                                        (IPTR)"Beitrag: analog = Stick links + "
+                                             "L1/R1; digital = D-Pad + A/B/Start; "
+                                             "beide = alle Richtungen + "
+                                             "Gruppe 1/2/3.",
                                     MUIA_Text_PreParse, (IPTR)"\33l",
                                     MUIA_Text_SetMin, FALSE,
                                     MUIA_Weight, 0,
@@ -3057,25 +3547,36 @@ static int gui_build(void)
      * darf kein MUI-Objekt angefasst werden -- das Setzen gehoert deshalb in
      * main() HINTER set(s_win, MUIA_Window_Open, TRUE).
      */
-    if (s_vergleich == NULL || s_port0 == NULL || s_port1 == NULL
+    if (s_regtext == NULL || s_port0 == NULL || s_port1 == NULL
         || s_logl == NULL || s_cfgtext == NULL || s_dev0 == NULL
         || s_dev1 == NULL || s_dir0[0] == NULL || s_dir0[1] == NULL
         || s_dir0[2] == NULL || s_dir1[0] == NULL || s_dir1[1] == NULL
         || s_dir1[2] == NULL || s_b0[0] == NULL || s_b0[1] == NULL
         || s_b0[2] == NULL || s_b1[0] == NULL || s_b1[1] == NULL
         || s_b1[2] == NULL || s_wirk0 == NULL || s_wirk1 == NULL
-        || s_seite == NULL || s_seiten == NULL) {
+        || s_seite == NULL || s_seiten == NULL
+        || s_beitrag0 == NULL || s_beitrag1 == NULL
+        || s_mspeed0 == NULL || s_mspeed1 == NULL
+        || s_mtotal0 == NULL || s_mtotal1 == NULL
+        || s_mtot0m == NULL || s_mtot0p == NULL
+        || s_mtot1m == NULL || s_mtot1p == NULL
+        || s_cfghint == NULL) {
         /* Ein fehlendes Objekt ist kein Grund weiterzumachen: die Anzeige
          * waere unvollstaendig, und ein set() darauf wuerde MUI treffen. */
-        gui_msg("MUI: Objektbaum unvollstaendig (vergleich=%d port0=%d "
+        gui_msg("MUI: Objektbaum unvollstaendig (reg=%d port0=%d "
                 "port1=%d log=%d cfg=%d dev=%d/%d dir=%d/%d btn=%d/%d "
-                "wirkt=%d/%d) -- Abbruch\n",
-                (s_vergleich != NULL), (s_port0 != NULL), (s_port1 != NULL),
+                "wirkt=%d/%d beitrag=%d/%d maus=%d/%d/%d/%d hint=%d) -- "
+                "Abbruch\n",
+                (s_regtext != NULL), (s_port0 != NULL), (s_port1 != NULL),
                 (s_logl != NULL), (s_cfgtext != NULL),
                 (s_dev0 != NULL), (s_dev1 != NULL),
                 (s_dir0[0] != NULL), (s_dir1[0] != NULL),
                 (s_b0[0] != NULL), (s_b1[0] != NULL),
-                (s_wirk0 != NULL), (s_wirk1 != NULL));
+                (s_wirk0 != NULL), (s_wirk1 != NULL),
+                (s_beitrag0 != NULL), (s_beitrag1 != NULL),
+                (s_mspeed0 != NULL), (s_mspeed1 != NULL),
+                (s_mtotal0 != NULL), (s_mtotal1 != NULL),
+                (s_cfghint != NULL));
         return -1;
     }
 
@@ -3123,6 +3624,24 @@ static int gui_build(void)
              s_app, 2, MUIM_Application_ReturnID, ID_DEV0);
     DoMethod(s_dev1, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
              s_app, 2, MUIM_Application_ReturnID, ID_DEV1);
+    /* Die Beitrags-Auswahl je Buchse: sie setzt sofort die Routing-Werte. */
+    DoMethod(s_beitrag0, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
+             s_app, 2, MUIM_Application_ReturnID, ID_BEITRAG0);
+    DoMethod(s_beitrag1, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
+             s_app, 2, MUIM_Application_ReturnID, ID_BEITRAG1);
+    /* Maus-Einstellungen (fw_ver 5): Tempo-Auswahl und Totzone -/+ . */
+    DoMethod(s_mspeed0, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
+             s_app, 2, MUIM_Application_ReturnID, ID_MSPEED0);
+    DoMethod(s_mspeed1, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
+             s_app, 2, MUIM_Application_ReturnID, ID_MSPEED1);
+    DoMethod(s_mtot0m, MUIM_Notify, MUIA_Pressed, FALSE,
+             s_app, 2, MUIM_Application_ReturnID, ID_MTOT0M);
+    DoMethod(s_mtot0p, MUIM_Notify, MUIA_Pressed, FALSE,
+             s_app, 2, MUIM_Application_ReturnID, ID_MTOT0P);
+    DoMethod(s_mtot1m, MUIM_Notify, MUIA_Pressed, FALSE,
+             s_app, 2, MUIM_Application_ReturnID, ID_MTOT1M);
+    DoMethod(s_mtot1p, MUIM_Notify, MUIA_Pressed, FALSE,
+             s_app, 2, MUIM_Application_ReturnID, ID_MTOT1P);
     /* Seitenumschalter Anzeige/Konfiguration. */
     DoMethod(s_seite, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
              s_app, 2, MUIM_Application_ReturnID, ID_SEITE);
@@ -3349,6 +3868,15 @@ int main(int argc, char **argv)
              */
             s_cfg_ok     = v4_info_has_caps(&info, V4P_CAP_PORT_ROUTING);
             s_devport_ok = v4_info_has_caps(&info, V4P_CAP_DEVICE_PORT);
+            /* Die Maus-Einstellungen sind eine EIGENE Faehigkeit (fw_ver 5).
+             * Fehlt das Bit, bleiben die Regler gesperrt -- es wird nichts
+             * gesendet, was der Slave mit BAD_CMD abweisen wuerde. */
+            s_mousecfg_ok = v4_info_has_caps(&info, V4P_CAP_MOUSE_CFG);
+            if (s_mousecfg_ok != 0) {
+                /* Einmal beim Start lesen (nicht im Takt): die Werte aendern
+                 * sich nur, wenn jemand sie aendert. */
+                gui_mouse_read();
+            }
             if (check != V4P_ST_OK) {
                 gui_msg("[ping] %s: Slave meldet proto=%u write=%u read=%u; "
                         "erwartet proto=%u write=%u read=%u\n",
@@ -3383,6 +3911,18 @@ int main(int argc, char **argv)
                                                    : V4P_CAP_DEVICE_PORT)),
                         (unsigned)info.caps,
                         (unsigned)V4P_FW_VER_ROUTING);
+            }
+            if (s_mousecfg_ok != 0) {
+                gui_msg("[ping] Maus-Einstellungen vorhanden (Faehigkeitsbit "
+                        "0x%04X): Tempo und Totzone je Buchse\n",
+                        (unsigned)V4P_CAP_MOUSE_CFG);
+            } else {
+                gui_msg("[ping] Hinweis: die Gegenstelle kann die "
+                        "Maus-Einstellungen nicht (Faehigkeitsbit 0x%04X "
+                        "fehlt, gemeldet 0x%04X) -- die Regler Tempo/Totzone "
+                        "bleiben gesperrt; dafuer wird fw_ver %u gebraucht\n",
+                        (unsigned)V4P_CAP_MOUSE_CFG,
+                        (unsigned)info.caps, (unsigned)V4P_FW_VER_MOUSE);
             }
         } else {
             gui_msg("[ping] %s\n", v4_strerror(rc));
@@ -3539,6 +4079,30 @@ int main(int argc, char **argv)
             break;
         case ID_BTN1:
             act_set_btn(1);
+            break;
+        case ID_BEITRAG0:
+            act_set_beitrag(0);
+            break;
+        case ID_BEITRAG1:
+            act_set_beitrag(1);
+            break;
+        case ID_MSPEED0:
+            act_set_maus(0, 0);
+            break;
+        case ID_MSPEED1:
+            act_set_maus(1, 0);
+            break;
+        case ID_MTOT0M:
+            act_set_maus(0, 1);
+            break;
+        case ID_MTOT0P:
+            act_set_maus(0, 2);
+            break;
+        case ID_MTOT1M:
+            act_set_maus(1, 1);
+            break;
+        case ID_MTOT1P:
+            act_set_maus(1, 2);
             break;
         case ID_SEITE:
             act_seite();

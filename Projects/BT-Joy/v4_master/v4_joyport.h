@@ -18,6 +18,12 @@
  * Quellen ueberein, ist die Kette ESP32 -> DB9 -> V4 in Ordnung. Weichen sie
  * ab, sieht man sofort, dass etwas nicht stimmt -- und der Rohwert sagt, wo.
  *
+ * WO DAS GILT -- UND WO NICHT (Stand 14.10.2026): der Vergleich ist eine
+ * DIAGNOSE und steht im PROTOKOLL (DebugUART/Logdatei, v4_joy_debug_text und
+ * v4_joy_herz_text). Das MUI-FENSTER zeigt ausschliesslich die direkten
+ * Registerwerte (v4_joy_direkt_text) -- dort soll stehen, was ueber den
+ * Joystick-Port ankommt, nicht die Sicht des ESP32.
+ *
  * Damit die beiden Zahlen unmittelbar vergleichbar sind, rechnet diese Datei
  * die Register in GENAU die Bitbelegung des Protokolls um (V4P_IN_ST_* aus
  * v4_proto.h):
@@ -198,6 +204,12 @@ typedef struct {
  * v4_debug.c bleiben, sonst wuerde die Debugzeile abgeschnitten. */
 #define V4_JOY_TEXT_MAX     300u
 
+/* Groesste Zeile der MEHRZEILIGEN Direktanzeige (v4_joy_direkt_text): eine
+ * Kopfzeile, die sieben Leitungszeilen und drei Summenzeilen. Das ist die
+ * Flaeche eines MUI-Textfelds, nicht eine Debugzeile -- die 300 von
+ * V4_JOY_TEXT_MAX gelten fuer Protokollzeilen und waeren hier zu klein. */
+#define V4_JOY_DIREKT_MAX   512u
+
 /* ------------------------------------------------------------------ */
 /* Zustand                                                             */
 /* ------------------------------------------------------------------ */
@@ -365,5 +377,37 @@ size_t v4_joy_herz_text(const v4_joy_t *st, const v4p_input_t *in,
  * Umbruch getrennt und ohne Umbruch am Ende. */
 size_t v4_joy_vergleich_text(const v4_joy_t *st, const v4p_input_t *in,
                              int i2c_gueltig, char *out, size_t cap);
+
+/*
+ * Die Anzeige EINER Buchse AUSSCHLIESSLICH aus den eigenen Registern -- OHNE
+ * jeden I2C-Wert. Das ist die Zeile fuer das Fenster: dort steht, was an den
+ * Anschlussleitungen ankommt (JOY0DAT/JOY1DAT fuer die Richtungen,
+ * CIAAPRA/POTINP fuer die Feuerknoepfe), nicht die Sicht des ESP32.
+ *
+ * Aufbau (mehrzeilig, ohne Umbruch am Ende):
+ *
+ *   Buchse 0  direkt aus den Registern
+ *   Leitung  Pin   Pegel    direkt
+ *   UP       Pin 1  -        -
+ *   ...
+ *   BTN1     Pin 6  0 (Low)  gedrueckt
+ *   BTN2     Pin 9  1 (High) -
+ *   BTN3     Pin 5  -        nicht lesbar
+ *   gedrueckt (direkt): BTN1
+ *   Roh: Zaehler=0x0300 (stabil=ja)
+ *   CIAAPRA=0x00F4 POTINP=0xFF02
+ *
+ * Der Vergleich direkt <-> I2C steht AUSDRUECKLICH NICHT hier: er gehoert ins
+ * Protokoll (DebugUART/Logdatei, v4_joy_debug_text/v4_joy_herz_text). `Pegel`
+ * ist der ROHWERT des jeweiligen Feuerregisters (1 = High); fuer die
+ * Richtungen gibt es keine einzelne Pegelleitung -- sie kommen aus dem
+ * Zaehler, dessen Rohwert in der vorletzten Zeile steht. BTN3 (Pin 5) ist
+ * direkt NICHT lesbar und wird als solches benannt, statt eine Messung
+ * vorzutaeuschen.
+ *
+ * Der Puffer des Aufrufers muss V4_JOY_DIREKT_MAX Byte fassen: die Anzeige ist
+ * MEHRZEILIG (Kopfzeile, sieben Leitungszeilen, drei Summenzeilen).
+ */
+size_t v4_joy_direkt_text(const v4_joy_t *st, int port, char *out, size_t cap);
 
 #endif /* V4_JOYPORT_H */

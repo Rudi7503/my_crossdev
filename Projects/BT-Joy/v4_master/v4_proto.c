@@ -11,6 +11,7 @@
 
 #include "v4_proto.h"
 
+#include <stdio.h>
 #include <string.h>
 
 /* ------------------------------------------------------------------ */
@@ -716,6 +717,119 @@ int v4p_dec_set_device_port(const uint8_t *p, uint8_t len,
 }
 
 /* ------------------------------------------------------------------ */
+/* Maus-Einstellungen (fw_ver 5)                                       */
+/* ------------------------------------------------------------------ */
+
+int v4p_mouse_speed_valid(uint8_t speed)
+{
+    /* Vergleich in int: die Grenzen sind kleine Zahlen, und ein Vergleich
+     * "uint8_t >= 0" waere fuer den Uebersetzer immer wahr (-Wtype-limits). */
+    return ((int)speed >= (int)V4P_MOUSE_SPEED_MIN
+            && (int)speed <= (int)V4P_MOUSE_SPEED_MAX) ? 1 : 0;
+}
+
+int v4p_mouse_totzone_valid(uint8_t totzone)
+{
+    /*
+     * Die Untergrenze ist 0 -- und 0 kann ein uint8_t nicht unterschreiten,
+     * eine Pruefung darauf waere fuer den Uebersetzer "immer wahr"
+     * (-Wtype-limits). Statt sie stillschweigend wegzulassen, steht hier eine
+     * Sicherung zur UEBERSETZUNGSZEIT: wer V4P_MOUSE_TOTZONE_MIN veraendert,
+     * bekommt einen Fehler und muss die Pruefung bewusst nachziehen.
+     */
+    typedef char v4p_totzone_min_ist_null[
+        (V4P_MOUSE_TOTZONE_MIN == 0u) ? 1 : -1];
+    (void)sizeof(v4p_totzone_min_ist_null);
+
+    return (totzone <= (uint8_t)V4P_MOUSE_TOTZONE_MAX) ? 1 : 0;
+}
+
+int v4p_mouse_cfg_valid(const v4p_mousecfg_t *c)
+{
+    unsigned port;
+
+    if (c == NULL) {
+        return 0;
+    }
+    for (port = 0u; port < V4P_PORT_COUNT; port++) {
+        if (!v4p_mouse_speed_valid(c->speed[port])
+            || !v4p_mouse_totzone_valid(c->totzone[port])) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+size_t v4p_enc_get_mouse_cfg(uint8_t *p, const v4p_mousecfg_t *in)
+{
+    p[V4P_MCFG_OFF_SPEED0]   = in->speed[0];
+    p[V4P_MCFG_OFF_TOTZONE0] = in->totzone[0];
+    p[V4P_MCFG_OFF_SPEED1]   = in->speed[1];
+    p[V4P_MCFG_OFF_TOTZONE1] = in->totzone[1];
+    return V4P_MCFG_PAYLOAD_LEN;
+}
+
+int v4p_dec_get_mouse_cfg(const uint8_t *p, uint8_t len, v4p_mousecfg_t *out)
+{
+    v4p_mousecfg_t tmp;
+
+    if (p == NULL) {
+        return -1;
+    }
+    if (len < (uint8_t)V4P_MCFG_PAYLOAD_LEN) {
+        return -1;
+    }
+    tmp.speed[0]   = p[V4P_MCFG_OFF_SPEED0];
+    tmp.totzone[0] = p[V4P_MCFG_OFF_TOTZONE0];
+    tmp.speed[1]   = p[V4P_MCFG_OFF_SPEED1];
+    tmp.totzone[1] = p[V4P_MCFG_OFF_TOTZONE1];
+    /* ERST pruefen, DANN uebernehmen: eine Antwort mit unmoeglichen Werten ist
+     * keine Bestaetigung. */
+    if (!v4p_mouse_cfg_valid(&tmp)) {
+        return -1;
+    }
+    if (out != NULL) {
+        *out = tmp;
+    }
+    return 0;
+}
+
+size_t v4p_enc_set_mouse_cfg(uint8_t *p, uint8_t port,
+                             const v4p_mousecfg_t *in)
+{
+    p[V4P_SMC_OFF_PORT]    = port;
+    p[V4P_SMC_OFF_SPEED]   = in->speed[port];
+    p[V4P_SMC_OFF_TOTZONE] = in->totzone[port];
+    return V4P_SMC_PAYLOAD_LEN;
+}
+
+int v4p_dec_set_mouse_cfg(const uint8_t *p, uint8_t len, uint8_t *port,
+                          uint8_t *speed, uint8_t *totzone)
+{
+    if (p == NULL) {
+        return -1;
+    }
+    if (len < (uint8_t)V4P_SMC_PAYLOAD_LEN) {
+        return -1;
+    }
+    if (p[V4P_SMC_OFF_PORT] >= V4P_PORT_COUNT
+        || !v4p_mouse_speed_valid(p[V4P_SMC_OFF_SPEED])
+        || !v4p_mouse_totzone_valid(p[V4P_SMC_OFF_TOTZONE])) {
+        return -1;
+    }
+    if (port != NULL) {
+        *port = p[V4P_SMC_OFF_PORT];
+    }
+    if (speed != NULL) {
+        *speed = p[V4P_SMC_OFF_SPEED];
+    }
+    if (totzone != NULL) {
+        *totzone = p[V4P_SMC_OFF_TOTZONE];
+    }
+    return 0;
+}
+
+/* ------------------------------------------------------------------ */
 /* Klartexte und Ableitungen                                           */
 /* ------------------------------------------------------------------ */
 
@@ -801,6 +915,29 @@ void v4p_dir_text(uint8_t dir, char *out, size_t cap)
         out[n++] = '.';
     }
     out[n] = '\0';
+}
+
+/*
+ * Maus-Einstellungen EINER Buchse in Klartext. Die Umrechnung in Schritte je
+ * Sekunde bzw. Rohwerte macht die Firmware -- hier stehen deshalb NUR die
+ * Stufe und der Prozentwert, und das ausdruecklich mit Einheit, damit niemand
+ * die Stufe fuer eine Geschwindigkeit haelt.
+ */
+void v4p_mousecfg_text(const v4p_mousecfg_t *c, uint8_t port,
+                       char *out, size_t cap)
+{
+    if (out == NULL || cap == 0u) {
+        return;
+    }
+    out[0] = '\0';
+    if (c == NULL || port >= V4P_PORT_COUNT) {
+        (void)snprintf(out, cap, "(keine Maus-Einstellung)");
+        return;
+    }
+    (void)snprintf(out, cap, "Tempo %u/%u, Totzone %u%%",
+                   (unsigned)c->speed[port],
+                   (unsigned)V4P_MOUSE_SPEED_MAX,
+                   (unsigned)c->totzone[port]);
 }
 
 /*

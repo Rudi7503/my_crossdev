@@ -442,6 +442,39 @@ static void test_state_eingangsverteilung(void)
     teardown(&m);
 }
 
+static void test_state_mauscfg(void)
+{
+    v4_state_t     s;
+    v4_master_t    m;
+    v4p_mousecfg_t c;
+
+    v4_test_case("GET_MOUSE_CFG uebernommen: Werte beider Buchsen, "
+                 "mousecfg_valid erst nach gueltiger Antwort");
+    setup(&s, &m);
+    CHECK_EQ(s.mousecfg_valid, 0);
+    CHECK_EQ(v4_get_mouse_cfg(&m, &c), V4P_ST_OK);
+    v4_state_put_mousecfg(&s, &c);
+    CHECK(s.mousecfg_valid);
+    CHECK_EQ(s.mousecfg.speed[0], V4P_MOUSE_SPEED_VORGABE);
+    CHECK_EQ(s.mousecfg.totzone[0], V4P_MOUSE_TOTZONE_VORGABE);
+    CHECK_EQ(s.mousecfg.speed[1], V4P_MOUSE_SPEED_VORGABE);
+    CHECK_EQ(s.mousecfg.totzone[1], V4P_MOUSE_TOTZONE_VORGABE);
+
+    /* Eine Aenderung nur an Buchse 0 kommt genauso an. */
+    CHECK_EQ(v4_set_mouse_cfg(&m, 0u, 9u, 33u), V4P_ST_OK);
+    CHECK_EQ(v4_get_mouse_cfg(&m, &c), V4P_ST_OK);
+    v4_state_put_mousecfg(&s, &c);
+    CHECK_EQ(s.mousecfg.speed[0], 9u);
+    CHECK_EQ(s.mousecfg.totzone[0], 33u);
+    CHECK_EQ(s.mousecfg.speed[1], V4P_MOUSE_SPEED_VORGABE);   /* unberuehrt */
+
+    v4_test_case("v4_state_put_mousecfg: NULL ist kein Wert");
+    v4_state_put_mousecfg(NULL, &c);
+    v4_state_put_mousecfg(&s, NULL);
+    CHECK_EQ(s.mousecfg.speed[0], 9u);      /* unveraendert */
+    teardown(&m);
+}
+
 /* ------------------------------------------------------------------ */
 
 int test_state(void)
@@ -459,6 +492,7 @@ int test_state(void)
     test_state_befehle();
     test_state_scan();
     test_state_eingangsverteilung();
+    test_state_mauscfg();
 
     return v4_test_failures;
 }

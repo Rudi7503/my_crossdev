@@ -832,6 +832,110 @@ static void test_display_helpers(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* Maus-Einstellungen (fw_ver 5)                                       */
+/* ------------------------------------------------------------------ */
+
+static void test_codec_mouse_cfg(void)
+{
+    uint8_t        p[V4P_MCFG_PAYLOAD_LEN];
+    v4p_mousecfg_t c;
+    uint8_t        port    = 9u;
+    uint8_t        speed   = 0u;
+    uint8_t        totzone = 0u;
+    char           txt[64];
+
+    v4_test_case("GET_MOUSE_CFG: 4 Byte [speed0][totzone0][speed1][totzone1]");
+    memset(&c, 0, sizeof(c));
+    c.speed[0]   = 7u;
+    c.totzone[0] = 12u;
+    c.speed[1]   = 3u;
+    c.totzone[1] = 50u;
+    CHECK_EQ(v4p_mouse_cfg_valid(&c), 1);
+    CHECK_EQ(v4p_enc_get_mouse_cfg(p, &c), V4P_MCFG_PAYLOAD_LEN);
+    CHECK_EQ(p[V4P_MCFG_OFF_SPEED0], 7u);
+    CHECK_EQ(p[V4P_MCFG_OFF_TOTZONE0], 12u);
+    CHECK_EQ(p[V4P_MCFG_OFF_SPEED1], 3u);
+    CHECK_EQ(p[V4P_MCFG_OFF_TOTZONE1], 50u);
+    memset(&c, 0, sizeof(c));
+    CHECK_EQ(v4p_dec_get_mouse_cfg(p, V4P_MCFG_PAYLOAD_LEN, &c), 0);
+    CHECK_EQ(c.speed[0], 7u);
+    CHECK_EQ(c.totzone[0], 12u);
+    CHECK_EQ(c.speed[1], 3u);
+    CHECK_EQ(c.totzone[1], 50u);
+
+    v4_test_case("SET_MOUSE_CFG: 3 Byte [port][speed][totzone]");
+    memset(&c, 0, sizeof(c));
+    c.speed[0]   = 4u;
+    c.totzone[0] = 20u;
+    c.speed[1]   = 9u;
+    c.totzone[1] = 100u;
+    CHECK_EQ(v4p_enc_set_mouse_cfg(p, 1u, &c), V4P_SMC_PAYLOAD_LEN);
+    CHECK_EQ(p[V4P_SMC_OFF_PORT], 1u);
+    CHECK_EQ(p[V4P_SMC_OFF_SPEED], 9u);         /* NUR Buchse 1 */
+    CHECK_EQ(p[V4P_SMC_OFF_TOTZONE], 100u);
+    port = 9u;
+    CHECK_EQ(v4p_dec_set_mouse_cfg(p, V4P_SMC_PAYLOAD_LEN, &port, &speed,
+                                   &totzone), 0);
+    CHECK_EQ(port, 1u);
+    CHECK_EQ(speed, 9u);
+    CHECK_EQ(totzone, 100u);
+
+    v4_test_case("Maus-Wertebereiche: Tempo 1..10, Totzone 0..100");
+    CHECK_EQ(v4p_mouse_speed_valid((uint8_t)V4P_MOUSE_SPEED_MIN), 1);
+    CHECK_EQ(v4p_mouse_speed_valid((uint8_t)V4P_MOUSE_SPEED_MAX), 1);
+    CHECK_EQ(v4p_mouse_speed_valid(0u), 0);                 /* keine Stufe 0 */
+    CHECK_EQ(v4p_mouse_speed_valid((uint8_t)(V4P_MOUSE_SPEED_MAX + 1u)), 0);
+    CHECK_EQ(v4p_mouse_totzone_valid(0u), 1);
+    CHECK_EQ(v4p_mouse_totzone_valid(100u), 1);
+    CHECK_EQ(v4p_mouse_totzone_valid(101u), 0);
+    CHECK_EQ(v4p_mouse_cfg_valid(NULL), 0);
+
+    v4_test_case("Maus-Codec: unmoegliche Werte und zu kurze Nutzlast");
+    memset(&c, 0, sizeof(c));
+    c.speed[0]   = 0u;                          /* unzulaessig */
+    c.totzone[0] = 12u;
+    c.speed[1]   = 7u;
+    c.totzone[1] = 12u;
+    CHECK_EQ(v4p_mouse_cfg_valid(&c), 0);
+    /* Der Decoder prueft dieselben Grenzen -- eine Antwort mit Tempo 0 oder
+     * Totzone 200 ist keine Bestaetigung. */
+    p[V4P_MCFG_OFF_SPEED0]   = 0u;
+    p[V4P_MCFG_OFF_TOTZONE0] = 12u;
+    p[V4P_MCFG_OFF_SPEED1]   = 7u;
+    p[V4P_MCFG_OFF_TOTZONE1] = 12u;
+    CHECK_EQ(v4p_dec_get_mouse_cfg(p, V4P_MCFG_PAYLOAD_LEN, &c), -1);
+    p[V4P_MCFG_OFF_SPEED0]   = 7u;
+    p[V4P_MCFG_OFF_TOTZONE0] = 200u;            /* > 100 */
+    CHECK_EQ(v4p_dec_get_mouse_cfg(p, V4P_MCFG_PAYLOAD_LEN, &c), -1);
+    p[V4P_MCFG_OFF_TOTZONE0] = 12u;
+    CHECK_EQ(v4p_dec_get_mouse_cfg(p, (uint8_t)(V4P_MCFG_PAYLOAD_LEN - 1u),
+                                   &c), -1);
+    CHECK_EQ(v4p_dec_get_mouse_cfg(NULL, V4P_MCFG_PAYLOAD_LEN, &c), -1);
+    /* SET-Echo: Port 2 und unzulaessige Werte werden abgewiesen. */
+    p[V4P_SMC_OFF_PORT]    = 2u;
+    p[V4P_SMC_OFF_SPEED]   = 5u;
+    p[V4P_SMC_OFF_TOTZONE] = 12u;
+    CHECK_EQ(v4p_dec_set_mouse_cfg(p, V4P_SMC_PAYLOAD_LEN, &port, &speed,
+                                   &totzone), -1);
+    p[V4P_SMC_OFF_PORT]    = 0u;
+    p[V4P_SMC_OFF_SPEED]   = 11u;
+    CHECK_EQ(v4p_dec_set_mouse_cfg(p, V4P_SMC_PAYLOAD_LEN, &port, &speed,
+                                   &totzone), -1);
+    CHECK_EQ(v4p_dec_set_mouse_cfg(p, (uint8_t)(V4P_SMC_PAYLOAD_LEN - 1u),
+                                   &port, &speed, &totzone), -1);
+
+    v4_test_case("Maus-Einstellungen als Text (mit Einheit)");
+    memset(&c, 0, sizeof(c));
+    c.speed[1]   = 7u;
+    c.totzone[1] = 12u;
+    v4p_mousecfg_text(&c, 1u, txt, sizeof(txt));
+    CHECK_STR(txt, "Tempo 7/10, Totzone 12%");
+    /* Ein unzulaessiger Port behauptet keine Werte. */
+    v4p_mousecfg_text(&c, 2u, txt, sizeof(txt));
+    CHECK(txt[0] != '\0');
+}
+
+/* ------------------------------------------------------------------ */
 
 int test_proto(void)
 {
@@ -848,6 +952,7 @@ int test_proto(void)
     test_codec_dev();
     test_codec_port_mode();
     test_codec_port_config();
+    test_codec_mouse_cfg();
     test_names_routing();
     test_display_helpers();
 

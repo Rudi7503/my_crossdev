@@ -153,7 +153,13 @@ static void caps_text(uint16_t caps, char *out, size_t cap)
         { V4P_CAP_HID_BLE,   "BLE" },
         { V4P_CAP_MOUSE,     "Maus" },
         { V4P_CAP_PAD,       "Pad" },
-        { V4P_CAP_BATTERY,   "Batterie" }
+        { V4P_CAP_BATTERY,   "Batterie" },
+        /* fw_ver 4/5: Eingangsverteilung, Geraetezuordnung, Maus-Einstellungen.
+         * Sie stehen hier genauso wie in v4_debug.c -- wer sie liest, soll
+         * nicht zwei Schreibweisen lernen muessen. */
+        { V4P_CAP_PORT_ROUTING, "Verteilung" },
+        { V4P_CAP_DEVICE_PORT,  "Geraetezuordnung" },
+        { V4P_CAP_MOUSE_CFG,    "Maus-Einstellungen" }
     };
     size_t   n     = 0u;
     int      first = 1;
@@ -623,6 +629,12 @@ static uint8_t act_swap(void)
 /*   cfg <0|1>                          eine Buchse anzeigen           */
 /*   cfg <0|1> mode auto|aus|joystick|maus                             */
 /*   cfg <0|1> dir alle|keine|stick_l|stick_r|dpad[+...]|0xNN          */
+/*   cfg <0|1> beitrag analog|digital|beide                            */
+/*                                      Bedienhilfe: setzt dieselben   */
+/*                                      Routing-Werte (SET_PORT_ROUTING)*/
+/*   cfg <0|1> mouse speed <1..10>      SET_MOUSE_CFG (fw_ver 5)       */
+/*   cfg <0|1> mouse totzone <0..100>   Prozent, Umrechnung in der      */
+/*                                      Firmware                       */
 /*   cfg <0|1> btn1|btn2|btn3 <quelle>  Quelle: keine,a,b,x,y,l1,r1,   */
 /*                                      l2,r2,l3,r3,start,select,home, */
 /*                                      gruppe1..3 oder 0..16          */
@@ -647,6 +659,34 @@ static int devport_verfuegbar(void)
 {
     return (S.info_valid != 0
             && v4_info_has_caps(&S.info, V4P_CAP_DEVICE_PORT) != 0) ? 1 : 0;
+}
+
+/* Maus-Einstellungen (fw_ver 5): verbindlich ist auch hier das Faehigkeitsbit,
+ * nicht die Firmware-Version. */
+static int mousecfg_verfuegbar(void)
+{
+    return (S.info_valid != 0
+            && v4_info_has_caps(&S.info, V4P_CAP_MOUSE_CFG) != 0) ? 1 : 0;
+}
+
+/* GET_MOUSE_CFG lesen und in den Zustandsblock uebernehmen. Liefert den
+ * Protokollstatus; bei fehlendem Faehigkeitsbit wird NICHTS gesendet. */
+static uint8_t mousecfg_lesen(void)
+{
+    v4p_mousecfg_t c;
+    uint8_t        rc;
+
+    if (!mousecfg_verfuegbar()) {
+        return V4P_ST_BAD_CMD;
+    }
+    rc = v4_get_mouse_cfg(&M, &c);
+    (void)v4_state_note(&S, rc);
+    if (rc != V4P_ST_OK) {
+        print_failure("GET_MOUSE_CFG", rc);
+        return rc;
+    }
+    v4_state_put_mousecfg(&S, &c);
+    return V4P_ST_OK;
 }
 
 /* GET_PORT_CONFIG lesen und in den Zustandsblock uebernehmen. */
@@ -740,25 +780,49 @@ static void cfg_geraete_text(int port, char *out, size_t cap)
     out[n] = '\0';
 }
 
-/* Eine Zeile je Buchse -- die Entsprechung zur Konfigurationszeile im Fenster. */
+/* Eine Zeile je Buchse -- die Entsprechung zur Konfigurationszeile im Fenster.
+ *
+ * Seit den Varianten (Beitrag) und den Maus-Einstellungen steht am Ende der
+ * Zeile, was die Oberflaeche als eigenes Feld zeigt: die abgeleitete Variante
+ * (analog/digital/beide/eigene) und Tempo/Totzone DIESER Buchse. Beim Beitrag
+ * "beide" kommt der Hinweis dazu, dass die Einzelschalter gegenstandslos sind --
+ * im Fenster sind sie dort ausgegraut, in der Konsole gibt es sie weiter. */
 static void cfg_zeile(int port, const v4p_portcfg_t *c, char *buf, size_t cap)
 {
-    char dir[48];
-    char geraet[V4P_NAME_BUF + 16u];
+    char    dir[48];
+    char    geraet[V4P_NAME_BUF + 16u];
+    char    maus[48];
+    uint8_t beitrag;
 
     v4p_dir_text(c->dir[port], dir, sizeof(dir));
     cfg_geraete_text(port, geraet, sizeof(geraet));
+    beitrag = v4_beitrag_aus_dir(c->dir[port]);
+
+    if (!mousecfg_verfuegbar()) {
+        (void)snprintf(maus, sizeof(maus),
+                       "Maus nicht verfuegbar (fw_ver %u fehlt)",
+                       (unsigned)V4P_FW_VER_MOUSE);
+    } else if (S.mousecfg_valid == 0) {
+        (void)snprintf(maus, sizeof(maus), "Maus: noch keine Antwort");
+    } else {
+        v4p_mousecfg_text(&S.mousecfg, (uint8_t)port, maus, sizeof(maus));
+    }
 
     (void)snprintf(buf, cap,
                    "Buchse %d: Geraet %-24s Vorgabe %-8s wirkt %-8s "
-                   "Richtungen %-22s Pin6<-%s Pin9<-%s Pin5<-%s",
+                   "Richtungen %-22s Pin6<-%s Pin9<-%s Pin5<-%s "
+                   "Beitrag %-7s %s%s",
                    port, geraet,
                    v4p_port_mode_soll_name(c->mode_soll[port]),
                    v4p_port_mode_name(c->mode_ist[port]),
                    dir,
                    v4p_taste_name_short(c->btn[port][0]),
                    v4p_taste_name_short(c->btn[port][1]),
-                   v4p_taste_name_short(c->btn[port][2]));
+                   v4p_taste_name_short(c->btn[port][2]),
+                   v4_beitrag_name(beitrag),
+                   maus,
+                   (beitrag == (uint8_t)V4P_BEITRAG_BEIDE)
+                       ? " (Einzelschalter gegenstandslos)" : "");
 }
 
 /* Alles (port < 0) oder eine Buchse anzeigen. Liest die Gegenstelle. */
@@ -769,6 +833,12 @@ static uint8_t act_cfg_show(int port)
 
     if (rc != V4P_ST_OK) {
         return rc;
+    }
+    /* Die Maus-Einstellungen gehoeren zu jeder Buchse dazu; sie kommen aus
+     * einer EIGENEN Abfrage (GET_MOUSE_CFG). Ist das Faehigkeitsbit nicht
+     * gesetzt, wird nichts gesendet -- die Zeile sagt das dann ausdruecklich. */
+    if (mousecfg_verfuegbar()) {
+        (void)mousecfg_lesen();
     }
     if (port < 0 || port >= (int)V4P_PORT_COUNT) {
         int p;
@@ -783,6 +853,12 @@ static uint8_t act_cfg_show(int port)
     }
     v4_msg("  Vorgabe = GET_PORT_CONFIG.mode_soll (auto = nach Geraeteart), "
            "wirkt = mode_ist\n"
+           "  Beitrag = Bedienhilfe: analog (Stick links + L1/R1), digital "
+           "(D-Pad + A/B/Start),\n"
+           "  beide (alle Richtungen + Gruppe 1/2/3) -- sie setzt nur "
+           "SET_PORT_ROUTING, kein neuer Befehl.\n"
+           "  Tempo/Totzone gelten JE BUCHSE (GET/SET_MOUSE_CFG); die "
+           "Umrechnung macht die Firmware.\n"
            "  Die Geraetezuordnung ist ueber die Leitung nicht lesbar: hier "
            "steht, was in dieser\n"
            "  Sitzung per SET_DEVICE_PORT gesetzt und bestaetigt wurde.\n");
@@ -907,6 +983,43 @@ static int cfg_dir_parse(const char *s, uint8_t *out)
         teil = (plus != NULL) ? (plus + 1) : NULL;
     }
     *out = maske;
+    return 1;
+}
+
+/* Eine Beitrags-Variante: "analog", "digital", "beide". -1 = unbekannt.
+ * "eigene" ist KEINE waehlbare Variante (sie beschreibt nur einen vorgefundenen
+ * Zustand) und wird deshalb nicht angenommen. */
+static int cfg_beitrag_parse(const char *s)
+{
+    if (s == NULL) {
+        return -1;
+    }
+    if (strcmp(s, "analog") == 0) {
+        return (int)V4P_BEITRAG_ANALOG;
+    }
+    if (strcmp(s, "digital") == 0) {
+        return (int)V4P_BEITRAG_DIGITAL;
+    }
+    if (strcmp(s, "beide") == 0 || strcmp(s, "beides") == 0) {
+        return (int)V4P_BEITRAG_BEIDE;
+    }
+    return -1;
+}
+
+/* Eine ganze Zahl 0..1000 aus einem Argument. 0 = erkannt. */
+static int cfg_zahl_parse(const char *s, int *out)
+{
+    char *ende = NULL;
+    long  zahl;
+
+    if (s == NULL || out == NULL || s[0] == '\0') {
+        return 0;
+    }
+    zahl = strtol(s, &ende, 10);
+    if (ende == NULL || *ende != '\0' || zahl < 0 || zahl > 1000) {
+        return 0;
+    }
+    *out = (int)zahl;
     return 1;
 }
 
@@ -1056,7 +1169,9 @@ static void act_cfg(char *line)
             return;
         }
         if (narg < 3) {
-            v4_msg("Aufruf: cfg <0|1> mode|dir|btn1|btn2|btn3 <wert>\n");
+            v4_msg("Aufruf: cfg <0|1> mode|dir|btn1|btn2|btn3 <wert>\n"
+                   "        cfg <0|1> beitrag analog|digital|beide\n"
+                   "        cfg <0|1> mouse speed|totzone <wert>\n");
             return;
         }
         if (!cfg_verfuegbar()) {
@@ -1113,6 +1228,123 @@ static void act_cfg(char *line)
                 return;
             }
             v4_msg("Buchse %d: Richtungen gesetzt.\n", port);
+        } else if (strcmp(arg[1], "beitrag") == 0) {
+            /* Die drei Varianten setzen NUR die bestehenden Routing-Werte. */
+            int     b = cfg_beitrag_parse(arg[2]);
+            uint8_t rc;
+            uint8_t btn[V4P_BTN_COUNT];
+            char    dir[48];
+
+            if (b < 0) {
+                v4_msg("\"%s\" ist kein Beitrag (analog, digital, beide).\n",
+                       arg[2]);
+                return;
+            }
+            rc = v4_set_port_beitrag(&M, (uint8_t)port, (uint8_t)b);
+            (void)v4_state_note(&S, rc);
+            if (rc != V4P_ST_OK) {
+                v4_msg("SET_PORT_ROUTING (Beitrag %s): %s -- nichts "
+                       "geaendert.\n", v4_beitrag_name((uint8_t)b),
+                       v4_strerror(rc));
+                return;
+            }
+            v4_beitrag_btn((uint8_t)b, btn);
+            v4p_dir_text(v4_beitrag_dir((uint8_t)b), dir, sizeof(dir));
+            v4_msg("Buchse %d: Beitrag %s gesetzt -- Richtungen %s, "
+                   "Pin6<-%s Pin9<-%s Pin5<-%s.\n",
+                   port, v4_beitrag_name((uint8_t)b), dir,
+                   v4p_taste_name(btn[0]), v4p_taste_name(btn[1]),
+                   v4p_taste_name(btn[2]));
+            if ((uint8_t)b == (uint8_t)V4P_BEITRAG_BEIDE) {
+                v4_msg("  Hinweis: bei 'beide' sind die EINZELNEN Richtungs- "
+                       "und Knopfschalter gegenstandslos;\n"
+                       "  'cfg %d dir' bzw. 'cfg %d btnN' aendern die "
+                       "Verteilung trotzdem.\n", port, port);
+            }
+        } else if (strcmp(arg[1], "mouse") == 0) {
+            int     wert = 0;
+            int     neu_speed;
+            int     neu_totzone;
+            uint8_t rc;
+
+            if (narg < 4) {
+                v4_msg("Aufruf: cfg <0|1> mouse speed|totzone <wert>\n"
+                       "  speed   1..%u (1 = langsamste)\n"
+                       "  totzone %u..%u Prozent\n",
+                       (unsigned)V4P_MOUSE_SPEED_MAX,
+                       (unsigned)V4P_MOUSE_TOTZONE_MIN,
+                       (unsigned)V4P_MOUSE_TOTZONE_MAX);
+                return;
+            }
+            if (!mousecfg_verfuegbar()) {
+                v4_msg("Die Gegenstelle kann die Maus-Einstellungen nicht "
+                       "(Faehigkeitsbit 0x%04X fehlt, gemeldet 0x%04X).\n"
+                       "  Sie braucht fw_ver %u; es wird NICHTS gesendet.\n",
+                       (unsigned)V4P_CAP_MOUSE_CFG,
+                       S.info_valid ? (unsigned)S.info.caps : 0u,
+                       (unsigned)V4P_FW_VER_MOUSE);
+                return;
+            }
+            if (!cfg_zahl_parse(arg[3], &wert)) {
+                v4_msg("\"%s\" ist keine Zahl.\n", arg[3]);
+                return;
+            }
+            /* ERST den bestaetigten Stand holen: das Feld, das NICHT geaendert
+             * wird, muss mitgeschickt werden (SET_MOUSE_CFG setzt Tempo UND
+             * Totzone einer Buchse). Ohne diese Abfrage wuerde ein Zahlendreher
+             * im anderen Feld mitgeschickt. */
+            rc = mousecfg_lesen();
+            if (rc != V4P_ST_OK) {
+                return;
+            }
+            neu_speed   = (int)S.mousecfg.speed[port];
+            neu_totzone = (int)S.mousecfg.totzone[port];
+            if (strcmp(arg[2], "speed") == 0) {
+                if (!v4p_mouse_speed_valid((uint8_t)wert)) {
+                    v4_msg("Tempo %d liegt ausserhalb 1..%u.\n", wert,
+                           (unsigned)V4P_MOUSE_SPEED_MAX);
+                    return;
+                }
+                neu_speed = wert;
+            } else if (strcmp(arg[2], "totzone") == 0) {
+                if (!v4p_mouse_totzone_valid((uint8_t)wert)) {
+                    v4_msg("Totzone %d liegt ausserhalb %u..%u Prozent.\n",
+                           wert, (unsigned)V4P_MOUSE_TOTZONE_MIN,
+                           (unsigned)V4P_MOUSE_TOTZONE_MAX);
+                    return;
+                }
+                neu_totzone = wert;
+            } else {
+                v4_msg("\"%s\" ist keine Maus-Einstellung (speed, totzone).\n",
+                       arg[2]);
+                return;
+            }
+            rc = v4_set_mouse_cfg(&M, (uint8_t)port, (uint8_t)neu_speed,
+                                  (uint8_t)neu_totzone);
+            (void)v4_state_note(&S, rc);
+            if (rc == V4P_ST_BAD_ARG) {
+                v4_msg("SET_MOUSE_CFG: BAD_ARG -- der Wert wurde abgelehnt "
+                       "(Tempo 1..%u, Totzone %u..%u Prozent); nichts "
+                       "geaendert.\n",
+                       (unsigned)V4P_MOUSE_SPEED_MAX,
+                       (unsigned)V4P_MOUSE_TOTZONE_MIN,
+                       (unsigned)V4P_MOUSE_TOTZONE_MAX);
+                return;
+            }
+            if (rc != V4P_ST_OK) {
+                v4_msg("SET_MOUSE_CFG: %s -- nichts geaendert.\n",
+                       v4_strerror(rc));
+                return;
+            }
+            /* Der Wrapper hat das Echo feldweise geprueft -- auf V4P_ST_OK
+             * stehen die Werte fest. Sie werden uebernommen wie bei
+             * SET_PORT_MODE; die Anzeige darunter liest ohnehin nach. */
+            S.mousecfg.speed[port]   = (uint8_t)neu_speed;
+            S.mousecfg.totzone[port] = (uint8_t)neu_totzone;
+            S.mousecfg_valid         = 1;
+            v4_msg("Buchse %d: Maus-Einstellung bestaetigt -- Tempo %d/%u, "
+                   "Totzone %d%%.\n", port, neu_speed,
+                   (unsigned)V4P_MOUSE_SPEED_MAX, neu_totzone);
         } else if (strcmp(arg[1], "btn1") == 0
                    || strcmp(arg[1], "btn2") == 0
                    || strcmp(arg[1], "btn3") == 0) {
@@ -1163,8 +1395,9 @@ static void act_cfg(char *line)
                    (idx == 0) ? "Pin 6" : ((idx == 1) ? "Pin 9" : "Pin 5"),
                    v4p_taste_name_short((uint8_t)code));
         } else {
-            v4_msg("Unbekannt: 'cfg %d %s ...' (mode, dir, btn1, btn2, "
-                   "btn3).\n", port, arg[1]);
+            v4_msg("Unbekannt: 'cfg %d %s ...' (mode, dir, btn1, btn2, btn3,\n"
+                   "  beitrag analog|digital|beide, mouse speed|totzone).\n",
+                   port, arg[1]);
             return;
         }
 
@@ -1369,8 +1602,8 @@ static int console_run(const char *dev)
            "t tauschen,\n"
            "             a Scan/Liste, c verbinden, d trennen, f vergessen, "
            "r RESET, q Ende\n"
-           "             cfg [<0|1> mode|dir|btn1|btn2|btn3 <wert>] | "
-           "cfg assign <index|BDA> <0|1>\n");
+           "             cfg [<0|1> mode|dir|beitrag|mouse|btn1|btn2|btn3 "
+           "<wert>] | cfg assign <index|BDA> <0|1>\n");
 
     while (beenden == 0) {
         console_herz_maybe();

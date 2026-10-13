@@ -184,12 +184,14 @@ demo: $(BUILD)/v4_console_demo
 	printf 's\nh\ni\nq\n' | ./$(BUILD)/v4_console_demo -n > $(BUILD)/demo1.txt 2>&1 || fail=1; \
 	grep -q "Adresse 0x5E" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: Adresse 0x5E steht nicht im Kopf"; fail=1; }; \
-	grep -q "PING ok: proto=3 fw=4 write=32 read=128" $(BUILD)/demo1.txt \
+	grep -q "PING ok: proto=3 fw=5 write=32 read=128" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: PING-Zeile fehlt oder nennt andere Rahmengroessen"; fail=1; }; \
-	grep -q "Faehigkeiten: 0x03FF" $(BUILD)/demo1.txt \
+	grep -q "Faehigkeiten: 0x07FF" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: Faehigkeiten fehlen"; fail=1; }; \
 	grep -q "Verteilung,Geraetezuordnung" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: die Faehigkeitsbits der Eingangsverteilung fehlen"; fail=1; }; \
+	grep -q "Maus-Einstellungen" $(BUILD)/demo1.txt \
+	    || { echo "  FEHLER: das Faehigkeitsbit der Maus-Einstellungen fehlt"; fail=1; }; \
 	grep -q "Buchse 0: Geraet (keines)" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: die Eingangsverteilung steht nicht im Anfangszustand"; fail=1; }; \
 	grep -q "Vorgabe auto" $(BUILD)/demo1.txt \
@@ -364,8 +366,57 @@ demo: $(BUILD)/v4_console_demo
 	    || { echo "  FEHLER: der fehlende Befehl wird nicht gemeldet"; fail=1; }; \
 	if grep -q "^\[i2c\] cmd=GET_PORT_CONFIG" $(BUILD)/demo16.txt; then \
 	    echo "  FEHLER: GET_PORT_CONFIG wurde trotz fehlendem Faehigkeitsbit gesendet"; fail=1; fi; \
+	echo "== Demo 11: Beitrag (analog/digital/beide) und Maus-Einstellungen =="; \
+	printf 'cfg 0 beitrag analog\ncfg 1 beitrag digital\ncfg 0 beitrag beide\ncfg 0 mouse speed 3\ncfg 0 mouse totzone 40\ncfg 1 mouse speed 9\ncfg 1 mouse totzone 100\ncfg\nq\n' \
+	    | ./$(BUILD)/v4_console_demo -n > $(BUILD)/demo17.txt 2>&1 || fail=1; \
+	grep -q "cmd=GET_MOUSE_CFG" $(BUILD)/demo17.txt \
+	    || { echo "  FEHLER: GET_MOUSE_CFG wird nicht abgesetzt"; fail=1; }; \
+	grep -q "cmd=SET_MOUSE_CFG" $(BUILD)/demo17.txt \
+	    || { echo "  FEHLER: SET_MOUSE_CFG wird nicht abgesetzt"; fail=1; }; \
+	grep -q "bestaetigt port=0 speed=3 totzone=12%" $(BUILD)/demo17.txt \
+	    || { echo "  FEHLER: die Echo-Zeile der Maus-Einstellung fehlt"; fail=1; }; \
+	grep -q "Buchse 0: Beitrag analog gesetzt -- Richtungen Stick links, Pin6<-L1 Pin9<-R1 Pin5<-keine." $(BUILD)/demo17.txt \
+	    || { echo "  FEHLER: Beitrag analog setzt nicht Stick links + L1/R1"; fail=1; }; \
+	grep -q "Buchse 1: Beitrag digital gesetzt -- Richtungen D-Pad, Pin6<-A Pin9<-B Pin5<-Start." $(BUILD)/demo17.txt \
+	    || { echo "  FEHLER: Beitrag digital setzt nicht D-Pad + A/B/Start"; fail=1; }; \
+	grep -q "Buchse 0: Beitrag beide gesetzt -- Richtungen Stick links+Stick rechts+D-Pad, Pin6<-Gruppe 1 (A,L1,L2,L3) Pin9<-Gruppe 2 (B,R1,R2,R3) Pin5<-Gruppe 3 (X,Y,Start,Select)." $(BUILD)/demo17.txt \
+	    || { echo "  FEHLER: Beitrag beide setzt nicht alle Richtungen + die drei Gruppen"; fail=1; }; \
+	grep -q "Buchse 0: Maus-Einstellung bestaetigt -- Tempo 3/10, Totzone 40%." $(BUILD)/demo17.txt \
+	    || { echo "  FEHLER: die Maus-Einstellung von Buchse 0 wird nicht bestaetigt"; fail=1; }; \
+	grep -q "Buchse 1: Maus-Einstellung bestaetigt -- Tempo 9/10, Totzone 100%." $(BUILD)/demo17.txt \
+	    || { echo "  FEHLER: die Maus-Einstellung von Buchse 1 wird nicht bestaetigt"; fail=1; }; \
+	grep -qE "Buchse 0: Geraet .*Beitrag beide +Tempo 3/10, Totzone 40% \(Einzelschalter gegenstandslos\)" $(BUILD)/demo17.txt \
+	    || { echo "  FEHLER: die Beitrags-Zeile mit dem Gegenstandslos-Hinweis fehlt"; fail=1; }; \
+	grep -qE "Buchse 1: Geraet .*Beitrag digital +Tempo 9/10, Totzone 100%" $(BUILD)/demo17.txt \
+	    || { echo "  FEHLER: Beitrag/Maus von Buchse 1 stehen nicht in der Zeile"; fail=1; }; \
+	grep -q "Hinweis: bei 'beide' sind die EINZELNEN Richtungs- und Knopfschalter gegenstandslos" $(BUILD)/demo17.txt \
+	    || { echo "  FEHLER: der Gegenstandslos-Hinweis zu 'beide' fehlt"; fail=1; }; \
+	echo "== Demo 12: fw_ver 4 -- Maus-Regler nicht verfuegbar, nichts gesendet =="; \
+	V4_DEMO_LEGACY_FW4=1 sh -c "printf 'cfg\ncfg 0 mouse speed 3\nq\n' | ./$(BUILD)/v4_console_demo -n" \
+	    > $(BUILD)/demo18.txt 2>&1 || fail=1; \
+	grep -q "PING ok: proto=3 fw=4 write=32 read=128" $(BUILD)/demo18.txt \
+	    || { echo "  FEHLER: fw_ver 4 wird nicht angenommen (gleicher Rahmen!)"; fail=1; }; \
+	grep -q "Faehigkeiten: 0x03FF" $(BUILD)/demo18.txt \
+	    || { echo "  FEHLER: fw_ver 4 meldet nicht genau die alten Faehigkeiten"; fail=1; }; \
+	grep -q "Die Gegenstelle kann die Maus-Einstellungen nicht" $(BUILD)/demo18.txt \
+	    || { echo "  FEHLER: die fehlende Maus-Faehigkeit wird nicht gemeldet"; fail=1; }; \
+	grep -q "Maus nicht verfuegbar (fw_ver 5 fehlt)" $(BUILD)/demo18.txt \
+	    || { echo "  FEHLER: die Zeile kennzeichnet den Maus-Regler nicht als nicht verfuegbar"; fail=1; }; \
+	grep -q "cmd=GET_PORT_CONFIG" $(BUILD)/demo18.txt \
+	    || { echo "  FEHLER: die Eingangsverteilung von fw_ver 4 wird nicht mehr gelesen"; fail=1; }; \
+	if grep -q "cmd=GET_MOUSE_CFG" $(BUILD)/demo18.txt; then \
+	    echo "  FEHLER: GET_MOUSE_CFG wurde trotz fehlendem Faehigkeitsbit gesendet"; fail=1; fi; \
+	if grep -q "cmd=SET_MOUSE_CFG" $(BUILD)/demo18.txt; then \
+	    echo "  FEHLER: SET_MOUSE_CFG wurde trotz fehlendem Faehigkeitsbit gesendet"; fail=1; fi; \
+	echo "== Demo 13: falsches Echo von SET_MOUSE_CFG wird nicht geglaubt =="; \
+	V4_DEMO_BAD_MOUSE_ECHO=1 sh -c "printf 'cfg 0 mouse speed 3\ncfg\nq\n' | ./$(BUILD)/v4_console_demo -n" \
+	    > $(BUILD)/demo19.txt 2>&1 || fail=1; \
+	grep -q "SET_MOUSE_CFG: Antwort gueltig, Nutzlast unbrauchbar -- nichts geaendert." $(BUILD)/demo19.txt \
+	    || { echo "  FEHLER: das falsche Echo wird nicht als Fehler gemeldet"; fail=1; }; \
+	grep -qE "Buchse 0: Geraet .*Tempo 7/10, Totzone 12%" $(BUILD)/demo19.txt \
+	    || { echo "  FEHLER: nach dem falschen Echo steht nicht mehr der echte Stand"; fail=1; }; \
 	if [ "$$fail" -eq 0 ]; then \
-	    echo "Demo: OK (10 Durchlaeufe, Mock, ohne Hardware)"; \
+	    echo "Demo: OK (13 Durchlaeufe, Mock, ohne Hardware)"; \
 	else echo "Demo: FEHLGESCHLAGEN"; exit 1; fi
 
 # Dasselbe Programm fuer einen echten i2c-dev-Bus. Laeuft nur, wenn dort auch

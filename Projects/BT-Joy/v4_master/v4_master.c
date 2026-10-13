@@ -556,6 +556,166 @@ uint8_t v4_set_device_port(v4_master_t *m, const uint8_t bda[V4P_BDA_LEN],
 }
 
 /* ------------------------------------------------------------------ */
+/* Maus-Einstellungen (fw_ver 5)                                       */
+/* ------------------------------------------------------------------ */
+
+uint8_t v4_get_mouse_cfg(v4_master_t *m, v4p_mousecfg_t *cfg)
+{
+    v4p_read_t r;
+    uint8_t    rc;
+
+    if (cfg == NULL) {
+        return V4_ERR_ARG;
+    }
+    memset(cfg, 0, sizeof(*cfg));
+
+    rc = v4_transact(m, V4P_CMD_GET_MOUSE_CFG, NULL, 0u, &r);
+    if (rc != V4P_ST_OK) {
+        return rc;
+    }
+    if (v4p_dec_get_mouse_cfg(r.payload, r.len, cfg) != 0) {
+        /* Zu kurz ODER ein Wert ausserhalb der Grenzen. Die Struktur bleibt
+         * genullt -- lieber keine Anzeige als eine erfundene. */
+        return V4_ERR_FRAME;
+    }
+    return V4P_ST_OK;
+}
+
+uint8_t v4_set_mouse_cfg(v4_master_t *m, uint8_t port, uint8_t speed,
+                         uint8_t totzone)
+{
+    uint8_t     p[V4P_SMC_PAYLOAD_LEN];
+    uint8_t     back_port    = 0u;
+    uint8_t     back_speed   = 0u;
+    uint8_t     back_totzone = 0u;
+    v4p_mousecfg_t cfg;
+    v4p_read_t  r;
+    uint8_t     rc;
+
+    /*
+     * Lokal dieselben Regeln wie der Slave: nur Buchse 0/1, Tempo 1..10,
+     * Totzone 0..100 Prozent. Ein BAD_ARG ohne Busrahmen ist billiger als
+     * einer mit -- und der Code ist derselbe, den der Slave schickt.
+     */
+    if (port >= V4P_PORT_COUNT || !v4p_mouse_speed_valid(speed)
+        || !v4p_mouse_totzone_valid(totzone)) {
+        return V4P_ST_BAD_ARG;
+    }
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.speed[port]   = speed;
+    cfg.totzone[port] = totzone;
+
+    (void)v4p_enc_set_mouse_cfg(p, port, &cfg);
+    rc = v4_transact(m, V4P_CMD_SET_MOUSE_CFG, p,
+                     (uint8_t)V4P_SMC_PAYLOAD_LEN, &r);
+    if (rc != V4P_ST_OK) {
+        return rc;
+    }
+    /* Echo feldweise pruefen: ein "OK" mit anderen Werten waere ein Hinweis
+     * auf einen verschobenen Strom, und die Anzeige zeigte sonst eine
+     * Einstellung, die es nicht gibt. */
+    if (v4p_dec_set_mouse_cfg(r.payload, r.len, &back_port, &back_speed,
+                              &back_totzone) != 0) {
+        return V4_ERR_FRAME;
+    }
+    if (back_port != port || back_speed != speed
+        || back_totzone != totzone) {
+        return V4_ERR_FRAME;
+    }
+    return V4P_ST_OK;
+}
+
+/* ------------------------------------------------------------------ */
+/* Bedienhilfe "Beitrag" -- KEIN Protokollbefehl                       */
+/*                                                                     */
+/* Sie setzt ausschliesslich die BESTEHENDEN Routing-Werte ueber        */
+/* SET_PORT_ROUTING. Die Zuordnung Variante -> Werte steht hier EINMAL  */
+/* (Tabelle), damit Konsole und Oberflaeche nicht zwei Schreibweisen    */
+/* pflegen und der Mock dieselben Werte sieht.                          */
+/* ------------------------------------------------------------------ */
+
+const char *v4_beitrag_name(uint8_t beitrag)
+{
+    switch (beitrag) {
+    case V4P_BEITRAG_ANALOG:  return "analog";
+    case V4P_BEITRAG_DIGITAL: return "digital";
+    case V4P_BEITRAG_BEIDE:   return "beide";
+    case V4P_BEITRAG_EIGENE:  return "eigene";
+    default:                  return "?";
+    }
+}
+
+/*
+ * Die Zuordnung in EINER Tabelle. Zeile = Variante, Spalte = Pin 6 / Pin 9 /
+ * Pin 5. "analog" ist die Maus-Belegung (L1 = links, R1 = rechts, Pin 5
+ * bleibt offen), "digital" die Joystick-Belegung, "beide" die drei bisherigen
+ * Gruppen (zusammen alle Tasten). Keine nicht-leere Quelle doppelt -- das
+ * verlangt der ESP32 (v4p_btn_set_valid).
+ */
+static const uint8_t s_beitrag_dir[V4P_BEITRAG_ANZAHL] = {
+    V4P_DIR_STICK_L,        /* analog  */
+    V4P_DIR_DPAD,           /* digital */
+    V4P_DIR_ALLE            /* beide   */
+};
+
+static const uint8_t s_beitrag_btn[V4P_BEITRAG_ANZAHL][V4P_BTN_COUNT] = {
+    { V4P_TASTE_L1, V4P_TASTE_R1, V4P_TASTE_KEINE },     /* analog  */
+    { V4P_TASTE_A,  V4P_TASTE_B,  V4P_TASTE_START },     /* digital */
+    { V4P_TASTE_GRUPPE1, V4P_TASTE_GRUPPE2, V4P_TASTE_GRUPPE3 } /* beide */
+};
+
+uint8_t v4_beitrag_dir(uint8_t beitrag)
+{
+    if (beitrag >= (uint8_t)V4P_BEITRAG_ANZAHL) {
+        return 0u;
+    }
+    return s_beitrag_dir[beitrag];
+}
+
+void v4_beitrag_btn(uint8_t beitrag, uint8_t btn[V4P_BTN_COUNT])
+{
+    unsigned k;
+
+    if (btn == NULL) {
+        return;
+    }
+    for (k = 0u; k < V4P_BTN_COUNT; k++) {
+        btn[k] = (beitrag < (uint8_t)V4P_BEITRAG_ANZAHL)
+                     ? s_beitrag_btn[beitrag][k]
+                     : (uint8_t)V4P_TASTE_KEINE;
+    }
+}
+
+uint8_t v4_beitrag_aus_dir(uint8_t dir)
+{
+    int stick = ((dir & (uint8_t)(V4P_DIR_STICK_L | V4P_DIR_STICK_R)) != 0u);
+    int dpad  = ((dir & (uint8_t)V4P_DIR_DPAD) != 0u);
+
+    if (dpad && stick) {
+        return (uint8_t)V4P_BEITRAG_BEIDE;
+    }
+    if (dpad) {
+        return (uint8_t)V4P_BEITRAG_DIGITAL;
+    }
+    if (stick) {
+        return (uint8_t)V4P_BEITRAG_ANALOG;
+    }
+    return (uint8_t)V4P_BEITRAG_EIGENE;
+}
+
+uint8_t v4_set_port_beitrag(v4_master_t *m, uint8_t port, uint8_t beitrag)
+{
+    uint8_t btn[V4P_BTN_COUNT];
+
+    if (beitrag >= (uint8_t)V4P_BEITRAG_ANZAHL) {
+        /* "eigene" ist keine Variante -- es gibt nichts zu senden. */
+        return V4_ERR_ARG;
+    }
+    v4_beitrag_btn(beitrag, btn);
+    return v4_set_port_routing(m, port, v4_beitrag_dir(beitrag), btn);
+}
+
+/* ------------------------------------------------------------------ */
 /* §11: Scan und Geraeteliste                                          */
 /* ------------------------------------------------------------------ */
 

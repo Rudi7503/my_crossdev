@@ -298,6 +298,8 @@ const char *v4_dbg_cmd_name(uint8_t cmd)
     case V4P_CMD_SET_DEVICE_PORT:  return "SET_DEVICE_PORT";
     case V4P_CMD_GET_PORT_CONFIG:  return "GET_PORT_CONFIG";
     case V4P_CMD_SET_PORT_ROUTING: return "SET_PORT_ROUTING";
+    case V4P_CMD_GET_MOUSE_CFG:    return "GET_MOUSE_CFG";
+    case V4P_CMD_SET_MOUSE_CFG:    return "SET_MOUSE_CFG";
     case V4P_CMD_SCAN_START:    return "SCAN_START";
     case V4P_CMD_SCAN_STOP:     return "SCAN_STOP";
     case V4P_CMD_DEV_COUNT:     return "DEV_COUNT";
@@ -444,6 +446,35 @@ static void kurzform(uint8_t cmd, const uint8_t *p, uint16_t len,
                            "port=%u",
                            bda[0], bda[1], bda[2], bda[3], bda[4], bda[5],
                            (unsigned)port);
+        }
+        break;
+    }
+    /*
+     * Maus-Einstellungen (fw_ver 5). Die Kurzform nennt Stufe und Prozentwert
+     * JE BUCHSE -- die Umrechnung in Schritte bzw. Rohwerte macht die Firmware,
+     * hier stehen nur die Werte auf der Leitung.
+     */
+    case V4P_CMD_GET_MOUSE_CFG: {
+        v4p_mousecfg_t c;
+
+        if (v4p_dec_get_mouse_cfg(p, len, &c) == 0) {
+            (void)snprintf(out, cap,
+                           "speed0=%u totzone0=%u%% speed1=%u totzone1=%u%%",
+                           (unsigned)c.speed[0], (unsigned)c.totzone[0],
+                           (unsigned)c.speed[1], (unsigned)c.totzone[1]);
+        }
+        break;
+    }
+    case V4P_CMD_SET_MOUSE_CFG: {
+        uint8_t port    = 0u;
+        uint8_t speed   = 0u;
+        uint8_t totzone = 0u;
+
+        if (v4p_dec_set_mouse_cfg(p, len, &port, &speed, &totzone) == 0) {
+            (void)snprintf(out, cap,
+                           "bestaetigt port=%u speed=%u totzone=%u%%",
+                           (unsigned)port, (unsigned)speed,
+                           (unsigned)totzone);
         }
         break;
     }
@@ -645,7 +676,9 @@ static void dbg_caps_text(uint16_t caps, char *out, size_t cap)
         /* fw_ver 4: nur wenn diese beiden Bits stehen, sind
          * GET_PORT_CONFIG/SET_PORT_ROUTING/SET_DEVICE_PORT vorhanden. */
         { V4P_CAP_PORT_ROUTING, "Verteilung" },
-        { V4P_CAP_DEVICE_PORT,  "Geraetezuordnung" }
+        { V4P_CAP_DEVICE_PORT,  "Geraetezuordnung" },
+        /* fw_ver 5: GET_MOUSE_CFG/SET_MOUSE_CFG (Tempo/Totzone je Buchse). */
+        { V4P_CAP_MOUSE_CFG,    "Maus-Einstellungen" }
     };
     size_t   n     = 0u;
     int      first = 1;

@@ -354,6 +354,74 @@ uint8_t v4_set_port_routing(v4_master_t *m, uint8_t port, uint8_t dir,
 uint8_t v4_set_device_port(v4_master_t *m, const uint8_t bda[V4P_BDA_LEN],
                            uint8_t port);
 
+/* 0x0B: Maus-Einstellungen BEIDER Buchsen in EINER Antwort (Tempo 1..10,
+ * Totzone in Prozent 0..100). Sie sind GLOBAL je Buchse: die Einstellung gilt
+ * fuer jede Buchse, die auf "Maus" steht. */
+uint8_t v4_get_mouse_cfg(v4_master_t *m, v4p_mousecfg_t *cfg);
+
+/* 0x0C: Maus-Einstellungen EINER Buchse setzen.
+ *
+ * Die Werte werden VORHER lokal geprueft (Tempo 1..10, Totzone 0..100 Prozent):
+ * ein unzulaessiger Wert ergibt V4_ERR_ARG und es wird NICHTS gesendet -- genau
+ * wie bei den uebrigen Wrappern. Danach prueft der Wrapper die Echo-Antwort
+ * feldweise; BAD_ARG des Slaves kommt unveraendert beim Aufrufer an, und der
+ * laesst seine Anzeige auf dem letzten BESTAETIGTEN Stand stehen. */
+uint8_t v4_set_mouse_cfg(v4_master_t *m, uint8_t port, uint8_t speed,
+                         uint8_t totzone);
+
+/* ------------------------------------------------------------------ */
+/* Bedienhilfe "Beitrag" je Buchse -- KEIN Protokollbefehl             */
+/*                                                                     */
+/* WAS DAS IST: eine reine BEDIENHILFE der beiden Frontends. Der ESP32    */
+/* kennt keinen Befehl "Beitrag"; eine Variante setzt lediglich die      */
+/* BESTEHENDEN Routing-Werte ueber SET_PORT_ROUTING (0x0A). Es wird also */
+/* kein Bit im Protokoll erfunden, und die Firmware bleibt unveraendert. */
+/*                                                                     */
+/*   analog    Richtungen <- Analog-Stick links, Knoepfe L1/R1/keine --  */
+/*             die Belegung einer MAUS-Buchse (L1 = links, R1 = rechts). */
+/*   digital   Richtungen <- D-Pad, Knoepfe A/B/Start -- die Belegung    */
+/*             einer JOYSTICK-Buchse.                                    */
+/*   beide     Richtungen <- alle drei Quellen (Stick links, Stick       */
+/*             rechts, D-Pad), Knoepfe Gruppe 1/2/3. Die drei Gruppen    */
+/*             zusammen decken ALLE Tasten ab (A,L1,L2,L3 / B,R1,R2,R3 /  */
+/*             X,Y,Start,Select; Home in keiner Gruppe) -- das ist das   */
+/*             "alle Knoepfe" ohne eine vierte Leitung zu erfinden.      */
+/*             Dann sind die EINZELSCHALTER gegenstandslos; die          */
+/*             Oberflaechen kennzeichnen das ausdruecklich.              */
+/*   eigene    KEINE Variante: die vorhandenen Richtungen passen zu      */
+/*             keiner der drei (z.B. dir == 0 oder eine Handbelegung).   */
+/*             Das ist ein ANZEIGEZUSTAND, kein Befehl.                  */
+/* ------------------------------------------------------------------ */
+#define V4P_BEITRAG_ANALOG   0u
+#define V4P_BEITRAG_DIGITAL  1u
+#define V4P_BEITRAG_BEIDE    2u
+#define V4P_BEITRAG_EIGENE   3u
+/* Waehlbare Varianten (ohne "eigene"). */
+#define V4P_BEITRAG_ANZAHL   3u
+
+/* Klartext einer Variante: "analog" / "digital" / "beide" / "eigene". */
+const char *v4_beitrag_name(uint8_t beitrag);
+
+/* Richtungsmaske einer Variante (V4P_DIR_*). Fuer "eigene" 0 -- das ist keine
+ * Variante und darf nicht gesendet werden. */
+uint8_t v4_beitrag_dir(uint8_t beitrag);
+
+/* Die drei Knopfquellen einer Variante (Pin 6, Pin 9, Pin 5). Fuer "eigene"
+ * bleiben alle drei V4P_TASTE_KEINE. `btn` muss V4P_BTN_COUNT Bytes fassen. */
+void v4_beitrag_btn(uint8_t beitrag, uint8_t btn[V4P_BTN_COUNT]);
+
+/* Ordnet eine BESTEHENDE Richtungsmaske einer Variante zu (fuer die Anzeige
+ * nach GET_PORT_CONFIG). Verglichen werden NUR die Richtungen: die
+ * Knopfquellen sind der "Wunsch" der Variante und duerfen einzeln geaendert
+ * werden, ohne dass die Richtungsaussage falsch wird. Enthaelt die Maske
+ * sowohl Stick- als auch D-Pad-Bits, ergibt das "beide"; 0 ergibt "eigene". */
+uint8_t v4_beitrag_aus_dir(uint8_t dir);
+
+/* 0x0A mit den Werten einer Variante. `beitrag` >= V4P_BEITRAG_ANZAHL oder
+ * ungueltig (auch V4P_BEITRAG_EIGENE) -> V4_ERR_ARG, es wird NICHTS gesendet.
+ * Sonst identisch zu v4_set_port_routing (inkl. Echo-Pruefung). */
+uint8_t v4_set_port_beitrag(v4_master_t *m, uint8_t port, uint8_t beitrag);
+
 uint8_t v4_scan_start(v4_master_t *m, uint8_t inq_units, int continuous); /* 0x10 */
 uint8_t v4_scan_stop (v4_master_t *m);                              /* 0x11 */
 uint8_t v4_dev_count (v4_master_t *m, uint8_t *count);              /* 0x12 */

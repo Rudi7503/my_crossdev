@@ -22,6 +22,15 @@
  *                         antworten BAD_CMD. Damit laesst sich pruefen, dass
  *                         die V4 eine solche Firmware ANNIMMT (gleicher
  *                         Rahmen) und die neuen Felder nicht blind setzt.
+ *   V4_DEMO_LEGACY_FW4=1  Firmware MIT Eingangsverteilung, aber OHNE
+ *                         Maus-Einstellungen: fw_ver 4, Faehigkeiten ohne
+ *                         0x0400, die Befehle 0x0B/0x0C antworten BAD_CMD.
+ *                         Damit laesst sich pruefen, dass der Maus-Regler als
+ *                         nicht verfuegbar gekennzeichnet wird und NICHTS
+ *                         gesendet wird.
+ *   V4_DEMO_BAD_MOUSE_ECHO=1  SET_MOUSE_CFG bestaetigt andere Werte -> der
+ *                         Master muss V4_ERR_FRAME melden, statt der
+ *                         Bestaetigung zu glauben.
  *   V4_DEMO_MOUSE=1       Controller ist eine Maus, Buchse 1 auf Maus
  *   V4_DEMO_CONNECT_ROUNDS=n  so viele GET_STATUS-Runden CONNECTING
  *   V4_DEMO_BAD_ECHO=1    SET_PORT_MODE bestaetigt den falschen Modus
@@ -93,8 +102,14 @@ int main(int argc, char **argv)
     if (env_num("V4_DEMO_LEGACY_FW3") != 0) {
         v4_mock.legacy_fw3 = 1;
     }
+    if (env_num("V4_DEMO_LEGACY_FW4") != 0) {
+        v4_mock.legacy_fw4 = 1;
+    }
     if (env_num("V4_DEMO_BAD_ECHO") != 0) {
         v4_mock.bad_set_port_echo = 1;
+    }
+    if (env_num("V4_DEMO_BAD_MOUSE_ECHO") != 0) {
+        v4_mock.bad_mousecfg_echo = 1;
     }
     if (env_num("V4_DEMO_ALREADY") != 0) {
         v4_mock_set_connected(0);

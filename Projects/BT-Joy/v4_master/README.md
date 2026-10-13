@@ -37,11 +37,12 @@ herein, damit der Lauf nicht an der Eingabeaufforderung stehenbleibt. Der Ziel
 prueft die Ausgabe auf die Zeilen, auf die es ankommt (Rahmengroessen, Adresse,
 Faehigkeiten, Controller, Portgruppen, gemessene Pegel samt Widerspruch
 "kein Pull-up"/"unmoeglich", Rueckfallweg der alten 10-Byte-Firmware, Scan,
-Verbinden, Modustausch, Fehlerwege) -- dazu, dass ein **toter Link**
-ausdruecklich gemeldet wird und das Programm sich beendet, statt zu warten
-(`V4_DEMO_LINK_TOT=1`), sowie seit dem Debugausbau, dass die Zeilen je
-I2C-Transaktion samt Dauer und Antwort-Kurzform erscheinen und `-quiet` sie
-wieder abschaltet.
+Verbinden, Modustausch, Fehlerwege, die Beitrags-Varianten analog/digital/beide
+und die Maus-Einstellungen samt Alt-Firmware und falschem Echo) -- dazu, dass
+ein **toter Link** ausdruecklich gemeldet wird und das Programm sich beendet,
+statt zu warten (`V4_DEMO_LINK_TOT=1`), sowie seit dem Debugausbau, dass die
+Zeilen je I2C-Transaktion samt Dauer und Antwort-Kurzform erscheinen und
+`-quiet` sie wieder abschaltet.
 
 Auf der V4 selbst:
 
@@ -89,17 +90,17 @@ make demo-i2c
 
 | Datei                    | Inhalt                                                       |
 |--------------------------|--------------------------------------------------------------|
-| `v4_proto.h/.c`          | Rahmenformat, CRC-8, Nutzlast-Codecs, Klartexte/Ableitungen   |
-| `v4_master.h/.c`         | Transaktionskern (SEQ, Wiederholung, BUSY, BAD_CRC) + Wrapper |
+| `v4_proto.h/.c`          | Rahmenformat, CRC-8, Nutzlast-Codecs (inkl. Maus-Einstellungen), Klartexte/Ableitungen |
+| `v4_master.h/.c`         | Transaktionskern (SEQ, Wiederholung, BUSY, BAD_CRC) + Wrapper + Beitrags-Bedienhilfe |
 | `v4_state.h/.c`          | Zustandshilfe der Frontends: letzte gueltige Werte, Backoff   |
-| `v4_joyport.h/.c`        | direkte Abfrage der Joystick-Register + Vergleich mit I2C     |
+| `v4_joyport.h/.c`        | direkte Abfrage der Joystick-Register (Direktanzeige) + Vergleich mit I2C |
 | `v4_debug.h/.c`          | gemeinsame Ausgabe: stdout + Debug-UART + Logdatei, Transaktionszeilen |
 | `v4_amiga_i2c.c`         | Zielplattform: i2c.library + timer.device (m68k, Big Endian)  |
 | `v4_linux_i2c.c`         | Linux-Harness: i2c-dev                                        |
 | `v4_mock.h/.c`           | ESP32-Emulator fuer Tests und Demo, inkl. Fehlerbilder        |
 | `v4_console.c`           | Textkonsole (beide Plattformen, mit Mock)                     |
 | `v4_gui.c`               | MUI-Oberflaeche (nur Amiga)                                   |
-| `tests/`                 | 158 Testfaelle / 1016 Checks, plus Demo-Rahmen (`demo_main.c`) |
+| `tests/`                 | 178 Testfaelle / 1192 Checks, plus Demo-Rahmen (`demo_main.c`) |
 | `tools/check_portability.sh`    | Quelltext-Lint: keine mehrbytigen Frame-Zugriffe      |
 | `tools/check_m68k_byteaccess.sh`| Nachweis im erzeugten m68k-Code                       |
 | `tools/check_mui_tree.py`       | Aufbaupruefer des MUI-Objektbaums in `v4_gui.c`        |
@@ -126,6 +127,7 @@ desselben Vertrags.
 Befehle (nur diese): `0x01` PING, `0x02` GET_STATUS, `0x03` GET_INFO,
 `0x04` SET_PORT_MODE, `0x05` GET_PORT_MODE, `0x06` GET_INPUT, `0x07` GET_HID,
 `0x08` SET_DEVICE_PORT, `0x09` GET_PORT_CONFIG, `0x0A` SET_PORT_ROUTING,
+`0x0B` GET_MOUSE_CFG, `0x0C` SET_MOUSE_CFG,
 `0x10` SCAN_START, `0x11` SCAN_STOP, `0x12` DEV_COUNT, `0x13` DEV_GET,
 `0x20` CONNECT, `0x21` CONNECT_BDA, `0x22` DISCONNECT, `0x23` FORGET,
 `0x7E` RESET.
@@ -179,6 +181,62 @@ die Zuordnungen, die in **dieser Sitzung** per `SET_DEVICE_PORT` gesetzt und
 bestaetigt wurden; die Zuordnung selbst liegt im NVS des ESP32 und bleibt dort.
 Ein "Loesen" gibt es nicht -- der ESP32 kennt nur "BDA -> Buchse".
 
+#### Der "Beitrag" -- eine Bedienhilfe, KEIN Protokollbefehl
+
+Der Benutzer waehlt je Buchse nicht nur das Geraet, sondern auch, **was** die
+Buchse bekommen soll. Diese drei Varianten sind reine **Bedienhilfe**: sie
+setzen die **bestehenden** Routing-Werte ueber `SET_PORT_ROUTING` (0x0A). Der
+ESP32 kennt keinen Befehl "Beitrag", und es wird kein Bit im Protokoll
+erfunden -- die Firmware bleibt unveraendert.
+
+| Variante | Richtungen (`dir`) | Knopfquellen (Pin 6, Pin 9, Pin 5) |
+|---|---|---|
+| `analog`  | `0x01` Stick links | `L1`, `R1`, `keine` -- die **Maus**-Belegung (L1 = links, R1 = rechts) |
+| `digital` | `0x04` D-Pad | `A`, `B`, `Start` -- die **Joystick**-Belegung |
+| `beide`   | `0x07` alle drei (Stick links, Stick rechts, D-Pad) | `Gruppe 1`/`Gruppe 2`/`Gruppe 3` -- zusammen **alle** Tasten (A,L1,L2,L3 / B,R1,R2,R3 / X,Y,Start,Select) |
+
+Die Zuordnung steht in **einer** Tabelle in `v4_master.c`
+(`s_beitrag_dir`/`s_beitrag_btn`) und wird von der Funktion
+`v4_set_port_beitrag()` gesetzt; Konsole und Oberflaeche rufen dieselbe
+Funktion auf. Die Rueckrichtung (`v4_beitrag_aus_dir()`) ordnet eine
+**bestehende** Richtungsmaske wieder einer Variante zu -- verglichen werden nur
+die Richtungen, denn die Knopfquellen duerfen einzeln nachjustiert werden.
+Passt eine Verteilung zu **keiner** der drei (z.B. `dir = 0` oder eine
+Handbelegung), zeigt das Feld `eigene` -- das ist ein **Anzeigezustand**, keine
+waehlbare Variante, und es wird nichts gesendet.
+
+Bei `beide` haben die **Einzelschalter** (drei Richtungsschalter und drei
+Knopfquellen) keine eigene Aussage mehr. Sie werden in der Oberflaeche deshalb
+mit `MUIA_Disabled` **gesperrt und gerastert** dargestellt (und im Klartext
+benannt); beim Wechsel auf `analog`/`digital` sind sie wieder bedienbar. So
+steht dort keine Schalterstellung, die einer anderen Anzeige widerspricht.
+
+### Maus-Einstellungen je Buchse (`fw_ver` 5, Faehigkeitsbit `0x0400`)
+
+Die Firmware meldet jetzt **`fw_ver = 5`**. Rahmen und `proto_ver` bleiben
+**unveraendert** (proto_ver 3); `v4_check_info()` prueft weiterhin nur
+`proto_ver` und die Rahmengroessen. Ob die beiden neuen Befehle vorhanden sind,
+sagt das Faehigkeitsbit **`0x0400`** (`V4P_CAP_MOUSE_CFG`). Fehlt es, bleiben
+die Regler **sichtbar gesperrt** (ausgegraut) und der Hinweis darunter nennt den
+Grund; es wird **nichts** gesendet, was der ESP32 mit `BAD_CMD` abweisen wuerde.
+
+| Befehl | Wert | Anfrage -> Antwort |
+|---|---|---|
+| `GET_MOUSE_CFG` | `0x0B` | -- -> **4 Byte**: `speed0`@0, `totzone0`@1, `speed1`@2, `totzone1`@3 (beide Buchsen in EINER Antwort) |
+| `SET_MOUSE_CFG` | `0x0C` | `[port u8][speed u8][totzone u8]` -> Echo (3 Byte); `BAD_ARG` bei port > 1 oder unzulaessigem Wert |
+
+* `speed` ist eine **Stufe 1..10** (1 = langsamste, 10 = schnellste; Vorgabe
+  **7**).
+* `totzone` ist ein **Prozentwert 0..100** (Vorgabe **12**); die Firmware rechnet
+  ihn in ihre Rohwerte um (`prozent * 512 / 100`).
+* Die Oberflaeche **rechnet nichts um**: sie zeigt und setzt nur Stufe und
+  Prozentwert. Die Umrechnung in Schritte je Sekunde bzw. Rohwerte macht
+  ausschliesslich die Firmware.
+* Der Master prueft die Werte **lokal** (dieselben Grenzen wie der Slave) und
+  prueft danach die **Echo-Antwort** feldweise; `BAD_ARG` kommt unveraendert
+  beim Aufrufer an, der seine Anzeige auf dem letzten bestaetigten Stand
+  stehen laesst.
+
 `GET_INPUT` liefert **12 Byte**: `state0`@0 und `state1`@1 (Zug-Maske,
 Bit gesetzt = nach GND gezogen = aktiv, Ruhe `0x00`), `steps_x`@2 und
 `steps_y`@6 (u32 LE) sowie ab der aktuellen Firmware `level0`@10 und
@@ -230,27 +288,37 @@ Auseinander gehen sie genau dort, wo es elektrisch interessant wird:
 | 1 | 1 | **gezogen, liest aber High** -- elektrisch unmöglich, Ausgangsstufe oder Pinbelegung prüfen |
 
 Die dritte Zeile ist der Befund, für den die Pegel überhaupt über die Leitung
-gehen: ohne sie sieht "kein Pull-up" wie "nichts gedrückt" aus. Konsole und MUI
-markieren den Widerspruch je Leitung und melden ihn zusätzlich als `WARNUNG: ...`
+gehen: ohne sie sieht "kein Pull-up" wie "nichts gedrückt" aus. **Die Konsole**
+markiert den Widerspruch je Leitung und meldet ihn zusätzlich als `WARNUNG: ...`
 (`v4p_level_missing_pullup()` / `v4p_level_impossible()` in `v4_proto.c`).
+**Die MUI-Oberflaeche zeigt `Zug`/`Pegel` seit dem 14.10.2026 nicht mehr im
+Fenster** -- dort stehen nur die direkten Portdaten (siehe unten). Der
+Widerspruch wird von ihr weiterhin **einmalig ins Protokoll** (DebugUART,
+Logdatei, Logfeld) geschrieben, damit die Diagnose nicht verloren geht.
 
 **Keine Ableitung mehr:** früher zeigte die Anzeige hier einen aus dem Zug
 *abgeleiteten* Ersatzwert ("Pegel (erwartet)"). Seit die Firmware die Pegel
 mitschickt, gibt es diesen Ersatz nicht mehr -- eine Zahl in der Pegelspalte ist
-gemessen. Antwortet ein alter ESP32 mit der 10-Byte-Fassung, steht in der Spalte
-`Pegel: Firmware ohne Pegel -- neu flashen` und je Zeile `(Pegel unbekannt)`.
+gemessen. Antwortet ein alter ESP32 mit der 10-Byte-Fassung, nennt der Vergleich
+im Protokoll `level=unbekannt` und keine Zahl.
 
 ## Direkt aus der Hardware -- der zweite Massstab
 
-Die V4 kann ihre Joystick-Anschluesse **selbst** lesen. Die MUI-Oberflaeche tut
-das seit diesem Durchgang und stellt die Werte **neben** die I2C-Antwort
-(`v4_joyport.c`, geprueft in `tests/test_joyport.c`). Das ist der Zweck:
+Die V4 kann ihre Joystick-Anschluesse **selbst** lesen. Genau das zeigt die
+MUI-Oberflaeche im Fenster (`v4_joyport.c`, geprueft in `tests/test_joyport.c`).
+Der Vergleich mit der I2C-Antwort ist der zweite Massstab:
 
 * I2C = was der **ESP32** meldet (`GET_INPUT`: Zug, Pegel),
 * direkt = was die **V4** an ihren eigenen Registern sieht.
 
-Stimmen beide ueberein, ist die Kette ESP32 -> DB9 -> V4 in Ordnung. Weichen sie
-ab, sagt der danebenstehende Rohwert, wo zu suchen ist.
+**Im Fenster stehen seit dem 14.10.2026 nur noch die direkten Werte** -- der
+Benutzer will sehen, was ueber den Joystick-Port **ankommt**. Der Vergleich
+(mit `OK` bzw. `ABWEICHUNG`) bleibt als Diagnose im **Protokoll**: er geht in
+die eine Herzzeile je Sekunde und sofort als eigene Zeile, wenn sich Richtung,
+Feuerknopf oder Urteil aendern (`v4_joy_debug_text` / `v4_joy_herz_text`,
+Praefix `[vergleich]`). Stimmen beide Quellen ueberein, ist die Kette
+ESP32 -> DB9 -> V4 in Ordnung; weichen sie ab, sagt der danebenstehende Rohwert,
+wo zu suchen ist.
 
 | Register   | Adresse   | Bedeutung                                                    |
 |------------|-----------|--------------------------------------------------------------|
@@ -261,8 +329,26 @@ ab, sagt der danebenstehende Rohwert, wo zu suchen ist.
 
 Zum Vergleich wird in **dieselbe Bitmaske** umgerechnet wie im Protokoll
 (`UP 0x01, DOWN 0x02, LEFT 0x04, RIGHT 0x08, BTN1 0x10, BTN2 0x20`); die
-deutschen Namen stehen daneben. So sehen die Zeilen im Fenster aus (und genau so
-gehen sie je Takt mit Praefix `[vergleich]` auf den DebugUART):
+deutschen Namen stehen daneben. So sieht die **Direktzeile im Fenster** aus
+(`v4_joy_direkt_text`, eine je Buchse):
+
+```
+Buchse 1  Modus Maus (ESP32)
+direkt aus den Registern:
+Leitung  Pin   Pegel    direkt
+UP       Pin 1  -        aktiv
+DOWN     Pin 2  -        -
+LEFT     Pin 3  -        -
+RIGHT    Pin 4  -        -
+BTN1     Pin 6  0 (Low)  gedrueckt
+BTN2     Pin 9  1 (High) -
+BTN3     Pin 5  -        nicht lesbar
+gedrueckt (direkt): VOR+BTN1
+Roh: Zaehler=0x0100 (stabil=ja)
+CIAAPRA=0x0074 POTINP=0xFF02
+```
+
+Und so sieht die **Vergleichszeile im Protokoll** aus (DebugUART/Logdatei):
 
 ```
 Buchse 0  direkt: 0x00 -   roh 0x085C   I2C: state=0x00 level=0x7F   OK
@@ -357,40 +443,65 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   Controller-Zeile ist lang, und ohne das macht MUI ihre Breite zur
   Mindestbreite des Fensterinhalts und zieht das Fenster ueber die zugesagten
   640 Pixel auf.
-* Zwei Portgruppen (Buchse 0/1) mit Cycle fuer die Betriebsart und je Leitung
-  `Zug` und `Pegel`; gezogene Leitungen sind fett gesetzt und mit
-  `GND` markiert. Widersprueche stehen als `<- kein Pull-up!` bzw.
-  `<- unmoeglich!` in der Zeile und werden einmalig ins Logfeld geschrieben.
-  Kein Farbcode: die Zuordnung der MUI-Stifte haengt an der Palette des
-  Anwenders, und ein "aktives Rot", das auf einem anderen Screen unsichtbar ist,
-  waere schlechter als Text.
+* **Die Anzeigeseite zeigt NUR die Portdaten -- direkt aus den Registern.**
+  Je Buchse stehen dort die sieben Leitungen (`UP`, `DOWN`, `LEFT`, `RIGHT`,
+  `BTN1`/Pin 6, `BTN2`/Pin 9, `BTN3`/Pin 5) mit dem **direkt gelesenen** Zustand,
+  darunter die gezogenen Leitungen, der Rohwert des Zaehlers
+  (`JOY0DAT`/`JOY1DAT`) und die Rohwerte der Feuerregister
+  (`CIAAPRA`/`POTINP`). Quelle ist ausschliesslich `v4_joyport.c`
+  (`v4_joy_direkt_text`). **Die Sicht des ESP32** (`state0`/`state1`,
+  `level0`/`level1`) und der Vergleich `direkt <-> I2C` samt `ABWEICHUNG` stehen
+  **nicht mehr im Fenster** -- der Benutzer will sehen, was ueber den
+  Joystick-Port **ankommt**. Der Vergleich bleibt als Diagnose im **Protokoll**
+  (DebugUART/Logdatei, eine Zeile je Sekunde bzw. sofort bei Aenderung), wo er
+  gebraucht wird. Nebeneffekt: die dauerhafte `ABWEICHUNG` auf Buchse 0 (das
+  Maus-Register `$DFF00A` = `APOLLO_MOUSE_GET_Y` -- kein Fehler, aber im Fenster
+  irrefuehrend) verschwindet aus dem Fenster.
+* Die **wirksame Betriebsart** steht weiterhin daneben (`wirkt: <Modus>` bzw.
+  `Modus <...> (ESP32)`), denn sie beschreibt, was der ESP32 an den Leitungen
+  **tut** -- das ist eine Einstellung, kein Portdatum. Ist die Angabe nicht da
+  (kein Kontakt), steht `Modus ? (ESP32 antwortet nicht)`, und die Portdaten
+  werden trotzdem gezeichnet: die Registerabfrage haengt nicht am Bus.
 * **Zwei Seiten statt einer laengeren Liste (`fw_ver` 4).** Der Umschalter
   `Seite:` (neben der Controller-Zeile, damit er keine zusaetzliche Hoehe
-  kostet) schaltet zwischen **`Anzeige`** (Ports + Vergleich, wie bisher) und
-  **`Konfiguration`** um. Die Seitengruppe ist ein `VGroup` mit
-  `MUIA_Group_PageMode`; `MUI_Group.doc` sagt dazu: *"the minimum width/height
-  of a page group is the maximum minimum width/height of all its children"*.
-  Die Konfigurationsseite ist kleiner als die Anzeigeseite -- die
-  Mindestgroesse des Fensters aendert sich damit **nicht**, und nichts wird
-  unter seine Mindesthoehe gedrueckt. Genau das war noetig: der Inhalt waere
-  sonst hoeher als der Schirm (640x360), und MUI haette die Textfelder
-  unsichtbar gemacht.
+  kostet) schaltet zwischen **`Anzeige`** (Portdaten) und **`Konfiguration`**
+  um. Die Seitengruppe ist ein `VGroup` mit `MUIA_Group_PageMode`;
+  `MUI_Group.doc` sagt dazu: *"the minimum width/height of a page group is the
+  maximum minimum width/height of all its children"*. Durch den Wegfall des
+  I2C-Vergleichs ist die Anzeigeseite kuerzer geworden; die Konfigurationsseite
+  bleibt in derselben Groessenordnung. Die Mindestgroesse des Fensters aendert
+  sich damit nicht nach oben, und nichts wird unter seine Mindesthoehe
+  gedrueckt. Genau das war noetig: der Inhalt waere sonst hoeher als der Schirm
+  (640x360), und MUI haette die Textfelder unsichtbar gemacht.
 * **Die Konfigurationsseite** zeigt je Zeile eine Angabe, links die
   Beschriftung, rechts die beiden Buchsen (gleiche `MUIA_FixWidth`, damit die
-  Spalten untereinander stehen): `Geraet` (Auswahlfeld aus der Scanliste),
-  `Richtungen` (drei Schalter Stick l / Stick r / D-Pad) und `Knopf Pin 6`,
-  `Pin 9`, `Pin 5` (je ein Auswahlfeld mit allen Quellen). Oben steht der
-  Klartext beider Buchsen, z.B.
+  Spalten untereinander stehen):
+  `Geraet` (Auswahlfeld aus der Scanliste),
+  **`Beitrag`** (`analog` / `digital` / `beide` / `eigene` -- die Bedienhilfe,
+  siehe oben; sie setzt `SET_PORT_ROUTING`),
+  `Richtungen` (drei Schalter Stick l / Stick r / D-Pad),
+  `Knopf Pin 6`, `Pin 9`, `Pin 5` (je ein Auswahlfeld mit allen Quellen),
+  **`Maus Tempo`** (Cycle 1..10) und **`Totzone`** (Text `NN %` mit `-`/`+`,
+  Schritt 1). Oben steht der Klartext beider Buchsen, z.B.
   `Buchse 0: 8BitDo 64 BT -- Vorgabe Maus, wirkt Maus, Richtungen Stick links,
-  Pin6<-L1, Pin9<-R1, Pin5<-keine`. Jede Aenderung geht **sofort** als
-  `SET_DEVICE_PORT` / `SET_PORT_ROUTING` zum ESP32; danach wird
-  `GET_PORT_CONFIG` gelesen und die Felder werden auf den **echten** Zustand
-  gestellt. Bei `BAD_ARG` (z.B. doppelt vergebene Knopfquelle) steht der Grund
-  im Klartext im Fenster und im Protokoll, und die Anzeige springt auf den
-  letzten bestaetigten Stand zurueck. Die drei Knopf-Auswahlfelder tragen
-  Kurzfassungen ("Gruppe 1"), weil MUI die Knopfbreite aus dem laengsten
-  Eintrag rechnet und drei Felder in eine Spalte passen muessen; die
-  Erklaerung steht als Hinweiszeile darunter und im Klartext.
+  Pin6<-L1, Pin9<-R1, Pin5<-keine, Beitrag analog, Tempo 7/10, Totzone 12%`.
+  Bei `Beitrag = beide` sind die Einzelschalter zusaetzlich mit
+  `MUIA_Disabled` **gesperrt und gerastert** und der Hinweis darunter sagt
+  warum. Jede Aenderung geht **sofort** als
+  `SET_DEVICE_PORT` / `SET_PORT_ROUTING` / `SET_MOUSE_CFG` zum ESP32; danach
+  wird `GET_PORT_CONFIG` bzw. `GET_MOUSE_CFG` gelesen und die Felder werden auf
+  den **echten** Zustand gestellt. Bei `BAD_ARG` (z.B. doppelt vergebene
+  Knopfquelle) steht der Grund im Klartext im Fenster und im Protokoll, und die
+  Anzeige springt auf den letzten bestaetigten Stand zurueck. Die drei
+  Knopf-Auswahlfelder tragen Kurzfassungen ("Gruppe 1"), weil MUI die
+  Knopfbreite aus dem laengsten Eintrag rechnet und drei Felder in eine Spalte
+  passen muessen; die Erklaerung steht als Hinweiszeile darunter und im
+  Klartext.
+* **Die Maus-Regler werden nur beim Start und nach jeder Aenderung gelesen.**
+  `GET_MOUSE_CFG` liefert die Werte **beider** Buchsen; im 200-ms-Takt waere das
+  reiner Verkehr ohne neue Aussage. Fehlt das Faehigkeitsbit `0x0400`, sind
+  beide Regler gesperrt und der Hinweis nennt den Grund (`fw_ver 5 noetig`);
+  gesendet wird dann nichts.
 * **Die beiden Auswahlknopfe der Betriebsart** (`Buchse 0:` / `Buchse 1:`)
   bekommen ihre Eintraege als **NULL-abgeschlossenes Array** von Zeichenketten
   (`gui_modus_eintraege = { "auto", "aus", "Joystick", "Maus", NULL }`). `MUIA_Cycle_Entries`
@@ -407,13 +518,12 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   der **wirksamen** Betriebsart aus `GET_PORT_MODE`/`mode_ist`. Die beiden
   Felder sind bewusst getrennt -- `0xFF` ist keine Betriebsart. Das Array ist
   `static` und traegt eine Uebersetzungszeit-Sicherung auf den NULL-Abschluss.
-* **Vergleich direkt <-> I2C** in einem eigenen Feld ueber die volle
-  Fensterbreite: eine Zeile je Buchse (`direkt: 0x11 VOR+BTN1 roh 0x0100` neben
-  `I2C: state=0x11 level=0x6E`) mit `OK` bzw. `ABWEICHUNG (Differenz 0x..)`,
-  darunter die Rohwerte von `CIAAPRA` und `POTINP` samt Grundzustand. Das Feld
-  wird auch dann gezeichnet, wenn der ESP32 schweigt -- die direkte Abfrage
-  haengt nicht am Bus. Verglichen wird nur, wenn die I2C-Werte aus DIESEM Takt
-  stammen; sonst steht `(alte Antwort)` und kein Urteil.
+* **Rohregister-Feld** ueber die volle Fensterbreite: `CIAAPRA=0x00F4
+  POTINP=0xFF02` samt Grundzustand, darunter der Satz `Vergleich direkt/I2C nur
+  im Protokoll (DebugUART/Logdatei)`. Das Feld wird auch dann gezeichnet, wenn
+  der ESP32 schweigt -- die direkte Abfrage haengt nicht am Bus. Der Vergleich
+  selbst (mit `OK` bzw. `ABWEICHUNG`) steht ausschliesslich im Protokoll; die
+  alte Vergleichszeile im Fenster ist entfallen (siehe oben).
 * **Fenster und Schirmgroesse.** Vorgabe 640x400 mit SizeGadget; `-w`/`-h`
   aendern die Groesse, mit der Maus geht es ueber das Groessensymbol. Passt die
   gewuenschte Groesse **nicht** auf den oeffentlichen Schirm (die Workbench
@@ -505,26 +615,36 @@ Eingangsverteilung auch ohne MUI bedienen und pruefen laesst:
 
 | Befehl | Wirkung |
 |---|---|
-| `cfg` | `GET_PORT_CONFIG` lesen und **beide** Buchsen anzeigen (Geraet, Vorgabe, wirkt, Richtungen, Pin6/Pin9/Pin5) |
+| `cfg` | `GET_PORT_CONFIG` und `GET_MOUSE_CFG` lesen und **beide** Buchsen anzeigen (Geraet, Vorgabe, wirkt, Richtungen, Pin6/Pin9/Pin5, Beitrag, Tempo/Totzone) |
 | `cfg <0\|1>` | nur diese Buchse anzeigen |
 | `cfg <0\|1> mode auto\|aus\|joystick\|maus` | `SET_PORT_MODE` (`auto` = `0xFF`) |
 | `cfg <0\|1> dir alle\|keine\|stick_l\|stick_r\|dpad[\|+...]\|0xNN` | `SET_PORT_ROUTING` mit dieser Richtungsmaske |
+| `cfg <0\|1> beitrag analog\|digital\|beide` | Bedienhilfe: setzt dieselben Routing-Werte ueber `SET_PORT_ROUTING` (`analog` = Stick links + L1/R1, `digital` = D-Pad + A/B/Start, `beide` = alle Richtungen + Gruppe 1/2/3) |
+| `cfg <0\|1> mouse speed <1..10>` | `SET_MOUSE_CFG` **dieser** Buchse; Stufe 1 = langsamste, Vorgabe 7 |
+| `cfg <0\|1> mouse totzone <0..100>` | `SET_MOUSE_CFG` **dieser** Buchse; Prozent, Umrechnung ausschliesslich in der Firmware |
 | `cfg <0\|1> btn1\|btn2\|btn3 <quelle>` | `SET_PORT_ROUTING`; Quelle: `keine`, `a`, `b`, `x`, `y`, `l1`, `r1`, `l2`, `r2`, `l3`, `r3`, `start`, `select`, `home`, `gruppe1`..`3`, `g1`..`g3` oder `0`..`16` |
 | `cfg assign <index\|BDA> <0\|1>` | `SET_DEVICE_PORT`; Index aus der Liste des Befehls `a`, oder eine Adresse `AA:BB:CC:DD:EE:FF` |
 
-Nach **jeder** Aenderung wird `GET_PORT_CONFIG` neu gelesen und die Zeile
-gezeigt. Ein `BAD_ARG` (z.B. dieselbe nicht-leere Knopfquelle auf zwei
-Leitungen) wird im Klartext gemeldet, und die Anzeige bleibt auf dem echten
-Stand. Beispiel (das Abnahmebeispiel aus dem Auftrag, `make demo`, Demo 9):
+Nach **jeder** Aenderung wird `GET_PORT_CONFIG` (und bei den Maus-Werten
+`GET_MOUSE_CFG`) neu gelesen und die Zeile gezeigt. Ein `BAD_ARG` (z.B.
+dieselbe nicht-leere Knopfquelle auf zwei Leitungen) wird im Klartext gemeldet,
+und die Anzeige bleibt auf dem echten Stand. Beispiel (das Abnahmebeispiel aus
+dem Auftrag, `make demo`, Demo 9; die neuen Befehle in Demo 11):
 
 ```
 Befehl> cfg 0 mode maus
 Buchse 0: Betriebsart Maus bestaetigt.
-Buchse 0: Geraet (keines)   Vorgabe Maus     wirkt Maus     Richtungen Stick links+Stick rechts+D-Pad Pin6<-Gruppe 1 Pin9<-Gruppe 2 Pin5<-Gruppe 3
+Buchse 0: Geraet (keines)   Vorgabe Maus     wirkt Maus     Richtungen Stick links+Stick rechts+D-Pad Pin6<-Gruppe 1 Pin9<-Gruppe 2 Pin5<-Gruppe 3 Beitrag beide    Tempo 7/10, Totzone 12% (Einzelschalter gegenstandslos)
 ...
 Befehl> cfg 0 btn2 l1
 SET_PORT_ROUTING: BAD_ARG -- "L1" ist auf dieser Buchse schon einer anderen Leitung zugeordnet
   (Pin6<-L1 Pin9<-R1 Pin5<-keine). Eine nicht-leere Quelle darf nur auf EINER Leitung stehen; nichts geaendert.
+...
+Befehl> cfg 0 beitrag analog
+Buchse 0: Beitrag analog gesetzt -- Richtungen Stick links, Pin6<-L1 Pin9<-R1 Pin5<-keine.
+...
+Befehl> cfg 0 mouse speed 3
+Buchse 0: Maus-Einstellung bestaetigt -- Tempo 3/10, Totzone 12%.
 ...
 Befehl> cfg assign 1 0
 Geraet [1] "Logitech MX Anywhere" -> Buchse 0 (bestaetigt).
@@ -616,19 +736,21 @@ haengen daran und bleiben unveraendert. `-trace` hat Vorrang vor `-quiet`.
 
 | Pruefung                          | Ergebnis                                   |
 |-----------------------------------|--------------------------------------------|
-| `make test` (Lint + Testsuite)    | 158 Faelle, 1016 Checks, 0 Fehler          |
+| `make test` (Lint + Testsuite)    | 178 Faelle, 1192 Checks, 0 Fehler          |
 | `make test-san` (ASan + UBSan)    | `ERGEBNIS: OK`, keine Befunde              |
-| `make demo` (Mock, Pipe)          | 10 Durchlaeufe geprueft, `Demo: OK`        |
+| `make demo` (Mock, Pipe)          | 13 Durchlaeufe geprueft, `Demo: OK`        |
 | `make amiga` (m68k-amigaos)       | baut mit `-Wall -Wextra -Werror` fehlerfrei|
 | `make amiga-gui` (MUI, `-lmui`)   | baut mit `-Wall -Wextra -Werror` fehlerfrei|
 | `make asm` (m68k-Disassembly)     | Frame-Bauer nur `move.b` auf Puffer        |
-| Zustandshilfe gegen Mock          | Ausfall, letzte Werte, Backoff 0,5->5 s, Erholung |
-| Direktabfrage gegen Attrappe      | RECHTS/LINKS/VOR/ZURUECK/Diagonale/Ruhe, Stabilitaetstor, Feuerknoepfe, Zeilenformate, Urteil `v4_joy_abweichung` (OK / Abweichungsmaske / kein Urteil) |
+| Zustandshilfe gegen Mock          | Ausfall, letzte Werte, Backoff 0,5->5 s, Erholung, Maus-Einstellungen je Buchse |
+| Direktabfrage gegen Attrappe      | RECHTS/LINKS/VOR/ZURUECK/Diagonale/Ruhe, Stabilitaetstor, Feuerknoepfe, Zeilenformate, Urteil `v4_joy_abweichung` (OK / Abweichungsmaske / kein Urteil), Direktzeile ohne jeden I2C-Wert (`v4_joy_direkt_text`) |
+| Beitrag (Bedienhilfe)             | Tabelle Variante -> Richtungen/Knopfquellen, Rueckrichtung aus der Maske (alle acht Werte), `v4_set_port_beitrag` gegen den Mock, `eigene`/Unfug -> `V4_ERR_ARG` ohne Rahmen |
+| Maus-Einstellungen (fw_ver 5)     | Vorgaben 7/12, Setzen je Buchse, lokale Grenzen, `BAD_ARG` des Slaves, falsches Echo -> `V4_ERR_FRAME`, fw_ver 4 ohne `0x0400` -> `BAD_CMD` |
 | Registerzugriff im m68k-Code      | `move.w $dff00a`, `move.w $dff00c`, `move.b $bfe001`, `move.w $dff016` -- absolute Adressen, kein Umweg |
 | Debugausgabe im Demo              | Transaktionszeile mit Dauer + Kurzform, `-quiet` schaltet sie ab |
 | Ausgabeschicht (`tests/test_debug.c`) | Herzzeile traegt Zaehler, letzten Status, verworfene Rahmen, Wiederholungen UND den Vergleich mit `CIAAPRA`/`POTINP` -- und passt VOLLSTAENDIG in den Zeilenpuffer; ein Aufruf je Meldung; Aenderung wird gemeldet, Wiederholung nicht; Transaktionszeilen nur, wenn bestellt |
 | MUI-Objektbaum (`make mui-lint`)   | Klammerbalance, `Child`/Objekt, Tag/Wert, Klassenzugehoerigkeit, Gruppen mit Kindern, `MUIA_Cycle_Entries` als NULL-Array statt Zeichenkette, Seitengruppe (`MUIA_Group_PageMode`) -- dazu ein Selbsttest an einem kuenstlichen Baum, der jeden dieser Fehler einzeln erzeugt |
-| Protokollkonstanten gegen ESP32   | gemeinsame `#define` identisch (inkl. `0x08`/`0x09`/`0x0A`, `0x0100`/`0x0200`, `0xFF`, Richtungs- und Knopfquellen) |
+| Protokollkonstanten gegen ESP32   | gemeinsame `#define` identisch (inkl. `0x08`/`0x09`/`0x0A`, `0x0B`/`0x0C`, `0x0100`/`0x0200`/`0x0400`, `0xFF`, Richtungs- und Knopfquellen, Tempo 1..10, Totzone 0..100) |
 | `make test-m68k` (qemu, Big Endian)| **SKIP** -- `m68k-linux-gnu-gcc`/`qemu-m68k` fehlen |
 
 ## Der Absturz vom 13.10.2026 -- Befund und was dagegen getan ist

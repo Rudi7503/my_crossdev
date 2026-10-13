@@ -16,9 +16,13 @@
  *   - Geraeteliste und Verbindungszustand: CONNECT setzt CONNECTING, erst
  *     weitere GET_STATUS fuehren nach CONNECTED (so wie der ESP32 arbeitet)
  *   - GET_HID mit Name, VID/PID, Reportzaehler
+ *   - die Maus-Einstellungen (fw_ver 5): GET_MOUSE_CFG liefert Tempo/Totzone
+ *     beider Buchsen, SET_MOUSE_CFG setzt eine Buchse, ein unzulaessiger Wert
+ *     ergibt BAD_ARG ohne Aenderung
  *   - RESET gibt beide Buchsen frei, laesst die Verbindung aber stehen
  * Dazu Stoerknoepfe fuer die Testmatrix (Framing-Fehler, BUSY, Link-Ausfall,
- * alte 10-Byte-GET_INPUT-Antwort ohne Pegel).
+ * alte 10-Byte-GET_INPUT-Antwort ohne Pegel, alte Firmware ohne
+ * Eingangsverteilung bzw. ohne Maus-Einstellungen).
  *
  * Der Mock liefert die Pegel als ZUSTAND, nicht als Rechnung: er kennt die
  * Zug-Maske und den Pegel getrennt und kann damit jede der vier Kombinationen
@@ -72,6 +76,15 @@ typedef struct {
                                  * laesst sich pruefen, dass der Master fw_ver
                                  * 3 annimmt (kein Abbruch) und die neuen
                                  * Felder nicht blind setzt. */
+    int legacy_fw4;             /* Firmware OHNE Maus-Einstellungen: GET_INFO
+                                 * meldet fw_ver 4 und caps OHNE 0x0400, und
+                                 * die Befehle 0x0B/0x0C antworten BAD_CMD.
+                                 * Damit laesst sich pruefen, dass der Master
+                                 * fw_ver 4/5 annimmt und den Maus-Regler als
+                                 * nicht verfuegbar kennzeichnet, statt zu
+                                 * senden. */
+    int bad_mousecfg_echo;      /* SET_MOUSE_CFG bestaetigt andere Werte
+                                 * (einmalig) -> V4_ERR_FRAME erwartet */
 
     /* Diagnose */
     unsigned long writes;       /* verarbeitete WRITE-Frames               */
@@ -122,6 +135,10 @@ void v4_mock_set_routing (int port, uint8_t dir,
  * laesst sich der Unterschied zwischen GET_PORT_CONFIG.mode_soll und
  * GET_PORT_CONFIG.mode_ist nachstellen. V4P_MODE_AUTO ist erlaubt. */
 void v4_mock_set_mode_soll(int port, uint8_t mode_soll);
+/* Maus-Einstellungen einer Buchse (fw_ver 5), wie SET_MOUSE_CFG sie speichert.
+ * Ungueltige Werte werden ignoriert. Die Vorgaben nach v4_mock_reset() sind die
+ * der Firmware: Tempo 7, Totzone 12 % auf BEIDEN Buchsen. */
+void v4_mock_set_mouse_cfg(int port, uint8_t speed, uint8_t totzone);
 /* Geraet -> Buchse, wie SET_DEVICE_PORT es speichert. Liefert bei gueltigem
  * Index 0/1, sonst 0xFF. */
 uint8_t v4_mock_dev_port(int idx);

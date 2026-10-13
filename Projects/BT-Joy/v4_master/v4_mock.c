@@ -67,6 +67,11 @@ static uint8_t  s_mode_soll[V4P_PORT_COUNT];
 static uint8_t  s_dir[V4P_PORT_COUNT];
 static uint8_t  s_btn[V4P_PORT_COUNT][V4P_BTN_COUNT];
 
+/* Maus-Einstellungen (fw_ver 5) je Buchse -- wie sie im NVS des ESP32 liegen.
+ * Vorgaben der Firmware: Tempo 7, Totzone 12 %. */
+static uint8_t  s_mouse_speed[V4P_PORT_COUNT];
+static uint8_t  s_mouse_totzone[V4P_PORT_COUNT];
+
 static v4p_hid_t s_hid;
 
 static uint8_t  s_ans[V4P_READ_FRAME_LEN];
@@ -151,11 +156,17 @@ static void mock_fill_info(v4p_info_t *in)
 {
     memset(in, 0, sizeof(*in));
     in->proto_ver        = (uint8_t)V4P_PROTO_VER;
-    /* fw_ver 4 = Eingangsverteilung. Der Stoerknopf legacy_fw3 stellt die
-     * Fassung OHNE die neuen Befehle nach -- genau die Firmware, die der
-     * Master weiterhin annehmen muss (gleicher Rahmen, gleiche proto_ver). */
-    in->fw_ver           = v4_mock.legacy_fw3
-                               ? 3u : (uint8_t)V4P_FW_VER;
+    /* fw_ver 4 = Eingangsverteilung, fw_ver 5 = Maus-Einstellungen. Die
+     * Stoerknoepfe legacy_fw3/legacy_fw4 stellen die aelteren Fassungen nach --
+     * genau die Firmware, die der Master weiterhin annehmen muss (gleicher
+     * Rahmen, gleiche proto_ver). */
+    if (v4_mock.legacy_fw3) {
+        in->fw_ver = 3u;
+    } else if (v4_mock.legacy_fw4) {
+        in->fw_ver = 4u;
+    } else {
+        in->fw_ver = (uint8_t)V4P_FW_VER;
+    }
     in->write_frame_len  = (uint8_t)V4P_WRITE_FRAME_LEN;
     in->read_frame_len   = (uint8_t)V4P_READ_FRAME_LEN;
     /* 0 = "kein Dateiweg". Das ist eine Faehigkeitsaussage, kein Platzhalter:
@@ -173,6 +184,11 @@ static void mock_fill_info(v4p_info_t *in)
     if (!v4_mock.legacy_fw3) {
         in->caps = (uint16_t)(in->caps | V4P_CAP_PORT_ROUTING
                               | V4P_CAP_DEVICE_PORT);
+    }
+    /* Maus-Einstellungen gibt es erst mit fw_ver 5 -- legacy_fw4 meldet die
+     * Eingangsverteilung, aber OHNE dieses Bit. */
+    if (!v4_mock.legacy_fw3 && !v4_mock.legacy_fw4) {
+        in->caps = (uint16_t)(in->caps | V4P_CAP_MOUSE_CFG);
     }
 }
 
@@ -472,6 +488,77 @@ static void mock_dispatch(uint8_t cmd, uint8_t seq, const uint8_t *pay,
         memcpy(p, pay, (size_t)V4P_SDP_PAYLOAD_LEN);
         mock_answer(cmd, seq, V4P_ST_OK, V4P_FLAG_NONE, p,
                     (uint8_t)V4P_SDP_PAYLOAD_LEN);
+        return;
+    }
+
+    /*
+     * Maus-Einstellungen (fw_ver 5). Bei legacy_fw3/legacy_fw4 sind sie NICHT
+     * vorhanden -- dann antwortet der Mock wie eine alte Firmware mit BAD_CMD,
+     * und der Master darf sie nicht als Bestaetigung deuten.
+     */
+    case V4P_CMD_GET_MOUSE_CFG: {
+        v4p_mousecfg_t c;
+        uint8_t        p[V4P_MCFG_PAYLOAD_LEN];
+
+        if (v4_mock.legacy_fw3 || v4_mock.legacy_fw4) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_CMD);
+            return;
+        }
+        memset(&c, 0, sizeof(c));
+        c.speed[0]   = s_mouse_speed[0];
+        c.totzone[0] = s_mouse_totzone[0];
+        c.speed[1]   = s_mouse_speed[1];
+        c.totzone[1] = s_mouse_totzone[1];
+        (void)v4p_enc_get_mouse_cfg(p, &c);
+        mock_answer(cmd, seq, V4P_ST_OK, V4P_FLAG_NONE, p,
+                    (uint8_t)V4P_MCFG_PAYLOAD_LEN);
+        return;
+    }
+
+    case V4P_CMD_SET_MOUSE_CFG: {
+        uint8_t port;
+        uint8_t speed;
+        uint8_t totzone;
+        uint8_t p[V4P_SMC_PAYLOAD_LEN];
+        v4p_mousecfg_t c;
+
+        if (v4_mock.legacy_fw3 || v4_mock.legacy_fw4) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_CMD);
+            return;
+        }
+        if (plen < (uint8_t)V4P_SMC_PAYLOAD_LEN) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_ARG);
+            return;
+        }
+        port    = pay[V4P_SMC_OFF_PORT];
+        speed   = pay[V4P_SMC_OFF_SPEED];
+        totzone = pay[V4P_SMC_OFF_TOTZONE];
+        /* ERST pruefen, DANN uebernehmen: ein abgelehnter Wert darf die
+         * laufende Einstellung nicht anfassen. */
+        if (port >= V4P_PORT_COUNT || !v4p_mouse_speed_valid(speed)
+            || !v4p_mouse_totzone_valid(totzone)) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_ARG);
+            return;
+        }
+        s_mouse_speed[port]   = speed;
+        s_mouse_totzone[port] = totzone;
+
+        memset(&c, 0, sizeof(c));
+        c.speed[0]   = s_mouse_speed[0];
+        c.speed[1]   = s_mouse_speed[1];
+        c.totzone[0] = s_mouse_totzone[0];
+        c.totzone[1] = s_mouse_totzone[1];
+        (void)v4p_enc_set_mouse_cfg(p, port, &c);
+        if (v4_mock.bad_mousecfg_echo) {
+            v4_mock.bad_mousecfg_echo = 0;
+            /* Stoerknopf: die Bestaetigung passt nicht zur Anforderung. */
+            p[V4P_SMC_OFF_SPEED] =
+                (uint8_t)((speed < (uint8_t)V4P_MOUSE_SPEED_MAX)
+                              ? (speed + 1u)
+                              : (speed - 1u));
+        }
+        mock_answer(cmd, seq, V4P_ST_OK, V4P_FLAG_NONE, p,
+                    (uint8_t)V4P_SMC_PAYLOAD_LEN);
         return;
     }
 
@@ -901,6 +988,13 @@ void v4_mock_reset(void)
     s_btn[1][1]    = (uint8_t)V4P_TASTE_GRUPPE2;
     s_btn[1][2]    = (uint8_t)V4P_TASTE_GRUPPE3;
 
+    /* Maus-Einstellungen: die Vorgaben der Firmware -- Tempo 7, Totzone 12 %
+     * auf beiden Buchsen. */
+    s_mouse_speed[0]   = (uint8_t)V4P_MOUSE_SPEED_VORGABE;
+    s_mouse_speed[1]   = (uint8_t)V4P_MOUSE_SPEED_VORGABE;
+    s_mouse_totzone[0] = (uint8_t)V4P_MOUSE_TOTZONE_VORGABE;
+    s_mouse_totzone[1] = (uint8_t)V4P_MOUSE_TOTZONE_VORGABE;
+
     memset(&s_hid, 0, sizeof(s_hid));
     s_hid.kind      = V4P_HID_KIND_NONE;
     s_hid.transport = V4P_HID_TR_BREDR;
@@ -977,6 +1071,18 @@ void v4_mock_set_routing(int port, uint8_t dir,
     s_btn[port][0] = btn[0];
     s_btn[port][1] = btn[1];
     s_btn[port][2] = btn[2];
+}
+
+void v4_mock_set_mouse_cfg(int port, uint8_t speed, uint8_t totzone)
+{
+    if (port < 0 || port >= (int)V4P_PORT_COUNT) {
+        return;
+    }
+    if (!v4p_mouse_speed_valid(speed) || !v4p_mouse_totzone_valid(totzone)) {
+        return;
+    }
+    s_mouse_speed[port]   = speed;
+    s_mouse_totzone[port] = totzone;
 }
 
 uint8_t v4_mock_dev_port(int idx)
