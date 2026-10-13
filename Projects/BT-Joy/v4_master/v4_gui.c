@@ -3894,13 +3894,10 @@ int main(int argc, char **argv)
             s_devport_ok = v4_info_has_caps(&info, V4P_CAP_DEVICE_PORT);
             /* Die Maus-Einstellungen sind eine EIGENE Faehigkeit (fw_ver 5).
              * Fehlt das Bit, bleiben die Regler gesperrt -- es wird nichts
-             * gesendet, was der Slave mit BAD_CMD abweisen wuerde. */
+             * gesendet, was der Slave mit BAD_CMD abweisen wuerde. Gelesen
+             * werden sie im langsamen Takt (der erste Takt ist vollstaendig),
+             * also VOR der ersten Anzeige des Fensters. */
             s_mousecfg_ok = v4_info_has_caps(&info, V4P_CAP_MOUSE_CFG);
-            if (s_mousecfg_ok != 0) {
-                /* Einmal beim Start lesen (nicht im Takt): die Werte aendern
-                 * sich nur, wenn jemand sie aendert. */
-                gui_mouse_read(1);
-            }
             if (check != V4P_ST_OK) {
                 gui_msg("[ping] %s: Slave meldet proto=%u write=%u read=%u; "
                         "erwartet proto=%u write=%u read=%u\n",

@@ -291,34 +291,35 @@ Die dritte Zeile ist der Befund, für den die Pegel überhaupt über die Leitung
 gehen: ohne sie sieht "kein Pull-up" wie "nichts gedrückt" aus. **Die Konsole**
 markiert den Widerspruch je Leitung und meldet ihn zusätzlich als `WARNUNG: ...`
 (`v4p_level_missing_pullup()` / `v4p_level_impossible()` in `v4_proto.c`).
-**Die MUI-Oberflaeche zeigt `Zug`/`Pegel` seit dem 14.10.2026 nicht mehr im
-Fenster** -- dort stehen nur die direkten Portdaten (siehe unten). Der
-Widerspruch wird von ihr weiterhin **einmalig ins Protokoll** (DebugUART,
-Logdatei, Logfeld) geschrieben, damit die Diagnose nicht verloren geht.
+**Abschnitt NUR fuer die Konsole:** die MUI-Oberflaeche liest `GET_INPUT`
+seit dem 14.10.2026 **ueberhaupt nicht mehr** -- kein `Zug`, kein `Pegel`, kein
+Vergleich. Ihre Eingangsquelle sind ausschliesslich die Register der V4 (siehe
+unten). Die Konsole ist der Notfallweg und das Diagnosewerkzeug und behaelt
+`GET_INPUT` samt Widerspruchspruefung.
 
-**Keine Ableitung mehr:** früher zeigte die Anzeige hier einen aus dem Zug
+**Keine Ableitung mehr:** frueher zeigte die Konsole hier einen aus dem Zug
 *abgeleiteten* Ersatzwert ("Pegel (erwartet)"). Seit die Firmware die Pegel
 mitschickt, gibt es diesen Ersatz nicht mehr -- eine Zahl in der Pegelspalte ist
-gemessen. Antwortet ein alter ESP32 mit der 10-Byte-Fassung, nennt der Vergleich
-im Protokoll `level=unbekannt` und keine Zahl.
+gemessen. Antwortet ein alter ESP32 mit der 10-Byte-Fassung, nennt die Konsole
+`level` nicht und zeigt keine Zahl, und die Oberflaeche merkt davon nichts: sie
+fragt `GET_INPUT` gar nicht erst.
 
 ## Direkt aus der Hardware -- der zweite Massstab
 
-Die V4 kann ihre Joystick-Anschluesse **selbst** lesen. Genau das zeigt die
-MUI-Oberflaeche im Fenster (`v4_joyport.c`, geprueft in `tests/test_joyport.c`).
-Der Vergleich mit der I2C-Antwort ist der zweite Massstab:
+Die V4 kann ihre Joystick-Anschluesse **selbst** lesen. Das ist seit dem
+14.10.2026 die **einzige** Quelle fuer das, was der Controller tut
+(`v4_joyport.c`, geprueft in `tests/test_joyport.c`):
 
-* I2C = was der **ESP32** meldet (`GET_INPUT`: Zug, Pegel),
-* direkt = was die **V4** an ihren eigenen Registern sieht.
+* **direkt** = was die **V4** an ihren eigenen Registern sieht
+  (`JOY0DAT`/`JOY1DAT`, `CIAAPRA`/`POTINP`) -- Grundlage von Fenster und
+  Protokoll,
+* I2C (`GET_INPUT`) wird von der Oberflaeche **nicht mehr abgefragt**. Es gibt
+  deshalb auch keinen Vergleich und kein `ABWEICHUNG` mehr -- weder im Fenster
+  noch im Protokoll: ohne die zweite Quelle gibt es nichts zu vergleichen.
 
-**Im Fenster stehen seit dem 14.10.2026 nur noch die direkten Werte** -- der
-Benutzer will sehen, was ueber den Joystick-Port **ankommt**. Der Vergleich
-(mit `OK` bzw. `ABWEICHUNG`) bleibt als Diagnose im **Protokoll**: er geht in
-die eine Herzzeile je Sekunde und sofort als eigene Zeile, wenn sich Richtung,
-Feuerknopf oder Urteil aendern (`v4_joy_debug_text` / `v4_joy_herz_text`,
-Praefix `[vergleich]`). Stimmen beide Quellen ueberein, ist die Kette
-ESP32 -> DB9 -> V4 in Ordnung; weichen sie ab, sagt der danebenstehende Rohwert,
-wo zu suchen ist.
+Die Registerwerte gehen in die **eine Herzzeile je Sekunde** und sofort als
+eigene Zeile (`[direkt]`), wenn sich Richtung oder Feuerknopf aendern
+(`v4_joy_direkt_protokoll_text`).
 
 | Register   | Adresse   | Bedeutung                                                    |
 |------------|-----------|--------------------------------------------------------------|
@@ -348,20 +349,15 @@ Roh: Zaehler=0x0100 (stabil=ja)
 CIAAPRA=0x0074 POTINP=0xFF02
 ```
 
-Und so sieht die **Vergleichszeile im Protokoll** aus (DebugUART/Logdatei):
+Und so sieht dieselbe Aussage im **Protokoll** aus (DebugUART/Logdatei,
+`v4_joy_direkt_protokoll_text`):
 
 ```
-Buchse 0  direkt: 0x00 -   roh 0x085C   I2C: state=0x00 level=0x7F   OK
-Buchse 1  direkt: 0x11 VOR+BTN1   roh 0x0100   I2C: state=0x11 level=0x6E   OK
-CIAAPRA=0x00F4  POTINP=0xFF02   Grundzustand CIAAPRA=0x00F4 POTINP=0xFF02
+[direkt] Buchse0 direkt=0x00 - stabil=ja roh=0x085C | Buchse1 direkt=0x18 RECHTS+BTN1 stabil=ja roh=0x0002 | CIAAPRA=0x00F4 POTINP=0xFF02
 ```
 
-Bei Abweichung steht `ABWEICHUNG (Differenz 0x..)` -- die Differenzmaske sagt
-unmittelbar, welche Leitung gemeint ist:
-
-```
-Buchse 1  direkt: 0x08 RECHTS   roh 0x0003   I2C: state=0x0A level=0x75   ABWEICHUNG (Differenz 0x02)
-```
+Im Ruhezustand steht dieselbe Zeile ohne Praefix in der Herzzeile (eine Zeile je
+Sekunde). Einen I2C-Vergleich gibt es nicht mehr.
 
 **Zwei Abtastungen je Buchse.** Der Zaehler der V4 liefert beim Umschalten
 Zwischenwerte (`$0003`, `$0200` im Mitschnitt vom 13.10.). Deshalb wird jede
@@ -377,8 +373,8 @@ Bit welche Taste ist, ist also offen. Deshalb gilt: als gedrueckt zaehlt, was
 sich vom **beim Start gemerkten** Wert unterscheidet -- in beide Richtungen
 (aktiv low oder aktiv high). Die Rohwerte beider Register stehen immer dabei,
 damit sich die Belegung von Hand ablesen laesst. `BTN3` (Pin 5) hat keine
-bekannte direkte Quelle und wird beim Vergleich **ausgelassen** -- ein
-"ABWEICHUNG" daraus waere keine Messung.
+bekannte direkte Quelle und wird ausdruecklich als "nicht lesbar" gefuehrt --
+eine erfundene Messung waere schlimmer als die Luecke.
 
 **Wo die Dekodierung vom Wortlaut des Auftrags abweicht** (und warum das
 Absicht ist): der Auftrag nennt `VOR = ((j >> 1) ^ j) & 0x0100` und
@@ -417,14 +413,16 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   VID:PID, Report-ID/-laenge, gezaehlte Reports, Batterie (`GET_HID`) -- in
   DREI Zeilen, damit Name, Art und VID:PID auch bei 640 Pixel Fensterbreite
   sichtbar bleiben.
-* **Der erste Takt ist ein vollstaendiger Takt** (`GET_PORT_MODE`, `GET_INPUT`,
-  `GET_STATUS`, `GET_HID`), genau wie die Konsole ihren "Anfangszustand"
-  sofort holt. Vorher wurde `GET_STATUS`/`GET_HID` nur in jedem fuenften Takt
-  abgefragt, und der erste Takt war keiner: in der Zustands- und der
-  Controller-Zeile standen dann nur die Anfangstexte (`" "` und `"Controller:
-  (wird gelesen)"`) -- die Felder sahen leer aus, obwohl ein Controller
-  verbunden war. Im Mitschnitt vom 13.10.2026 lagen dazwischen 25 s
-  (`[mui] Fenster offen` 17:37:49 -> erste `[status]`-Zeile 17:38:14).
+* **Der erste Takt ist ein vollstaendiger Takt** (`GET_STATUS`,
+  `GET_PORT_MODE`, `GET_HID`, `GET_PORT_CONFIG`, `GET_MOUSE_CFG`), genau wie
+  die Konsole ihren "Anfangszustand" sofort holt. Vorher wurde
+  `GET_STATUS`/`GET_HID` nur in jedem fuenften Takt abgefragt, und der erste
+  Takt war keiner: in der Zustands- und der Controller-Zeile standen dann nur
+  die Anfangstexte (`" "` und `"Controller: (wird gelesen)"`) -- die Felder
+  sahen leer aus, obwohl ein Controller verbunden war. Im Mitschnitt vom
+  13.10.2026 lagen dazwischen 25 s (`[mui] Fenster offen` 17:37:49 -> erste
+  `[status]`-Zeile 17:38:14). `GET_INPUT` gehoert **nicht** dazu: die
+  Eingangsquelle sind die Register der V4.
 * **Eine erkannte Verbindung fuellt die Geraeteliste mit.** Steht laut
   `GET_STATUS` eine Verbindung und ist die Liste noch leer, holt der Takt sie
   genau einmal automatisch (`gui_liste_auto`/`act_scan_start(1)`, dieselbe
@@ -450,13 +448,10 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   (`JOY0DAT`/`JOY1DAT`) und die Rohwerte der Feuerregister
   (`CIAAPRA`/`POTINP`). Quelle ist ausschliesslich `v4_joyport.c`
   (`v4_joy_direkt_text`). **Die Sicht des ESP32** (`state0`/`state1`,
-  `level0`/`level1`) und der Vergleich `direkt <-> I2C` samt `ABWEICHUNG` stehen
-  **nicht mehr im Fenster** -- der Benutzer will sehen, was ueber den
-  Joystick-Port **ankommt**. Der Vergleich bleibt als Diagnose im **Protokoll**
-  (DebugUART/Logdatei, eine Zeile je Sekunde bzw. sofort bei Aenderung), wo er
-  gebraucht wird. Nebeneffekt: die dauerhafte `ABWEICHUNG` auf Buchse 0 (das
-  Maus-Register `$DFF00A` = `APOLLO_MOUSE_GET_Y` -- kein Fehler, aber im Fenster
-  irrefuehrend) verschwindet aus dem Fenster.
+  `level0`/`level1`) und ein Vergleich `direkt <-> I2C` existieren **nicht
+  mehr** -- weder im Fenster noch im Protokoll, denn die Oberflaeche holt
+  `GET_INPUT` gar nicht mehr. Die direkten Registerwerte gehen als
+  `[direkt]`-Zeile bzw. in der Herzzeile ins Protokoll (DebugUART/Logdatei).
 * Die **wirksame Betriebsart** steht weiterhin daneben (`wirkt: <Modus>` bzw.
   `Modus <...> (ESP32)`), denn sie beschreibt, was der ESP32 an den Leitungen
   **tut** -- das ist eine Einstellung, kein Portdatum. Ist die Angabe nicht da
@@ -467,8 +462,8 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   kostet) schaltet zwischen **`Anzeige`** (Portdaten) und **`Konfiguration`**
   um. Die Seitengruppe ist ein `VGroup` mit `MUIA_Group_PageMode`;
   `MUI_Group.doc` sagt dazu: *"the minimum width/height of a page group is the
-  maximum minimum width/height of all its children"*. Durch den Wegfall des
-  I2C-Vergleichs ist die Anzeigeseite kuerzer geworden; die Konfigurationsseite
+  maximum minimum width/height of all its children"*. Durch den Wegfall der
+  Eingangsabfrage ist die Anzeigeseite kuerzer geworden; die Konfigurationsseite
   bleibt in derselben Groessenordnung. Die Mindestgroesse des Fensters aendert
   sich damit nicht nach oben, und nichts wird unter seine Mindesthoehe
   gedrueckt. Genau das war noetig: der Inhalt waere sonst hoeher als der Schirm
@@ -497,11 +492,17 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   Knopfbreite aus dem laengsten Eintrag rechnet und drei Felder in eine Spalte
   passen muessen; die Erklaerung steht als Hinweiszeile darunter und im
   Klartext.
-* **Die Maus-Regler werden nur beim Start und nach jeder Aenderung gelesen.**
-  `GET_MOUSE_CFG` liefert die Werte **beider** Buchsen; im 200-ms-Takt waere das
-  reiner Verkehr ohne neue Aussage. Fehlt das Faehigkeitsbit `0x0400`, sind
-  beide Regler gesperrt und der Hinweis nennt den Grund (`fw_ver 5 noetig`);
-  gesendet wird dann nichts.
+* **Die Maus-Regler werden im langsamen Takt und nach jeder Aenderung
+  gelesen.** `GET_MOUSE_CFG` liefert die Werte **beider** Buchsen; in jedem
+  200-ms-Takt waere das reiner Verkehr ohne neue Aussage. Fehlt das
+  Faehigkeitsbit `0x0400`, sind beide Regler gesperrt und der Hinweis nennt den
+  Grund (`fw_ver 5 noetig`); gesendet wird dann nichts.
+* **Keine Controller-Eingabewerte ueber I2C.** `GET_INPUT` wird von der
+  Oberflaeche **nicht** mehr abgefragt -- weder fuer die Anzeige noch fuer einen
+  Vergleich. Was der Controller tut, steht ausschliesslich in den Registern der
+  V4 (jeder Takt, ohne Bus). Alles, was im langsamen Takt ueber I2C laeuft, ist
+  Verbindungszustand, Geraeteinfo oder Einstellung: `GET_STATUS`,
+  `GET_PORT_MODE`, `GET_HID`, `GET_PORT_CONFIG`, `GET_MOUSE_CFG`.
 * **Die beiden Auswahlknopfe der Betriebsart** (`Buchse 0:` / `Buchse 1:`)
   bekommen ihre Eintraege als **NULL-abgeschlossenes Array** von Zeichenketten
   (`gui_modus_eintraege = { "auto", "aus", "Joystick", "Maus", NULL }`). `MUIA_Cycle_Entries`
@@ -519,11 +520,10 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   Felder sind bewusst getrennt -- `0xFF` ist keine Betriebsart. Das Array ist
   `static` und traegt eine Uebersetzungszeit-Sicherung auf den NULL-Abschluss.
 * **Rohregister-Feld** ueber die volle Fensterbreite: `CIAAPRA=0x00F4
-  POTINP=0xFF02` samt Grundzustand, darunter der Satz `Vergleich direkt/I2C nur
-  im Protokoll (DebugUART/Logdatei)`. Das Feld wird auch dann gezeichnet, wenn
-  der ESP32 schweigt -- die direkte Abfrage haengt nicht am Bus. Der Vergleich
-  selbst (mit `OK` bzw. `ABWEICHUNG`) steht ausschliesslich im Protokoll; die
-  alte Vergleichszeile im Fenster ist entfallen (siehe oben).
+  POTINP=0xFF02` samt Grundzustand, darunter der Satz `Direkt aus den Registern
+  der V4 (JOY0DAT/JOY1DAT, CIAAPRA/POTINP) -- die einzige Eingangsquelle.` Das
+  Feld wird auch dann gezeichnet, wenn der ESP32 schweigt -- die direkte
+  Abfrage haengt nicht am Bus. Einen I2C-Vergleich gibt es nicht mehr.
 * **Fenster und Schirmgroesse.** Vorgabe 640x400 mit SizeGadget; `-w`/`-h`
   aendern die Groesse, mit der Maus geht es ueber das Groessensymbol. Passt die
   gewuenschte Groesse **nicht** auf den oeffentlichen Schirm (die Workbench
@@ -588,10 +588,11 @@ Workbench eingefroren.
 * **Wachsender Abstand:** nach einem Fehlversuch wird mit 0,5 s -> 1 s -> 2 s ->
   5 s (danach bleibt es bei 5 s) erneut gefragt. Ein fehlender Partner erzeugt so
   keinen Dauerlauf auf dem Bus.
-* **Der Takt:** `GET_PORT_MODE`/`GET_INPUT` alle 200 ms, jeder fuenfte Takt
-  zusaetzlich `GET_STATUS`/`GET_HID`. Live ist abschaltbar; dann fragt nur noch
-  "Aktualisieren" ab. Gibt es kein `timer.device`, wird nach jedem Ereignis
-  gezeichnet (Fallback ohne Takt).
+* **Der Takt:** die Register der V4 in JEDEM Takt (200 ms, ohne Bus). I2C nur
+  im langsamen Takt (jeder fuenfte, rund 1 s): `GET_STATUS`, `GET_PORT_MODE`,
+  `GET_HID`, `GET_PORT_CONFIG`, `GET_MOUSE_CFG` -- keine Eingabewerte. Live ist
+  abschaltbar; dann fragt nur noch "Aktualisieren" ab. Gibt es kein
+  `timer.device`, wird nach jedem Ereignis gezeichnet (Fallback ohne Takt).
 * **Beenden:** die Plattform wird geschlossen, danach MUI abgebaut. Es gibt
   keinen zweiten Faden, der noch auf den Bus zugreifen koennte.
 
@@ -664,8 +665,8 @@ nicht.
 | Startbanner                                | Name, Version, Datum, Uhrzeit, Logdatei, I2C-Adresse | einmal |
 | Plattform                                  | `[plattform] v4_plat_open -> 0 (OK)`    | vor/nach dem Oeffnen |
 | Register beim Start                        | `[direkt] Register beim Start: JOY0DAT=0x085C JOY1DAT=0x0000 CIAAPRA=0x00F4 POTINP=0xFF02` | einmal (Grundzustand der Feuerleitungen) |
-| **Vergleich direkt <-> I2C (Ruhe)**        | `[herz] takt=12s aufrufe=144 tx_frames=... geprueft=137 fehlerhaft=0 fehlerserie=0 letzter_status=OK \| Buchse0 direkt=0x00 stabil=ja roh=0x085C I2C state=0x00 level=0x7F OK \| Buchse1 ... \| CIAAPRA=0x00F4 POTINP=0xFF02` | **einmal je Sekunde** (in der Herzzeile) |
-| **Vergleich direkt <-> I2C (Aenderung)**   | `[vergleich] Buchse0 direkt=0x04 stabil=ja roh=0x085C I2C state=0x00 level=0x7F ABWEICHUNG(Diff 0x04) \| ...` | **sofort**, wenn sich Richtung, Feuerknopf oder Urteil aendern |
+| **Registerwerte (Ruhe)**                   | `[herz] takt=12s aufrufe=144 tx_frames=... geprueft=137 fehlerhaft=0 fehlerserie=0 letzter_status=OK \| Buchse0 direkt=0x00 - stabil=ja roh=0x085C \| Buchse1 direkt=0x18 RECHTS+BTN1 stabil=ja roh=0x0002 \| CIAAPRA=0x00F4 POTINP=0xFF02` | **einmal je Sekunde** (in der Herzzeile) |
+| **Registerwerte (Aenderung)**              | `[direkt] Buchse0 direkt=0x04 VOR stabil=ja roh=0x085C \| Buchse1 ... \| CIAAPRA=0x00F4 POTINP=0xFF02` | **sofort**, wenn sich Richtung oder Feuerknopf aendern |
 | Erster PING                                | `[ping] ...`                            | einmal |
 | **Jede I2C-Transaktion**                   | `[i2c] cmd=GET_INPUT seq=12 status=OK len=12 dauer=2900us \| state0=... ` | je Transaktion -- **nur mit `-trace`** |
 | Antwort-Kopf                               | `[info] proto=3 ...`                    | einmal |
@@ -709,8 +710,8 @@ inklusive Wiederholungen.
 
 | Betrieb                        | Zeilen je Sekunde | was                                        |
 |--------------------------------|-------------------|---------------------------------------------|
-| Ruhezustand (nichts passiert)  | **1**             | die Herzzeile: Zaehler, letzter Status, verworfene Rahmen, die Rahmenpruefung (`geprueft`/`fehlerhaft`/`fehlerserie`), Wiederholungen **und** der Vergleich direkt/I2C beider Buchsen mit `CIAAPRA`/`POTINP` |
-| Aenderung                      | **+1 je Aenderung** | sofort eine fertige Zeile: Richtung, Feuerknopf, Buchsenmodus, Sitzvergabe, Fehler, Verbindungsverlust/-erholung, Abweichung direkt/I2C |
+| Ruhezustand (nichts passiert)  | **1**             | die Herzzeile: Zaehler, letzter Status, verworfene Rahmen, die Rahmenpruefung (`geprueft`/`fehlerhaft`/`fehlerserie`), Wiederholungen **und** die direkten Registerwerte beider Buchsen mit `CIAAPRA`/`POTINP` |
+| Aenderung                      | **+1 je Aenderung** | sofort eine fertige Zeile: Richtung, Feuerknopf, Buchsenmodus, Sitzvergabe, Fehler, Verbindungsverlust/-erholung |
 | `-trace`                       | ~100 und mehr     | zusaetzlich jede Transaktion und jeden Schritt |
 
 Vorher waren es im ruhigen Betrieb **rund 18 Zeilen je Sekunde** (10
@@ -719,12 +720,19 @@ Takt) mit 150 bis 300 Zeichen je Zeile -- bei 115200 Baud ist das der groesste
 Einzelposten auf dem UART. Jetzt ist es **eine** Zeile je Sekunde, und die
 enthaelt alles, was man zum Mitlesen braucht.
 
-**Warum der Vergleich in der Herzzeile steht:** er ist der Zweck des Programms,
-und er soll auch im Ruhezustand sichtbar bleiben -- aber nicht fuenfmal je
-Sekunde. `v4_dbg_herz_zusatz()` haengt ihn an DIESELBE Zeile an, statt eine
-zweite aufzumachen (Einzelheiten in `v4_debug.h`). Zusaetzlich geht sofort eine
-eigene Zeile heraus, wenn sich der direkte Stand oder das Urteil aendert -- denn
-eine Abweichung ist genau das Ereignis, auf das man wartet.
+**I2C-Abfragen der Oberflaeche:** in JEDEM Takt (200 ms) wird nur noch die
+Registerabfrage der V4 gemacht -- die kostet **keinen** Bus. Ueber I2C laeuft
+im langsamen Takt (rund 1 s) `GET_STATUS`, `GET_PORT_MODE`, `GET_HID`,
+`GET_PORT_CONFIG` und `GET_MOUSE_CFG`; waehrend einer Suche kommt alle drei
+Takte `DEV_COUNT` dazu. `GET_INPUT` ist **entfallen** -- es war die haeufigste
+Transaktion (vorher zwei Befehle je 200-ms-Takt, also rund zehn je Sekunde).
+
+**Warum die Registerwerte in der Herzzeile stehen:** sie sind die Aussage der
+Oberflaeche und sollen auch im Ruhezustand sichtbar bleiben -- aber nicht
+fuenfmal je Sekunde. `v4_dbg_herz_zusatz()` haengt sie an DIESELBE Zeile an,
+statt eine zweite aufzumachen (Einzelheiten in `v4_debug.h`). Zusaetzlich geht
+sofort eine eigene Zeile (`[direkt]`) heraus, wenn sich Richtung oder
+Feuerknopf aendern -- das ist das Ereignis, auf das man wartet.
 
 **`-quiet` und `-trace`:** Fuer die Oberflaeche ist `-quiet` die **Vorgabe**:
 Transaktionszeilen nur auf ausdrueckliche Anforderung (`-trace`). Die Konsole
@@ -732,23 +740,84 @@ behaelt ihre Vorgabe "Transaktionszeilen an", weil dort die Zeile je
 Transaktion die Arbeitsgrundlage ist -- die Demo-Pruefungen in `make demo`
 haengen daran und bleiben unveraendert. `-trace` hat Vorrang vor `-quiet`.
 
+## Geraetesuche (Scan) -- Ablauf und ein Firmware-Befund
+
+Der Knopf "Neu suchen" (und die automatische Liste nach einer erkannten
+Verbindung) schickt `SCAN_START` mit **einem** Fenster (`continuous = 0`); die
+Fensterlaenge wird aus der Wartezeit gerechnet (der Master schickt sie in
+1,28-s-Einheiten). Danach fragt der Takt `DEV_COUNT` -- **alle drei Takte**,
+damit der Bus ruhig bleibt -- und holt bei einem Treffer die ganze Liste mit
+`DEV_GET`. Die Suche laeuft asynchron: das Fenster ist 30 s, die harte
+Obergrenze 60 s. Ist das Fenster abgelaufen und die Liste leer, aber
+`GET_STATUS` meldet **"Scan laeuft"**, wird **nachgefasst** statt "keine
+Geraete" zu behaupten; erst wenn die Gegenstelle nicht mehr sucht (oder die
+harte Obergrenze erreicht ist), steht die Meldung da -- mit dem Stand der
+Gegenstelle:
+
+```
+[scan] keine Geraete gefunden (Scan der Gegenstelle beendet, Generation 0).
+       Ist der Controller eingeschaltet und in Reichweite?
+```
+
+Vorher waren es 40 Takte (8 s). Eine BluePad32-Suche braucht deutlich laenger
+(im Mitschnitt vom 13.10.2026 lagen 25 s zwischen `SCAN_START` und der ersten
+Statusantwort), und die Oberflaeche gab auf, bevor die Gegenstelle Ergebnisse
+haben konnte.
+
+### Der Befund vom 14.10.2026: die Ursache lag in der FIRMWARE
+
+Im Mitschnitt `V4_ESP32_BT_Joy/logs/monitor_session.log` steht (Zeitstempel
+553137/553140 ms):
+
+```
+I (553137) bt_mgr: DIAG merge: num=1 liste=0x3ffbb1c4
+I (553138) bt_mgr: DIAG fund 0: e4:17:d8:5f:e6:c9 transport=1 usage=0 name=8BitDo 64 BT
+W (553140) bt_mgr: DIAG tm: vorher=0 nachher=0 idx=255
+I (553151) bt_mgr: Scan: 1 Fund(e), Tabelle jetzt 0
+```
+
+Der ESP32 **findet** das Pad, traegt es aber nicht in seine Tabelle ein:
+`vorher=0 nachher=0 idx=255`. Ursache in `V4_ESP32_BT_Joy_BP32/main/bt_manager.c`,
+`table_merge()`: `find_index_by_bda()` liefert bei "nicht gefunden"
+`V4P_BT_NO_INDEX` = **`0xFF` = 255** (Zeile 158), der Aufrufer prueft aber
+`if (idx < 0)` (Zeile 202). 255 ist nicht kleiner als 0 -- der Zweig fuer ein
+**neues** Geraet wird uebersprungen, `s_dev_count` bleibt 0, und danach wird
+`s_devs[255]` beschrieben, obwohl `s_devs` nur `BT_MGR_MAX_DEVICES = 8`
+Eintraege hat (**Schreibzugriff ausserhalb des Feldes**).
+
+Folge fuer die V4: `DEV_COUNT` antwortet korrekt mit **0** (die Tabelle ist
+leer), `GET_STATUS` meldet `Geraete 0` und `Scan-Generation 0` -- die
+Oberflaeche hat also recht mit "keine Geraete gefunden". Der Fehler liegt
+**nicht** in der Oberflaeche und nicht am Scan-Weg: die V4 schickt
+`SCAN_START`, der ESP32 geht in `Zustand 1 (SCANNING)`, und `DEV_COUNT` wird
+waehrend der ganzen Suche abgefragt (`letzter_status=OK (DEV_COUNT)`).
+
+Der Fix gehoert in die Firmware (Vorschlag, dort NICHT von der V4-Seite
+geaendert): in `find_index_by_bda()` `-1` liefern **oder** in `table_merge()`
+`if (idx == V4P_BT_NO_INDEX)` pruefen (und die Adresse vor dem Schreiben gegen
+`BT_MGR_MAX_DEVICES` begrenzen). Zu pruefen sind auch die uebrigen Aufrufer von
+`find_index_by_bda_locked()`: sie vergleichen ebenfalls `< 0`, und
+`bt_mgr_connected_index()` kann dadurch 255 liefern -- was zufaellig wieder
+`V4P_NO_INDEX` (0xFF) ergibt und deshalb bisher nicht auffiel.
+
 ## Nachweis (Stand 14.10.2026)
 
 | Pruefung                          | Ergebnis                                   |
 |-----------------------------------|--------------------------------------------|
-| `make test` (Lint + Testsuite)    | 178 Faelle, 1192 Checks, 0 Fehler          |
+| `make test` (Lint + Testsuite)    | 182 Faelle, 1216 Checks, 0 Fehler          |
 | `make test-san` (ASan + UBSan)    | `ERGEBNIS: OK`, keine Befunde              |
 | `make demo` (Mock, Pipe)          | 13 Durchlaeufe geprueft, `Demo: OK`        |
 | `make amiga` (m68k-amigaos)       | baut mit `-Wall -Wextra -Werror` fehlerfrei|
 | `make amiga-gui` (MUI, `-lmui`)   | baut mit `-Wall -Wextra -Werror` fehlerfrei|
+| `make gui-lint` (Eingangsquelle)  | `v4_gui.c` ohne `GET_INPUT` und ohne I2C-Vergleich; Selbsttest des Pruefers vorhanden |
 | `make asm` (m68k-Disassembly)     | Frame-Bauer nur `move.b` auf Puffer        |
 | Zustandshilfe gegen Mock          | Ausfall, letzte Werte, Backoff 0,5->5 s, Erholung, Maus-Einstellungen je Buchse |
-| Direktabfrage gegen Attrappe      | RECHTS/LINKS/VOR/ZURUECK/Diagonale/Ruhe, Stabilitaetstor, Feuerknoepfe, Zeilenformate, Urteil `v4_joy_abweichung` (OK / Abweichungsmaske / kein Urteil), Direktzeile ohne jeden I2C-Wert (`v4_joy_direkt_text`) |
+| Direktabfrage gegen Attrappe      | RECHTS/LINKS/VOR/ZURUECK/Diagonale/Ruhe, Stabilitaetstor, Feuerknoepfe, Zeilenformate, Direktzeile ohne jeden I2C-Wert (`v4_joy_direkt_text`), Protokollzeile ohne I2C/Urteil (`v4_joy_direkt_protokoll_text`) |
 | Beitrag (Bedienhilfe)             | Tabelle Variante -> Richtungen/Knopfquellen, Rueckrichtung aus der Maske (alle acht Werte), `v4_set_port_beitrag` gegen den Mock, `eigene`/Unfug -> `V4_ERR_ARG` ohne Rahmen |
 | Maus-Einstellungen (fw_ver 5)     | Vorgaben 7/12, Setzen je Buchse, lokale Grenzen, `BAD_ARG` des Slaves, falsches Echo -> `V4_ERR_FRAME`, fw_ver 4 ohne `0x0400` -> `BAD_CMD` |
 | Registerzugriff im m68k-Code      | `move.w $dff00a`, `move.w $dff00c`, `move.b $bfe001`, `move.w $dff016` -- absolute Adressen, kein Umweg |
 | Debugausgabe im Demo              | Transaktionszeile mit Dauer + Kurzform, `-quiet` schaltet sie ab |
-| Ausgabeschicht (`tests/test_debug.c`) | Herzzeile traegt Zaehler, letzten Status, verworfene Rahmen, Wiederholungen UND den Vergleich mit `CIAAPRA`/`POTINP` -- und passt VOLLSTAENDIG in den Zeilenpuffer; ein Aufruf je Meldung; Aenderung wird gemeldet, Wiederholung nicht; Transaktionszeilen nur, wenn bestellt |
+| Ausgabeschicht (`tests/test_debug.c`) | Herzzeile traegt Zaehler, letzten Status, verworfene Rahmen, Wiederholungen UND die Registerwerte mit `CIAAPRA`/`POTINP` -- und passt VOLLSTAENDIG in den Zeilenpuffer; ein Aufruf je Meldung; Aenderung wird gemeldet, Wiederholung nicht; Transaktionszeilen nur, wenn bestellt |
 | MUI-Objektbaum (`make mui-lint`)   | Klammerbalance, `Child`/Objekt, Tag/Wert, Klassenzugehoerigkeit, Gruppen mit Kindern, `MUIA_Cycle_Entries` als NULL-Array statt Zeichenkette, Seitengruppe (`MUIA_Group_PageMode`) -- dazu ein Selbsttest an einem kuenstlichen Baum, der jeden dieser Fehler einzeln erzeugt |
 | Protokollkonstanten gegen ESP32   | gemeinsame `#define` identisch (inkl. `0x08`/`0x09`/`0x0A`, `0x0B`/`0x0C`, `0x0100`/`0x0200`/`0x0400`, `0xFF`, Richtungs- und Knopfquellen, Tempo 1..10, Totzone 0..100) |
 | `make test-m68k` (qemu, Big Endian)| **SKIP** -- `m68k-linux-gnu-gcc`/`qemu-m68k` fehlen |

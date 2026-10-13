@@ -658,6 +658,42 @@ static void test_joy_direkt_text(void)
 }
 
 /* ------------------------------------------------------------------ */
+/* Die Protokoll-/Herzzeile: beide Buchsen direkt, ohne I2C           */
+/* ------------------------------------------------------------------ */
+
+static void test_joy_direkt_protokoll(void)
+{
+    v4_joy_t     st;
+    v4_joy_roh_t ruh   = roh(0x0000u, 0x0000u, CIA_BASIS, POT_BASIS);
+    v4_joy_roh_t jetzt = roh(0x0000u, 0x0002u, 0x74u, POT_BASIS);
+    char         t[V4_JOY_TEXT_MAX];
+
+    v4_test_case("Protokollzeile: beide Buchsen direkt, KEIN I2C, kein Urteil");
+    v4_joy_init(&st);
+    v4_joy_basis(&st, &ruh);            /* Loslassen ist der Grundzustand */
+    stabil(&st, &jetzt);                /* Buchse 1: RECHTS, BTN1 gezogen */
+
+    (void)v4_joy_direkt_protokoll_text(&st, t, sizeof(t));
+    /* Buchse 0 ruht, Buchse 1 traegt RECHTS|BTN1 = 0x18. */
+    CHECK(strstr(t, "Buchse0 direkt=0x00 - stabil=ja roh=0x0000") != NULL);
+    CHECK(strstr(t, "Buchse1 direkt=0x18 RECHTS+BTN1 stabil=ja roh=0x0002")
+          != NULL);
+    CHECK(strstr(t, "CIAAPRA=0x0074 POTINP=0xFF02") != NULL);
+    /* Ausdruecklich NICHTS aus der I2C-Sicht und kein Urteil. */
+    CHECK(strstr(t, "I2C") == NULL);
+    CHECK(strstr(t, "state=") == NULL);
+    CHECK(strstr(t, "level=") == NULL);
+    CHECK(strstr(t, "ABWEICHUNG") == NULL);
+    CHECK(strstr(t, "OK") == NULL);
+    CHECK(strlen(t) < V4_JOY_TEXT_MAX);
+
+    v4_test_case("Protokollzeile: Randfaelle NULL/leerer Puffer");
+    CHECK_EQ(v4_joy_direkt_protokoll_text(NULL, t, sizeof(t)), 0u);
+    CHECK_EQ(v4_joy_direkt_protokoll_text(&st, NULL, 100u), 0u);
+    CHECK_EQ(v4_joy_direkt_protokoll_text(&st, t, 0u), 0u);
+}
+
+/* ------------------------------------------------------------------ */
 /* Randfaelle                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -735,6 +771,7 @@ int test_joyport(void)
     test_joy_debug_text();
     test_joy_vergleich_text();
     test_joy_direkt_text();
+    test_joy_direkt_protokoll();
 
     test_joy_randfaelle();
 

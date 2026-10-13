@@ -89,6 +89,11 @@ typedef struct {
     /* Diagnose */
     unsigned long writes;       /* verarbeitete WRITE-Frames               */
     unsigned long reads;        /* Leseaufrufe                             */
+    unsigned long input_reads;  /* GET_INPUT-Aufrufe (0x06). Die MUI-
+                                 * Oberflaeche fragt GET_INPUT nicht mehr ab;
+                                 * die Konsole als Notfallweg schon. Damit
+                                 * laesst sich pruefen, dass eine Aufruffolge
+                                 * OHNE Controller-Eingabewerte auskommt. */
     unsigned long delay_calls;  /* Aufrufe von v4_plat_delay_us            */
     unsigned long delay_us;     /* summierte Wartezeit                     */
     int           last_cmd;     /* letzter Befehlscode (-1 = keiner)       */

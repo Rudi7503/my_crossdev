@@ -567,6 +567,10 @@ static void mock_dispatch(uint8_t cmd, uint8_t seq, const uint8_t *pay,
         uint8_t     p[V4P_IN_PAYLOAD_LEN];
         uint8_t     plen = (uint8_t)V4P_IN_PAYLOAD_LEN;
 
+        /* Zaehler fuer die Pruefung, dass eine Aufruffolge OHNE
+         * Controller-Eingabewerte auskommt (die MUI-Oberflaeche fragt
+         * GET_INPUT nicht mehr ab). */
+        v4_mock.input_reads++;
         mock_fill_input(&in);
         (void)v4p_enc_get_input(p, &in);
 

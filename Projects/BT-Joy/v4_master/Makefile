@@ -106,7 +106,7 @@ AMIGA_NAME ?= v4_joy
 GUI_NAME   ?= BT Gamecontroller GUI
 LOG_NAME   ?= v4_joy.log
 
-.PHONY: all test lint selftest-lint mui-lint test-san test-m68k demo demo-i2c \
+.PHONY: all test lint selftest-lint mui-lint gui-lint test-san test-m68k demo demo-i2c \
         amiga amiga-gui asm verify clean upload upload-gui log check-host \
         check-upload acp-ls
 
@@ -166,6 +166,32 @@ mui-lint:
 	    exit 1; }
 	@python3 tools/check_mui_tree.py v4_gui.c
 	@python3 tools/check_mui_tree.py --selftest
+
+# Wache ueber die EINGANGSQUELLE der Oberflaeche.
+#
+# Der Benutzer will im Fenster nur sehen, was ueber den Joystick-Port ankommt.
+# Quelle dafuer sind die Register der V4 (v4_joyport.c), NICHT GET_INPUT. Diese
+# Wache liest den Quelltext von v4_gui.c und schlaegt fehl, sobald dort wieder
+# ein I2C-Eingang oder ein I2C-Vergleich auftaucht. Sie ergaenzt den Mock-Test
+# "Oberflaechen-Takt: die I2C-Folge enthaelt KEIN GET_INPUT" (tests/test_master.c):
+# der prueft die Aufruffolge, diese Wache den Quelltext.
+#
+# Die Konsole (v4_console.c) ist AUSDRUECKLICH nicht betroffen: sie ist der
+# Notfallweg und das Diagnosewerkzeug und behaelt GET_INPUT samt Zug/Pegel.
+gui-lint:
+	@fail=0; \
+	for wort in v4_get_input v4_joy_debug_text v4_joy_herz_text \
+	            v4_joy_vergleich_text v4_joy_port_text v4_joy_abweichung \
+	            s_input_frisch ABWEICHUNG; do \
+	    if grep -q "$$wort" v4_gui.c; then \
+	        echo "FEHLER: v4_gui.c nennt $$wort -- die Oberflaeche darf keine"; \
+	        echo "        Controller-Eingabewerte ueber I2C holen oder vergleichen."; \
+	        echo "        Quelle ist v4_joyport.c (JOY0DAT/JOY1DAT/CIAAPRA/POTINP)."; \
+	        fail=1; \
+	    fi; \
+	done; \
+	test $$fail -eq 0 || exit 1; \
+	echo "gui-lint: v4_gui.c ohne GET_INPUT und ohne I2C-Vergleich -- sauber"
 
 # ------------------------------------------------------------------ #
 # Demo: das echte Konsolenprogramm gegen den Mock                     #
@@ -479,7 +505,7 @@ asm:
 # Alles, was ohne Hardware pruefbar ist.                               #
 # ------------------------------------------------------------------ #
 
-verify: lint selftest-lint mui-lint test test-san demo asm amiga amiga-gui
+verify: lint selftest-lint mui-lint gui-lint test test-san demo asm amiga amiga-gui
 	@echo
 	@echo "verify: Lint, Tests, Sanitizer, Demo gegen den Mock, MUI-Baumpruefer,"
 	@echo "        m68k-Nachweis, Amiga-Konsole und MUI-Oberflaeche sind durch."

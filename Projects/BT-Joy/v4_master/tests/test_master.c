@@ -930,6 +930,46 @@ static void test_mousecfg(void)
     teardown();
 }
 
+/*
+ * Die MUI-Oberflaeche liest keine Controller-Eingabewerte mehr ueber I2C: die
+ * Quelle sind die Joyport-Register der V4. Diese Folge ist genau der I2C-Teil
+ * ihres langsamen Takts (gui_poll) -- Status, Betriebsart, HID, Verteilung,
+ * Maus. Sie darf GET_INPUT NICHT enthalten.
+ *
+ * Belegt wird das ueber den Mock-Zaehler v4_mock.input_reads (er zaehlt nur
+ * GET_INPUT). Dass der Zaehler ueberhaupt funktioniert, prueft der zweite Teil.
+ * Die Konsole als Notfallweg behaelt GET_INPUT (dritter Teil) -- dort haengen
+ * die Zug-/Pegel-Spalten und mehrere Demo-Pruefungen daran.
+ */
+static void test_ohne_i2c_eingang(void)
+{
+    v4_master_t    m;
+    v4p_status_t   st;
+    v4p_hid_t      hid;
+    v4p_portcfg_t  cfg;
+    v4p_mousecfg_t mc;
+    v4p_input_t    in;
+    uint8_t        mode[V4P_PORT_COUNT];
+
+    v4_test_case("Oberflaechen-Takt: die I2C-Folge enthaelt KEIN GET_INPUT");
+    setup(&m);
+    CHECK_EQ(v4_mock.input_reads, 0ul);
+    CHECK_EQ(v4_get_status(&m, &st), V4P_ST_OK);
+    CHECK_EQ(v4_get_port_mode(&m, mode), V4P_ST_OK);
+    CHECK_EQ(v4_get_hid(&m, &hid), V4P_ST_OK);
+    CHECK_EQ(v4_get_port_config(&m, &cfg), V4P_ST_OK);
+    CHECK_EQ(v4_get_mouse_cfg(&m, &mc), V4P_ST_OK);
+    CHECK_EQ(v4_mock.input_reads, 0ul);
+    CHECK(v4_mock.last_cmd != (int)V4P_CMD_GET_INPUT);
+
+    v4_test_case("Zaehler arbeitet: ein ausdrueckliches GET_INPUT zaehlt");
+    memset(&in, 0, sizeof(in));
+    CHECK_EQ(v4_get_input(&m, &in), V4P_ST_OK);
+    CHECK_EQ(v4_mock.input_reads, 1ul);
+    CHECK_EQ(v4_mock.last_cmd, (int)V4P_CMD_GET_INPUT);
+    teardown();
+}
+
 /* ------------------------------------------------------------------ */
 
 int test_master(void)
@@ -943,6 +983,7 @@ int test_master(void)
     test_routing();
     test_beitrag();
     test_mousecfg();
+    test_ohne_i2c_eingang();
     test_devices_and_connect();
     test_link_failures();
     test_seq_discipline();
