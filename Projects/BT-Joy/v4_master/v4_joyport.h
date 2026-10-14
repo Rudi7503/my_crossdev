@@ -34,12 +34,14 @@
  *   Bit 0x08  RIGHT   (direkt: RECHTS)       Pin 4
  *   Bit 0x10  BTN1                           Pin 6
  *   Bit 0x20  BTN2                           Pin 9
- *   Bit 0x40  BTN3                           Pin 5 -- direkt NICHT lesbar
+ *   Bit 0x40  BTN3                           Pin 5  (POTINP Bit 9/11)
  *
- * BTN3 wird beim Vergleich ausgelassen (V4_JOY_VERGLEICHSMASKE): fuer Pin 5
- * nennt der Auftrag keine direkte Quelle, und ein daraus abgeleitetes
- * "ABWEICHUNG" waere eine Aussage ueber eine Messung, die es nicht gibt. Im
- * I2C-Wert ist das Bit trotzdem zu sehen.
+ * BTN3 (Pin 5) wird SEIT dem 16.10.2026 direkt gelesen: er liegt auf dem
+ * ZWEITEN Pot-Bit der jeweiligen Buchse, POTINP Bit 9 (Buchse 0) bzw. Bit 11
+ * (Buchse 1) -- also genau das Bit, das bis dahin nirgends gelesen wurde.
+ * Damit ist auch der Vergleich vollstaendig (V4_JOY_VERGLEICHSMASKE enthaelt
+ * BTN3): dass "Pin 5 <- Start" nichts zeigte, lag genau daran, dass die V4
+ * nicht hinsah, obwohl der ESP32 die Leitung trieb.
  *
  * WO DIE REGISTERSTELLEN HERKOMMEN -- nachgemessen am 13.10.2026
  * --------------------------------------------------------------
@@ -184,21 +186,34 @@ typedef struct {
 #define V4_JOY_M_VOR        0x0100u     /* Y-Zaehler Bit 0, Pin 1 (oben)    */
 #define V4_JOY_M_LINKS      0x0200u     /* Y-Zaehler Bit 1, Pin 3           */
 
+/* Anzahl der Feuerleitungen JE BUCHSE: Pin 6 (BTN1), Pin 9 (BTN2), Pin 5
+ * (BTN3). Die Zahl steht hier EINMAL; Tabelle und Schleifen benutzen sie. */
+#define V4_JOY_FEUER_ANZAHL 3u
+
 /* Feuerleitungen im Rohwert. Bit 7 fuer Buchse 1 ist die klassische
  * Amiga-Belegung (/FIR1); am Geraet ist sie NICHT gemessen -- deshalb steht der
  * Rohwert daneben. */
 #define V4_JOY_CIA_BTN1_P0  0x40u       /* CIAAPRA Bit 6: Knopf 1 Buchse 0  */
 #define V4_JOY_CIA_BTN1_P1  0x80u       /* CIAAPRA Bit 7: Knopf 1 Buchse 1  */
-#define V4_JOY_POT_BTN2_P0  0x0100u     /* POTINP  Bit 8: Knopf 2 Buchse 0  */
+#define V4_JOY_POT_BTN2_P0  0x0100u     /* POTINP  Bit 8:  Knopf 2 Buchse 0 */
 #define V4_JOY_POT_BTN2_P1  0x0400u     /* POTINP  Bit 10: Knopf 2 Buchse 1 */
+/*
+ * Pin 5 (BTN3) liegt auf dem ZWEITEN Pot-Bit je Buchse: Bit 9 fuer Buchse 0,
+ * Bit 11 fuer Buchse 1. Dieselbe Behandlung wie BTN1/BTN2 (Grundzustand
+ * merken, Pegelwechsel = gedrueckt) -- die Polaritaet wird also NICHT geraten.
+ */
+#define V4_JOY_POT_BTN3_P0  0x0200u     /* POTINP  Bit 9:  Knopf 3 Buchse 0 */
+#define V4_JOY_POT_BTN3_P1  0x0800u     /* POTINP  Bit 11: Knopf 3 Buchse 1 */
 
 /*
- * Beim Vergleich ausgelassen: BTN3 (Pin 5). Fuer diese Leitung nennt der
- * Auftrag keine direkte Quelle -- ein "ABWEICHUNG" daraus waere keine Messung,
- * sondern eine Behauptung. BTN1/BTN2/Richtungen werden verglichen.
+ * Verglichen wird ALLES, was direkt lesbar ist -- also alle sieben Leitungen.
+ *
+ * BTN3 war bis zum 16.10.2026 ausgenommen, weil es keine direkte Quelle gab.
+ * Seit POTINP Bit 9/11 gelesen wird, ist ein Vergleich eine MESSUNG und keine
+ * Behauptung; BTN3 wieder auszunehmen wuerde genau den Fehler verstecken, den
+ * der Benutzer gesehen hat ("Pin 5 <- Start" kam nicht an).
  */
-#define V4_JOY_VERGLEICHSMASKE \
-    ((uint8_t)(V4P_IN_ST_MASK & (uint8_t)~V4P_IN_ST_BTN3))
+#define V4_JOY_VERGLEICHSMASKE  ((uint8_t)V4P_IN_ST_MASK)
 
 /* Groesste Zeile, die diese Datei baut. Muss unter V4_DBG_LINE (300) aus
  * v4_debug.c bleiben, sonst wuerde die Debugzeile abgeschnitten. */
@@ -226,7 +241,7 @@ typedef struct {
 
     /* ---- Feuerknoepfe: Grundzustand und letzter gueltiger Stand -------- */
     v4_joy_roh_t  basis_roh;                        /* Registersatz beim Start */
-    uint8_t       feuer_jetzt[V4P_PORT_COUNT][2];   /* 0/1 letzte Abtastung */
+    uint8_t       feuer_jetzt[V4P_PORT_COUNT][V4_JOY_FEUER_ANZAHL];
     uint8_t       feuer_stabil[V4P_PORT_COUNT];     /* 1 = letzte war stabil*/
     uint8_t       basis_ok;                         /* 1 = Startwert gemerkt*/
 
@@ -297,7 +312,7 @@ void v4_joy_basis(v4_joy_t *st, const v4_joy_roh_t *roh);
  */
 void v4_joy_update(v4_joy_t *st, const v4_joy_roh_t *a, const v4_joy_roh_t *b);
 
-/* Gedrueckte Feuerknoepfe einer Buchse (V4P_IN_ST_BTN1|BTN2), 0 wenn keiner. */
+/* Gedrueckte Feuerknoepfe einer Buchse (BTN1|BTN2|BTN3), 0 wenn keiner. */
 uint8_t v4_joy_feuer(const v4_joy_t *st, int port);
 
 /* Richtungen einer Buchse als V4P_IN_ST_*-Maske (0, wenn noch nie stabil). */
@@ -392,7 +407,7 @@ size_t v4_joy_vergleich_text(const v4_joy_t *st, const v4p_input_t *in,
  *   ...
  *   BTN1     Pin 6  0 (Low)  gedrueckt
  *   BTN2     Pin 9  1 (High) -
- *   BTN3     Pin 5  -        nicht lesbar
+ *   BTN3     Pin 5  0 (Low)  gedrueckt
  *   gedrueckt (direkt): BTN1
  *   Roh: Zaehler=0x0300 (stabil=ja)
  *   CIAAPRA=0x00F4 POTINP=0xFF02
@@ -401,9 +416,9 @@ size_t v4_joy_vergleich_text(const v4_joy_t *st, const v4p_input_t *in,
  * Protokoll (DebugUART/Logdatei, v4_joy_debug_text/v4_joy_herz_text). `Pegel`
  * ist der ROHWERT des jeweiligen Feuerregisters (1 = High); fuer die
  * Richtungen gibt es keine einzelne Pegelleitung -- sie kommen aus dem
- * Zaehler, dessen Rohwert in der vorletzten Zeile steht. BTN3 (Pin 5) ist
- * direkt NICHT lesbar und wird als solches benannt, statt eine Messung
- * vorzutaeuschen.
+ * Zaehler, dessen Rohwert in der vorletzten Zeile steht. Auch BTN3 (Pin 5) hat
+ * jetzt eine Pegelspalte: sein Rohbit ist POTINP Bit 9 (Buchse 0) bzw. Bit 11
+ * (Buchse 1).
  *
  * Der Puffer des Aufrufers muss V4_JOY_DIREKT_MAX Byte fassen: die Anzeige ist
  * MEHRZEILIG (Kopfzeile, sieben Leitungszeilen, drei Summenzeilen).

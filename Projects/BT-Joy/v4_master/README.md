@@ -71,7 +71,7 @@ der Ausgabe sparsam sein.
 | `-l <pfad>` | Logdatei (Vorgabe `Programs:test/v4_gui.log`)                  |
 | `-nolog`, `-n` | keine Logdatei                                              |
 | `-d <geraet>` | I2C-Geraet (Linux-Harness; auf der V4 wirkungslos)           |
-| `-w <px>`, `-h <px>` | Fenstergroesse der MUI (Vorgabe **640x400**, mit der Maus aenderbar) |
+| `-w <px>`, `-h <px>` | Fenstergroesse der MUI (Vorgabe **700x480**, mit der Maus aenderbar) |
 | `-a`, `-x`  | nur Konsole: Trace an bzw. zusaetzlich Rahmenbytes             |
 | `-w <us>`, `-r <zahl>`, `-o <pfad>`, `-t <ticks>` | nur Konsole: Wartezeit vor dem Lesen, Versuche je Transaktion, Logdatei, Wartezeit je Logzeile |
 
@@ -410,7 +410,7 @@ LEFT     Pin 3  -        -
 RIGHT    Pin 4  -        -
 BTN1     Pin 6  0 (Low)  gedrueckt
 BTN2     Pin 9  1 (High) -
-BTN3     Pin 5  -        nicht lesbar
+BTN3     Pin 5  0 (Low)  gedrueckt
 gedrueckt (direkt): VOR+BTN1
 Roh: Zaehler=0x0100 (stabil=ja)
 CIAAPRA=0x0074 POTINP=0xFF02
@@ -439,8 +439,13 @@ sich beim Druecken an `CIAAPRA`/`POTINP` nichts (`$00F4` bzw. `$FF02`). Welches
 Bit welche Taste ist, ist also offen. Deshalb gilt: als gedrueckt zaehlt, was
 sich vom **beim Start gemerkten** Wert unterscheidet -- in beide Richtungen
 (aktiv low oder aktiv high). Die Rohwerte beider Register stehen immer dabei,
-damit sich die Belegung von Hand ablesen laesst. `BTN3` (Pin 5) hat keine
-bekannte direkte Quelle und wird ausdruecklich als "nicht lesbar" gefuehrt --
+damit sich die Belegung von Hand ablesen laesst. `BTN3` (Pin 5) wird seit dem
+16.10.2026 mitgelesen: sein Rohbit ist **POTINP Bit 9** (Buchse 0) bzw.
+**Bit 11** (Buchse 1) -- das zweite Pot-Bit je Buchse, das bis dahin nirgends
+ausgewertet wurde. Genau daran lag es, dass "Pin 5 <- Start" nie ankam: der
+ESP32 trieb die Leitung, die V4 sah nicht hin. BTN3 wird wie BTN1/BTN2
+behandelt (Grundzustand merken, Pegelwechsel = gedrueckt) und ist jetzt auch im
+Vergleich enthalten --
 eine erfundene Messung waere schlimmer als die Luecke.
 
 **Wo die Dekodierung vom Wortlaut des Auftrags abweicht** (und warum das
@@ -538,7 +543,9 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
 * **Die Mindestmasse werden ausgegeben.** Nach dem Oeffnen und bei jedem
   Seitenwechsel ruft die Oberflaeche `MUIM_AskMinMax` -- dieselbe Methode, die
   MUI fuer das Layout benutzt -- und schreibt das Ergebnis ins Protokoll:
-  `[fenster] Mindestgroesse Seite Konfiguration: ... px (Fenster 640x400)`.
+  `[fenster] Seitenbereich (sichtbar): ... px` / `[fenster] Seite Ports
+  (sichtbar): ... px` -- passt die sichtbare Seite in den Seitenbereich, muss
+  nicht gescrollt werden.
   Damit ist "passt nicht" belegbar statt geraten. (Die Seitengruppe meldet das
   Maximum ueber alle Seiten, die beiden Seiten zusaetzlich einzeln.)
 * **Namen im Fenster:** die beiden Anschluesse heissen dort **`Port 0`** / **`Port 1`**
@@ -654,15 +661,15 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   der V4 (JOY0DAT/JOY1DAT, CIAAPRA/POTINP) -- die einzige Eingangsquelle.` Das
   Feld wird auch dann gezeichnet, wenn der ESP32 schweigt -- die direkte
   Abfrage haengt nicht am Bus. Einen I2C-Vergleich gibt es nicht mehr.
-* **Fenster und Schirmgroesse.** Vorgabe 640x400 mit SizeGadget; `-w`/`-h`
+* **Fenster und Schirmgroesse.** Vorgabe **700x480** mit SizeGadget; `-w`/`-h`
   aendern die Groesse, mit der Maus geht es ueber das Groessensymbol. Passt die
   gewuenschte Groesse **nicht** auf den oeffentlichen Schirm (die Workbench
   dieser V4 laeuft auf 640x360), wird sie auf den Schirm begrenzt und das
-  ausdruecklich gemeldet: `[fenster] 640x400 passt nicht auf den Schirm
+  ausdruecklich gemeldet: `[fenster] 700x480 passt nicht auf den Schirm
   (640x360) -- auf 624x336 begrenzt.` Ein Fenster, das nicht passt, ist
   unbrauchbar (die unterste Zeile, das Logfeld, ist nie zu sehen), und MUI
   rechnet beim Oeffnen eines Fensters mit SizeGadget mit einem Groessenbereich,
-  den es auf so einem Schirm nicht geben kann. Passt 640x400, aendert sich
+  den es auf so einem Schirm nicht geben kann. Passt 700x480, aendert sich
   nichts.
 * **MUI-Objekte werden erst angefasst, wenn das Fenster wirklich offen ist.**
   `s_gui_up` -- der Schalter, der den Zeilen-Haken fuer die Logliste scharf
@@ -670,7 +677,7 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   Ergebnis von `MUIA_Window_Open` wird geprueft (schlaegt es fehl, endet das
   Programm mit einer Zeile im Log statt weiterzurechnen). Vorher stand
   `s_gui_up` direkt hinter dem Aufbau des Objektbaums. Die Reihenfolge steht im
-  Log: `[mui] Objektbaum steht ...` -> `[mui] Fenster offen (640x400). Ab hier
+  Log: `[mui] Objektbaum steht ...` -> `[mui] Fenster offen (700x480). Ab hier
   werden MUI-Objekte angefasst.` -> `[takt] erste Abfrage ...`.
 * Knoepfe: Neu suchen, Verbinden, Trennen, Vergessen, Aktualisieren,
   Port 0/1 Modus weiterschalten, Buchsen tauschen, Live-Aktualisierung.

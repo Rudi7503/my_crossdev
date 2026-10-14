@@ -88,23 +88,28 @@ void v4_joy_lesen(v4_joy_roh_t *roh)
  *                    (klassische Amiga-Belegung /FIR0 und /FIR1; Bit 7 ist am
  *                    Geraet NICHT gemessen -- der Rohwert steht daneben)
  *   Knopf 2 (Pin 9)  POTINP   Bit 8 fuer Buchse 0, Bit 10 fuer Buchse 1
+ *   Knopf 3 (Pin 5)  POTINP   Bit 9 fuer Buchse 0, Bit 11 fuer Buchse 1
  *
- * Knopf 3 (Pin 5) fehlt hier ABSICHTLICH: der Auftrag nennt dafuer keine
- * direkte Quelle. Er steht weiter im I2C-Wert und wird beim Vergleich
- * ausgelassen (V4_JOY_VERGLEICHSMASKE).
+ * Knopf 3 (Pin 5) wird seit dem 16.10.2026 mitgelesen: es ist das ZWEITE
+ * Pot-Bit der Buchse, das bis dahin nirgends ausgewertet wurde. Genau daran
+ * lag es, dass "Pin 5 <- Start" in der Anzeige nie ankam -- der ESP32 trieb
+ * die Leitung, die V4 sah nicht hin. Alle drei Leitungen werden gleich
+ * behandelt (Grundzustand merken, Pegelwechsel = gedrueckt).
  */
 static const struct {
     uint8_t  quelle;    /* V4_JOY_QUELLE_*          */
     uint16_t bit;       /* Bit im Register          */
     uint8_t  zustand;   /* V4P_IN_ST_BTN1 / BTN2    */
-} s_feuer[V4P_PORT_COUNT][2] = {
+} s_feuer[V4P_PORT_COUNT][V4_JOY_FEUER_ANZAHL] = {
     {
         { V4_JOY_QUELLE_CIA, V4_JOY_CIA_BTN1_P0, (uint8_t)V4P_IN_ST_BTN1 },
-        { V4_JOY_QUELLE_POT, V4_JOY_POT_BTN2_P0, (uint8_t)V4P_IN_ST_BTN2 }
+        { V4_JOY_QUELLE_POT, V4_JOY_POT_BTN2_P0, (uint8_t)V4P_IN_ST_BTN2 },
+        { V4_JOY_QUELLE_POT, V4_JOY_POT_BTN3_P0, (uint8_t)V4P_IN_ST_BTN3 }
     },
     {
         { V4_JOY_QUELLE_CIA, V4_JOY_CIA_BTN1_P1, (uint8_t)V4P_IN_ST_BTN1 },
-        { V4_JOY_QUELLE_POT, V4_JOY_POT_BTN2_P1, (uint8_t)V4P_IN_ST_BTN2 }
+        { V4_JOY_QUELLE_POT, V4_JOY_POT_BTN2_P1, (uint8_t)V4P_IN_ST_BTN2 },
+        { V4_JOY_QUELLE_POT, V4_JOY_POT_BTN3_P1, (uint8_t)V4P_IN_ST_BTN3 }
     }
 };
 
@@ -304,7 +309,7 @@ void v4_joy_update(v4_joy_t *st, const v4_joy_roh_t *a, const v4_joy_roh_t *b)
         /* Feuerleitungen getrennt bewerten: sie haengen nicht am Zaehler. Ein
          * bewegter Zaehler (Mausbetrieb) darf einen Tastendruck nicht
          * verschlucken. */
-        for (k = 0; k < 2; k++) {
+        for (k = 0; k < (int)V4_JOY_FEUER_ANZAHL; k++) {
             if (feuer_bit(a, s_feuer[port][k].quelle, s_feuer[port][k].bit)
                 != feuer_bit(b, s_feuer[port][k].quelle,
                              s_feuer[port][k].bit)) {
@@ -312,7 +317,7 @@ void v4_joy_update(v4_joy_t *st, const v4_joy_roh_t *a, const v4_joy_roh_t *b)
             }
         }
         if (feuer_gleich != 0) {
-            for (k = 0; k < 2; k++) {
+            for (k = 0; k < (int)V4_JOY_FEUER_ANZAHL; k++) {
                 st->feuer_jetzt[port][k] =
                     feuer_bit(a, s_feuer[port][k].quelle,
                               s_feuer[port][k].bit);
@@ -338,7 +343,7 @@ uint8_t v4_joy_feuer(const v4_joy_t *st, int port)
          * geraten, sie wird gemessen. */
         return 0u;
     }
-    for (k = 0; k < 2; k++) {
+    for (k = 0; k < (int)V4_JOY_FEUER_ANZAHL; k++) {
         uint8_t basis  = feuer_bit(&st->basis_roh, s_feuer[port][k].quelle,
                                    s_feuer[port][k].bit);
         uint8_t jetzt  = st->feuer_jetzt[port][k];
@@ -616,8 +621,8 @@ size_t v4_joy_vergleich_text(const v4_joy_t *st, const v4p_input_t *in,
  *
  * `Pegel` ist der ROHWERT des Feuerregisters (1 = High). Fuer die vier
  * Richtungsleitungen gibt es keine einzelne Pegelleitung; sie kommen aus dem
- * Zaehler (JOY0DAT/JOY1DAT), dessen Rohwert darunter steht. BTN3 (Pin 5) ist
- * direkt nicht lesbar -- das wird gesagt, nicht geraten.
+ * Zaehler (JOY0DAT/JOY1DAT), dessen Rohwert darunter steht. BTN3 (Pin 5) hat
+ * seit dem 16.10.2026 ebenfalls eine Pegelspalte (POTINP Bit 9/11).
  */
 size_t v4_joy_direkt_text(const v4_joy_t *st, int port, char *out, size_t cap)
 {
@@ -648,8 +653,8 @@ size_t v4_joy_direkt_text(const v4_joy_t *st, int port, char *out, size_t cap)
             /* Richtung: kommt aus dem Zaehler, keine einzelne Pegelleitung. */
             pegel  = "-";
             urteil = aktiv ? "aktiv" : "-";
-        } else if (bit < 6u) {
-            /* BTN1/BTN2: der Rohwert des Feuerregisters ist der Pegel. */
+        } else if (bit < 4u + (unsigned)V4_JOY_FEUER_ANZAHL) {
+            /* BTN1/BTN2/BTN3: der Rohwert des Feuerregisters ist der Pegel. */
             unsigned k   = bit - 4u;
             int      roh = (int)feuer_bit(&st->roh, s_feuer[port][k].quelle,
                                           s_feuer[port][k].bit);
@@ -657,8 +662,10 @@ size_t v4_joy_direkt_text(const v4_joy_t *st, int port, char *out, size_t cap)
             pegel  = roh ? "1 (High)" : "0 (Low)";
             urteil = aktiv ? "gedrueckt" : "-";
         } else {
+            /* Kein bekannter Bit -- das gibt es mit V4P_IN_ST_COUNT nicht,
+             * aber die Zeile soll auch dann nichts behaupten. */
             pegel  = "-";
-            urteil = "nicht lesbar";
+            urteil = "?";
         }
         tx_add(out, cap, &n, "%-7s %-5s %-8s %s\n",
                v4p_bit_name(bit), v4p_bit_pin(bit), pegel, urteil);

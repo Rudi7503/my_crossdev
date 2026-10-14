@@ -378,10 +378,18 @@ static void test_urteil_direkt_i2c(void)
     CHECK_EQ(v4_joy_abweichung(&st, &in, 1, 0), (unsigned)V4P_IN_ST_UP);
     CHECK_EQ(v4_joy_abweichung(&st, &in, 1, 1), 0u);
 
-    /* BTN3 (Pin 5) wird ausgelassen: es gibt keine direkte Quelle dafuer. */
+    /*
+     * BTN3 (Pin 5) wird SEIT dem 16.10.2026 MIT verglichen: die direkte Quelle
+     * ist POTINP Bit 9 (Buchse 0) / Bit 11 (Buchse 1). Meldet I2C BTN3 und die
+     * Register zeigen nichts, ist das eine echte Abweichung -- der Fall, der
+     * beim Benutzer unsichtbar blieb ("Pin 5 <- Start" kam nicht an).
+     */
     in.state[0] = (uint8_t)V4P_IN_ST_BTN3;
-    CHECK_EQ(v4_joy_abweichung(&st, &in, 1, 0), 0u);
-    CHECK_EQ((unsigned)V4_JOY_VERGLEICHSMASKE & (unsigned)V4P_IN_ST_BTN3, 0u);
+    CHECK_EQ(v4_joy_abweichung(&st, &in, 1, 0), (unsigned)V4P_IN_ST_BTN3);
+    CHECK_EQ((unsigned)V4_JOY_VERGLEICHSMASKE & (unsigned)V4P_IN_ST_BTN3,
+             (unsigned)V4P_IN_ST_BTN3);
+    /* Und die Maske deckt ALLE sieben Leitungen ab. */
+    CHECK_EQ((unsigned)V4_JOY_VERGLEICHSMASKE, (unsigned)V4P_IN_ST_MASK);
 
     /* Eine ALTE Antwort ergibt kein Urteil -- gegen sie zu vergleichen waere
      * keine Messung. */

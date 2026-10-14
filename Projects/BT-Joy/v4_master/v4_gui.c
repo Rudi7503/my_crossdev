@@ -43,8 +43,7 @@
  * ([fenster] Mindestgroesse ...), damit "passt nicht" belegbar ist.
  *
  * WARUM ZWEI SEITEN UND NICHT EINE LAENGERE LISTE: mit fw_ver 4 ist der Inhalt
- * so gewachsen, dass er bei 640x400 (auf dieser V4 sogar 640x360) nicht mehr
- * untereinander passt. MUI_Group.doc sagt zur Seitengruppe: "the minimum
+ * so gewachsen, dass er nicht mehr untereinander passt. MUI_Group.doc sagt zur Seitengruppe: "the minimum
  * width/height of a page group is the maximum minimum width/height of all its
  * children". Die Anzeigeseite ist durch den Wegfall der Eingangsabfrage KLEINER
  * geworden; die Konfigurationsseite bleibt durch die neue Zeile je Einstellung
@@ -126,7 +125,7 @@
  * ueber v4_debug.c.
  *
  * AUFBAU UND FENSTER:
- * Fenster 640x400 mit SizeGadget; -w/-h aendern die Groesse, mit der Maus geht
+ * Fenster 700x480 (Vorgabe) mit SizeGadget; -w/-h aendern die Groesse, mit der Maus geht
  * es ueber das Groessensymbol. Passt die gewuenschte Groesse nicht auf den
  * Schirm (die Workbench dieser V4 laeuft auf 640x360), wird sie begrenzt und
  * das ausdruecklich gemeldet -- ein Fenster, das nicht passt, ist unbrauchbar,
@@ -194,7 +193,7 @@
 
 /*
  * Rand, den ein Fenster auf dem Schirm braucht (Rahmen und Titelleiste). Die
- * Vorgabe 640x400 wird damit verglichen: passt sie nicht, wird sie auf den
+ * Vorgabe 700x480 wird damit verglichen: passt sie nicht, wird sie auf den
  * Schirm begrenzt (siehe gui_fenster_an_schirm).
  */
 #define GUI_SCHIRM_RAND_W 16
@@ -310,13 +309,16 @@ static const char *s_log_path = GUI_LOG_VORGABE;
  *   -w <breite>   -h <hoehe>      beim Aufruf
  *   mit der Maus                  ueber das Groessensymbol (SizeGadget)
  *
- * WARUM NICHT FEST: 800x520 war zu gross - auf einem 640x480-Schirm passt das
- * Fenster nicht mehr vollstaendig auf den Schirm, und der Logbereich waechst
- * mit dem Text mit. Jetzt ist die Vorgabe kleiner, und wer mehr Platz will,
- * zieht das Fenster auf oder gibt die Groesse beim Aufruf an.
+ * WARUM 700x480 (16.10.2026): mit 640x400 stand die Seite "Ports" genau auf
+ * der Kante -- der Benutzer musste das Fenster von Hand leicht vergroessern,
+ * danach war es in Ordnung. Der Schirm dieser V4 ist 1280x720, es ist also
+ * Platz. 700x480 laesst beiden Spalten und allen Seiten Luft, ohne den
+ * Kopfbereich oder die Listen zu druecken. Wer mehr oder weniger will, zieht
+ * das Fenster auf oder gibt die Groesse beim Aufruf an; auf einem KLEINEREN
+ * Schirm wird weiterhin auf den Schirm begrenzt (gui_fenster_an_schirm).
  */
-static int s_fenster_w = 640;
-static int s_fenster_h = 400;
+static int s_fenster_w = 700;
+static int s_fenster_h = 480;
 static int s_schirm_w;                 /* 0 = nicht ermittelt */
 static int s_schirm_h;
 static int s_fenster_geklemmt;         /* 1 = auf den Schirm begrenzt */
@@ -375,7 +377,7 @@ static Object *s_maushint;            /* Hinweis auf der Seite "Maus"      */
  * s_seiten die Seitengruppe (MUIA_Group_PageMode) mit den beiden Seiten.
  *
  * s_scroll/s_virt sind die Scrollgruppe und die virtuelle Gruppe um die
- * Seitengruppe: sie halten das Fenster bei 640x400 bedienbar, auch wenn eine
+ * Seitengruppe: sie halten das Fenster bei jeder Groesse bedienbar, auch wenn eine
  * Seite hoeher ist als der Platz (siehe der Aufbau unten).
  */
 static Object *s_seite;
@@ -533,7 +535,7 @@ typedef char gui_speed_eintraege_mit_null[
 /*
  * Die DREI Seiten: "Anzeige" (Portdaten), "Ports" (Geraet, Beitrag,
  * Richtungen als Klartext, Knopfquellen) und "Maus" (Tempo/Totzone je Port).
- * Der Inhalt ist mit fw_ver 4/5 so gewachsen, dass er nicht mehr auf 640x400
+ * Der Inhalt ist mit fw_ver 4/5 so gewachsen, dass er nicht mehr untereinander
  * passt; eine Seitengruppe (MUIA_Group_PageMode) zeigt immer nur eine Seite.
  * Ihre Mindestgroesse ist laut MUI_Group.doc "the maximum minimum width/height
  * of all its children" -- deshalb liegt sie in einer Scrollgruppe, und deshalb
@@ -964,7 +966,7 @@ static void gui_show_hid(void)
 
     /*
      * Drei Zeilen, und die wichtigen Angaben stehen VORN: das Feld darf
-     * hoechstens 640 Pixel breit sein (Fensterbreite), und Name, Art,
+     * hoechstens so breit wie das Fenster sein, und Name, Art,
      * Transport und VID:PID sind die Aussage, die man beim Draufschauen
      * braucht. Die Zaehler dahinter sind Beiwerk und duerfen am Rand
      * abgeschnitten werden.
@@ -1854,7 +1856,8 @@ static void gui_show_portcfg(void)
  * Die von MUI BERECHNETEN Mindestgroessen ins Protokoll schreiben.
  *
  * WARUM: MUI rechnet die Mindestgroesse eines Fensters aus dem Inhalt; ob eine
- * Seite bei 640x400 passt, war bisher nur zu raten. MUIM_AskMinMax ist genau
+ * Seite in das Fenster passt, war bisher nur zu raten. (Der erste Versuch mit
+ * MUIM_AskMinMax lieferte am Geraet durchgehend 0 -- siehe unten.)
  * die Methode, die das Layout dafuer benutzt -- der Aufruf hier ist reine
  * Diagnose und aendert nichts. Die Seitengruppe meldet das MAXIMUM ueber alle
  * Seiten (MUI_Group.doc); die beiden Seiten werden zusaetzlich einzeln
@@ -3224,7 +3227,7 @@ static void act_seite(void)
         gui_show_portcfg();
     }
     /* Die Mindestmasse der gerade sichtbaren Seite ins Protokoll (Diagnose
-     * fuer "passt die Seite bei 640x400?"). */
+     * fuer "passt die Seite in das Fenster?"). */
     gui_mindestmasse_melden();
 }
 
@@ -3509,7 +3512,7 @@ static void close_libs(void)
 /*
  * Die Fenstergroesse an den Schirm anpassen.
  *
- * WOZU: die Vorgabe ist 640x400 (mit -w/-h aenderbar). Laeuft die Workbench
+ * WOZU: die Vorgabe ist 700x480 (mit -w/-h aenderbar). Laeuft die Workbench
  * aber auf einem kleineren Schirm -- auf dieser V4 ist 640x360 eingestellt --
  * dann ist das Fenster HOEHER als der Schirm. Das ist nicht nur unbrauchbar
  * (die unterste Zeile, das Logfeld, ist nie zu sehen): MUI rechnet beim
@@ -3518,7 +3521,7 @@ static void close_libs(void)
  * Schirm begrenzt -- und das ausdruecklich gemeldet, damit niemand raetselt,
  * warum das Fenster kleiner ist.
  *
- * Passt 640x400 (oder was -w/-h vorgibt), aendert sich NICHTS. Ohne
+ * Passt 700x480 (oder was -w/-h vorgibt), aendert sich NICHTS. Ohne
  * oeffentlichen Schirm ebenfalls nicht, dann gilt die Vorgabe unveraendert.
  */
 static void gui_fenster_an_schirm(void)
@@ -3584,9 +3587,10 @@ static int gui_build(void)
                  * WARUM ANZEIGE UND KONFIGURATION AUF ZWEI SEITEN LIEGEN:
                  *
                  * Mit fw_ver 4 ist der Inhalt deutlich gewachsen -- je Buchse
-                 * kommen Geraet, Richtungen und drei Knopfquellen dazu. Bei
-                 * 640x400 (und auf dieser V4 sogar nur 640x360, siehe
-                 * gui_fenster_an_schirm) passt das nicht mehr untereinander:
+                 * kommen Geraet, Richtungen und drei Knopfquellen dazu. In
+                 * einem kleinen Fenster (und auf einem kleinen Schirm, siehe
+                 * gui_fenster_an_schirm, begrenzt MUI zusaetzlich) passt das
+                 * nicht mehr untereinander:
                  * der bisherige Inhalt war schon an der Grenze, und MUI
                  * drueckt Textfelder ohne Gewicht unter ihre Mindesthoehe --
                  * sie saehen dann LEER aus.
@@ -3692,9 +3696,9 @@ static int gui_build(void)
                      * MUIA_Text_SetMin, FALSE gehoert dazu: die Vorgabe TRUE
                      * macht die Textbreite zur Mindestbreite des Fensterinhalts.
                      * Die Controller-Zeile ist rund 100 Zeichen lang -- das
-                     * waere breiter als die zugesagten 640 Pixel und wuerde MUI
-                     * das Fenster aufziehen. Mit FALSE bleibt das Fenster 640
-                     * breit und der Text wird am Rand abgeschnitten (die
+                     * waere breiter als das Fenster und wuerde MUI das Fenster
+                     * aufziehen. Mit FALSE bleibt das Fenster so breit wie
+                     * vorgegeben und der Text wird am Rand abgeschnitten (die
                      * wichtigen Angaben stehen am Zeilenanfang).
                      */
                     Child, s_seite_anzeige = VGroup,
@@ -3739,7 +3743,7 @@ static int gui_build(void)
                                      * im Fenster; SetMin FALSE haelt die
                                      * Spaltenbreite bei der Aufteilung und
                                      * verhindert, dass ein langer Rohwert das
-                                     * Fenster ueber 640 px zieht. */
+                                     * Fenster aufzieht. */
                                     MUIA_Text_SetMin, FALSE,
                                     MUIA_Weight, 0,
                                 End,
@@ -3800,7 +3804,7 @@ static int gui_build(void)
                              * WIRKSAME Maske als Klartext.
                              *
                              * WARUM DIE DREI KNOPFQUELLEN IN EINER ZEILE: jede
-                             * Zeile kostet rund 20 Pixel; bei 640x400 ist das
+                             * Zeile kostet rund 20 Pixel; im Fenster ist das
                              * der Unterschied zwischen "passt" und "muss
                              * scrollen". Die Eintraege sind dafuer KURZ
                              * (gui_taste_kurz_eintraege, z.B. "Gr.1"); die
@@ -4657,7 +4661,7 @@ int main(int argc, char **argv)
      * Zeilen auch im Logfeld des Fensters stehen).
      *
      * MUI rechnet die Mindestgroesse aus dem Inhalt; ohne Messung ist nur zu
-     * raten, ob eine Seite bei 640x400 passt. MUIM_AskMinMax ist genau die
+     * raten, ob eine Seite in das Fenster passt. MUIM_AskMinMax ist genau die
      * Methode, die das Layout dafuer benutzt -- hier wird sie einmal von Hand
      * gerufen und das Ergebnis ins Protokoll geschrieben. Das steht auch nach
      * jeder Seitenumschaltung erneut da (act_seite), damit beide Seiten

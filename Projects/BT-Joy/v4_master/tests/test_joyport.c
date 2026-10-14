@@ -14,8 +14,9 @@
  *   - das Stabilitaetstor: zwei GLEICHE Abtastungen werden uebernommen, zwei
  *     UNGLEICHE verworfen (der letzte gueltige Stand bleibt stehen),
  *   - die Feuerknoepfe gegen den gemerkten GRUNDZUSTAND (nicht hart verdrahtet)
- *     samt beiden Polaritaeten,
- *   - die Vergleichszeilen (OK / ABWEICHUNG, BTN3 ausgelassen) und die
+ *     samt beiden Polaritaeten -- BTN1 (Pin 6), BTN2 (Pin 9) und BTN3 (Pin 5,
+ *     POTINP Bit 9/11),
+ *   - die Vergleichszeilen (OK / ABWEICHUNG, BTN3 MIT verglichen) und die
  *     Rohwertzeile mit vier Hexziffern.
  *
  * Was hier NICHT geprueft wird -- das braucht die V4: dass die vier Register
@@ -297,6 +298,74 @@ static void test_joy_feuer_potinp(void)
              (long)(V4P_IN_ST_BTN1 | V4P_IN_ST_BTN2));
 }
 
+/*
+ * Knopf 3 (Pin 5) -- der Fall, der beim Benutzer nicht ankam.
+ *
+ * Der ESP32 treibt Pin 5; die V4 hat die Leitung bis zum 16.10.2026 NICHT
+ * gelesen, weil das ZWEITE Pot-Bit je Buchse nirgends ausgewertet wurde.
+ * Hier wird genau das geprueft: POTINP Bit 9 (Buchse 0) und Bit 11 (Buchse 1),
+ * getrennt, und "low = gedrueckt" gegen den gemerkten Grundzustand.
+ */
+static void test_joy_feuer_btn3(void)
+{
+    v4_joy_t     st;
+    /* Grundzustand: Pin 5 liegt HIGH (losgelassen) -- Bit 9 und Bit 11 an. */
+    const uint16_t basis_pot = (uint16_t)(POT_BASIS | 0x0200u | 0x0800u);
+    v4_joy_roh_t basis = roh(0x0000u, 0x0000u, CIA_BASIS, basis_pot);
+    v4_joy_roh_t p0    = roh(0x0000u, 0x0000u, CIA_BASIS,
+                             (uint16_t)(basis_pot & ~0x0200u));  /* Bit 9  = 0 */
+    v4_joy_roh_t p1    = roh(0x0000u, 0x0000u, CIA_BASIS,
+                             (uint16_t)(basis_pot & ~0x0800u));  /* Bit 11 = 0 */
+    v4_joy_roh_t beide = roh(0x0000u, 0x0000u, CIA_BASIS,
+                             (uint16_t)(basis_pot & ~(0x0200u | 0x0800u)));
+
+    v4_test_case("Knopf 3 (Pin 5): POTINP Bit 9 = Buchse 0, Bit 11 = Buchse 1");
+    v4_joy_init(&st);
+    stabil(&st, &basis);
+    CHECK_EQ(v4_joy_feuer(&st, 0), 0x00);       /* high = nicht gedrueckt */
+    CHECK_EQ(v4_joy_feuer(&st, 1), 0x00);
+
+    stabil(&st, &p0);                            /* Buchse 0: low = gedrueckt */
+    CHECK_EQ(v4_joy_feuer(&st, 0), (long)V4P_IN_ST_BTN3);
+    CHECK_EQ(v4_joy_feuer(&st, 1), 0x00);        /* Buchse 1 bleibt frei */
+
+    stabil(&st, &p1);                            /* Buchse 1: low = gedrueckt */
+    CHECK_EQ(v4_joy_feuer(&st, 0), 0x00);
+    CHECK_EQ(v4_joy_feuer(&st, 1), (long)V4P_IN_ST_BTN3);
+
+    stabil(&st, &beide);
+    CHECK_EQ(v4_joy_feuer(&st, 0), (long)V4P_IN_ST_BTN3);
+    CHECK_EQ(v4_joy_feuer(&st, 1), (long)V4P_IN_ST_BTN3);
+
+    /* Die anderen Leitungen kommen dabei NICHT mit: BTN1/BTN2 bleiben im
+     * Grundzustand (das Bit steht dort unveraendert). */
+    stabil(&st, &basis);
+    stabil(&st, &beide);
+    CHECK_EQ(v4_joy_feuer(&st, 0)
+                 & (long)(V4P_IN_ST_BTN1 | V4P_IN_ST_BTN2), 0);
+
+    v4_test_case("Knopf 3: Polaritaet kommt aus dem Grundzustand, nicht aus "
+                 "dem Code");
+    /* Umgekehrter Grundzustand (Pin 5 liegt LOW): derselbe Pegelwechsel gilt
+     * dann als gedrueckt. Das ist die Zusage "aktiv low ODER aktiv high". */
+    {
+        v4_joy_roh_t basis_low = roh(0x0000u, 0x0000u, CIA_BASIS,
+                                     (uint16_t)(basis_pot
+                                                & ~(0x0200u | 0x0800u)));
+
+        /* Nur Bit 9 wechselt (Buchse 0): 0 -> 1. */
+        v4_joy_roh_t p0_high = roh(0x0000u, 0x0000u, CIA_BASIS,
+                                   (uint16_t)(basis_pot & ~0x0800u));
+
+        v4_joy_init(&st);
+        stabil(&st, &basis_low);
+        CHECK_EQ(v4_joy_feuer(&st, 0), 0x00);
+        stabil(&st, &p0_high);                   /* Bit 9 nun HIGH */
+        CHECK_EQ(v4_joy_feuer(&st, 0), (long)V4P_IN_ST_BTN3);
+        CHECK_EQ(v4_joy_feuer(&st, 1), 0x00);    /* Buchse 1 unveraendert */
+    }
+}
+
 static void test_joy_feuer_polaritaet(void)
 {
     v4_joy_t     st;
@@ -441,17 +510,36 @@ static void test_joy_port_text_abweichung(void)
     CHECK(strstr(t, "ABWEICHUNG") != NULL);
     CHECK(strstr(t, "Differenz 0x02") != NULL);
 
-    /* BTN3 kann die direkte Quelle nicht lesen (kein Register bekannt) und
-     * wird beim Vergleich AUSGELASSEN -- sonst stuende bei jedem BTN3-Druck
-     * eine Abweichung da, die keine Messung ist. */
+    /* BTN3 (Pin 5) wird SEIT dem 16.10.2026 direkt gelesen (POTINP Bit 9/11)
+     * und deshalb MIT verglichen: meldet die I2C-Seite BTN3 und die Register
+     * zeigen nichts, ist das eine echte Abweichung -- genau der Fall, der
+     * beim Benutzer unsichtbar blieb. */
     vergleich_setzen(&st, 0x0000u, CIA_BASIS, POT_BASIS);
     in.state[1]      = (uint8_t)V4P_IN_ST_BTN3;
     in.level[1]      = 0x3Fu;
     in.level_valid   = 1u;
     (void)v4_joy_port_text(&st, &in, 1, 1, t, sizeof(t));
     CHECK(strstr(t, "state=0x40") != NULL);
-    CHECK(strstr(t, "OK") != NULL);
-    CHECK(strstr(t, "ABWEICHUNG") == NULL);
+    CHECK(strstr(t, "ABWEICHUNG") != NULL);
+    CHECK(strstr(t, "Differenz 0x40") != NULL);
+
+    /* Und umgekehrt: lesen die Register BTN3, waehrend I2C nichts meldet,
+     * steht die Abweichung ebenso da. */
+    {
+        /* Buchse 1: Pin 5 liegt auf POTINP Bit 11 (0x0800). */
+        v4_joy_roh_t b3 = roh(0x0000u, 0x0000u, CIA_BASIS,
+                              (uint16_t)(POT_BASIS | 0x0800u));
+        v4_joy_roh_t g3 = roh(0x0000u, 0x0000u, CIA_BASIS,
+                              (uint16_t)((POT_BASIS | 0x0800u) & ~0x0800u));
+
+        v4_joy_init(&st);
+        v4_joy_basis(&st, &b3);
+        stabil(&st, &g3);               /* Buchse 1: Bit 11 low = gedrueckt */
+        in.state[1] = 0x00u;
+        (void)v4_joy_port_text(&st, &in, 1, 1, t, sizeof(t));
+        CHECK(strstr(t, "direkt: 0x40 BTN3") != NULL);
+        CHECK(strstr(t, "ABWEICHUNG") != NULL);
+    }
 }
 
 static void test_joy_port_text_feuer(void)
@@ -639,7 +727,10 @@ static void test_joy_direkt_text(void)
     CHECK(strstr(t, "Roh: Zaehler=0x0100 (stabil=ja)") != NULL);
     CHECK(strstr(t, "CIAAPRA=0x0074 POTINP=0xFF02") != NULL);   /* Rohwert */
     CHECK(strstr(t, "0 (Low)") != NULL);        /* Pegel Bit 7 liegt auf 0 */
-    CHECK(strstr(t, "nicht lesbar") != NULL);   /* BTN3/Pin 5 */
+    /* BTN3 (Pin 5) hat seit dem 16.10.2026 eine EIGENE Pegelspalte -- kein
+     * "nicht lesbar" mehr. */
+    CHECK(strstr(t, "BTN3") != NULL);
+    CHECK(strstr(t, "nicht lesbar") == NULL);
     /* Und AUSDRUECKLICH nichts aus der I2C-Sicht: das Fenster zeigt nur die
      * Portdaten, der Vergleich steht im Protokoll. */
     CHECK(strstr(t, "I2C") == NULL);
@@ -647,6 +738,23 @@ static void test_joy_direkt_text(void)
     CHECK(strstr(t, "level=") == NULL);
     CHECK(strstr(t, "ABWEICHUNG") == NULL);
     CHECK(strlen(t) < V4_JOY_DIREKT_MAX);
+
+    v4_test_case("Direktzeile: BTN3 (Pin 5) erscheint mit Pegel und Urteil");
+    {
+        v4_joy_roh_t basis3 = roh(0x0000u, 0x0000u, CIA_BASIS,
+                                  (uint16_t)(POT_BASIS | 0x0200u | 0x0800u));
+        v4_joy_roh_t gedr3  = roh(0x0000u, 0x0000u, CIA_BASIS,
+                                  (uint16_t)((POT_BASIS | 0x0200u | 0x0800u)
+                                             & ~0x0200u));
+
+        v4_joy_init(&st);
+        v4_joy_basis(&st, &basis3);
+        stabil(&st, &gedr3);
+        (void)v4_joy_direkt_text(&st, 0, t, sizeof(t));
+        CHECK(strstr(t, "BTN3") != NULL);
+        CHECK(strstr(t, "0 (Low)") != NULL);     /* das Rohbit steht da */
+        CHECK(strstr(t, "gedrueckt (direkt): BTN3") != NULL);
+    }
 
     v4_test_case("Direktzeile: leere Buchse zeigt keine erfundene Aktivitaet");
     v4_joy_init(&st);
@@ -757,6 +865,7 @@ int test_joyport(void)
     test_joy_feuer_grundzustand();
     test_joy_feuer_ciaapra();
     test_joy_feuer_potinp();
+    test_joy_feuer_btn3();
     test_joy_feuer_polaritaet();
     test_joy_feuer_stabilitaet();
 
