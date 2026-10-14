@@ -334,7 +334,7 @@ deutschen Namen stehen daneben. So sieht die **Direktzeile im Fenster** aus
 (`v4_joy_direkt_text`, eine je Buchse):
 
 ```
-Buchse 1  Modus Maus (ESP32)
+Port 1  Modus Maus (ESP32)
 direkt aus den Registern:
 Leitung  Pin   Pegel    direkt
 UP       Pin 1  -        aktiv
@@ -436,7 +436,8 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   fehlenden Platz bei einem zu kleinen Fenster nach Gewicht, und ein
   Textobjekt mit dem Vorgabegewicht 100 kann unter seine Mindesthoehe gedrueckt
   werden -- es sieht dann leer aus, obwohl der Inhalt gesetzt ist. Den Platz
-  bekommen stattdessen die beiden Listen (Gewicht 30/40, `MUIA_MinHeight 36`).
+  bekommen stattdessen die Seitengruppe (Gewicht 50) und die beiden Listen
+  (Gewicht 20/20, `MUIA_MinHeight 20`).
   Die vier Kopffelder tragen zusaetzlich `MUIA_Text_SetMin, FALSE`: die
   Controller-Zeile ist lang, und ohne das macht MUI ihre Breite zur
   Mindestbreite des Fensterinhalts und zieht das Fenster ueber die zugesagten
@@ -457,6 +458,25 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   **tut** -- das ist eine Einstellung, kein Portdatum. Ist die Angabe nicht da
   (kein Kontakt), steht `Modus ? (ESP32 antwortet nicht)`, und die Portdaten
   werden trotzdem gezeichnet: die Registerabfrage haengt nicht am Bus.
+* **Die Seiten liegen in einer Scrollgruppe (`MUIA_Scrollgroup`, seit
+  15.10.2026).** Die Mindesthoehe einer Seitengruppe ist das **Maximum ueber
+  alle Seiten** (`MUI_Group.doc`). Ist eine Seite hoeher als das Fenster,
+  drueckt MUI die Felder zusammen oder schneidet sie ab -- am Geraet war die
+  Konfigurationsseite dann erst nach dem Vergroessern des Fensters bedienbar.
+  Scrollgroup + Virtgroup (`MUIA_Virtgroup_TryFit, FALSE`) nehmen den Seiten
+  die Macht, das Fenster zu vergroessern; `MUIA_Scrollgroup_AutoBars` zeigt die
+  Balken **nur**, wenn wirklich nicht alles passt. Der Umschalter `Seite:`
+  steht **ausserhalb** der Scrollgruppe (neben der Controller-Zeile) und ist
+  damit in jeder Fenstergroesse sichtbar und bedienbar.
+* **Die Mindestmasse werden ausgegeben.** Nach dem Oeffnen und bei jedem
+  Seitenwechsel ruft die Oberflaeche `MUIM_AskMinMax` -- dieselbe Methode, die
+  MUI fuer das Layout benutzt -- und schreibt das Ergebnis ins Protokoll:
+  `[fenster] Mindestgroesse Seite Konfiguration: ... px (Fenster 640x400)`.
+  Damit ist "passt nicht" belegbar statt geraten. (Die Seitengruppe meldet das
+  Maximum ueber alle Seiten, die beiden Seiten zusaetzlich einzeln.)
+* **Namen im Fenster:** die beiden Anschluesse heissen dort **`Port 0`** / **`Port 1`**
+  (Konsole und Protokoll behalten `Buchse`), und die Beitrags-Varianten heissen
+  **`analog`** / **`digital`** / **`beides`** / **`eigene`**
 * **Zwei Seiten statt einer laengeren Liste (`fw_ver` 4).** Der Umschalter
   `Seite:` (neben der Controller-Zeile, damit er keine zusaetzliche Hoehe
   kostet) schaltet zwischen **`Anzeige`** (Portdaten) und **`Konfiguration`**
@@ -468,21 +488,28 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   sich damit nicht nach oben, und nichts wird unter seine Mindesthoehe
   gedrueckt. Genau das war noetig: der Inhalt waere sonst hoeher als der Schirm
   (640x360), und MUI haette die Textfelder unsichtbar gemacht.
-* **Die Konfigurationsseite** zeigt je Zeile eine Angabe, links die
-  Beschriftung, rechts die beiden Buchsen (gleiche `MUIA_FixWidth`, damit die
-  Spalten untereinander stehen):
-  `Geraet` (Auswahlfeld aus der Scanliste),
-  **`Beitrag`** (`analog` / `digital` / `beide` / `eigene` -- die Bedienhilfe,
-  siehe oben; sie setzt `SET_PORT_ROUTING`),
-  `Richtungen` (drei Schalter Stick l / Stick r / D-Pad),
-  `Knopf Pin 6`, `Pin 9`, `Pin 5` (je ein Auswahlfeld mit allen Quellen),
-  **`Maus Tempo`** (Cycle 1..10) und **`Totzone`** (Text `NN %` mit `-`/`+`,
-  Schritt 1). Oben steht der Klartext beider Buchsen, z.B.
-  `Buchse 0: 8BitDo 64 BT -- Vorgabe Maus, wirkt Maus, Richtungen Stick links,
+* **Es gibt DREI Seiten: `Seite: Anzeige | Ports | Maus`.** `Ports` zeigt
+  Geraet, Beitrag, Richtungen (als Klartext) und die Knopfquellen, `Maus` die
+  Maus-Regler. Das ist kein Selbstzweck: eine Seitengruppe ist so hoch wie ihre
+  **hoechste** Seite (`MUI_Group.doc`), und mit allen Einstellungen auf einer
+  Seite war sie hoeher als das Fenster -- man musste scrollen.
+* **Die Seite `Ports`** zeigt je Zeile eine Angabe, links die Beschriftung,
+  rechts die beiden Ports (gleiche `MUIA_FixWidth`, damit die Spalten
+  untereinander stehen):
+  `Geraet` (Auswahlfeld aus der Scanliste; die Namen sind auf 14 Zeichen
+  gekuerzt),
+  **`Beitrag`** (`analog` / `digital` / **`beides`** / `eigene` -- die
+  Bedienhilfe, siehe oben; sie setzt `SET_PORT_ROUTING`),
+  `Richtungen` -- **nur Anzeige als Klartext**, es gibt dort **keine Schalter
+  mehr** (die Werte legt der Beitrag fest; drei Checkboxen daneben waren eine
+  zweite, widerspruechliche Stelle),
+  `Knopf 6/9/5` (**eine** Zeile mit drei Auswahlfeldern je Port; die Eintraege
+  sind dort kurz, z.B. `Gr.1`, weil MUI die Breite aus dem laengsten Eintrag
+  rechnet -- die vollen Namen stehen in der Klartextzeile und im Protokoll).
+  Oben steht der Klartext beider Ports, z.B.
+  `Port 0: 8BitDo 64 BT -- Vorgabe Maus, wirkt Maus, Richtungen Stick links,
   Pin6<-L1, Pin9<-R1, Pin5<-keine, Beitrag analog, Tempo 7/10, Totzone 12%`.
-  Bei `Beitrag = beide` sind die Einzelschalter zusaetzlich mit
-  `MUIA_Disabled` **gesperrt und gerastert** und der Hinweis darunter sagt
-  warum. Jede Aenderung geht **sofort** als
+  Jede Aenderung geht **sofort** als
   `SET_DEVICE_PORT` / `SET_PORT_ROUTING` / `SET_MOUSE_CFG` zum ESP32; danach
   wird `GET_PORT_CONFIG` bzw. `GET_MOUSE_CFG` gelesen und die Felder werden auf
   den **echten** Zustand gestellt. Bei `BAD_ARG` (z.B. doppelt vergebene
@@ -497,6 +524,41 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
   200-ms-Takt waere das reiner Verkehr ohne neue Aussage. Fehlt das
   Faehigkeitsbit `0x0400`, sind beide Regler gesperrt und der Hinweis nennt den
   Grund (`fw_ver 5 noetig`); gesendet wird dann nichts.
+* **Die Seite `Maus`** traegt `Tempo` (Cycle 1..10) und `Totzone` (Text `NN %`
+  mit `-`/`+`, Schritt 1) je Port in EINER Zeile; der Hinweis nennt die
+  Bedienung (Klick schaltet weiter, rechte Maustaste oeffnet die Liste) bzw.
+  das fehlende Faehigkeitsbit.
+* **In der Geraeteliste steht hinter der MAC, ob das Geraet verbunden ist.**
+  Quelle ist `GET_STATUS.conn_index` -- der Index des verbundenen Geraets in
+  **genau der Tabelle**, aus der `DEV_GET` liest. Ohne gueltige Statusantwort
+  steht dort **`unbekannt`** und nicht "nicht verbunden"; eine fehlende Antwort
+  ist keine Aussage. Wenn der Firmware-Agent das Feld in `DEV_GET` nachreicht,
+  wird die Anzeige darauf umgestellt. Die Liste wird nur bei einer **Aenderung**
+  des Verbindungszustands neu gefuellt (sonst flackerte die Auswahl), der
+  aktive Eintrag bleibt erhalten.
+* **`Verbindung aktiv -- Suche pausiert`** steht in der Zustandszeile, wenn ein
+  Controller verbunden ist und nicht gesucht wird: das ist BluePad32-Verhalten
+  (gesucht wird erst nach dem Trennen), und ohne den Zusatz saehe die Zeile aus,
+  als sei die Suche kaputt.
+* **`GET/SET_MOUSE_CFG` werden IMMER protokolliert** (auch ohne `-trace`) --
+  genau hier war nicht nachvollziehbar, ob eine Tempo-Aenderung ankommt. Eine
+  Zeile entsteht bei jeder Aenderung, nicht im Takt:
+  `[maus] SET_MOUSE_CFG port=0 Tempo 8/10 Totzone 12% bestaetigt -- vorher
+  port0 Tempo 7/10 Totzone 12%, port1 Tempo 7/10 Totzone 12%, gelesen ...`
+  bzw. bei Ablehnung `... -> BAD_ARG (abgelehnt); unveraendert gelesen: ...`.
+  Die Zeile nennt IMMER **beide** Ports -- damit sieht man sofort, ob eine
+  Aenderung den richtigen Port getroffen hat oder ob beide wandern.
+* **Ein Geraet gehoert immer genau EINEM Port.** Der ESP32 speichert je Geraet
+  **eine** Buchse (NVS-Feld `port`, `v4_devices_zuordnen()` in
+  `V4_ESP32_BT_Joy_BP32/main/v4_devices.c`). Dieselbe BDA fuer den anderen Port
+  zu waehlen **verschiebt** die Zuordnung; der erste Port verliert sie. Das ist
+  **kein** Fehler der Oberflaeche. Fuer **einen** Controller auf **beiden**
+  Buchsen ist der **duo**-Betrieb des ESP32 zustaendig
+  (`V4_ESP32_BT_Joy_BP32/main/v4_platform.c`, "duo: EIN Controller auf BEIDEN
+  Buchsen"): eine Buchse wird Maus, die andere Joystick. duo ist eine
+  Einstellung der ESP32-Seite und hat **keinen** I2C-Befehl. Wird eine
+  Zuordnung verschoben, sagt die Oberflaeche das im Klartext
+  (`[cfg] Hinweis: ... war Port 0 zugeordnet und ist jetzt Port 1 ...`).
 * **Keine Controller-Eingabewerte ueber I2C.** `GET_INPUT` wird von der
   Oberflaeche **nicht** mehr abgefragt -- weder fuer die Anzeige noch fuer einen
   Vergleich. Was der Controller tut, steht ausschliesslich in den Registern der

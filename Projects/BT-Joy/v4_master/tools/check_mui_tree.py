@@ -164,15 +164,45 @@ KLASSEN = {
         "MUIA_List_MultiTestHook", "MUIA_List_AdjustHeight",
         "MUIA_List_AdjustWidth", "MUIA_List_Visible",
     },
+    # Scrollgroup ist eine Group-Unterklasse: sie traegt dieselben
+    # Group-Tags (Kinder!) und dazu ihre Scrollgroup-Attribute. Der Inhalt
+    # MUSS ein Virtgroup-Objekt sein (MUI_Scrollgroup.doc).
+    "ScrollgroupObject": {
+        "MUIA_Scrollgroup_Contents", "MUIA_Scrollgroup_AutoBars",
+        "MUIA_Scrollgroup_FreeHoriz", "MUIA_Scrollgroup_FreeVert",
+        "MUIA_Scrollgroup_UseWinBorder", "MUIA_Scrollgroup_VertBar",
+        "MUIA_Scrollgroup_HorizBar", "MUIA_Scrollgroup_NoVertBar",
+        "MUIA_Scrollgroup_NoHorizBar",
+        # Group-Tags, weil Scrollgroup von GroupObject abstammt
+        "MUIA_Group_Child", "MUIA_Group_Horiz", "MUIA_Group_Columns",
+        "MUIA_Group_Rows", "MUIA_Group_SameHeight", "MUIA_Group_SameWidth",
+        "MUIA_Group_Spacing", "MUIA_Group_HorizSpacing",
+        "MUIA_Group_VertSpacing", "MUIA_Group_Homogeneous",
+        "MUIA_Group_PageMode", "MUIA_Group_ActivePage", "MUIA_Group_Children",
+        "MUIA_Group_LayoutHook", "MUIA_Group_Forward", "MUIA_Group_Regions",
+    },
+    # Virtgroup ist ebenfalls eine Group-Unterklasse.
+    "VirtgroupObject": {
+        "MUIA_Virtgroup_Width", "MUIA_Virtgroup_Height",
+        "MUIA_Virtgroup_Left", "MUIA_Virtgroup_Top",
+        "MUIA_Virtgroup_Input", "MUIA_Virtgroup_TryFit",
+        "MUIA_Group_Child", "MUIA_Group_Horiz", "MUIA_Group_Columns",
+        "MUIA_Group_Rows", "MUIA_Group_SameHeight", "MUIA_Group_SameWidth",
+        "MUIA_Group_Spacing", "MUIA_Group_HorizSpacing",
+        "MUIA_Group_VertSpacing", "MUIA_Group_Homogeneous",
+        "MUIA_Group_PageMode", "MUIA_Group_ActivePage", "MUIA_Group_Children",
+        "MUIA_Group_LayoutHook", "MUIA_Group_Forward", "MUIA_Group_Regions",
+    },
 }
 
 OBJEKTE = ("ApplicationObject", "WindowObject", "TextObject", "GroupObject",
-           "VGroup", "HGroup", "CycleObject", "ListviewObject", "ListObject")
+           "VGroup", "HGroup", "CycleObject", "ListviewObject", "ListObject",
+           "ScrollgroupObject", "VirtgroupObject")
 
 # VGroup/HGroup sind GroupObject mit festem MUIA_Group_Horiz.
 ALIAS = {"VGroup": "GroupObject", "HGroup": "GroupObject"}
 
-GRUPPEN = {"GroupObject"}
+GRUPPEN = {"GroupObject", "ScrollgroupObject", "VirtgroupObject"}
 
 TAG_RE = re.compile(r"^(MUIA_|MUIM_|MUIV_)")
 OBJ_RE = re.compile(r"\b(%s)\b" % "|".join(OBJEKTE))
