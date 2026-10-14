@@ -300,6 +300,8 @@ const char *v4_dbg_cmd_name(uint8_t cmd)
     case V4P_CMD_SET_PORT_ROUTING: return "SET_PORT_ROUTING";
     case V4P_CMD_GET_MOUSE_CFG:    return "GET_MOUSE_CFG";
     case V4P_CMD_SET_MOUSE_CFG:    return "SET_MOUSE_CFG";
+    case V4P_CMD_GET_DUO:          return "GET_DUO";
+    case V4P_CMD_SET_DUO:          return "SET_DUO";
     case V4P_CMD_SCAN_START:    return "SCAN_START";
     case V4P_CMD_SCAN_STOP:     return "SCAN_STOP";
     case V4P_CMD_DEV_COUNT:     return "DEV_COUNT";
@@ -328,6 +330,14 @@ static const char *trace_name(uint8_t event)
     default:             return "?       ";
     }
 }
+
+/*
+ * Die zuletzt gemeldeten Faehigkeiten. Sie stehen hier, weil die Kurzform
+ * einer Antwort NUR die Nutzlast sieht -- und DEV_GET ist ohne das
+ * Faehigkeitsbit V4P_CAP_DEV_STATE nicht eindeutig zu lesen (Layoutwechsel mit
+ * fw_ver 6: name_len 7 -> 8). v4_dbg_info() setzt den Wert.
+ */
+static uint16_t s_caps;
 
 /* ------------------------------------------------------------------ */
 /* Kurzform der Antwort                                                */
@@ -521,11 +531,28 @@ static void kurzform(uint8_t cmd, const uint8_t *p, uint16_t len,
     case V4P_CMD_DEV_GET: {
         v4p_dev_t dev;
 
-        if (v4p_dec_dev(p, len, &dev) == 0) {
-            (void)snprintf(out, cap, "name=\"%s\" bda=%02X:%02X:%02X:%02X:%02X:%02X",
+        if (v4p_dec_dev(p, len, s_caps, &dev) == 0) {
+            const char *verb = (dev.verbunden == V4P_DEV_VERBUNDEN_UNBEKANNT)
+                                   ? "?"
+                                   : ((dev.verbunden != 0) ? "ja" : "nein");
+
+            (void)snprintf(out, cap,
+                           "name=\"%s\" bda=%02X:%02X:%02X:%02X:%02X:%02X "
+                           "verbunden=%s",
                            (dev.name[0] != '\0') ? dev.name : "(ohne Namen)",
                            dev.bda[0], dev.bda[1], dev.bda[2], dev.bda[3],
-                           dev.bda[4], dev.bda[5]);
+                           dev.bda[4], dev.bda[5], verb);
+        }
+        break;
+    }
+    /* duo (fw_ver 6): eine Zeile, die den Wert AUSSCHREIBT. */
+    case V4P_CMD_GET_DUO:
+    case V4P_CMD_SET_DUO: {
+        uint8_t duo = 0u;
+
+        if (v4p_dec_duo(p, len, &duo) == 0) {
+            (void)snprintf(out, cap, "duo=%u (%s)", (unsigned)duo,
+                           v4p_duo_name(duo));
         }
         break;
     }
@@ -678,7 +705,9 @@ static void dbg_caps_text(uint16_t caps, char *out, size_t cap)
         { V4P_CAP_PORT_ROUTING, "Verteilung" },
         { V4P_CAP_DEVICE_PORT,  "Geraetezuordnung" },
         /* fw_ver 5: GET_MOUSE_CFG/SET_MOUSE_CFG (Tempo/Totzone je Buchse). */
-        { V4P_CAP_MOUSE_CFG,    "Maus-Einstellungen" }
+        { V4P_CAP_MOUSE_CFG,    "Maus-Einstellungen" },
+        { V4P_CAP_DUO,          "duo" },
+        { V4P_CAP_DEV_STATE,    "Geraetezustand" }
     };
     size_t   n     = 0u;
     int      first = 1;
@@ -726,6 +755,7 @@ void v4_dbg_info(const v4p_info_t *info)
     if (info == NULL) {
         return;
     }
+    s_caps = info->caps;
     dbg_caps_text(info->caps, caps, sizeof(caps));
     v4_dbg("[info] proto=%u fw=%u write=%u read=%u chunk=%u max_dev=%u "
            "caps=0x%04X (%s)\n",

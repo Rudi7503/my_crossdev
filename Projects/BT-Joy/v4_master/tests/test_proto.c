@@ -450,9 +450,10 @@ static void test_codec_dev(void)
     v4p_dev_t in;
     v4p_dev_t out;
     uint8_t   p[V4P_DEV_OFF_NAME + V4P_DEVNAME_MAX];
+    uint8_t   p_alt[V4P_DEV_OFF_NAME_ALT + V4P_DEVNAME_MAX];
     uint8_t   i;
 
-    v4_test_case("DEV_GET: idx, bda[6], name_len, name");
+    v4_test_case("DEV_GET fw6: idx, bda[6], VERBUNDEN, name_len, name");
     memset(&in, 0, sizeof(in));
     in.idx = 4u;
     for (i = 0u; i < 6u; i++) {
@@ -460,22 +461,63 @@ static void test_codec_dev(void)
     }
     (void)strcpy(in.name, "Logitech MX Anywhere");
     in.name_len = 20u;
+    in.verbunden = 1;
 
     CHECK_EQ(v4p_enc_dev(p, &in), (size_t)V4P_DEV_OFF_NAME + 20u);
     CHECK_EQ(p[V4P_DEV_OFF_INDEX], 4u);
     CHECK_EQ(p[V4P_DEV_OFF_BDA], 0xA0u);
     CHECK_EQ(p[V4P_DEV_OFF_BDA + 5u], 0xA5u);
+    CHECK_EQ(p[V4P_DEV_OFF_CONNECTED], 1u);
     CHECK_EQ(p[V4P_DEV_OFF_NAME_LEN], 20u);
+    /* Das Verbunden-Byte liegt auf Offset 7 -- also DORT, wo frueher
+     * name_len stand. Genau das ist der Layoutwechsel. */
+    CHECK_EQ(p[V4P_DEV_OFF_CONNECTED], p[7]);
 
-    CHECK_EQ(v4p_dec_dev(p, (uint8_t)(V4P_DEV_OFF_NAME + 20u), &out), 0);
+    CHECK_EQ(v4p_dec_dev(p, (uint8_t)(V4P_DEV_OFF_NAME + 20u),
+                         V4P_CAP_DEV_STATE, &out), 0);
     CHECK_EQ(out.idx, 4u);
     CHECK_EQ(out.bda[0], 0xA0u);
     CHECK_EQ(out.bda[5], 0xA5u);
     CHECK_EQ(out.name_len, 20u);
+    CHECK_EQ(out.verbunden, 1);
     CHECK_STR(out.name, "Logitech MX Anywhere");
 
+    v4_test_case("DEV_GET fw6: nicht verbunden und 'nicht verbunden' lesbar");
+    in.verbunden = 0;
+    (void)v4p_enc_dev(p, &in);
+    CHECK_EQ(v4p_dec_dev(p, (uint8_t)(V4P_DEV_OFF_NAME + 20u),
+                         V4P_CAP_DEV_STATE, &out), 0);
+    CHECK_EQ(out.verbunden, 0);
+
+    v4_test_case("DEV_GET ALT (fw5): name_len liegt bei 7");
+    CHECK_EQ(v4p_enc_dev_alt(p_alt, &in),
+             (size_t)V4P_DEV_OFF_NAME_ALT + 20u);
+    CHECK_EQ(p_alt[V4P_DEV_OFF_NAME_LEN_ALT], 20u);
+    CHECK_EQ(v4p_dec_dev(p_alt, (uint8_t)(V4P_DEV_OFF_NAME_ALT + 20u),
+                         0u, &out), 0);
+    CHECK_EQ(out.name_len, 20u);
+    CHECK_STR(out.name, "Logitech MX Anywhere");
+    /* Ohne das Faehigkeitsbit gibt es das Feld nicht -- "unbekannt". */
+    CHECK_EQ(out.verbunden, V4P_DEV_VERBUNDEN_UNBEKANNT);
+
+    v4_test_case("DEV_GET: dasselbe Byte, beide Layouts -- das Bit entscheidet");
+    /*
+     * Eine Nutzlast, die als fw6 "verbunden=0, name_len=20" und als fw5
+     * "name_len=0" gelesen werden KANN. Nur das Faehigkeitsbit entscheidet;
+     * deshalb prueft der Decoder BEIDE Faelle ausdruecklich.
+     */
+    CHECK_EQ(v4p_dec_dev(p, (uint8_t)(V4P_DEV_OFF_NAME + 20u),
+                         V4P_CAP_DEV_STATE, &out), 0);
+    CHECK_EQ(out.name_len, 20u);
+    CHECK_STR(out.name, "Logitech MX Anywhere");
+    CHECK_EQ(v4p_dec_dev(p, (uint8_t)(V4P_DEV_OFF_NAME_ALT + 1u),
+                         0u, &out), 0);
+    CHECK_EQ(out.name_len, 0u);
+    CHECK_STR(out.name, "");
+
     v4_test_case("DEV_GET: abgeschnittene Nutzlast wird abgewiesen");
-    CHECK_EQ(v4p_dec_dev(p, (uint8_t)(V4P_DEV_OFF_NAME + 19u), &out), -1);
+    CHECK_EQ(v4p_dec_dev(p, (uint8_t)(V4P_DEV_OFF_NAME + 19u),
+                         V4P_CAP_DEV_STATE, &out), -1);
 
     v4_test_case("DEV_GET: 49 Zeichen (Leitungsgrenze) passen");
     for (i = 0u; i < (uint8_t)V4P_DEVNAME_MAX; i++) {
@@ -485,7 +527,7 @@ static void test_codec_dev(void)
     in.name_len = (uint8_t)V4P_DEVNAME_MAX;
     CHECK_EQ(v4p_enc_dev(p, &in), (size_t)V4P_DEV_OFF_NAME + V4P_DEVNAME_MAX);
     CHECK_EQ(v4p_dec_dev(p, (uint8_t)(V4P_DEV_OFF_NAME + V4P_DEVNAME_MAX),
-                         &out), 0);
+                         V4P_CAP_DEV_STATE, &out), 0);
     CHECK_EQ(out.name_len, V4P_DEVNAME_MAX);
 
     v4_test_case("DEV_GET: 50 Zeichen werden auf 49 gekuerzt");
@@ -498,6 +540,36 @@ static void test_codec_dev(void)
     in.name_len = (uint8_t)(V4P_DEVNAME_MAX + 1u);
     CHECK_EQ(v4p_enc_dev(p, &in), (size_t)V4P_DEV_OFF_NAME + V4P_DEVNAME_MAX);
     CHECK_EQ(p[V4P_DEV_OFF_NAME_LEN], V4P_DEVNAME_MAX);
+}
+
+static void test_codec_duo(void)
+{
+    uint8_t p[V4P_DUO_PAYLOAD_LEN];
+    uint8_t out = 0xFFu;
+
+    v4_test_case("duo: erlaubte Werte 0/1/2");
+    CHECK_EQ(v4p_duo_valid(V4P_DUO_OFF), 1);
+    CHECK_EQ(v4p_duo_valid(V4P_DUO_MOUSE_PORT0), 1);
+    CHECK_EQ(v4p_duo_valid(V4P_DUO_MOUSE_PORT1), 1);
+    CHECK_EQ(v4p_duo_valid(3u), 0);
+    CHECK_EQ(v4p_duo_valid(0xFFu), 0);
+
+    v4_test_case("duo: Codec, 1 Byte in beide Richtungen");
+    CHECK_EQ(v4p_enc_duo(p, V4P_DUO_MOUSE_PORT1),
+             (size_t)V4P_DUO_PAYLOAD_LEN);
+    CHECK_EQ(p[V4P_DUO_OFF_STATE], V4P_DUO_MOUSE_PORT1);
+    CHECK_EQ(v4p_dec_duo(p, V4P_DUO_PAYLOAD_LEN, &out), 0);
+    CHECK_EQ(out, V4P_DUO_MOUSE_PORT1);
+    /* Eine leere Antwort ist ein Formatfehler, kein Wert. */
+    CHECK_EQ(v4p_dec_duo(p, 0u, &out), -1);
+
+    v4_test_case("duo: Klartext nennt BEIDE Rollen");
+    CHECK_STR(v4p_duo_name(V4P_DUO_OFF), "aus");
+    CHECK_STR(v4p_duo_name(V4P_DUO_MOUSE_PORT0),
+              "Port 0 Maus, Port 1 Joystick");
+    CHECK_STR(v4p_duo_name(V4P_DUO_MOUSE_PORT1),
+              "Port 1 Maus, Port 0 Joystick");
+    CHECK_STR(v4p_duo_name(9u), "?");
 }
 
 static void test_codec_port_mode(void)
@@ -950,6 +1022,7 @@ int test_proto(void)
     test_level_diagnosis();
     test_codec_hid();
     test_codec_dev();
+    test_codec_duo();
     test_codec_port_mode();
     test_codec_port_config();
     test_codec_mouse_cfg();

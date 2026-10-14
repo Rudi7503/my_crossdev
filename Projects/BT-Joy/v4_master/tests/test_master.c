@@ -302,6 +302,17 @@ static void test_devices_and_connect(void)
 
     v4_test_case("DEV_COUNT/DEV_GET: drei Geraete mit Namen und Adresse");
     setup(&m);
+    /*
+     * Vor dem Lesen der Geraeteliste die Faehigkeiten holen: das DEV_GET-Layout
+     * haengt an V4P_CAP_DEV_STATE (fw_ver 6 hat ein Verbunden-Byte VOR
+     * name_len). Genau so macht es die Oberflaeche beim Start (PING).
+     */
+    {
+        v4p_info_t info;
+
+        CHECK_EQ(v4_ping(&m, &info), V4P_ST_OK);
+        CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_DEV_STATE), 1);
+    }
     rc = v4_dev_count(&m, &count);
     CHECK_EQ(rc, V4P_ST_OK);
     CHECK_EQ(count, 3u);
@@ -930,6 +941,103 @@ static void test_mousecfg(void)
     teardown();
 }
 
+/* ------------------------------------------------------------------ */
+/* duo (fw_ver 6)                                                      */
+/* ------------------------------------------------------------------ */
+
+static void test_duo(void)
+{
+    v4_master_t m;
+    v4p_info_t  info;
+    uint8_t     duo = 0xFFu;
+
+    v4_test_case("GET_DUO: Vorgabe ist 0 (aus)");
+    setup(&m);
+    CHECK_EQ(v4_get_duo(&m, &duo), V4P_ST_OK);
+    CHECK_EQ(duo, V4P_DUO_OFF);
+    CHECK_EQ(v4_get_duo(&m, NULL), V4_ERR_ARG);
+    teardown();
+
+    v4_test_case("SET_DUO: 0/1/2 werden gesetzt und gelesen");
+    setup(&m);
+    CHECK_EQ(v4_set_duo(&m, V4P_DUO_MOUSE_PORT0), V4P_ST_OK);
+    CHECK_EQ(v4_get_duo(&m, &duo), V4P_ST_OK);
+    CHECK_EQ(duo, V4P_DUO_MOUSE_PORT0);
+    CHECK_EQ(v4_set_duo(&m, V4P_DUO_MOUSE_PORT1), V4P_ST_OK);
+    CHECK_EQ(v4_get_duo(&m, &duo), V4P_ST_OK);
+    CHECK_EQ(duo, V4P_DUO_MOUSE_PORT1);
+    CHECK_EQ(v4_set_duo(&m, V4P_DUO_OFF), V4P_ST_OK);
+    CHECK_EQ(v4_get_duo(&m, &duo), V4P_ST_OK);
+    CHECK_EQ(duo, V4P_DUO_OFF);
+    teardown();
+
+    v4_test_case("SET_DUO: unzulaessiger Wert lokal -> BAD_ARG, "
+                 "kein Rahmen, nichts geaendert");
+    setup(&m);
+    {
+        unsigned long vorher = v4_mock.writes;
+
+        CHECK_EQ(v4_set_duo(&m, 3u), V4P_ST_BAD_ARG);
+        CHECK_EQ(v4_set_duo(&m, 0xFFu), V4P_ST_BAD_ARG);
+        CHECK_EQ(v4_mock.writes, vorher);
+    }
+    CHECK_EQ(v4_mock_duo(), V4P_DUO_OFF);
+    teardown();
+
+    v4_test_case("SET_DUO: BAD_ARG des Slaves kommt durch, alt bleibt stehen");
+    setup(&m);
+    CHECK_EQ(v4_set_duo(&m, V4P_DUO_MOUSE_PORT0), V4P_ST_OK);
+    v4_mock.force_status = V4P_ST_BAD_ARG;
+    CHECK_EQ(v4_set_duo(&m, V4P_DUO_MOUSE_PORT1), V4P_ST_BAD_ARG);
+    CHECK_EQ(v4_get_duo(&m, &duo), V4P_ST_OK);
+    CHECK_EQ(duo, V4P_DUO_MOUSE_PORT0);
+    teardown();
+
+    v4_test_case("SET_DUO: falsches Echo -> V4_ERR_FRAME");
+    setup(&m);
+    v4_mock.bad_duo_echo = 1;
+    CHECK_EQ(v4_set_duo(&m, V4P_DUO_MOUSE_PORT1), V4_ERR_FRAME);
+    teardown();
+
+    v4_test_case("GET_DUO: Wert ausserhalb 0/1/2 ist ein Formatfehler");
+    setup(&m);
+    v4_mock_set_duo(V4P_DUO_MOUSE_PORT1);
+    /* Ein Slave, der 9 liefert, ist kein gueltiger Zustand. */
+    {
+        uint8_t p[V4P_DUO_PAYLOAD_LEN];
+
+        p[V4P_DUO_OFF_STATE] = 9u;
+        CHECK_EQ(v4p_dec_duo(p, (uint8_t)V4P_DUO_PAYLOAD_LEN, &duo), 0);
+        CHECK_EQ(v4p_duo_valid(duo), 0);
+    }
+    teardown();
+
+    v4_test_case("fw_ver 5 (ohne duo): PING wird ANGENOMMEN, 0x0D/0x0E "
+                 "melden BAD_CMD, DEV_GET benutzt das ALTE Layout");
+    v4_mock_reset();
+    v4_mock_seed_default();
+    v4_mock.legacy_fw5 = 1;
+    CHECK_EQ(v4_open(&m, NULL), 0);
+    CHECK_EQ(v4_ping(&m, &info), V4P_ST_OK);
+    CHECK_EQ(info.fw_ver, 5u);
+    CHECK_EQ(v4_check_info(&info), V4P_ST_OK);      /* gleicher Rahmen! */
+    CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_DUO), 0);
+    CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_DEV_STATE), 0);
+    /* Die Maus-Einstellungen sind bei fw_ver 5 sehr wohl da. */
+    CHECK_EQ(v4_info_has_caps(&info, V4P_CAP_MOUSE_CFG), 1);
+    CHECK_EQ(v4_get_duo(&m, &duo), V4P_ST_BAD_CMD);
+    CHECK_EQ(v4_set_duo(&m, V4P_DUO_MOUSE_PORT0), V4P_ST_BAD_CMD);
+    {
+        v4p_dev_t d;
+
+        /* Das ALTE Layout: name_len bei 7, sonst kaeme hier Muell heraus. */
+        CHECK_EQ(v4_dev_get(&m, 0u, &d), V4P_ST_OK);
+        CHECK_STR(d.name, "8BitDo Pro 2");
+        CHECK_EQ(d.verbunden, V4P_DEV_VERBUNDEN_UNBEKANNT);
+    }
+    teardown();
+}
+
 /*
  * Die MUI-Oberflaeche liest keine Controller-Eingabewerte mehr ueber I2C: die
  * Quelle sind die Joyport-Register der V4. Diese Folge ist genau der I2C-Teil
@@ -983,6 +1091,7 @@ int test_master(void)
     test_routing();
     test_beitrag();
     test_mousecfg();
+    test_duo();
     test_ohne_i2c_eingang();
     test_devices_and_connect();
     test_link_failures();

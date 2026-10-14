@@ -407,7 +407,16 @@ int v4p_dec_get_hid(const uint8_t *p, uint8_t len, v4p_hid_t *out)
     return 0;
 }
 
-size_t v4p_enc_dev(uint8_t *p, const v4p_dev_t *in)
+/*
+ * DEV_GET-Nutzlast schreiben.
+ *
+ * v4p_enc_dev() schreibt das NEUE Layout (fw_ver 6, mit Verbunden-Byte),
+ * v4p_enc_dev_alt() das ALTE (fw_ver < 6, name_len bei 7). Beide stehen hier
+ * nebeneinander, damit Mock und Tests BEIDE Staende erzeugen koennen -- der
+ * Master muss sie ja auch beide lesen koennen.
+ */
+static size_t enc_dev_common(uint8_t *p, const v4p_dev_t *in, uint8_t off_conn,
+                             uint8_t off_len, uint8_t off_name)
 {
     uint8_t n = in->name_len;
     uint8_t i;
@@ -420,29 +429,60 @@ size_t v4p_enc_dev(uint8_t *p, const v4p_dev_t *in)
     for (i = 0; i < 6u; i++) {
         p[V4P_DEV_OFF_BDA + i] = in->bda[i];
     }
-    p[V4P_DEV_OFF_NAME_LEN] = n;
-    for (i = 0; i < n; i++) {
-        p[V4P_DEV_OFF_NAME + i] = (uint8_t)in->name[i];
+    if (off_conn != 0xFFu) {
+        p[off_conn] = (in->verbunden == 1) ? 1u : 0u;
     }
-    return (size_t)V4P_DEV_OFF_NAME + (size_t)n;
+    p[off_len] = n;
+    for (i = 0; i < n; i++) {
+        p[off_name + i] = (uint8_t)in->name[i];
+    }
+    return (size_t)off_name + (size_t)n;
 }
 
-int v4p_dec_dev(const uint8_t *p, uint8_t len, v4p_dev_t *out)
+size_t v4p_enc_dev(uint8_t *p, const v4p_dev_t *in)
+{
+    return enc_dev_common(p, in, (uint8_t)V4P_DEV_OFF_CONNECTED,
+                          (uint8_t)V4P_DEV_OFF_NAME_LEN,
+                          (uint8_t)V4P_DEV_OFF_NAME);
+}
+
+size_t v4p_enc_dev_alt(uint8_t *p, const v4p_dev_t *in)
+{
+    return enc_dev_common(p, in, 0xFFu,
+                          (uint8_t)V4P_DEV_OFF_NAME_LEN_ALT,
+                          (uint8_t)V4P_DEV_OFF_NAME_ALT);
+}
+
+int v4p_dec_dev(const uint8_t *p, uint8_t len, uint16_t caps, v4p_dev_t *out)
 {
     uint8_t n;
     uint8_t i;
+    uint8_t off_len;
+    uint8_t off_name;
+    int     neu;
 
     if (p == NULL || out == NULL) {
         return -1;
     }
-    if (len < (uint8_t)V4P_DEV_OFF_NAME) {
+    /*
+     * Welches Layout? AUSSCHLIESSLICH das Faehigkeitsbit entscheidet. Aus der
+     * Nutzlast allein laesst es sich nicht ableiten: ein Verbunden-Byte 0
+     * sieht aus wie name_len 0.
+     */
+    neu     = ((caps & V4P_CAP_DEV_STATE) != 0u) ? 1 : 0;
+    off_len = neu ? (uint8_t)V4P_DEV_OFF_NAME_LEN
+                  : (uint8_t)V4P_DEV_OFF_NAME_LEN_ALT;
+    off_name = neu ? (uint8_t)V4P_DEV_OFF_NAME
+                   : (uint8_t)V4P_DEV_OFF_NAME_ALT;
+
+    if (len < (uint8_t)(off_name)) {
         return -1;
     }
-    n = p[V4P_DEV_OFF_NAME_LEN];
+    n = p[off_len];
     if (n > V4P_DEVNAME_MAX) {
         return -1;
     }
-    if ((uint16_t)V4P_DEV_OFF_NAME + (uint16_t)n > (uint16_t)len) {
+    if ((uint16_t)off_name + (uint16_t)n > (uint16_t)len) {
         return -1;
     }
 
@@ -453,8 +493,11 @@ int v4p_dec_dev(const uint8_t *p, uint8_t len, v4p_dev_t *out)
     }
     out->name_len = n;
     out->flags    = 0u;         /* siehe v4p_dec_get_hid */
+    out->verbunden = neu
+                         ? ((p[V4P_DEV_OFF_CONNECTED] != 0u) ? 1 : 0)
+                         : V4P_DEV_VERBUNDEN_UNBEKANNT;
     for (i = 0; i < n; i++) {
-        out->name[i] = (char)p[V4P_DEV_OFF_NAME + i];
+        out->name[i] = (char)p[off_name + i];
     }
     out->name[n] = '\0';
     return 0;
@@ -758,6 +801,66 @@ int v4p_mouse_cfg_valid(const v4p_mousecfg_t *c)
         }
     }
     return 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* duo (GET_DUO/SET_DUO, fw_ver 6)                                     */
+/* ------------------------------------------------------------------ */
+
+int v4p_duo_valid(uint8_t duo)
+{
+    return (duo == (uint8_t)V4P_DUO_OFF
+            || duo == (uint8_t)V4P_DUO_MOUSE_PORT0
+            || duo == (uint8_t)V4P_DUO_MOUSE_PORT1) ? 1 : 0;
+}
+
+size_t v4p_enc_duo(uint8_t *p, uint8_t duo)
+{
+    p[V4P_DUO_OFF_STATE] = duo;
+    return V4P_DUO_PAYLOAD_LEN;
+}
+
+int v4p_dec_duo(const uint8_t *p, uint8_t len, uint8_t *out)
+{
+    if (p == NULL || out == NULL) {
+        return -1;
+    }
+    if (len < (uint8_t)V4P_DUO_PAYLOAD_LEN) {
+        return -1;
+    }
+    /*
+     * Der Wert wird hier NICHT auf 0/1/2 geprueft: das ist die Aufgabe von
+     * v4p_duo_valid() beim AUFRUFER. So kann eine Anzeige auch einen
+     * unbekannten Wert ehrlich als "?" darstellen, statt ihn zu verschlucken.
+     */
+    *out = p[V4P_DUO_OFF_STATE];
+    return 0;
+}
+
+const char *v4p_duo_name(uint8_t duo)
+{
+    switch (duo) {
+    case V4P_DUO_OFF:
+        return "aus";
+    case V4P_DUO_MOUSE_PORT0:
+        return "Port 0 Maus, Port 1 Joystick";
+    case V4P_DUO_MOUSE_PORT1:
+        return "Port 1 Maus, Port 0 Joystick";
+    default:
+        return "?";
+    }
+}
+
+void v4p_duo_text(uint8_t duo, char *out, size_t cap)
+{
+    if (out == NULL || cap == 0u) {
+        return;
+    }
+    if (v4p_duo_valid(duo)) {
+        (void)snprintf(out, cap, "%s", v4p_duo_name(duo));
+    } else {
+        (void)snprintf(out, cap, "unbekannt (%u)", (unsigned)duo);
+    }
 }
 
 size_t v4p_enc_get_mouse_cfg(uint8_t *p, const v4p_mousecfg_t *in)

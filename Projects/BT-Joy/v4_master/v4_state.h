@@ -86,6 +86,13 @@ typedef struct {
     v4p_mousecfg_t mousecfg;
     int            mousecfg_valid;
     /*
+     * duo aus GET_DUO (fw_ver 6): 0 = aus, 1 = Port 0 Maus / Port 1 Joystick,
+     * 2 = umgekehrt. duo_valid bleibt 0, solange keine gueltige Antwort
+     * vorliegt -- der Schalter zeigt dann NICHT "aus", sondern "?".
+     */
+    uint8_t        duo;
+    int            duo_valid;
+    /*
      * Geraet -> Buchse. Der ESP32 liefert diese Zuordnung ueber die Leitung
      * NICHT zurueck (DEV_GET nennt nur Name und Adresse, GET_PORT_CONFIG nur
      * die Buchsenfelder). Was hier steht, ist deshalb das, was in DIESER
@@ -154,6 +161,9 @@ void v4_state_put_portcfg(v4_state_t *s, const v4p_portcfg_t *cfg);
  * gueltiger Antwort rufen). Die Werte sind STUFEN/Prozent, keine
  * physikalischen Groessen -- es wird hier nichts umgerechnet. */
 void v4_state_put_mousecfg(v4_state_t *s, const v4p_mousecfg_t *cfg);
+
+/* duo uebernehmen (nur bei gueltiger Antwort aufrufen). */
+void v4_state_put_duo(v4_state_t *s, uint8_t duo);
 
 /* Eine bestaetigte Geraetezuordnung merken (SET_DEVICE_PORT). Gleiche Adresse
  * ersetzt den vorhandenen Eintrag, eine neue kommt dazu (bis

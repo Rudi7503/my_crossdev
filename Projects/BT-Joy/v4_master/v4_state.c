@@ -222,6 +222,15 @@ void v4_state_put_mousecfg(v4_state_t *s, const v4p_mousecfg_t *cfg)
     s->mousecfg_valid = 1;
 }
 
+void v4_state_put_duo(v4_state_t *s, uint8_t duo)
+{
+    if (s == NULL) {
+        return;
+    }
+    s->duo       = duo;
+    s->duo_valid = 1;
+}
+
 void v4_state_put_devport(v4_state_t *s, const uint8_t bda[V4P_BDA_LEN],
                           uint8_t port)
 {

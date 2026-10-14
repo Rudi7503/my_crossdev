@@ -268,6 +268,8 @@ static uint8_t v4_info_common(v4_master_t *m, uint8_t cmd, v4p_info_t *info)
     if (v4p_dec_get_info(r.payload, r.len, info) != 0) {
         return V4_ERR_FRAME;
     }
+    /* Fuer das DEV_GET-Layout merken (fw_ver 6: Verbunden-Byte). */
+    m->caps = info->caps;
     return V4P_ST_OK;
 }
 
@@ -626,6 +628,60 @@ uint8_t v4_set_mouse_cfg(v4_master_t *m, uint8_t port, uint8_t speed,
 }
 
 /* ------------------------------------------------------------------ */
+/* duo (GET_DUO/SET_DUO, fw_ver 6)                                     */
+/* ------------------------------------------------------------------ */
+
+uint8_t v4_get_duo(v4_master_t *m, uint8_t *duo)
+{
+    v4p_read_t r;
+    uint8_t    rc;
+
+    if (duo == NULL) {
+        return V4_ERR_ARG;
+    }
+    *duo = 0u;
+
+    rc = v4_transact(m, V4P_CMD_GET_DUO, NULL, 0u, &r);
+    if (rc != V4P_ST_OK) {
+        return rc;
+    }
+    if (v4p_dec_duo(r.payload, r.len, duo) != 0) {
+        return V4_ERR_FRAME;
+    }
+    /*
+     * Ein Wert ausserhalb 0/1/2 ist KEIN gueltiger Zustand -- lieber ein
+     * Fehler als eine erfundene Anzeige.
+     */
+    if (!v4p_duo_valid(*duo)) {
+        *duo = 0u;
+        return V4_ERR_FRAME;
+    }
+    return V4P_ST_OK;
+}
+
+uint8_t v4_set_duo(v4_master_t *m, uint8_t duo)
+{
+    uint8_t    p[V4P_DUO_PAYLOAD_LEN];
+    uint8_t    back = 0u;
+    v4p_read_t r;
+    uint8_t    rc;
+
+    if (!v4p_duo_valid(duo)) {
+        return V4P_ST_BAD_ARG;      /* lokal, ohne Busrahmen */
+    }
+    (void)v4p_enc_duo(p, duo);
+    rc = v4_transact(m, V4P_CMD_SET_DUO, p, (uint8_t)V4P_DUO_PAYLOAD_LEN, &r);
+    if (rc != V4P_ST_OK) {
+        return rc;
+    }
+    /* Echo pruefen: der Slave antwortet mit demselben Byte. */
+    if (v4p_dec_duo(r.payload, r.len, &back) != 0 || back != duo) {
+        return V4_ERR_FRAME;
+    }
+    return V4P_ST_OK;
+}
+
+/* ------------------------------------------------------------------ */
 /* Bedienhilfe "Beitrag" -- KEIN Protokollbefehl                       */
 /*                                                                     */
 /* Sie setzt ausschliesslich die BESTEHENDEN Routing-Werte ueber        */
@@ -769,7 +825,7 @@ uint8_t v4_dev_get(v4_master_t *m, uint8_t idx, v4p_dev_t *dev)
     if (rc != V4P_ST_OK) {
         return rc;
     }
-    if (v4p_dec_dev(r.payload, r.len, dev) != 0) {
+    if (v4p_dec_dev(r.payload, r.len, m->caps, dev) != 0) {
         return V4_ERR_FRAME;
     }
     dev->flags = r.flags;       /* NAME_TRUNCATED sichtbar machen */

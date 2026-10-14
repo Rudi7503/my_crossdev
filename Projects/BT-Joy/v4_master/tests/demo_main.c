@@ -105,11 +105,19 @@ int main(int argc, char **argv)
     if (env_num("V4_DEMO_LEGACY_FW4") != 0) {
         v4_mock.legacy_fw4 = 1;
     }
+    /* fw_ver 5: Maus-Einstellungen ja, duo und das DEV_GET-Verbunden-Byte
+     * nein -- das ALTE DEV_GET-Layout (name_len bei 7). */
+    if (env_num("V4_DEMO_LEGACY_FW5") != 0) {
+        v4_mock.legacy_fw5 = 1;
+    }
     if (env_num("V4_DEMO_BAD_ECHO") != 0) {
         v4_mock.bad_set_port_echo = 1;
     }
     if (env_num("V4_DEMO_BAD_MOUSE_ECHO") != 0) {
         v4_mock.bad_mousecfg_echo = 1;
+    }
+    if (env_num("V4_DEMO_BAD_DUO_ECHO") != 0) {
+        v4_mock.bad_duo_echo = 1;
     }
     if (env_num("V4_DEMO_ALREADY") != 0) {
         v4_mock_set_connected(0);

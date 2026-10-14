@@ -280,6 +280,12 @@ static void test_state_scan(void)
     v4_test_case("Scan: Geraeteliste direkt gelesen und uebernommen");
     setup(&s, &m);
 
+    /* Faehigkeiten holen -- das DEV_GET-Layout haengt an V4P_CAP_DEV_STATE. */
+    {
+        v4p_info_t info;
+
+        CHECK_EQ(v4_ping(&m, &info), V4P_ST_OK);
+    }
     CHECK_EQ(v4_scan_start(&m, 8u, 1), V4P_ST_OK);
     CHECK_EQ(v4_dev_count(&m, &count), V4P_ST_OK);
     CHECK_EQ(count, 3u);

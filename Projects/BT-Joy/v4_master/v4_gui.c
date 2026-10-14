@@ -260,6 +260,8 @@
 #define ID_MTOT0P     24
 #define ID_MTOT1M     25
 #define ID_MTOT1P     26
+/* duo (fw_ver 6): EIN Controller auf beiden Buchsen. */
+#define ID_DUO        27
 
 struct IntuitionBase *IntuitionBase;
 struct GfxBase       *GfxBase;
@@ -364,6 +366,8 @@ static Object *s_beitrag0, *s_beitrag1;
 static Object *s_mspeed0, *s_mspeed1;
 static Object *s_mtotal0, *s_mtotal1;
 static Object *s_mtot0m, *s_mtot0p, *s_mtot1m, *s_mtot1p;
+static Object *s_duo;                 /* duo-Auswahlfeld (Seite "Ports")   */
+static Object *s_duotext;             /* duo: Klartext daneben             */
 static Object *s_cfghint;             /* Hinweis auf der Seite "Ports"     */
 static Object *s_maushint;            /* Hinweis auf der Seite "Maus"      */
 /*
@@ -438,6 +442,18 @@ typedef char gui_modus_eintraege_mit_null[
  * von rund 250 Pixeln passen. Der volle Name steht in der Zusammenfassung und
  * im Hinweistext darunter.
  */
+/*
+ * duo (fw_ver 6). Der INDEX ist der WERT (V4P_DUO_*): 0 aus, 1 Port 0 Maus,
+ * 2 Port 1 Maus. Die Eintraege sind KURZ (die volle Bedeutung steht im
+ * Klartext daneben), weil MUI die Breite aus dem laengsten Eintrag rechnet.
+ */
+static const char *const gui_duo_eintraege[] = {
+    "aus", "Port 0 Maus", "Port 1 Maus", NULL
+};
+
+typedef char gui_duo_eintraege_mit_null[
+    (sizeof(gui_duo_eintraege) / sizeof(gui_duo_eintraege[0]) == 4u) ? 1 : -1];
+
 static const char *const gui_taste_eintraege[] = {
     "keine", "A", "B", "X", "Y", "L1", "R1", "L2", "R2", "L3", "R3",
     "Start", "Select", "Home", "Gruppe 1", "Gruppe 2", "Gruppe 3", NULL
@@ -584,6 +600,10 @@ static int     s_devport_ok;
  * EIGENE Faehigkeit -- fehlt sie, bleiben die Regler sichtbar gesperrt, statt
  * sinnlos zu senden. */
 static int     s_mousecfg_ok;
+/* 1 = die Gegenstelle kann duo (Faehigkeitsbit V4P_CAP_DUO, GET_DUO 0x0D /
+ * SET_DUO 0x0E, fw_ver 6): EIN Controller auf BEIDEN Buchsen. Fehlt das Bit,
+ * ist der Schalter sichtbar gesperrt und es wird nichts gesendet. */
+static int     s_duo_ok;
 static int     s_cfg_warned;          /* Hinweis nur EINMAL ins Log         */
 static int     s_cfg_sperre;          /* 1 = gerade Anzeige nachziehen:
                                        * Notifies nicht als Befehl deuten   */
@@ -634,6 +654,11 @@ static int      s_joy_stand_gueltig;
  */
 static v4p_mousecfg_t s_maus_alt;
 static int            s_maus_alt_gueltig;
+
+/* Zuletzt GEMELDETER duo-Zustand -- dieselbe Regel: eine Zeile nur bei einer
+ * Aenderung, nicht im Takt. */
+static uint8_t s_duo_alt;
+static int     s_duo_alt_gueltig;
 
 /* ------------------------------------------------------------------ */
 /* Ausgabe                                                            */
@@ -718,7 +743,9 @@ static void caps_text(uint16_t caps, char *out, size_t cap)
         { V4P_CAP_BATTERY,   "Batterie" },
         { V4P_CAP_PORT_ROUTING, "Verteilung" },
         { V4P_CAP_DEVICE_PORT,  "Geraetezuordnung" },
-        { V4P_CAP_MOUSE_CFG,    "Maus-Einstellungen" }
+        { V4P_CAP_MOUSE_CFG,    "Maus-Einstellungen" },
+        { V4P_CAP_DUO,          "duo" },
+        { V4P_CAP_DEV_STATE,    "Geraetezustand" }
     };
     size_t   n     = 0u;
     int      first = 1;
@@ -1241,6 +1268,100 @@ static uint8_t gui_mouse_read(int note)
     return rc;
 }
 
+/*
+ * duo lesen (GET_DUO, fw_ver 6).
+ *
+ * Wie bei den Maus-Einstellungen: eine Zeile nur bei einer AENDERUNG (auch
+ * fuer die erste Antwort), nicht in jedem Takt.
+ */
+static uint8_t gui_duo_read(int note)
+{
+    uint8_t duo = 0u;
+    uint8_t rc;
+
+    if (s_duo_ok == 0) {
+        return V4P_ST_BAD_CMD;
+    }
+    rc = v4_get_duo(&M, &duo);
+    if (note != 0) {
+        (void)v4_state_note(&S, rc);
+    }
+    if (rc != V4P_ST_OK) {
+        v4_dbg_fehler("GET_DUO", rc, &M);
+        gui_msg("[duo] GET_DUO: %s -- der Schalter bleibt auf dem letzten "
+                "gueltigen Stand\n", v4_strerror(rc));
+        return rc;
+    }
+    v4_state_put_duo(&S, duo);
+    if (s_duo_alt_gueltig == 0 || s_duo_alt != duo) {
+        gui_msg("[duo] GET_DUO: %u (%s)%s\n", (unsigned)duo,
+                v4p_duo_name(duo),
+                (duo == V4P_DUO_OFF) ? ""
+                                     : " -- EIN Controller auf BEIDEN Buchsen");
+        s_duo_alt         = duo;
+        s_duo_alt_gueltig = 1;
+    }
+    return rc;
+}
+
+/*
+ * Welcher Port ist bei aktivem duo der BEGLEITER?
+ *
+ * duo setzt nur die Betriebsarten; die Geraetezuordnung bleibt, wie sie ist
+ * (ein Geraet = ein Port). Der Begleiter ist deshalb der Port, der NICHT die
+ * gemerkte Buchse des einen Controllers ist -- dort braucht es keine eigene
+ * Zuordnung, und genau dort wird die Geraeteauswahl gesperrt.
+ *
+ * Ist keine (eindeutige) Zuordnung bekannt, gilt der Port mit der zweiten
+ * Rolle: bei duo = 1 (Port 0 Maus) ist das Port 1. So ist die Anzeige auch
+ * direkt nach dem Einschalten eindeutig und behauptet nichts Falsches.
+ *
+ * Rueckgabe: 0/1 = Begleiter, -1 = duo aus oder unklar.
+ */
+static int gui_duo_begleiter(void)
+{
+    uint8_t i;
+    uint8_t bda[V4P_BDA_LEN];
+    int     belegt0 = 0;
+    int     belegt1 = 0;
+
+    if (s_duo_ok == 0 || S.duo_valid == 0
+        || S.duo == (uint8_t)V4P_DUO_OFF) {
+        return -1;
+    }
+    for (i = 0u; i < S.devport_n; i++) {
+        uint8_t port = v4_state_devport_at(&S, i, bda);
+
+        if (port == 0u) {
+            belegt0 = 1;
+        } else if (port == 1u) {
+            belegt1 = 1;
+        }
+    }
+    if (belegt0 != 0 && belegt1 == 0) {
+        return 1;
+    }
+    if (belegt1 != 0 && belegt0 == 0) {
+        return 0;
+    }
+    return (S.duo == (uint8_t)V4P_DUO_MOUSE_PORT0) ? 1 : 0;
+}
+
+/*
+ * Welche Rolle hat `port`, wenn duo laeuft? "Maus" oder "Joystick"; NULL,
+ * wenn duo aus ist. duo = 1: Port 0 Maus / Port 1 Joystick, duo = 2 umgekehrt.
+ */
+static const char *gui_duo_rolle(int port)
+{
+    if (S.duo_valid == 0 || S.duo == (uint8_t)V4P_DUO_OFF) {
+        return NULL;
+    }
+    if (S.duo == (uint8_t)V4P_DUO_MOUSE_PORT0) {
+        return (port == 0) ? "Maus" : "Joystick";
+    }
+    return (port == 0) ? "Joystick" : "Maus";
+}
+
 /* Die Geraeteliste in die Eintraege der beiden Auswahlfelder uebernehmen.
  * Index 0 ist "(keines)" (siehe s_dev_eintraege). Die Namen werden auf 14
  * Zeichen gekuerzt: die Zelle teilt sich seit dem 15.10.2026 mit dem
@@ -1446,6 +1567,7 @@ static void gui_show_portcfg(void)
     static char buf[900];               /* ortsfest (4-KB-Stapel!) */
     static char hint[640];              /* ortsfest (4-KB-Stapel!) */
     int         port;
+    int         duo_begleiter;
     size_t      n = 0u;
 
     if (s_cfgtext == NULL) {
@@ -1468,6 +1590,13 @@ static void gui_show_portcfg(void)
          * anzubieten, die der Slave mit BAD_CMD abweist. */
         gui_disabled_set(s_beitrag0, 1);
         gui_disabled_set(s_beitrag1, 1);
+        /* duo ist eine eigene Faehigkeit; ohne Verteilung bleibt der Schalter
+         * trotzdem gesperrt, weil er ohne Betriebsarten nichts bewirkt. */
+        gui_disabled_set(s_duo, 1);
+        if (s_duotext != NULL) {
+            set(s_duotext, MUIA_Text_Contents,
+                (IPTR)"untaetig (keine Eingangsverteilung)");
+        }
         gui_disabled_set(s_mspeed0, 1);
         gui_disabled_set(s_mspeed1, 1);
         gui_disabled_set(s_mtotal0, 1);
@@ -1505,6 +1634,11 @@ static void gui_show_portcfg(void)
         gui_dev_eintraege_bauen();
     }
 
+    /* Wer ist bei aktivem duo der Begleiter-Port? (Siehe gui_duo_begleiter.)
+     * EINMAL bestimmt -- beide Schleifen dieser Funktion brauchen denselben
+     * Wert, sonst zeigte die Klartextzeile etwas anderes als die Felder. */
+    duo_begleiter = gui_duo_begleiter();
+
     /* ZWEI Zeilen -- eine je Port. Eine Titelzeile waere Hoehe ohne Aussage;
      * was die Zeile bedeutet, sagt der Hinweis unter der Tabelle. */
     n = 0u;
@@ -1516,7 +1650,14 @@ static void gui_show_portcfg(void)
         uint8_t beitrag = v4_beitrag_aus_dir(S.portcfg.dir[port]);
 
         v4p_dir_text(S.portcfg.dir[port], dir, sizeof(dir));
-        gui_dev_text(port, geraet, sizeof(geraet));
+        if (duo_begleiter == port) {
+            const char *rolle = gui_duo_rolle(port);
+
+            (void)snprintf(geraet, sizeof(geraet), "duo: %s",
+                           (rolle != NULL) ? rolle : "ein Controller");
+        } else {
+            gui_dev_text(port, geraet, sizeof(geraet));
+        }
         if (s_mousecfg_ok != 0 && S.mousecfg_valid != 0) {
             v4p_mousecfg_text(&S.mousecfg, (uint8_t)port, maus, sizeof(maus));
         } else if (s_mousecfg_ok == 0) {
@@ -1547,6 +1688,32 @@ static void gui_show_portcfg(void)
      * missdeutet wird -- die Handler vergleichen ohnehin gegen den
      * Zustandsblock, aber so bleibt es auch bei einem Renntakt eindeutig. */
     s_cfg_sperre = 1;
+
+    /*
+     * duo stellen. Ohne Faehigkeitsbit gesperrt (kein Senden), ohne gueltige
+     * Antwort "?" statt "aus" -- eine fehlende Antwort ist keine Aussage.
+     */
+    if (s_duo != NULL) {
+        gui_disabled_set(s_duo, (s_duo_ok == 0) ? 1 : 0);
+        gui_cycle_set(s_duo, (IPTR)((S.duo_valid != 0) ? S.duo : 0u));
+    }
+    if (s_duotext != NULL) {
+        char t[96];
+
+        if (s_duo_ok == 0) {
+            (void)snprintf(t, sizeof(t), "nicht verfuegbar (fw %u)",
+                           (unsigned)V4P_FW_VER_DUO);
+        } else if (S.duo_valid == 0) {
+            (void)snprintf(t, sizeof(t), "?");
+        } else if (S.duo == (uint8_t)V4P_DUO_OFF) {
+            (void)snprintf(t, sizeof(t),
+                           "aus (jeder Controller seine Buchse)");
+        } else {
+            /* Passt in die 250-px-Zelle und nennt BEIDE Rollen. */
+            (void)snprintf(t, sizeof(t), "%s", v4p_duo_name(S.duo));
+        }
+        set(s_duotext, MUIA_Text_Contents, (IPTR)t);
+    }
 
     for (port = 0; port < (int)V4P_PORT_COUNT; port++) {
         Object **b3    = (port == 0) ? s_b0 : s_b1;
@@ -1590,6 +1757,12 @@ static void gui_show_portcfg(void)
                                                              : (IPTR)0);
         }
         gui_cycle_set(dev, gui_dev_active(port));
+        /*
+         * BEI AKTIVEM duo GEHOERT DER BEGLEITER-PORT duo -- dort waere eine
+         * Geraeteauswahl eine Luege (es bedient ihn derselbe Controller).
+         * Deshalb sichtbar gesperrt, mit dem Grund im Klartext daneben.
+         */
+        gui_disabled_set(dev, (duo_begleiter == port) ? 1 : 0);
         gui_cycle_set(mcyc, gui_mode_index(S.portcfg.mode_soll[port]));
         gui_cycle_set(bcyc, (IPTR)beitrag);
 
@@ -1636,8 +1809,10 @@ static void gui_show_portcfg(void)
                        "D-Pad + A/B/Start,\n"
                        "beides = alle Richtungen + Gruppe 1/2/3, eigene = "
                        "passt zu keiner Variante.\n"
-                       "Geraet: genau EIN Port je Geraet -- beide Ports = "
-                       "duo im ESP32.");
+                       "duo = EIN Controller auf beiden Ports; es setzt nur "
+                       "die Betriebsarten\n"
+                       "und sperrt die Geraeteauswahl des duo-Ports (kein "
+                       "zweiter Controller).");
         set(s_cfghint, MUIA_Text_Contents, (IPTR)hint);
     }
 
@@ -2095,6 +2270,12 @@ static void gui_poll(int slow)
         rc = rc2;
     }
     rc2 = gui_mouse_read(0);
+    if (rc2 != V4P_ST_OK && rc == V4P_ST_OK) {
+        rc = rc2;
+    }
+    /* duo (fw_ver 6). Fehlt das Faehigkeitsbit, kostet das KEINEN Rahmen --
+     * gui_duo_read kehrt sofort zurueck. */
+    rc2 = gui_duo_read(0);
     if (rc2 != V4P_ST_OK && rc == V4P_ST_OK) {
         rc = rc2;
     }
@@ -2723,6 +2904,71 @@ static void act_set_beitrag(int port)
  * fuer ein einzelnes Feld. Ist das Faehigkeitsbit nicht gesetzt, wird NICHTS
  * gesendet und das Feld zurueckgezogen.
  */
+/*
+ * duo setzen (SET_DUO, fw_ver 6).
+ *
+ * duo heisst: EIN Controller bedient BEIDE Buchsen -- die eine als Maus, die
+ * andere als Joystick. Es ist KEINE Geraetezuordnung: die bleibt je Geraet
+ * genau eine Buchse. Deshalb wird hier auch nichts an der Liste geaendert;
+ * die Oberflaeche MARKIERT nur, welcher Port den duo-Part uebernimmt.
+ */
+static void act_set_duo(void)
+{
+    IPTR    v;
+    uint8_t vorher = (S.duo_valid != 0) ? S.duo : (uint8_t)V4P_DUO_OFF;
+    uint8_t rc;
+
+    if (s_duo == NULL) {
+        return;
+    }
+    if (s_duo_ok == 0) {
+        gui_cycle_set(s_duo, (IPTR)vorher);
+        gui_msg("[duo] Die Gegenstelle kann duo nicht (Faehigkeitsbit 0x%04X "
+                "fehlt, fw_ver %u noetig) -- nichts gesendet\n",
+                (unsigned)V4P_CAP_DUO, (unsigned)V4P_FW_VER_DUO);
+        return;
+    }
+    if (s_cfg_sperre != 0) {
+        return;
+    }
+    v = gui_cycle_get(s_duo);
+    if (v > (IPTR)2) {
+        v = 0;
+    }
+    if (S.duo_valid != 0 && (uint8_t)v == S.duo) {
+        return;                     /* nur die Anzeige hat sich nachgezogen */
+    }
+    rc = v4_set_duo(&M, (uint8_t)v);
+    (void)v4_state_note(&S, rc);
+    if (rc == V4P_ST_BAD_ARG) {
+        gui_msg("[duo] SET_DUO %u: BAD_ARG -- erlaubt sind nur 0 (aus), "
+                "1 (Port 0 Maus) und 2 (Port 1 Maus); die Einstellung bleibt "
+                "%u (%s)\n",
+                (unsigned)v, (unsigned)vorher, v4p_duo_name(vorher));
+        gui_cycle_set(s_duo, (IPTR)vorher);
+        gui_show_portcfg();
+        return;
+    }
+    if (rc != V4P_ST_OK) {
+        gui_msg("[duo] SET_DUO %u: %s -- nichts geaendert\n", (unsigned)v,
+                v4_strerror(rc));
+        gui_cycle_set(s_duo, (IPTR)vorher);
+        gui_show_portcfg();
+        return;
+    }
+    v4_state_put_duo(&S, (uint8_t)v);
+    /* Immer eine Zeile je Aenderung, mit dem ZURUECKGELESENEN Wert. */
+    (void)gui_duo_read(1);
+    gui_msg("[duo] SET_DUO %u (%s) bestaetigt -- vorher %u (%s), gelesen %u "
+            "(%s)%s\n",
+            (unsigned)v, v4p_duo_name((uint8_t)v),
+            (unsigned)vorher, v4p_duo_name(vorher),
+            (unsigned)(S.duo_valid ? S.duo : 0u),
+            v4p_duo_name(S.duo_valid ? S.duo : (uint8_t)0u),
+            (v == (IPTR)0) ? "" : " -- EIN Controller auf BEIDEN Buchsen");
+    gui_show_portcfg();
+}
+
 static void act_set_maus(int port, int feld)
 {
     Object *speed = (port == 0) ? s_mspeed0 : s_mspeed1;
@@ -3426,20 +3672,6 @@ static int gui_build(void)
                             MUIA_Weight, 0,
                         End,
                     End,
-                    /*
-                     * SEITE 1: DIE KONFIGURATION JE BUCHSE (fw_ver 4).
-                     *
-                     * Die Betriebsart steht auf der Anzeigeseite bei den
-                     * Buchsen ("Vorgabe" + "wirkt"), hier stehen Geraet,
-                     * Richtungen und die drei Knopfquellen -- je Zeile eine
-                     * Angabe, links die Beschriftung, rechts die beiden
-                     * Buchsen. So bleiben es sieben Zeilen statt vierzehn, und
-                     * die beiden Spalten stehen untereinander deckungsgleich
-                     * (gleiche Fixbreiten).
-                     *
-                     * Der Klartext in s_cfgtext nennt den vollen Zustand beider
-                     * Buchsen -- genau die Zeile aus dem Auftragsbeispiel.
-                     */
                             /*
                              * SEITE 1: "Ports" -- Geraet, Beitrag, Richtungen
                              * (NUR Anzeige) und die drei Knopfquellen.
@@ -3597,6 +3829,40 @@ static int gui_build(void)
                                         Child, s_b1[2] = CycleObject,
                                             MUIA_Cycle_Entries,
                                                 (IPTR)gui_taste_kurz_eintraege,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                End,
+                                /*
+                                 * duo (fw_ver 6): EIN Controller auf BEIDEN
+                                 * Buchsen -- die eine als Maus, die andere
+                                 * als Joystick. Das Auswahlfeld setzt NUR die
+                                 * Betriebsarten; die Geraetezuordnung bleibt
+                                 * unangetastet. Der Klartext daneben sagt, was
+                                 * der Wert bedeutet, damit niemand "Port 1
+                                 * Maus" fuer eine Geraetezuordnung haelt.
+                                 */
+                                Child, HGroup,
+                                    MUIA_Weight, 0,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"duo",
+                                        MUIA_FixWidth, 96,
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_duo = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_duo_eintraege,
+                                            MUIA_Disabled, TRUE,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 250,
+                                        Child, s_duotext = TextObject,
+                                            MUIA_Text_Contents, (IPTR)"?",
+                                            MUIA_Text_SetMin, FALSE,
                                             MUIA_Weight, 0,
                                         End,
                                     End,
@@ -3804,6 +4070,7 @@ static int gui_build(void)
         || s_root == NULL || s_scroll == NULL || s_virt == NULL
         || s_seite_anzeige == NULL || s_seite_ports == NULL
         || s_seite_maus == NULL || s_maushint == NULL
+        || s_duo == NULL || s_duotext == NULL
         || s_beitrag0 == NULL || s_beitrag1 == NULL
         || s_mspeed0 == NULL || s_mspeed1 == NULL
         || s_mtotal0 == NULL || s_mtotal1 == NULL
@@ -3815,7 +4082,7 @@ static int gui_build(void)
         gui_msg("MUI: Objektbaum unvollstaendig (reg=%d port0=%d "
                 "port1=%d log=%d cfg=%d dev=%d/%d rdir=%d/%d btn=%d/%d "
                 "wirkt=%d/%d beitrag=%d/%d maus=%d/%d/%d/%d hint=%d "
-                "seiten=%d/%d/%d) -- Abbruch\n",
+                "seiten=%d/%d/%d duo=%d) -- Abbruch\n",
                 (s_regtext != NULL), (s_port0 != NULL), (s_port1 != NULL),
                 (s_logl != NULL), (s_cfgtext != NULL),
                 (s_dev0 != NULL), (s_dev1 != NULL),
@@ -3826,7 +4093,8 @@ static int gui_build(void)
                 (s_mspeed0 != NULL), (s_mspeed1 != NULL),
                 (s_mtotal0 != NULL), (s_mtotal1 != NULL),
                 (s_cfghint != NULL),
-                (s_root != NULL), (s_scroll != NULL), (s_virt != NULL));
+                (s_root != NULL), (s_scroll != NULL), (s_virt != NULL),
+                (s_duo != NULL));
         return -1;
     }
 
@@ -3874,6 +4142,10 @@ static int gui_build(void)
              s_app, 2, MUIM_Application_ReturnID, ID_DEV0);
     DoMethod(s_dev1, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
              s_app, 2, MUIM_Application_ReturnID, ID_DEV1);
+    /* duo (fw_ver 6): das Auswahlfeld setzt GET/SET_DUO. */
+    DoMethod(s_duo, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
+             s_app, 2, MUIM_Application_ReturnID, ID_DUO);
+
     /* Die Beitrags-Auswahl je Buchse: sie setzt sofort die Routing-Werte. */
     DoMethod(s_beitrag0, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
              s_app, 2, MUIM_Application_ReturnID, ID_BEITRAG0);
@@ -4120,6 +4392,8 @@ int main(int argc, char **argv)
              * werden sie im langsamen Takt (der erste Takt ist vollstaendig),
              * also VOR der ersten Anzeige des Fensters. */
             s_mousecfg_ok = v4_info_has_caps(&info, V4P_CAP_MOUSE_CFG);
+            /* duo ist ebenfalls eine EIGENE Faehigkeit (fw_ver 6). */
+            s_duo_ok      = v4_info_has_caps(&info, V4P_CAP_DUO);
             if (check != V4P_ST_OK) {
                 gui_msg("[ping] %s: Slave meldet proto=%u write=%u read=%u; "
                         "erwartet proto=%u write=%u read=%u\n",
@@ -4154,6 +4428,18 @@ int main(int argc, char **argv)
                                                    : V4P_CAP_DEVICE_PORT)),
                         (unsigned)info.caps,
                         (unsigned)V4P_FW_VER_ROUTING);
+            }
+            if (s_duo_ok != 0) {
+                gui_msg("[ping] duo vorhanden (Faehigkeitsbit 0x%04X): EIN "
+                        "Controller auf BEIDEN Buchsen, die eine als Maus\n",
+                        (unsigned)V4P_CAP_DUO);
+            } else {
+                gui_msg("[ping] Hinweis: die Gegenstelle kann duo nicht "
+                        "(Faehigkeitsbit 0x%04X fehlt, gemeldet 0x%04X) -- "
+                        "der duo-Schalter bleibt gesperrt; dafuer wird fw_ver "
+                        "%u gebraucht\n",
+                        (unsigned)V4P_CAP_DUO, (unsigned)info.caps,
+                        (unsigned)V4P_FW_VER_DUO);
             }
             if (s_mousecfg_ok != 0) {
                 gui_msg("[ping] Maus-Einstellungen vorhanden (Faehigkeitsbit "
@@ -4333,6 +4619,9 @@ int main(int argc, char **argv)
             break;
         case ID_BTN1:
             act_set_btn(1);
+            break;
+        case ID_DUO:
+            act_set_duo();
             break;
         case ID_BEITRAG0:
             act_set_beitrag(0);

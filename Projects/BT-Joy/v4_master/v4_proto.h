@@ -86,20 +86,28 @@
  *
  * fw_ver 4 bringt die Eingangsverteilung: GET_PORT_CONFIG (0x09),
  * SET_PORT_ROUTING (0x0A) und SET_DEVICE_PORT (0x08). fw_ver 5 bringt die
- * Maus-Einstellungen: GET_MOUSE_CFG (0x0B) und SET_MOUSE_CFG (0x0C). Rahmen und
- * proto_ver bleiben in BEIDEN Faellen UNVERAENDERT (proto_ver 3, 32 -> 128
- * Byte) -- eine Firmware mit fw_ver 4 oder 5 darf deshalb NICHT abgelehnt
- * werden. v4_check_info() prueft ausschliesslich proto_ver und Rahmengroessen;
- * wer wissen will, ob die Befehle da sind, fragt die Faehigkeitsbits
- * V4P_CAP_PORT_ROUTING / V4P_CAP_DEVICE_PORT / V4P_CAP_MOUSE_CFG ab
- * (v4_info_has_caps). */
-#define V4P_FW_VER              5u
+ * Maus-Einstellungen: GET_MOUSE_CFG (0x0B) und SET_MOUSE_CFG (0x0C). fw_ver 6
+ * bringt den duo-Betrieb (GET_DUO 0x0D / SET_DUO 0x0E: EIN Controller auf
+ * BEIDEN Buchsen) und das Verbunden-Byte in DEV_GET. Rahmen und proto_ver
+ * bleiben in ALLEN Faellen UNVERAENDERT (proto_ver 3, 32 -> 128 Byte) -- eine
+ * Firmware mit fw_ver 4, 5 oder 6 darf deshalb NICHT abgelehnt werden.
+ * v4_check_info() prueft ausschliesslich proto_ver und Rahmengroessen; wer
+ * wissen will, ob die Befehle da sind, fragt die Faehigkeitsbits
+ * V4P_CAP_PORT_ROUTING / V4P_CAP_DEVICE_PORT / V4P_CAP_MOUSE_CFG /
+ * V4P_CAP_DUO / V4P_CAP_DEV_STATE ab (v4_info_has_caps). */
+#define V4P_FW_VER              6u
 /* Der Stand, ab dem es die Eingangsverteilung gibt (nur als Klartext/Pruefung
  * gedacht -- die verbindliche Auskunft sind die Faehigkeitsbits). */
 #define V4P_FW_VER_ROUTING      4u
 /* Der Stand, ab dem es die Maus-Einstellungen (Tempo/Totzone) gibt. Auch hier
  * gilt: verbindlich ist das Faehigkeitsbit V4P_CAP_MOUSE_CFG, nicht die Zahl. */
 #define V4P_FW_VER_MOUSE        5u
+/* Der Stand, ab dem es duo (GET_DUO/SET_DUO) gibt. Verbindlich ist
+ * V4P_CAP_DUO. */
+#define V4P_FW_VER_DUO          6u
+/* Der Stand, ab dem DEV_GET das Verbunden-Byte enthaelt (Layoutwechsel!).
+ * Verbindlich ist V4P_CAP_DEV_STATE. */
+#define V4P_FW_VER_DEV_STATE    6u
 
 #define V4P_MAGIC_WRITE         0xA5u   /* V4 -> ESP32, fest 32 Byte   */
 #define V4P_MAGIC_READ          0x5Au   /* ESP32 -> V4,  fest 128 Byte */
@@ -188,6 +196,23 @@ enum {
  * Vorhandene Bits 0x0001..0x0200 sind belegt, 0x0400 ist frei.
  */
 #define V4P_CAP_MOUSE_CFG       0x0400u  /* GET_MOUSE_CFG/SET_MOUSE_CFG   */
+/*
+ * duo (fw_ver 6): EIN Controller auf BEIDEN Buchsen -- die eine als Maus
+ * (Quadratur), die andere als Joystick. GET_DUO 0x0D / SET_DUO 0x0E.
+ *
+ * WARUM DAS NICHT DIE GERAETEZUORDNUNG IST: duo setzt AUSSCHLIESSLICH die
+ * Betriebsarten. Ein Geraet hat im ESP32 weiterhin genau EINE gemerkte Buchse
+ * (NVS-Feld "port"); duo tastet sie nicht an, und wenn duo endet, gilt sie
+ * sofort wieder. Wer dieselbe BDA fuer beide Buchsen eintragen will, kommt
+ * damit also nicht zum Ziel -- siehe v4_devices_zuordnen() der ESP32-Seite.
+ */
+#define V4P_CAP_DUO             0x0800u  /* GET_DUO/SET_DUO               */
+/*
+ * DEV_GET hat ab fw_ver 6 ein Verbunden-Byte VOR name_len (Layoutwechsel:
+ * name_len 7 -> 8, name 8 -> 9). Ein Master MUSS beide Layouts kennen: ohne
+ * dieses Bit gilt das alte, sonst zeigt er Namen als Muell an.
+ */
+#define V4P_CAP_DEV_STATE       0x1000u  /* DEV_GET: Verbunden-Byte (fw 6) */
 
 /* ------------------------------------------------------------------ */
 /* Die zwei DB9-Buchsen -- V4P_PORT_* / V4P_IN_* der ESP32-Seite        */
@@ -445,9 +470,18 @@ enum {
 
 /* DEV_GET: idx, bda[6], name_len, name */
 #define V4P_DEV_OFF_INDEX       0u
-#define V4P_DEV_OFF_BDA         1u
-#define V4P_DEV_OFF_NAME_LEN    7u
-#define V4P_DEV_OFF_NAME        8u
+#define V4P_DEV_OFF_BDA         1u      /* 6 Byte, beide Layouts          */
+/*
+ * ACHTUNG, LAYOUTWECHSEL mit fw_ver 6 (V4P_CAP_DEV_STATE): das Verbunden-Byte
+ * liegt VOR name_len, name_len und name ruecken um ein Byte nach hinten.
+ * Welches Layout gilt, sagt AUSSCHLIESSLICH das Faehigkeitsbit -- die Nutzlast
+ * selbst ist nicht eindeutig (ein Verbunden-Byte 0 sieht aus wie name_len 0).
+ */
+#define V4P_DEV_OFF_CONNECTED   7u      /* NEU (fw 6): 1 = verbunden      */
+#define V4P_DEV_OFF_NAME_LEN_ALT 7u     /* alt (fw < 6)                   */
+#define V4P_DEV_OFF_NAME_ALT    8u      /* alt (fw < 6)                   */
+#define V4P_DEV_OFF_NAME_LEN    8u      /* neu (fw 6)                     */
+#define V4P_DEV_OFF_NAME        9u      /* neu (fw 6)                     */
 
 /* ------------------------------------------------------------------ */
 /* Befehlscodes -- §11. Nur was der ESP32 dieses Projekts kann.        */
@@ -483,6 +517,15 @@ enum {
     V4P_CMD_GET_MOUSE_CFG    = 0x0B, /* - -> 4 Byte (beide Buchsen)         */
     V4P_CMD_SET_MOUSE_CFG    = 0x0C, /* [port][speed][totzone] -> Echo (3)  */
 
+    /*
+     * duo (fw_ver 6). GET_DUO liefert 1 Byte (den Zustand), SET_DUO nimmt
+     * 1 Byte und antwortet mit demselben Byte (Echo). Erlaubt sind NUR
+     * V4P_DUO_OFF / V4P_DUO_MOUSE_PORT0 / V4P_DUO_MOUSE_PORT1; alles andere
+     * ergibt BAD_ARG, und die alte Einstellung bleibt.
+     */
+    V4P_CMD_GET_DUO          = 0x0D, /* -          -> [duo u8]              */
+    V4P_CMD_SET_DUO          = 0x0E, /* [duo u8]   -> Echo (1 Byte)         */
+
     V4P_CMD_SCAN_START    = 0x10,   /* [len_s u8]   -> -                     */
     V4P_CMD_SCAN_STOP     = 0x11,   /* -            -> -                     */
     V4P_CMD_DEV_COUNT     = 0x12,   /* -            -> count u8              */
@@ -495,6 +538,36 @@ enum {
 
     V4P_CMD_RESET         = 0x7E    /* -            -> - (beide Buchsen aus) */
 };
+
+/* ------------------------------------------------------------------ */
+/* duo (GET_DUO/SET_DUO) -- Lage und Werte, identisch zur ESP32-Seite   */
+/* ------------------------------------------------------------------ */
+
+#define V4P_DUO_OFF_STATE       0u      /* Lage des Bytes in der Nutzlast */
+#define V4P_DUO_PAYLOAD_LEN     1u      /* Anfrage UND Antwort            */
+
+#define V4P_DUO_OFF             0u      /* aus: je Controller seine Buchse */
+#define V4P_DUO_MOUSE_PORT0     1u      /* an: Port 0 Maus, Port 1 Joystick */
+#define V4P_DUO_MOUSE_PORT1     2u      /* an: Port 1 Maus, Port 0 Joystick */
+
+typedef struct {
+    uint8_t idx;
+    uint8_t bda[6];
+    uint8_t name_len;
+    uint8_t flags;              /* V4P_FLAG_*                             */
+    char    name[V4P_NAME_BUF];
+    /*
+     * NUR fw_ver 6 (V4P_CAP_DEV_STATE): 1 = dieses Geraet ist gerade
+     * verbunden, 0 = nicht. Bei der alten Nutzlast gibt es das Feld nicht --
+     * dann steht hier V4P_DEV_VERBUNDEN_UNBEKANNT (-1), und die Oberflaeche
+     * sagt "unbekannt" statt "nicht verbunden".
+     */
+    int     verbunden;
+} v4p_dev_t;
+
+/* Der Wert in v4p_dev_t.verbunden, wenn die Nutzlast das Feld NICHT hat
+ * (fw_ver < 6 / V4P_CAP_DEV_STATE fehlt). */
+#define V4P_DEV_VERBUNDEN_UNBEKANNT (-1)
 
 /* ------------------------------------------------------------------ */
 /* Rueckgabewerte der Prueffunktionen                                  */
@@ -576,15 +649,6 @@ typedef struct {
     uint8_t  flags;             /* V4P_FLAG_*                             */
     char     name[V4P_HID_NAME_BUF];
 } v4p_hid_t;
-
-/* Antwort auf DEV_GET */
-typedef struct {
-    uint8_t  idx;
-    uint8_t  bda[6];
-    uint8_t  name_len;
-    uint8_t  flags;             /* V4P_FLAG_*                             */
-    char     name[V4P_NAME_BUF];
-} v4p_dev_t;
 
 /*
  * Antwort auf GET_PORT_CONFIG -- die Eingangsverteilung BEIDER Buchsen
@@ -696,7 +760,10 @@ size_t v4p_enc_get_info  (uint8_t *p, const v4p_info_t   *in);
 size_t v4p_enc_get_status(uint8_t *p, const v4p_status_t *in);
 size_t v4p_enc_get_input (uint8_t *p, const v4p_input_t  *in);
 size_t v4p_enc_get_hid   (uint8_t *p, const v4p_hid_t    *in);
+/* NEUES Layout (fw_ver 6, mit Verbunden-Byte). */
 size_t v4p_enc_dev       (uint8_t *p, const v4p_dev_t    *in);
+/* ALTES Layout (fw_ver < 6, name_len bei 7). Nur fuer Tests/Mock. */
+size_t v4p_enc_dev_alt   (uint8_t *p, const v4p_dev_t    *in);
 size_t v4p_enc_get_port_mode(uint8_t *p, const uint8_t mode[V4P_PORT_COUNT]);
 size_t v4p_enc_set_port_mode(uint8_t *p, uint8_t port, uint8_t mode);
 
@@ -739,7 +806,11 @@ int v4p_dec_get_info  (const uint8_t *p, uint8_t len, v4p_info_t   *out);
 int v4p_dec_get_status(const uint8_t *p, uint8_t len, v4p_status_t *out);
 int v4p_dec_get_input (const uint8_t *p, uint8_t len, v4p_input_t  *out);
 int v4p_dec_get_hid   (const uint8_t *p, uint8_t len, v4p_hid_t    *out);
-int v4p_dec_dev       (const uint8_t *p, uint8_t len, v4p_dev_t    *out);
+/* Layoutwahl ueber das FAEHIGKEITSBIT V4P_CAP_DEV_STATE (nicht ueber die
+ * Nutzlast -- die ist nicht eindeutig). Ohne das Bit gilt das alte Layout,
+ * und out->verbunden steht auf V4P_DEV_VERBUNDEN_UNBEKANNT. */
+int v4p_dec_dev       (const uint8_t *p, uint8_t len, uint16_t caps,
+                       v4p_dev_t    *out);
 int v4p_dec_get_port_mode(const uint8_t *p, uint8_t len,
                           uint8_t mode[V4P_PORT_COUNT]);
 int v4p_dec_set_port_mode(const uint8_t *p, uint8_t len, uint8_t *port,
@@ -775,6 +846,19 @@ int v4p_mouse_totzone_valid(uint8_t totzone);
 /* 1 = die Werte BEIDER Buchsen sind zulaessig. `c` darf nicht NULL sein --
  * ein fehlender Wert ist kein gueltiger Wert. */
 int v4p_mouse_cfg_valid(const v4p_mousecfg_t *c);
+
+/* ---- duo (GET_DUO/SET_DUO, fw_ver 6) ---- */
+
+/* 1 = der Wert ist einer der drei erlaubten (0/1/2). */
+int v4p_duo_valid(uint8_t duo);
+
+size_t v4p_enc_duo(uint8_t *p, uint8_t duo);
+int    v4p_dec_duo(const uint8_t *p, uint8_t len, uint8_t *out);
+
+/* Klartext fuer Fenster und Protokoll ("aus", "Port 0 Maus / Port 1
+ * Joystick", "Port 1 Maus / Port 0 Joystick", sonst "?"). */
+const char *v4p_duo_name(uint8_t duo);
+void        v4p_duo_text(uint8_t duo, char *out, size_t cap);
 
 /* ------------------------------------------------------------------ */
 /* Klartexte und Auswertungen fuer die Oberflaechen                    */

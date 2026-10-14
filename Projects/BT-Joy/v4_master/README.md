@@ -205,15 +205,17 @@ Passt eine Verteilung zu **keiner** der drei (z.B. `dir = 0` oder eine
 Handbelegung), zeigt das Feld `eigene` -- das ist ein **Anzeigezustand**, keine
 waehlbare Variante, und es wird nichts gesendet.
 
-Bei `beide` haben die **Einzelschalter** (drei Richtungsschalter und drei
-Knopfquellen) keine eigene Aussage mehr. Sie werden in der Oberflaeche deshalb
-mit `MUIA_Disabled` **gesperrt und gerastert** dargestellt (und im Klartext
-benannt); beim Wechsel auf `analog`/`digital` sind sie wieder bedienbar. So
-steht dort keine Schalterstellung, die einer anderen Anzeige widerspricht.
+**Die drei Richtungsschalter gibt es nicht mehr** (16.10.2026). Sie waren eine
+zweite Stelle fuer dieselbe Aussage -- welche Richtungen gelten, legt der
+Beitrag fest -- und widersprachen ihm. Die Seite `Ports` zeigt die **wirksame**
+Richtungsmaske deshalb nur noch als **Klartext** je Port (`v4p_dir_text`); die
+drei **Knopfquellen** bleiben bedienbar, denn sie sagen, welche Taste auf
+Pin 6/9/5 liegt, und das ist eine echte Wahl.
 
-### Maus-Einstellungen je Buchse (`fw_ver` 5, Faehigkeitsbit `0x0400`)
+### Maus-Einstellungen je Buchse (ab `fw_ver` 5, Faehigkeitsbit `0x0400`)
 
-Die Firmware meldet jetzt **`fw_ver = 5`**. Rahmen und `proto_ver` bleiben
+Die Maus-Einstellungen gibt es **ab `fw_ver = 5`** (aktueller Stand: 6). Rahmen
+und `proto_ver` bleiben
 **unveraendert** (proto_ver 3); `v4_check_info()` prueft weiterhin nur
 `proto_ver` und die Rahmengroessen. Ob die beiden neuen Befehle vorhanden sind,
 sagt das Faehigkeitsbit **`0x0400`** (`V4P_CAP_MOUSE_CFG`). Fehlt es, bleiben
@@ -236,6 +238,71 @@ Grund; es wird **nichts** gesendet, was der ESP32 mit `BAD_CMD` abweisen wuerde.
   prueft danach die **Echo-Antwort** feldweise; `BAD_ARG` kommt unveraendert
   beim Aufrufer an, der seine Anzeige auf dem letzten bestaetigten Stand
   stehen laesst.
+
+### duo: EIN Controller auf beiden Buchsen (`fw_ver` 6, Faehigkeitsbit `0x0800`)
+
+Die Firmware meldet **`fw_ver = 6`**. Rahmen und `proto_ver` bleiben
+**unveraendert** (proto_ver 3); verbindlich sind die Faehigkeitsbits.
+
+| Befehl | Wert | Anfrage -> Antwort |
+|---|---|---|
+| `GET_DUO` | `0x0D` | -- -> **1 Byte**: `duo` |
+| `SET_DUO` | `0x0E` | `[duo u8]` -> **Echo** (1 Byte); nur **0/1/2** erlaubt, sonst `BAD_ARG` und die alte Einstellung bleibt |
+
+| Wert | Bedeutung |
+|---|---|
+| `0` | aus -- jeder Controller bedient seine gemerkte Buchse |
+| `1` | Port 0 **Maus**, Port 1 **Joystick** |
+| `2` | Port 1 **Maus**, Port 0 **Joystick** |
+
+* **duo ist KEINE Geraetezuordnung.** Ein Geraet hat im ESP32 weiterhin genau
+  **eine** Buchse (NVS-Feld `port`); duo setzt **nur die Betriebsarten** und
+  tastet die Zuordnung nicht an. Wer dieselbe BDA beiden Buchsen zuweist,
+  **verschiebt** sie deshalb nur -- dafuer ist duo da.
+* duo wirkt **nur bei genau EINEM Controller**; bei zwei Controllern gilt
+  unveraendert je Controller seine Buchse.
+* Fehlt das Faehigkeitsbit `0x0800`, ist der Schalter **gesperrt** mit
+  Klartextgrund, und es wird **nichts** gesendet.
+* In der Oberflaeche steht der Schalter auf der Seite `Ports` (`duo`), mit dem
+  Klartext daneben (`aus -- jeder Controller bedient seine Buchse` bzw.
+  `EIN Controller auf BEIDEN Buchsen`). Bei aktivem duo wird der **Begleiter**
+  -- der Port, der **nicht** die gemerkte Buchse des einen Controllers ist --
+  in der Klartextzeile als **`duo: Maus`** bzw. **`duo: Joystick`**
+  gekennzeichnet, und seine **Geraeteauswahl ist gesperrt** (sonst waere sie
+  eine Luege: es bedient ihn derselbe Controller). Konsole:
+  `cfg duo [aus|0|port0|1|port1|2]`.
+
+### Geraeteliste und DEV_GET-Layout (`fw_ver` 6, Faehigkeitsbit `0x1000`)
+
+`DEV_GET` hat ab `fw_ver 6` ein **Verbunden-Byte direkt hinter der BDA**; dadurch
+**wandern `name_len` und `name` um ein Byte**:
+
+| Offset | alt (`fw_ver` < 6) | neu (`fw_ver` 6, `V4P_CAP_DEV_STATE`) |
+|---|---|---|
+| 0 | `idx` | `idx` |
+| 1…6 | `bda[6]` | `bda[6]` |
+| 7 | `name_len` | **`verbunden`** (1 = gerade verbunden) |
+| 8 | `name` | **`name_len`** |
+| 9… | -- | **`name`** |
+
+* Der Decoder waehlt das Layout **ausschliesslich ueber das Faehigkeitsbit**
+  (`v4p_dec_dev(p, len, caps, &dev)`) -- die Nutzlast allein ist nicht
+  eindeutig (ein Verbunden-Byte 0 sieht aus wie `name_len` 0). Ohne das Bit
+  gilt das **alte** Layout, und `dev.verbunden` steht auf
+  `V4P_DEV_VERBUNDEN_UNBEKANNT`.
+* Fuer die Anzeige "verbunden" in der **Geraeteliste** gilt weiterhin
+  `GET_STATUS.conn_index` -- der Index des verbundenen Geraets in genau der
+  Tabelle, aus der `DEV_GET` liest. Das ist die **eine** Wahrheit der Liste
+  (live, ohne zusaetzliche Abfrage); das neue Feld wird dekodiert und in der
+  Rahmenkurzform (`verbunden=ja/nein/?`) gezeigt, aber **nicht** parallel in
+  derselben Anzeige.
+
+Der **Maus-Nachlauf** ist auf der ESP32-Seite behoben (Rest wird beim Loslassen
+verworfen, gestaute Schritte werden verworfen statt nachgeholt; das Tempo bleibt
+unveraendert). Kriecht der Zeiger danach noch, ist es der Ruhewert des Pads
+gegenueber der Totzone -- dann hilft eine groessere Totzone
+(`cfg <port> mouse totzone <wert>`; auf der ESP32-Konsole `maus <port> totzone
+<wert>`).
 
 `GET_INPUT` liefert **12 Byte**: `state0`@0 und `state1`@1 (Zug-Maske,
 Bit gesetzt = nach GND gezogen = aktiv, Ruhe `0x00`), `steps_x`@2 und
@@ -477,17 +544,18 @@ direkte Quelle kann sie nicht sehen. Diagonalen ueber beide Achsen (z.B.
 * **Namen im Fenster:** die beiden Anschluesse heissen dort **`Port 0`** / **`Port 1`**
   (Konsole und Protokoll behalten `Buchse`), und die Beitrags-Varianten heissen
   **`analog`** / **`digital`** / **`beides`** / **`eigene`**
-* **Zwei Seiten statt einer laengeren Liste (`fw_ver` 4).** Der Umschalter
+* **Drei Seiten statt einer langen Liste (`fw_ver` 4/5).** Der Umschalter
   `Seite:` (neben der Controller-Zeile, damit er keine zusaetzliche Hoehe
-  kostet) schaltet zwischen **`Anzeige`** (Portdaten) und **`Konfiguration`**
-  um. Die Seitengruppe ist ein `VGroup` mit `MUIA_Group_PageMode`;
-  `MUI_Group.doc` sagt dazu: *"the minimum width/height of a page group is the
-  maximum minimum width/height of all its children"*. Durch den Wegfall der
-  Eingangsabfrage ist die Anzeigeseite kuerzer geworden; die Konfigurationsseite
-  bleibt in derselben Groessenordnung. Die Mindestgroesse des Fensters aendert
-  sich damit nicht nach oben, und nichts wird unter seine Mindesthoehe
-  gedrueckt. Genau das war noetig: der Inhalt waere sonst hoeher als der Schirm
-  (640x360), und MUI haette die Textfelder unsichtbar gemacht.
+  kostet) schaltet zwischen **`Anzeige`** (Portdaten), **`Ports`** (Geraet,
+  Beitrag, Richtungen als Klartext, Knopfquellen) und **`Maus`**
+  (Tempo/Totzone) um. Die Seitengruppe ist ein `VGroup` mit
+  `MUIA_Group_PageMode`; `MUI_Group.doc` sagt dazu: *"the minimum
+  width/height of a page group is the maximum minimum width/height of all its
+  children"*. Genau deshalb sind die Einstellungen auf ZWEI Seiten verteilt:
+  mit allen Feldern auf einer Seite war sie hoeher als das Fenster, und man
+  musste scrollen. Die Seitengruppe liegt zusaetzlich in einer Scrollgruppe
+  (`MUIA_Virtgroup_TryFit, FALSE`) -- sie kann das Fenster also nicht mehr
+  vergroessern; die Balken erscheinen nur, wenn es wirklich nicht passt.
 * **Es gibt DREI Seiten: `Seite: Anzeige | Ports | Maus`.** `Ports` zeigt
   Geraet, Beitrag, Richtungen (als Klartext) und die Knopfquellen, `Maus` die
   Maus-Regler. Das ist kein Selbstzweck: eine Seitengruppe ist so hoch wie ihre
@@ -877,11 +945,13 @@ geaendert): in `find_index_by_bda()` `-1` liefern **oder** in `table_merge()`
 | Direktabfrage gegen Attrappe      | RECHTS/LINKS/VOR/ZURUECK/Diagonale/Ruhe, Stabilitaetstor, Feuerknoepfe, Zeilenformate, Direktzeile ohne jeden I2C-Wert (`v4_joy_direkt_text`), Protokollzeile ohne I2C/Urteil (`v4_joy_direkt_protokoll_text`) |
 | Beitrag (Bedienhilfe)             | Tabelle Variante -> Richtungen/Knopfquellen, Rueckrichtung aus der Maske (alle acht Werte), `v4_set_port_beitrag` gegen den Mock, `eigene`/Unfug -> `V4_ERR_ARG` ohne Rahmen |
 | Maus-Einstellungen (fw_ver 5)     | Vorgaben 7/12, Setzen je Buchse, lokale Grenzen, `BAD_ARG` des Slaves, falsches Echo -> `V4_ERR_FRAME`, fw_ver 4 ohne `0x0400` -> `BAD_CMD` |
+| duo (fw_ver 6)                    | Vorgabe 0 (aus), 0/1/2 setzen und lesen, unzulaessiger Wert lokal -> `BAD_ARG` ohne Rahmen, `BAD_ARG`/falsches Echo des Slaves, fw_ver 5 ohne `0x0800` -> `BAD_CMD` |
+| DEV_GET-Layout (fw_ver 6)         | beide Layouts (alt 7/8, neu 8/9) ueber `V4P_CAP_DEV_STATE`, dasselbe Byte in beiden Layouts, abgeschnittene Nutzlast, 49-Zeichen-Grenze |
 | Registerzugriff im m68k-Code      | `move.w $dff00a`, `move.w $dff00c`, `move.b $bfe001`, `move.w $dff016` -- absolute Adressen, kein Umweg |
 | Debugausgabe im Demo              | Transaktionszeile mit Dauer + Kurzform, `-quiet` schaltet sie ab |
 | Ausgabeschicht (`tests/test_debug.c`) | Herzzeile traegt Zaehler, letzten Status, verworfene Rahmen, Wiederholungen UND die Registerwerte mit `CIAAPRA`/`POTINP` -- und passt VOLLSTAENDIG in den Zeilenpuffer; ein Aufruf je Meldung; Aenderung wird gemeldet, Wiederholung nicht; Transaktionszeilen nur, wenn bestellt |
 | MUI-Objektbaum (`make mui-lint`)   | Klammerbalance, `Child`/Objekt, Tag/Wert, Klassenzugehoerigkeit, Gruppen mit Kindern, `MUIA_Cycle_Entries` als NULL-Array statt Zeichenkette, Seitengruppe (`MUIA_Group_PageMode`) -- dazu ein Selbsttest an einem kuenstlichen Baum, der jeden dieser Fehler einzeln erzeugt |
-| Protokollkonstanten gegen ESP32   | gemeinsame `#define` identisch (inkl. `0x08`/`0x09`/`0x0A`, `0x0B`/`0x0C`, `0x0100`/`0x0200`/`0x0400`, `0xFF`, Richtungs- und Knopfquellen, Tempo 1..10, Totzone 0..100) |
+| Protokollkonstanten gegen ESP32   | gemeinsame `#define` identisch (inkl. `0x08`/`0x09`/`0x0A`, `0x0B`/`0x0C`, `0x0D`/`0x0E`, `0x0100`/`0x0200`/`0x0400`/`0x0800`/`0x1000`, DEV_GET-Offsets beider Layouts, `0xFF`, Richtungs- und Knopfquellen, Tempo 1..10, Totzone 0..100, duo 0/1/2) |
 | `make test-m68k` (qemu, Big Endian)| **SKIP** -- `m68k-linux-gnu-gcc`/`qemu-m68k` fehlen |
 
 ## Der Absturz vom 13.10.2026 -- Befund und was dagegen getan ist
@@ -1080,14 +1150,16 @@ Buszeile **vor** der ersten Zeile der Direktabfrage.
    und ist **nicht** am Geraet nachgemessen. Ebenso ungemessen: ob ein
    verbundenes Geraet beim `SET_DEVICE_PORT` wirklich sofort umgehaengt wird
    (die Doku sagt "sofort, wenn die Zielbuchse frei ist").
-9. **Die neue Konfigurationsseite ist uebersetzt und baumgeprueft, aber nicht
-   auf der V4 geoeffnet.** Geprueft sind: der Amiga-Build mit `-Werror`, der
-   MUI-Baumpruefer (`make mui-lint`, inkl. Selbsttest der Seitengruppe) und die
-   Groessenrechnung der Seitengruppe laut `MUI_Group.doc` (Mindestgroesse =
-   Maximum ueber die Seiten, die Konfigurationsseite ist kleiner). **Nicht**
-   gesehen: dass MUI die Seite auf dem Geraet wirklich so legt. Der
-   Umschalter sitzt neben der dreizeiligen Controller-Zeile, damit er keine
-   zusaetzliche Hoehe kostet -- das Fenster soll so hoch bleiben wie bisher.
+9. **Die drei Seiten sind uebersetzt und baumgeprueft, aber nicht auf der V4
+   geoeffnet.** Geprueft sind: der Amiga-Build mit `-Werror`, der
+   MUI-Baumpruefer (`make mui-lint`, inkl. Selbsttest), die Groessenrechnung
+   laut `MUI_Group.doc` (Mindestgroesse = Maximum ueber die Seiten; gezaehlt:
+   Anzeige ~136, Ports ~132, Maus ~40 px) und die Laufzeitmessung per
+   `MUIM_AskMinMax` (`[fenster] Mindestgroesse ...`, fuenf Zeilen). **Nicht**
+   gesehen: dass MUI die Seiten auf dem Geraet wirklich so legt -- die exakten
+   Zahlen stehen nach dem naechsten Lauf im Protokoll. Der Umschalter sitzt
+   neben der dreizeiligen Controller-Zeile, damit er keine zusaetzliche Hoehe
+   kostet.
 10. **Die Geraetezuordnung ist ueber I2C nicht lesbar.** `DEV_GET` liefert nur
     Name und Adresse, `GET_PORT_CONFIG` nur die Buchsenfelder. Konsole und
     Oberflaeche zeigen deshalb, was in **dieser Sitzung** per

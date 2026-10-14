@@ -639,6 +639,11 @@ static uint8_t act_swap(void)
 /*                                      l2,r2,l3,r3,start,select,home, */
 /*                                      gruppe1..3 oder 0..16          */
 /*   cfg assign <index|BDA> <0|1>       Geraet einer Buchse zuordnen   */
+/*   cfg duo                            duo-Zustand anzeigen (fw_ver 6)*/
+/*   cfg duo aus|0|port0|1|port1|2      duo setzen: EIN Controller auf */
+/*                                      BEIDEN Buchsen (die eine Maus, */
+/*                                      die andere Joystick). Das ist   */
+/*                                      KEINE Geraetezuordnung.          */
 /*                                                                     */
 /* Nach JEDER Aenderung wird GET_PORT_CONFIG neu gelesen und angezeigt. */
 /* Ein abgelehnter Wert (BAD_ARG, z.B. doppelte Knopfquelle) aendert     */
@@ -839,6 +844,25 @@ static uint8_t act_cfg_show(int port)
      * gesetzt, wird nichts gesendet -- die Zeile sagt das dann ausdruecklich. */
     if (mousecfg_verfuegbar()) {
         (void)mousecfg_lesen();
+    }
+    /*
+     * duo gehoert zu KEINER Buchse, aber in die Zustandsuebersicht: es sagt,
+     * ob EIN Controller beide Buchsen bedient. Fehlt das Faehigkeitsbit, wird
+     * nichts gesendet und nichts behauptet.
+     */
+    if (S.info_valid != 0
+        && v4_info_has_caps(&S.info, V4P_CAP_DUO) != 0) {
+        uint8_t duo = 0u;
+        uint8_t drc = v4_get_duo(&M, &duo);
+
+        (void)v4_state_note(&S, drc);
+        if (drc == V4P_ST_OK) {
+            v4_state_put_duo(&S, duo);
+            v4_msg("  duo = %u (%s)%s\n", (unsigned)duo, v4p_duo_name(duo),
+                   (duo == V4P_DUO_OFF)
+                       ? ""
+                       : " -- EIN Controller auf BEIDEN Buchsen");
+        }
     }
     if (port < 0 || port >= (int)V4P_PORT_COUNT) {
         int p;
@@ -1064,6 +1088,85 @@ static int cfg_bda_parse(const char *s, uint8_t bda[V4P_BDA_LEN])
 }
 
 /*
+ * "cfg duo [wert]" -- duo lesen und setzen (fw_ver 6).
+ *
+ * duo heisst: EIN Controller bedient BEIDE Buchsen, die eine als Maus, die
+ * andere als Joystick. Es ist KEINE Geraetezuordnung (die bleibt je Geraet
+ * genau eine Buchse) und wirkt nur, solange genau EIN Controller verbunden
+ * ist. Verbindlich ist das Faehigkeitsbit V4P_CAP_DUO: fehlt es, wird nichts
+ * gesendet und die Anzeige behauptet auch nichts.
+ */
+static uint8_t act_cfg_duo(int narg, char **arg)
+{
+    uint8_t duo = 0u;
+    uint8_t rc;
+
+    if (S.info_valid == 0
+        || v4_info_has_caps(&S.info, V4P_CAP_DUO) == 0) {
+        v4_msg("Die Gegenstelle kann duo nicht (Faehigkeitsbit 0x%04X fehlt, "
+               "fw_ver %u noetig) -- nichts gesendet.\n",
+               (unsigned)V4P_CAP_DUO, (unsigned)V4P_FW_VER_DUO);
+        return V4P_ST_BAD_CMD;
+    }
+
+    if (narg < 2) {                     /* nur anzeigen */
+        rc = v4_get_duo(&M, &duo);
+        (void)v4_state_note(&S, rc);
+        if (rc != V4P_ST_OK) {
+            print_failure("GET_DUO", rc);
+            return rc;
+        }
+        v4_state_put_duo(&S, duo);
+        v4_msg("duo = %u (%s)%s\n", (unsigned)duo, v4p_duo_name(duo),
+               (duo == V4P_DUO_OFF)
+                   ? " -- jeder Controller bedient seine Buchse"
+                   : " -- EIN Controller auf BEIDEN Buchsen");
+        return V4P_ST_OK;
+    }
+
+    {
+        const char *w = arg[1];
+        uint8_t     neu;
+
+        if (strcmp(w, "aus") == 0 || strcmp(w, "off") == 0
+            || strcmp(w, "0") == 0) {
+            neu = (uint8_t)V4P_DUO_OFF;
+        } else if (strcmp(w, "port0") == 0 || strcmp(w, "p0") == 0
+                   || strcmp(w, "1") == 0) {
+            neu = (uint8_t)V4P_DUO_MOUSE_PORT0;
+        } else if (strcmp(w, "port1") == 0 || strcmp(w, "p1") == 0
+                   || strcmp(w, "2") == 0) {
+            neu = (uint8_t)V4P_DUO_MOUSE_PORT1;
+        } else {
+            v4_msg("Aufruf: cfg duo [aus|0|port0|1|port1|2]\n");
+            return V4P_ST_BAD_ARG;
+        }
+
+        rc = v4_set_duo(&M, neu);
+        (void)v4_state_note(&S, rc);
+        if (rc == V4P_ST_BAD_ARG) {
+            v4_msg("SET_DUO: BAD_ARG -- erlaubt sind nur 0 (aus), 1 (Port 0 "
+                   "Maus) und 2 (Port 1 Maus); die alte Einstellung bleibt.\n");
+            return rc;
+        }
+        if (rc != V4P_ST_OK) {
+            print_failure("SET_DUO", rc);
+            return rc;
+        }
+        v4_state_put_duo(&S, neu);
+    }
+    /* Nach jeder Aenderung den ECHTEN Stand lesen und zeigen. */
+    rc = v4_get_duo(&M, &duo);
+    (void)v4_state_note(&S, rc);
+    if (rc == V4P_ST_OK) {
+        v4_state_put_duo(&S, duo);
+    }
+    v4_msg("duo = %u (%s) bestaetigt%s\n", (unsigned)duo, v4p_duo_name(duo),
+           (duo == V4P_DUO_OFF) ? "" : " -- EIN Controller auf BEIDEN Buchsen");
+    return V4P_ST_OK;
+}
+
+/*
  * Eine Kommandozeile nach "cfg" auswerten. `line` ist der Rest der Zeile
  * (ohne "cfg"). Die Geraeteliste kommt aus dem Zustandsblock (Befehl 'a').
  */
@@ -1081,6 +1184,15 @@ static void act_cfg(char *line)
     /* "cfg" bzw. "cfg <port>" -- anzeigen. */
     if (narg == 0) {
         (void)act_cfg_show(-1);
+        return;
+    }
+    /*
+     * duo ist NICHT buchsenbezogen und wird deshalb vor der Buchsenauswertung
+     * behandelt. Verbindlich ist das Faehigkeitsbit V4P_CAP_DUO; fehlt es,
+     * wird NICHTS gesendet.
+     */
+    if (strcmp(arg[0], "duo") == 0) {
+        (void)act_cfg_duo(narg, arg);
         return;
     }
     if (strcmp(arg[0], "assign") == 0) {
@@ -1171,7 +1283,8 @@ static void act_cfg(char *line)
         if (narg < 3) {
             v4_msg("Aufruf: cfg <0|1> mode|dir|btn1|btn2|btn3 <wert>\n"
                    "        cfg <0|1> beitrag analog|digital|beide\n"
-                   "        cfg <0|1> mouse speed|totzone <wert>\n");
+                   "        cfg <0|1> mouse speed|totzone <wert>\n"
+                   "        cfg duo [aus|0|port0|1|port1|2]\n");
             return;
         }
         if (!cfg_verfuegbar()) {
@@ -1603,7 +1716,7 @@ static int console_run(const char *dev)
            "             a Scan/Liste, c verbinden, d trennen, f vergessen, "
            "r RESET, q Ende\n"
            "             cfg [<0|1> mode|dir|beitrag|mouse|btn1|btn2|btn3 "
-           "<wert>] | cfg assign <index|BDA> <0|1>\n");
+           "<wert>] | cfg assign <index|BDA> <0|1> | cfg duo [0|1|2]\n");
 
     while (beenden == 0) {
         console_herz_maybe();

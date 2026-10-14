@@ -47,6 +47,7 @@ static int        s_dev_count;
 
 static uint8_t  s_state;            /* V4P_STATE_*                      */
 static uint8_t  s_conn_index;       /* 0xFF = keiner                    */
+static uint8_t  s_duo = V4P_DUO_OFF;/* duo-Zustand (fw_ver 6)           */
 static int      s_connect_left;     /* CONNECTING-Runden bis CONNECTED  */
 static int      s_forgotten;        /* FORGET: NVS-Adresse geloescht    */
 
@@ -164,6 +165,8 @@ static void mock_fill_info(v4p_info_t *in)
         in->fw_ver = 3u;
     } else if (v4_mock.legacy_fw4) {
         in->fw_ver = 4u;
+    } else if (v4_mock.legacy_fw5) {
+        in->fw_ver = 5u;
     } else {
         in->fw_ver = (uint8_t)V4P_FW_VER;
     }
@@ -189,6 +192,10 @@ static void mock_fill_info(v4p_info_t *in)
      * Eingangsverteilung, aber OHNE dieses Bit. */
     if (!v4_mock.legacy_fw3 && !v4_mock.legacy_fw4) {
         in->caps = (uint16_t)(in->caps | V4P_CAP_MOUSE_CFG);
+    }
+    /* duo und das Verbunden-Byte in DEV_GET gibt es erst mit fw_ver 6. */
+    if (!v4_mock.legacy_fw3 && !v4_mock.legacy_fw4 && !v4_mock.legacy_fw5) {
+        in->caps = (uint16_t)(in->caps | V4P_CAP_DUO | V4P_CAP_DEV_STATE);
     }
 }
 
@@ -666,11 +673,69 @@ static void mock_dispatch(uint8_t cmd, uint8_t seq, const uint8_t *pay,
             }
             dev.name[dev.name_len] = '\0';
         }
+        /*
+         * Layout: OHNE V4P_CAP_DEV_STATE (legacy_fw3/4/5) das ALTE (name_len
+         * bei 7), sonst das neue mit dem Verbunden-Byte. Genau die
+         * Unterscheidung, die der Master treffen muss.
+         */
+        dev.verbunden = (s_conn_index == idx) ? 1 : 0;
         {
-            size_t n = v4p_enc_dev(p, &dev);
+            size_t n;
 
+            if (v4_mock.legacy_fw3 || v4_mock.legacy_fw4 || v4_mock.legacy_fw5) {
+                n = v4p_enc_dev_alt(p, &dev);
+            } else {
+                n = v4p_enc_dev(p, &dev);
+            }
             mock_answer(cmd, seq, V4P_ST_OK, V4P_FLAG_NONE, p, (uint8_t)n);
         }
+        return;
+    }
+
+    /*
+     * duo (fw_ver 6). Bei legacy_fw3/4/5 gibt es die Befehle nicht -- sie
+     * antworten BAD_CMD, wie die aeltere Firmware.
+     */
+    case V4P_CMD_GET_DUO: {
+        uint8_t p[V4P_DUO_PAYLOAD_LEN];
+
+        if (v4_mock.legacy_fw3 || v4_mock.legacy_fw4 || v4_mock.legacy_fw5) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_CMD);
+            return;
+        }
+        p[V4P_DUO_OFF_STATE] = s_duo;
+        mock_answer(cmd, seq, V4P_ST_OK, V4P_FLAG_NONE, p,
+                    (uint8_t)V4P_DUO_PAYLOAD_LEN);
+        return;
+    }
+
+    case V4P_CMD_SET_DUO: {
+        uint8_t p[V4P_DUO_PAYLOAD_LEN];
+        uint8_t duo;
+
+        if (v4_mock.legacy_fw3 || v4_mock.legacy_fw4 || v4_mock.legacy_fw5) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_CMD);
+            return;
+        }
+        if (plen < V4P_DUO_PAYLOAD_LEN) {
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_ARG);
+            return;
+        }
+        duo = pay[V4P_DUO_OFF_STATE];
+        if (!v4p_duo_valid(duo)) {
+            /* Die alte Einstellung bleibt -- wie auf dem ESP32. */
+            mock_answer_empty(cmd, seq, V4P_ST_BAD_ARG);
+            return;
+        }
+        s_duo = duo;
+        if (v4_mock.bad_duo_echo) {
+            v4_mock.bad_duo_echo = 0;
+            duo = (uint8_t)((duo == V4P_DUO_MOUSE_PORT1) ? V4P_DUO_MOUSE_PORT0
+                                                         : V4P_DUO_MOUSE_PORT1);
+        }
+        p[V4P_DUO_OFF_STATE] = duo;
+        mock_answer(cmd, seq, V4P_ST_OK, V4P_FLAG_NONE, p,
+                    (uint8_t)V4P_DUO_PAYLOAD_LEN);
         return;
     }
 
@@ -1009,6 +1074,16 @@ void v4_mock_reset(void)
     s_answer_no = 0u;
     s_cmd_no    = 0u;
     s_now_us    = 0u;                   /* Uhr des Mocks zuruecksetzen */
+}
+
+uint8_t v4_mock_duo(void)
+{
+    return s_duo;
+}
+
+void v4_mock_set_duo(uint8_t duo)
+{
+    s_duo = v4p_duo_valid(duo) ? duo : (uint8_t)V4P_DUO_OFF;
 }
 
 int v4_mock_dev_add(const char *name, const uint8_t bda[6])

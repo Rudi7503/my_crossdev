@@ -256,6 +256,13 @@ typedef struct {
                                          * Schreiben: der Befehl kann zweimal
                                          * ausgefuehrt worden sein (§7/§6) */
     int           last_check;   /* letzter V4P_CHECK_*-Grund           */
+    /*
+     * Zuletzt gemeldete Faehigkeiten (GET_INFO/PING). Sie werden hier
+     * GEMERKT, weil das DEV_GET-Layout davon abhaengt (fw_ver 6 hat ein
+     * Verbunden-Byte VOR name_len) -- ein Aufrufer, der nur die Nutzlast
+     * sieht, kann das nicht entscheiden. 0 = noch nichts gelesen.
+     */
+    uint16_t      caps;
     /* Debugausgabe -- nach v4_init()/v4_open() setzen (siehe oben) */
     v4_trace_fn   trace;
     void         *trace_ctx;
@@ -368,6 +375,17 @@ uint8_t v4_get_mouse_cfg(v4_master_t *m, v4p_mousecfg_t *cfg);
  * laesst seine Anzeige auf dem letzten BESTAETIGTEN Stand stehen. */
 uint8_t v4_set_mouse_cfg(v4_master_t *m, uint8_t port, uint8_t speed,
                          uint8_t totzone);
+
+/* 0x0D: duo lesen. 1 Byte: 0 = aus, 1 = Port 0 Maus / Port 1 Joystick,
+ * 2 = umgekehrt (V4P_DUO_*). duo ist KEINE Geraetezuordnung: es setzt nur die
+ * Betriebsarten, und nur wenn genau EIN Controller verbunden ist. */
+uint8_t v4_get_duo(v4_master_t *m, uint8_t *duo);
+
+/* 0x0E: duo setzen. Der Wert wird VORHER lokal geprueft (nur 0/1/2); sonst
+ * V4_ERR_ARG und es wird nichts gesendet. Auf V4P_ST_OK wird das Echo geprueft
+ * -- ein "OK" mit einem anderen Wert waere ein verschobener Strom. BAD_ARG des
+ * Slaves kommt unveraendert an, und die alte Einstellung bleibt dort stehen. */
+uint8_t v4_set_duo(v4_master_t *m, uint8_t duo);
 
 /* ------------------------------------------------------------------ */
 /* Bedienhilfe "Beitrag" je Buchse -- KEIN Protokollbefehl             */

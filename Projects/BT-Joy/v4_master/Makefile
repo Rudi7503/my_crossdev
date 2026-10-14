@@ -210,10 +210,12 @@ demo: $(BUILD)/v4_console_demo
 	printf 's\nh\ni\nq\n' | ./$(BUILD)/v4_console_demo -n > $(BUILD)/demo1.txt 2>&1 || fail=1; \
 	grep -q "Adresse 0x5E" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: Adresse 0x5E steht nicht im Kopf"; fail=1; }; \
-	grep -q "PING ok: proto=3 fw=5 write=32 read=128" $(BUILD)/demo1.txt \
+	grep -q "PING ok: proto=3 fw=6 write=32 read=128" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: PING-Zeile fehlt oder nennt andere Rahmengroessen"; fail=1; }; \
-	grep -q "Faehigkeiten: 0x07FF" $(BUILD)/demo1.txt \
+	grep -q "Faehigkeiten: 0x1FFF" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: Faehigkeiten fehlen"; fail=1; }; \
+	grep -q "duo" $(BUILD)/demo1.txt \
+	    || { echo "  FEHLER: das duo-Faehigkeitsbit fehlt"; fail=1; }; \
 	grep -q "Verteilung,Geraetezuordnung" $(BUILD)/demo1.txt \
 	    || { echo "  FEHLER: die Faehigkeitsbits der Eingangsverteilung fehlen"; fail=1; }; \
 	grep -q "Maus-Einstellungen" $(BUILD)/demo1.txt \
@@ -441,8 +443,45 @@ demo: $(BUILD)/v4_console_demo
 	    || { echo "  FEHLER: das falsche Echo wird nicht als Fehler gemeldet"; fail=1; }; \
 	grep -qE "Buchse 0: Geraet .*Tempo 7/10, Totzone 12%" $(BUILD)/demo19.txt \
 	    || { echo "  FEHLER: nach dem falschen Echo steht nicht mehr der echte Stand"; fail=1; }; \
+	echo "== Demo 14: duo -- EIN Controller auf beiden Buchsen (fw_ver 6) =="; \
+	printf 'cfg duo\ncfg duo 1\ncfg duo\ncfg duo 2\nq\n' \
+	    | ./$(BUILD)/v4_console_demo -n > $(BUILD)/demo20.txt 2>&1 || fail=1; \
+	grep -q "cmd=GET_DUO" $(BUILD)/demo20.txt \
+	    || { echo "  FEHLER: GET_DUO wird nicht abgesetzt"; fail=1; }; \
+	grep -q "cmd=SET_DUO" $(BUILD)/demo20.txt \
+	    || { echo "  FEHLER: SET_DUO wird nicht abgesetzt"; fail=1; }; \
+	grep -q "duo = 0 (aus) -- jeder Controller bedient seine Buchse" $(BUILD)/demo20.txt \
+	    || { echo "  FEHLER: der Aus-Zustand wird nicht im Klartext gemeldet"; fail=1; }; \
+	grep -q "duo = 1 (Port 0 Maus, Port 1 Joystick) bestaetigt -- EIN Controller auf BEIDEN Buchsen" $(BUILD)/demo20.txt \
+	    || { echo "  FEHLER: duo 1 wird nicht bestaetigt"; fail=1; }; \
+	grep -q "duo = 2 (Port 1 Maus, Port 0 Joystick) bestaetigt" $(BUILD)/demo20.txt \
+	    || { echo "  FEHLER: duo 2 wird nicht bestaetigt"; fail=1; }; \
+	echo "== Demo 15: fw_ver 5 -- kein duo, ALTES DEV_GET-Layout, Namen stimmen =="; \
+	V4_DEMO_LEGACY_FW5=1 sh -c "printf 'a\ncfg duo\ncfg duo 1\nq\n' | ./$(BUILD)/v4_console_demo -n" \
+	    > $(BUILD)/demo21.txt 2>&1 || fail=1; \
+	grep -q "PING ok: proto=3 fw=5 write=32 read=128" $(BUILD)/demo21.txt \
+	    || { echo "  FEHLER: fw_ver 5 wird nicht angenommen (gleicher Rahmen!)"; fail=1; }; \
+	grep -q "Faehigkeiten: 0x07FF" $(BUILD)/demo21.txt \
+	    || { echo "  FEHLER: fw_ver 5 meldet nicht genau die alten Faehigkeiten"; fail=1; }; \
+	grep -q "8BitDo Pro 2" $(BUILD)/demo21.txt \
+	    || { echo "  FEHLER: das ALTE DEV_GET-Layout wird nicht gelesen (Name fehlt)"; fail=1; }; \
+	grep -q "Logitech MX Anywhere" $(BUILD)/demo21.txt \
+	    || { echo "  FEHLER: das ALTE DEV_GET-Layout wird nicht gelesen"; fail=1; }; \
+	grep -q "Die Gegenstelle kann duo nicht" $(BUILD)/demo21.txt \
+	    || { echo "  FEHLER: das fehlende duo-Faehigkeitsbit wird nicht gemeldet"; fail=1; }; \
+	if grep -q "cmd=GET_DUO" $(BUILD)/demo21.txt; then \
+	    echo "  FEHLER: GET_DUO wurde trotz fehlendem Faehigkeitsbit gesendet"; fail=1; fi; \
+	if grep -q "cmd=SET_DUO" $(BUILD)/demo21.txt; then \
+	    echo "  FEHLER: SET_DUO wurde trotz fehlendem Faehigkeitsbit gesendet"; fail=1; fi; \
+	echo "== Demo 16: falsches Echo von SET_DUO wird nicht geglaubt =="; \
+	V4_DEMO_BAD_DUO_ECHO=1 sh -c "printf 'cfg duo 1\ncfg duo\nq\n' | ./$(BUILD)/v4_console_demo -n" \
+	    > $(BUILD)/demo22.txt 2>&1 || fail=1; \
+	grep -q "SET_DUO: Antwort gueltig, Nutzlast unbrauchbar" $(BUILD)/demo22.txt \
+	    || { echo "  FEHLER: das falsche duo-Echo wird nicht als Fehler gemeldet"; fail=1; }; \
+	grep -q "duo = 1 (Port 0 Maus, Port 1 Joystick)" $(BUILD)/demo22.txt \
+	    || { echo "  FEHLER: der echte Stand nach dem falschen Echo fehlt"; fail=1; }; \
 	if [ "$$fail" -eq 0 ]; then \
-	    echo "Demo: OK (13 Durchlaeufe, Mock, ohne Hardware)"; \
+	    echo "Demo: OK (16 Durchlaeufe, Mock, ohne Hardware)"; \
 	else echo "Demo: FEHLGESCHLAGEN"; exit 1; fi
 
 # Dasselbe Programm fuer einen echten i2c-dev-Bus. Laeuft nur, wenn dort auch

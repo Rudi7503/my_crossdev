@@ -85,6 +85,15 @@ typedef struct {
                                  * senden. */
     int bad_mousecfg_echo;      /* SET_MOUSE_CFG bestaetigt andere Werte
                                  * (einmalig) -> V4_ERR_FRAME erwartet */
+    int legacy_fw5;             /* Firmware OHNE duo und OHNE das DEV_GET-
+                                 * Verbunden-Byte: GET_INFO meldet fw_ver 5
+                                 * und caps OHNE 0x0800/0x1000, die Befehle
+                                 * 0x0D/0x0E antworten BAD_CMD, und DEV_GET
+                                 * benutzt das ALTE Layout (name_len 7).
+                                 * Damit laesst sich pruefen, dass der Master
+                                 * beide Layouts liest. */
+    int bad_duo_echo;           /* SET_DUO bestaetigt einen anderen Wert
+                                 * (einmalig) -> V4_ERR_FRAME erwartet */
 
     /* Diagnose */
     unsigned long writes;       /* verarbeitete WRITE-Frames               */
@@ -118,6 +127,10 @@ void v4_mock_seed_default(void);
 
 /* Geraetetabelle. Liefert 0 bei Erfolg, -1 wenn voll oder Name unbrauchbar. */
 int v4_mock_dev_add(const char *name, const uint8_t bda[6]);
+
+/* duo-Zustand des Mocks (0/1/2) -- fuer Tests und Demo. */
+uint8_t v4_mock_duo(void);
+void    v4_mock_set_duo(uint8_t duo);
 
 /* Buchsen.
  *
