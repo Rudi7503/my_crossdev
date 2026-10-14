@@ -27,23 +27,22 @@
  *                              Maus-Tempo und Maus-Totzone
  *                              (GET/SET_MOUSE_CFG), dazu der Klartext beider
  *                              Buchsen
- *   - Knoepfe: Neu suchen, Geraeteliste/Verbinden, Trennen, Vergessen,
- *     Port 0/1 Vorgabe weiterschalten, Buchsen tauschen
+ *   - Knoepfe: Suchen, Verbinden, Trennen, Vergessen, Neu laden, Live,
+ *     Tauschen (EINE Reihe -- jede Zeile zaehlt auf 640x360)
  *   - Logfeld mit allen Meldungen
  *
- * WARUM DIE SEITEN IN EINER SCROLLGRUPPE LIEGEN (15.10.2026): die Mindesthoehe
- * einer Seitengruppe ist das MAXIMUM ueber alle Seiten (MUI_Group.doc). Ist
- * eine Seite hoeher als das Fenster, drueckt MUI die Felder zusammen oder
- * schneidet sie ab -- am Geraet war die Konfigurationsseite dann erst nach dem
- * Vergroessern des Fensters bedienbar. Scrollgroup + Virtgroup (TryFit FALSE)
- * nehmen den Seiten die Macht, das Fenster zu vergroessern; gescrollt wird nur,
- * wenn es nicht passt (AutoBars). Der Umschalter "Seite:" steht AUSSERHALB und
- * ist damit immer sichtbar. Nach dem Oeffnen und bei jedem Seitenwechsel
- * schreibt die Oberflaeche die von MUI BERECHNETEN Mindestmasse ins Protokoll
- * ([fenster] Mindestgroesse ...), damit "passt nicht" belegbar ist.
+ * WARUM DIE SEITEN DIREKT IN DER SEITENGRUPPE LIEGEN (17.10.2026): ein Versuch
+ * mit Scrollgroup + Virtgroup (MUIA_Virtgroup_TryFit, FALSE) ist am Geraet
+ * GESCHEITERT -- die Seitengruppe bekam 0x0 Pixel und der Bereich unter dem
+ * Umschalter blieb LEER (Messwerte im Baum-Kommentar in gui_build). Die
+ * Seitengruppe braucht keine Scrollgruppe: laut MUI_Group.doc ist ihre
+ * Mindesthoehe das MAXIMUM ueber ihre Kinder, und die drei Seiten sind so
+ * kompakt, dass sie in ein 640x336-Fenster passen (der Schirm dieser V4 ist
+ * 640x360). Nach dem Oeffnen und bei jedem Seitenwechsel schreibt die
+ * Oberflaeche die TATSAECHLICHEN Groessen ins Protokoll ([fenster] ...).
  *
- * WARUM ZWEI SEITEN UND NICHT EINE LAENGERE LISTE: mit fw_ver 4 ist der Inhalt
- * so gewachsen, dass er nicht mehr untereinander passt. MUI_Group.doc sagt zur Seitengruppe: "the minimum
+ * WARUM DREI SEITEN UND NICHT EINE LAENGERE LISTE: mit fw_ver 4/5 ist der
+ * Inhalt so gewachsen, dass er nicht mehr untereinander passt. MUI_Group.doc sagt zur Seitengruppe: "the minimum
  * width/height of a page group is the maximum minimum width/height of all its
  * children". Die Anzeigeseite ist durch den Wegfall der Eingangsabfrage KLEINER
  * geworden; die Konfigurationsseite bleibt durch die neue Zeile je Einstellung
@@ -196,8 +195,13 @@
  * Vorgabe 700x480 wird damit verglichen: passt sie nicht, wird sie auf den
  * Schirm begrenzt (siehe gui_fenster_an_schirm).
  */
-#define GUI_SCHIRM_RAND_W 16
-#define GUI_SCHIRM_RAND_H 24
+/*
+ * Rand, den das Fenster auf dem Schirm braucht. KLEIN gewaehlt (17.10.2026):
+ * der Schirm dieser V4 ist 640x360 -- bei 16/24 px Rand blieben nur 624x336.
+ * 8/8 px geben 632x352.
+ */
+#define GUI_SCHIRM_RAND_W 8
+#define GUI_SCHIRM_RAND_H 8
 
 /*
  * Wie lange auf Scanergebnisse bzw. CONNECTED gewartet wird, in Takten.
@@ -245,8 +249,13 @@
 /* Die beiden Knoepfe "Port N Modus >": sie schalten die VORGABE EINEN Schritt
  * weiter. Das ist ein eigener ReturnID, weil das Auswahlfeld selbst schon auf
  * ID_MODE0/ID_MODE1 hoert (dort wird der Wert direkt gesendet). */
-#define ID_MODE0_NEXT 16
-#define ID_MODE1_NEXT 17
+/*
+ * 16/17 waren die Knoepfe "Port N Modus >" in der zweiten Knopfreihe. Die
+ * Reihe ist am 17.10.2026 entfallen (jede Zeile zaehlt auf 640x360); die
+ * Betriebsart stellt man auf der Seite "Anzeige" mit dem Feld "Vorgabe" ein.
+ * Die Nummern bleiben frei -- eine Umnummerierung wuerde nur Verwirrung
+ * stiften. act_mode_weiter() wird deshalb nicht mehr gerufen.
+ */
 /* Der Umschalter "Seite" (Anzeige / Konfiguration). */
 #define ID_SEITE      18
 /* Die Beitrags-Auswahl je Buchse (analog / digital / beide / eigene). */
@@ -321,6 +330,8 @@ static int s_fenster_w = 700;
 static int s_fenster_h = 480;
 static int s_schirm_w;                 /* 0 = nicht ermittelt */
 static int s_schirm_h;
+static int s_schirm_sichtbar_w;        /* ViewPort: was wirklich zu sehen ist */
+static int s_schirm_sichtbar_h;
 static int s_fenster_geklemmt;         /* 1 = auf den Schirm begrenzt */
 static const char *s_dev_path;        /* NULL = Vorgabe der Plattform  */
 static int     s_debug_uart = 1;      /* -nodebug schaltet den Debug-UART ab */
@@ -332,12 +343,10 @@ static Object *s_app;
 static Object *s_win;
 static Object *s_root;                /* Fensterinhalt (oberste VGroup)   */
 static Object *s_link;                /* Verbindungszeile (Ausfallhinweis) */
-static Object *s_info;                /* Kopfzeile                        */
 static Object *s_ctrl;                /* Controller-Zeile                 */
 static Object *s_state;               /* Zustandszeile                    */
 static Object *s_port0;               /* Portgruppe 0                     */
 static Object *s_port1;               /* Portgruppe 1                     */
-static Object *s_regtext;             /* Rohregister (direkt), volle Breite */
 static Object *s_mode0;               /* Cycle Vorgabe Betriebsart Port 0 */
 static Object *s_mode1;               /* Cycle Vorgabe Betriebsart Port 1 */
 
@@ -353,7 +362,6 @@ static Object *s_mode1;               /* Cycle Vorgabe Betriebsart Port 1 */
  *   s_cfgtext            Kopf, Zusammenfassung und Meldungen im Klartext
  */
 static Object *s_dev0, *s_dev1;
-static Object *s_rdir0, *s_rdir1;     /* Richtungen: NUR Anzeige (Klartext) */
 static Object *s_b0[3], *s_b1[3];
 static Object *s_wirk0, *s_wirk1;
 static Object *s_cfgtext;
@@ -376,14 +384,14 @@ static Object *s_maushint;            /* Hinweis auf der Seite "Maus"      */
  * Seitenumschalter: s_seite ist das Auswahlfeld ("Anzeige"/"Konfiguration"),
  * s_seiten die Seitengruppe (MUIA_Group_PageMode) mit den beiden Seiten.
  *
- * s_scroll/s_virt sind die Scrollgruppe und die virtuelle Gruppe um die
- * Seitengruppe: sie halten das Fenster bei jeder Groesse bedienbar, auch wenn eine
- * Seite hoeher ist als der Platz (siehe der Aufbau unten).
+ * Die Seiten liegen DIREKT in der Seitengruppe -- ohne Scrollgruppe und ohne
+ * virtuelle Gruppe. WARUM (17.10.2026): mit Scrollgroup + Virtgroup
+ * (MUIA_Virtgroup_TryFit, FALSE) bekam die Seitengruppe am Geraet 0x0 Pixel,
+ * der Bereich unter dem Umschalter blieb LEER. Die Messwerte stehen im
+ * Baum-Kommentar in gui_build().
  */
 static Object *s_seite;
 static Object *s_seiten;
-static Object *s_scroll;              /* Scrollgroup um die Seitengruppe   */
-static Object *s_virt;                /* Virtgroup (Inhalt der Scrollgroup)*/
 static Object *s_seite_anzeige;       /* Seite 0 (Anzeige)                 */
 static Object *s_seite_ports;         /* Seite 1 (Ports: Geraet/Beitrag/..)*/
 static Object *s_seite_maus;          /* Seite 2 (Maus: Tempo/Totzone)     */
@@ -740,66 +748,6 @@ static void gui_msg(const char *fmt, ...)
 
 /* ------------------------------------------------------------------ */
 /* Klartext der Faehigkeiten (fuer die Kopfzeile)                      */
-/* ------------------------------------------------------------------ */
-
-static void caps_text(uint16_t caps, char *out, size_t cap)
-{
-    static const struct {
-        uint16_t    bit;
-        const char *name;
-    } tab[] = {
-        { V4P_CAP_PORT_MODE, "Port-Modus" },
-        { V4P_CAP_GET_INPUT, "Eingaenge" },
-        { V4P_CAP_GET_HID,   "HID-Info" },
-        { V4P_CAP_HID_BT,    "BT" },
-        { V4P_CAP_HID_BLE,   "BLE" },
-        { V4P_CAP_MOUSE,     "Maus" },
-        { V4P_CAP_PAD,       "Pad" },
-        { V4P_CAP_BATTERY,   "Batterie" },
-        { V4P_CAP_PORT_ROUTING, "Verteilung" },
-        { V4P_CAP_DEVICE_PORT,  "Geraetezuordnung" },
-        { V4P_CAP_MOUSE_CFG,    "Maus-Einstellungen" },
-        { V4P_CAP_DUO,          "duo" },
-        { V4P_CAP_DEV_STATE,    "Geraetezustand" }
-    };
-    size_t   n     = 0u;
-    int      first = 1;
-    unsigned i;
-
-    if (out == NULL || cap == 0u) {
-        return;
-    }
-    out[0] = '\0';
-    for (i = 0u; i < (unsigned)(sizeof(tab) / sizeof(tab[0])); i++) {
-        const char *name;
-        size_t      len;
-        size_t      k;
-
-        if ((caps & tab[i].bit) == 0u) {
-            continue;
-        }
-        name = tab[i].name;
-        len  = strlen(name);
-        if (n + (first ? 0u : 1u) + len + 1u > cap) {
-            break;
-        }
-        if (!first) {
-            out[n++] = ',';
-        }
-        for (k = 0u; k < len; k++) {
-            out[n++] = name[k];
-        }
-        first = 0;
-    }
-    if (first) {
-        const char *keine = "(keine)";
-
-        for (n = 0u; keine[n] != '\0' && n + 1u < cap; n++) {
-            out[n] = keine[n];
-        }
-    }
-    out[n] = '\0';
-}
 
 /* ------------------------------------------------------------------ */
 /* Anzeige aktualisieren                                               */
@@ -857,34 +805,6 @@ static void gui_show_link(void)
     }
 }
 
-static void gui_show_info(void)
-{
-    v4p_info_t  info;
-    char        caps[160];
-    static char buf[420];
-
-    if (!S.info_valid) {
-        return;                 /* noch nichts empfangen: alte Anzeige bleibt */
-    }
-    info = S.info;
-    caps_text(info.caps, caps, sizeof(caps));
-    (void)snprintf(buf, sizeof(buf),
-                   "Protokoll %u / Firmware %u, Rahmen %u -> %u Byte, "
-                   "Adresse 0x%02X, Geraete max. %u\n"
-                   "Faehigkeiten 0x%04X: %s\n"
-                   "Bulk-Weg: %s",
-                   (unsigned)info.proto_ver, (unsigned)info.fw_ver,
-                   (unsigned)info.write_frame_len,
-                   (unsigned)info.read_frame_len,
-                   (unsigned)V4_I2C_ADDR7, (unsigned)info.max_devices,
-                   (unsigned)info.caps, caps,
-                   (info.bulk_payload_max == 0u)
-                       ? "nein (kein Dateizugriff)"
-                       : "ja");
-    if (s_info != NULL) {
-        set(s_info, MUIA_Text_Contents, (IPTR)buf);
-    }
-}
 
 static void gui_show_status(void)
 {
@@ -965,16 +885,13 @@ static void gui_show_hid(void)
     }
 
     /*
-     * Drei Zeilen, und die wichtigen Angaben stehen VORN: das Feld darf
-     * hoechstens so breit wie das Fenster sein, und Name, Art,
-     * Transport und VID:PID sind die Aussage, die man beim Draufschauen
-     * braucht. Die Zaehler dahinter sind Beiwerk und duerfen am Rand
-     * abgeschnitten werden.
+     * ZWEI Zeilen (17.10.2026; vorher drei): auf einem 640x360-Schirm zaehlt
+     * jede Zeile. Die wichtigen Angaben stehen VORN -- Name, Art, Transport,
+     * VID:PID --, die Zaehler dahinter duerfen am Rand abgeschnitten werden.
      */
     (void)snprintf(buf, sizeof(buf),
                    "Controller: %s%s\n"
-                   "Art %s, Transport %s, VID:PID %04X:%04X\n"
-                   "Report-ID %u, Reportlaenge %u Byte, Reports %u, %s",
+                   "Art %s, %s, %04X:%04X, Report-ID %u/%u B, Reports %u, %s",
                    (hid.name[0] != '\0') ? hid.name : "(ohne Namen)",
                    ((hid.flags & V4P_FLAG_NAME_TRUNCATED) != 0u)
                        ? " (Name gekuerzt)" : "",
@@ -1019,36 +936,16 @@ static void gui_build_port_text(int port, uint8_t mode, int mode_gueltig,
         (void)snprintf(kopf, sizeof(kopf),
                        "Port %d  Modus ? (ESP32 antwortet nicht)", port);
     }
-    (void)v4_joy_direkt_text(&J, port, direkt, sizeof(direkt));
-    (void)snprintf(buf, cap, "%s\n%s", kopf, direkt);
+    (void)v4_joy_direkt_kurz_text(&J, port, direkt, sizeof(direkt));
+    /*
+     * Die Modus-Zeile daneben nennt Port und Betriebsart schon ("Port 0:",
+     * "Vorgabe", "wirkt: ...") -- deshalb hier NUR die Registerzeilen; der
+     * Kopf kostete sonst eine zusaetzliche Zeile.
+     */
+    (void)snprintf(buf, cap, "%s", direkt);
+    (void)kopf;
 }
 
-/*
- * Die Rohwerte der Feuerregister ueber die volle Fensterbreite. Das steht in
- * einem EIGENEN Textobjekt, weil es in den beiden Portspalten zu breit waere.
- *
- * Er wird IMMER gezeichnet: die direkte Abfrage haengt nicht am Bus und muss
- * auch dann sichtbar sein, wenn der ESP32 schweigt.
- *
- * Es gibt KEINEN Vergleich mehr -- weder hier noch im Protokoll. Die
- * Oberflaeche liest GET_INPUT nicht mehr, die Registerwerte stehen fuer sich.
- */
-static void gui_show_regtext(void)
-{
-    static char buf[V4_JOY_TEXT_MAX + 128u];    /* ortsfest (4-KB-Stapel!) */
-    size_t      n;
-
-    if (s_regtext == NULL) {
-        return;
-    }
-    n = v4_joy_reg_text(&J, buf, sizeof(buf));
-    if (n + 90u < sizeof(buf)) {
-        (void)snprintf(buf + n, sizeof(buf) - n,
-                       "\nDirekt aus den Registern der V4 (JOY0DAT/JOY1DAT, "
-                       "CIAAPRA/POTINP) -- die einzige Eingangsquelle.");
-    }
-    set(s_regtext, MUIA_Text_Contents, (IPTR)buf);
-}
 /* Vorwaertsdeklarationen: gui_show_ports (unten) zieht die Betriebsart-Knoepfe
  * auf die VORGABE aus GET_PORT_CONFIG; die beiden Helfer stehen im naechsten
  * Abschnitt bei den uebrigen Funktionen der Eingangsverteilung. */
@@ -1073,10 +970,6 @@ static void gui_show_ports(void)
 {
     uint8_t     mode[V4P_PORT_COUNT];
     static char buf[900];               /* ortsfest (4-KB-Stapel!) */
-
-    /* Zuerst die Rohregister: sie haengen NICHT daran, ob eine gueltige
-     * I2C-Antwort da ist. */
-    gui_show_regtext();
 
     mode[0] = S.mode_valid ? S.mode[0] : 0u;
     mode[1] = S.mode_valid ? S.mode[1] : 0u;
@@ -1732,7 +1625,6 @@ static void gui_show_portcfg(void)
 
     for (port = 0; port < (int)V4P_PORT_COUNT; port++) {
         Object **b3    = (port == 0) ? s_b0 : s_b1;
-        Object  *rdir  = (port == 0) ? s_rdir0 : s_rdir1;
         Object  *dev   = (port == 0) ? s_dev0 : s_dev1;
         Object  *mcyc  = (port == 0) ? s_mode0 : s_mode1;
         Object  *wirk  = (port == 0) ? s_wirk0 : s_wirk1;
@@ -1744,20 +1636,6 @@ static void gui_show_portcfg(void)
         uint8_t  beitrag = v4_beitrag_aus_dir(S.portcfg.dir[port]);
         int      maus_aus;
         unsigned k;
-
-        /*
-         * RICHTUNGEN NUR ANZEIGEN (seit 16.10.2026): es gibt keine
-         * Richtungsschalter mehr. Welche Quellen gelten, legt der Beitrag
-         * fest (analog -> Stick links, digital -> D-Pad, beides -> alle);
-         * drei Checkboxen daneben waren eine zweite, widerspruechliche
-         * Stelle. Hier steht die WIRKSAME Maske als Klartext.
-         */
-        if (rdir != NULL) {
-            char r[48];
-
-            v4p_dir_text(S.portcfg.dir[port], r, sizeof(r));
-            set(rdir, MUIA_Text_Contents, (IPTR)r);
-        }
 
         /*
          * Die drei Knopfquellen bleiben bedienbar -- auch bei "beides": sie
@@ -1841,12 +1719,9 @@ static void gui_show_portcfg(void)
                            (unsigned)V4P_FW_VER_MOUSE);
         } else {
             (void)snprintf(hint, sizeof(hint),
-                           "Tempo und Totzone gelten JE PORT. Klick schaltet "
-                           "weiter, die rechte Maustaste oeffnet die Liste.\n"
-                           "duo = EIN Controller auf beiden Ports (die eine "
-                           "Maus, die andere Joystick); es setzt nur die\n"
-                           "Betriebsarten und sperrt die Geraeteauswahl des "
-                           "duo-Ports (kein zweiter Controller).");
+                           "Tempo/Totzone je PORT (Klick weiter, rechte "
+                           "Maustaste Liste); duo=ein Controller auf beiden "
+                           "Ports, sperrt dessen Geraeteauswahl.");
         }
         set(s_maushint, MUIA_Text_Contents, (IPTR)hint);
     }
@@ -1880,8 +1755,8 @@ static void gui_mindestmasse_melden(void)
      * MUIM_Show/Hide").
      */
     obj[0] = s_root;   name[0] = "Fensterinhalt";
-    obj[1] = s_scroll; name[1] = "Seitenbereich (sichtbar)";
-    obj[2] = s_seiten; name[2] = "Seitengruppe (alle Seiten)";
+    obj[1] = s_seiten; name[1] = "Seitengruppe (alle Seiten)";
+    obj[2] = NULL;     name[2] = NULL;
 
     for (i = 0; i < 3; i++) {
         IPTR w = 0, h = 0, l = 0, t = 0;
@@ -2722,30 +2597,6 @@ static void act_set_mode(int port)
     }
 }
 
-/*
- * Der Knopf "Port N Modus >": die VORGABE einen Schritt weiterschalten.
- *
- * Der Kreislauf ist auto -> aus -> Joystick -> Maus -> auto (die Reihenfolge
- * des Auswahlfeldes). Das Auswahlfeld wird dabei MITGEZOGEN -- sein set()
- * loest zwar dieselbe Notify aus, aber der anschliessende direkte Aufruf
- * macht die Wirkung unabhaengig davon sofort.
- */
-static void act_mode_weiter(int port)
-{
-    Object *cyc  = (port == 0) ? s_mode0 : s_mode1;
-    uint8_t soll = gui_mode_aus_index(gui_cycle_get(cyc));
-    uint8_t next;
-
-    if (soll == (uint8_t)V4P_MODE_AUTO) {
-        next = (uint8_t)V4P_PORT_OFF;
-    } else if (soll >= (uint8_t)V4P_PORT_MODE_MAX) {
-        next = (uint8_t)V4P_MODE_AUTO;
-    } else {
-        next = (uint8_t)(soll + 1u);
-    }
-    gui_cycle_set(cyc, gui_mode_index(next));
-    act_set_mode(port);
-}
 
 /*
  * Geraet (BDA aus der Scanliste) einer Buchse zuordnen -- SET_DEVICE_PORT.
@@ -3214,11 +3065,6 @@ static void act_seite(void)
     if (s_seiten != NULL) {
         set(s_seiten, MUIA_Group_ActivePage, v);
     }
-    /* Beim Wechsel wieder nach oben: die Seiten liegen in einer Scrollgruppe,
-     * und die Position der anderen Seite ist dort sinnlos. */
-    if (s_virt != NULL) {
-        set(s_virt, MUIA_Virtgroup_Top, 0);
-    }
     if (v == 0) {
         gui_show_ports();
     } else {
@@ -3259,7 +3105,7 @@ static void act_refresh(void)
     gui_joy_aenderungen();
     gui_joy_herz_zusatz();
     gui_show_link();
-    gui_show_info();
+    /* gui_show_info() entfaellt -- siehe dort. */
     gui_show_ports();
     gui_show_slow();
     gui_show_portcfg();
@@ -3384,7 +3230,6 @@ static void gui_tick(void)
      *    Anzeige stehen -- genau das ist die Zusage "die letzten gueltigen
      *    Werte bleiben sichtbar". */
     gui_show_link();
-    gui_show_info();
     gui_show_ports();
     gui_show_slow();
     gui_show_portcfg();
@@ -3534,7 +3379,24 @@ static void gui_fenster_an_schirm(void)
     }
     s_schirm_w = (int)schirm->Width;
     s_schirm_h = (int)schirm->Height;
+    /*
+     * WICHTIG (17.10.2026): Width/Height sind die GROESSE DES SCHIRMS, nicht
+     * das, was davon zu SEHEN ist. Am Geraet stand hier "Schirm 1280x720",
+     * waehrend der Bildschirmmodus 640x360 war -- das Fenster wurde also
+     * 700x480 gross und lag zur Haelfte ausserhalb des sichtbaren Bereichs.
+     * Der ViewPort nennt den sichtbaren Ausschnitt (DWidth/DHeight); ist er
+     * kleiner als der Schirm, gilt ER.
+     */
+    s_schirm_sichtbar_w = (int)schirm->ViewPort.DWidth;
+    s_schirm_sichtbar_h = (int)schirm->ViewPort.DHeight;
     UnlockPubScreen(NULL, schirm);
+
+    if (s_schirm_sichtbar_w > 0 && s_schirm_sichtbar_w < s_schirm_w) {
+        s_schirm_w = s_schirm_sichtbar_w;
+    }
+    if (s_schirm_sichtbar_h > 0 && s_schirm_sichtbar_h < s_schirm_h) {
+        s_schirm_h = s_schirm_sichtbar_h;
+    }
 
     if (s_schirm_w > 0 && s_fenster_w > s_schirm_w - GUI_SCHIRM_RAND_W) {
         s_fenster_w        = s_schirm_w - GUI_SCHIRM_RAND_W;
@@ -3556,7 +3418,7 @@ static void gui_fenster_an_schirm(void)
 static int gui_build(void)
 {
     Object *btn_scan, *btn_conn, *btn_disconn, *btn_forget;
-    Object *btn_mode0, *btn_mode1, *btn_swap, *btn_refresh;
+    Object *btn_swap, *btn_refresh;
 
     s_app = ApplicationObject,
         MUIA_Application_Title,       (IPTR)"BT Gamecontroller GUI v" GUI_VERSION,
@@ -3616,12 +3478,6 @@ static int gui_build(void)
                     MUIA_Text_SetMin, FALSE,
                     MUIA_Weight, 0,
                 End,
-                Child, s_info = TextObject,
-                    MUIA_Text_Contents, (IPTR)"Verbinde mit dem ESP32 ...",
-                    MUIA_Text_PreParse, (IPTR)"\33l",
-                    MUIA_Text_SetMin, FALSE,
-                    MUIA_Weight, 0,
-                End,
                 Child, s_state = TextObject,
                     MUIA_Text_Contents, (IPTR)" ",
                     MUIA_Text_PreParse, (IPTR)"\33l",
@@ -3669,12 +3525,19 @@ static int gui_build(void)
                  * passt (AutoBars). Der Umschalter "Seite:" steht AUSSERHALB und ist
                  * damit immer sichtbar und bedienbar.
                  */
-                Child, s_scroll = ScrollgroupObject,
-                    MUIA_Scrollgroup_Contents, s_virt = VirtgroupObject,
-                        MUIA_Virtgroup_TryFit, FALSE,
-                        Child, s_seiten = VGroup,
-                            MUIA_Group_PageMode, TRUE,
-                            MUIA_Group_ActivePage, 0,
+                Child, s_seiten = VGroup,
+                    MUIA_Group_PageMode, TRUE,
+                    MUIA_Group_ActivePage, 0,
+                    /*
+                     * Gewicht: die Seitengruppe bekommt den Platz, der nach
+                     * den festen Anzeigefeldern uebrig bleibt. MUIA_MinHeight
+                     * ist die VERSUCHERUNG: selbst wenn das Fenster zu klein
+                     * ist, behaelt die Seitengruppe diese Hoehe -- sie kann
+                     * nicht mehr auf 0 gedrueckt werden (genau das war der
+                     * Fehler mit der Scrollgruppe).
+                     */
+                    MUIA_Weight, 60,
+                    MUIA_MinHeight, 110,
                     /*
                      * SEITE 0: die laufende Anzeige -- NUR die Portdaten.
                      *
@@ -3784,13 +3647,6 @@ static int gui_build(void)
                          * nicht mehr abgefragt). Der Text darunter sagt das
                          * ausdruecklich.
                          */
-                        Child, s_regtext = TextObject,
-                            MUIA_Text_Contents,
-                                (IPTR)"Rohregister (direkt) ...",
-                            MUIA_Text_PreParse, (IPTR)"\33l",
-                            MUIA_Text_SetMin, FALSE,
-                            MUIA_Weight, 0,
-                        End,
                     End,
                             /*
                              * SEITE 1: "Ports" -- Geraet, Beitrag, Richtungen
@@ -3881,30 +3737,6 @@ static int gui_build(void)
                                         Child, s_beitrag1 = CycleObject,
                                             MUIA_Cycle_Entries,
                                                 (IPTR)gui_beitrag_eintraege,
-                                            MUIA_Weight, 0,
-                                        End,
-                                    End,
-                                End,
-                                Child, HGroup,
-                                    MUIA_Weight, 0,
-                                    Child, TextObject,
-                                        MUIA_Text_Contents, (IPTR)"Richtungen",
-                                        MUIA_FixWidth, 96,
-                                        MUIA_Text_PreParse, (IPTR)"\33l",
-                                    End,
-                                    Child, HGroup,
-                                        MUIA_FixWidth, 240,
-                                        Child, s_rdir0 = TextObject,
-                                            MUIA_Text_Contents, (IPTR)"?",
-                                            MUIA_Text_SetMin, FALSE,
-                                            MUIA_Weight, 0,
-                                        End,
-                                    End,
-                                    Child, HGroup,
-                                        MUIA_FixWidth, 240,
-                                        Child, s_rdir1 = TextObject,
-                                            MUIA_Text_Contents, (IPTR)"?",
-                                            MUIA_Text_SetMin, FALSE,
                                             MUIA_Weight, 0,
                                         End,
                                     End,
@@ -4108,15 +3940,8 @@ static int gui_build(void)
                                 End,
                             End,
                         End,
-                    End,
-                    MUIA_Scrollgroup_FreeHoriz, FALSE,
-                    MUIA_Scrollgroup_FreeVert, TRUE,
-                    MUIA_Scrollgroup_AutoBars, TRUE,
-                    MUIA_Weight, 60,
-                    MUIA_MinHeight, 175,
-                End,
                 /*
-                 * Die beiden Knopfreihen und die Listen stehen AUSSERHALB der
+                 * Die Knopfreihe und die Listen stehen AUSSERHALB der
                  * Seitengruppe und sind damit auf beiden Seiten sichtbar.
                  *
                  * Die beiden Listen sind die einzigen Kinder mit Gewicht: sie
@@ -4139,32 +3964,21 @@ static int gui_build(void)
                     Child, btn_refresh = MUI_MakeObject(MUIO_Button,
                                           (IPTR)"Aktualisieren", NULL),
                     Child, s_live      = MUI_MakeObject(MUIO_Checkmark,
-                                          (IPTR)"Live (0,2 s)", NULL),
-                End,
-                Child, HGroup,
-                    MUIA_Weight, 0,
-                    Child, btn_mode0 = MUI_MakeObject(MUIO_Button,
-                                          (IPTR)"Port 0 Modus >", NULL),
-                    Child, btn_mode1 = MUI_MakeObject(MUIO_Button,
-                                          (IPTR)"Port 1 Modus >", NULL),
-                    Child, btn_swap  = MUI_MakeObject(MUIO_Button,
-                                          (IPTR)"Ports tauschen", NULL),
-                    Child, TextObject,
-                        MUIA_Text_Contents, (IPTR)"Direkt aus den Registern der V4 "
-                            "(JOY0DAT/JOY1DAT, CIAAPRA/POTINP)",
-                    End,
+                                          (IPTR)"Live", NULL),
+                    Child, btn_swap    = MUI_MakeObject(MUIO_Button,
+                                          (IPTR)"Tauschen", NULL),
                 End,
                 Child, s_devs_lv = ListviewObject,
                     MUIA_Listview_List, s_devs = ListObject,
                     End,
                     MUIA_Weight, 20,
-                    MUIA_MinHeight, 20,
+                    MUIA_MinHeight, 12,
                 End,
                 Child, ListviewObject,
                     MUIA_Listview_List, s_logl = ListObject,
                     End,
                     MUIA_Weight, 20,
-                    MUIA_MinHeight, 20,
+                    MUIA_MinHeight, 12,
                 End,
             End,
         End,
@@ -4182,14 +3996,14 @@ static int gui_build(void)
      * darf kein MUI-Objekt angefasst werden -- das Setzen gehoert deshalb in
      * main() HINTER set(s_win, MUIA_Window_Open, TRUE).
      */
-    if (s_regtext == NULL || s_port0 == NULL || s_port1 == NULL
+    if (s_port0 == NULL || s_port1 == NULL
         || s_logl == NULL || s_cfgtext == NULL || s_dev0 == NULL
-        || s_dev1 == NULL || s_rdir0 == NULL || s_rdir1 == NULL
+        || s_dev1 == NULL
         || s_b0[0] == NULL || s_b0[1] == NULL
         || s_b0[2] == NULL || s_b1[0] == NULL || s_b1[1] == NULL
         || s_b1[2] == NULL || s_wirk0 == NULL || s_wirk1 == NULL
         || s_seite == NULL || s_seiten == NULL
-        || s_root == NULL || s_scroll == NULL || s_virt == NULL
+        || s_root == NULL
         || s_seite_anzeige == NULL || s_seite_ports == NULL
         || s_seite_maus == NULL || s_maushint == NULL
         || s_duo == NULL || s_duotext == NULL
@@ -4201,22 +4015,20 @@ static int gui_build(void)
         || s_cfghint == NULL) {
         /* Ein fehlendes Objekt ist kein Grund weiterzumachen: die Anzeige
          * waere unvollstaendig, und ein set() darauf wuerde MUI treffen. */
-        gui_msg("MUI: Objektbaum unvollstaendig (reg=%d port0=%d "
-                "port1=%d log=%d cfg=%d dev=%d/%d rdir=%d/%d btn=%d/%d "
+        gui_msg("MUI: Objektbaum unvollstaendig (port0=%d "
+                "port1=%d log=%d cfg=%d dev=%d/%d btn=%d/%d "
                 "wirkt=%d/%d beitrag=%d/%d maus=%d/%d/%d/%d hint=%d "
-                "seiten=%d/%d/%d duo=%d) -- Abbruch\n",
-                (s_regtext != NULL), (s_port0 != NULL), (s_port1 != NULL),
+                "seiten=%d duo=%d) -- Abbruch\n",
+                (s_port0 != NULL), (s_port1 != NULL),
                 (s_logl != NULL), (s_cfgtext != NULL),
                 (s_dev0 != NULL), (s_dev1 != NULL),
-                (s_rdir0 != NULL), (s_rdir1 != NULL),
                 (s_b0[0] != NULL), (s_b1[0] != NULL),
                 (s_wirk0 != NULL), (s_wirk1 != NULL),
                 (s_beitrag0 != NULL), (s_beitrag1 != NULL),
                 (s_mspeed0 != NULL), (s_mspeed1 != NULL),
                 (s_mtotal0 != NULL), (s_mtotal1 != NULL),
                 (s_cfghint != NULL),
-                (s_root != NULL), (s_scroll != NULL), (s_virt != NULL),
-                (s_duo != NULL));
+                (s_root != NULL), (s_duo != NULL));
         return -1;
     }
 
@@ -4234,10 +4046,6 @@ static int gui_build(void)
              s_app, 2, MUIM_Application_ReturnID, ID_FORGET);
     DoMethod(btn_refresh, MUIM_Notify, MUIA_Pressed, FALSE,
              s_app, 2, MUIM_Application_ReturnID, ID_REFRESH);
-    DoMethod(btn_mode0, MUIM_Notify, MUIA_Pressed, FALSE,
-             s_app, 2, MUIM_Application_ReturnID, ID_MODE0_NEXT);
-    DoMethod(btn_mode1, MUIM_Notify, MUIA_Pressed, FALSE,
-             s_app, 2, MUIM_Application_ReturnID, ID_MODE1_NEXT);
     DoMethod(btn_swap, MUIM_Notify, MUIA_Pressed, FALSE,
              s_app, 2, MUIM_Application_ReturnID, ID_SWAP);
     /* Doppelklick auf ein gefundenes Geraet verbindet es. */
@@ -4615,8 +4423,11 @@ int main(int argc, char **argv)
                     wunsch_w, wunsch_h, s_schirm_w, s_schirm_h,
                     s_fenster_w, s_fenster_h);
         } else if (s_schirm_w > 0) {
-            gui_msg("[fenster] %dx%d, Schirm %dx%d\n",
-                    s_fenster_w, s_fenster_h, s_schirm_w, s_schirm_h);
+            gui_msg("[fenster] %dx%d, Schirm %dx%d (sichtbar %dx%d)%s\n",
+                    s_fenster_w, s_fenster_h, s_schirm_w, s_schirm_h,
+                    s_schirm_sichtbar_w, s_schirm_sichtbar_h,
+                    (s_fenster_geklemmt != 0)
+                        ? " -- auf den Schirm begrenzt" : "");
         }
     }
 
@@ -4723,12 +4534,6 @@ int main(int argc, char **argv)
             break;
         case ID_MODE1:
             act_set_mode(1);
-            break;
-        case ID_MODE0_NEXT:
-            act_mode_weiter(0);
-            break;
-        case ID_MODE1_NEXT:
-            act_mode_weiter(1);
             break;
         case ID_DEV0:
             act_set_dev(0);

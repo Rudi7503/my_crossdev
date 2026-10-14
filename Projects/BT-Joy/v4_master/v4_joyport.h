@@ -394,6 +394,29 @@ size_t v4_joy_vergleich_text(const v4_joy_t *st, const v4p_input_t *in,
                              int i2c_gueltig, char *out, size_t cap);
 
 /*
+ * Die KURZE Fassung derselben Aussage -- fuer die Seite "Anzeige" des Fensters.
+ *
+ * WARUM ES SIE GIBT (17.10.2026): die ausfuehrliche Tabelle
+ * (v4_joy_direkt_text) ist 13 Zeilen hoch. Auf dem kleinen Schirm dieser V4
+ * (640x360) passt das zusammen mit Kopfbereich, Knoepfen und Listen nicht ins
+ * Fenster; MUI drueckt dann Felder unter ihre Mindesthoehe -- der Bereich unter
+ * dem Umschalter blieb leer. Diese Fassung bringt DIESELBEN Werte in VIER
+ * kurzen Zeilen unter:
+ *
+ *   direkt=0x09 VOR+RECHTS  stabil=ja  roh=0x0103
+ *   Richtung: UP=0 DN=0 LF=1 RT=0
+ *   Tasten: B1=0 B2=1 B3=0 (Pegel 1=High)
+ *   CIAAPRA=0x00F4  POTINP=0xFF02
+ *
+ * Verloren geht nur die Zuordnung "Leitung -> Pin" Zeile fuer Zeile; die steht
+ * weiter in v4_joy_direkt_text und in der Konsole. Alle vier Register, die
+ * dekodierte Maske, die Stabilitaet und der Zustand jeder der sieben Leitungen
+ * stehen auch hier.
+ */
+size_t v4_joy_direkt_kurz_text(const v4_joy_t *st, int port,
+                               char *out, size_t cap);
+
+/*
  * Die Anzeige EINER Buchse AUSSCHLIESSLICH aus den eigenen Registern -- OHNE
  * jeden I2C-Wert. Das ist die Zeile fuer das Fenster: dort steht, was an den
  * Anschlussleitungen ankommt (JOY0DAT/JOY1DAT fuer die Richtungen,

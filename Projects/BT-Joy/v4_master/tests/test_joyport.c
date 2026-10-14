@@ -765,6 +765,51 @@ static void test_joy_direkt_text(void)
     CHECK(strstr(t, "gedrueckt (direkt): -") != NULL);
 }
 
+/*
+ * Die KURZE Fassung fuer das Fenster (vier Zeilen statt dreizehn). Sie muss
+ * dieselben Werte tragen: Maske, Stabilitaet, Rohzaehler, die sieben
+ * Leitungen und beide Feuerregister.
+ */
+static void test_joy_direkt_kurz_text(void)
+{
+    v4_joy_t     st;
+    /* Grundzustand: die Pot-Leitungen liegen HIGH (losgelassen) -- 0xFF02 hat
+     * Bit 8..11 gesetzt, also auch Bit 9 (BTN3 Buchse 0) und Bit 11 (Buchse 1). */
+    v4_joy_roh_t basis = roh(0x0000u, 0x0000u, CIA_BASIS,
+                             (uint16_t)(POT_BASIS | 0x0200u | 0x0800u));
+    /* Buchse 1: LINKS (joy1dat 0x0200), BTN1 gezogen (CIAAPRA Bit 7 = 0),
+     * BTN3 gezogen (POTINP Bit 11 = 0). */
+    v4_joy_roh_t jetzt = roh(0x0000u, 0x0200u, 0x74u,
+                             (uint16_t)((POT_BASIS | 0x0200u | 0x0800u)
+                                        & ~0x0800u));
+    char         t[V4_JOY_DIREKT_MAX];
+
+    v4_test_case("Kurzzeile (Fenster): vier Zeilen, gleiche Werte");
+    v4_joy_init(&st);
+    v4_joy_basis(&st, &basis);
+    stabil(&st, &jetzt);
+
+    (void)v4_joy_direkt_kurz_text(&st, 1, t, sizeof(t));
+    CHECK(strstr(t, "direkt=0x54 LINKS+BTN1+BTN3") != NULL);
+    CHECK(strstr(t, "stabil=ja") != NULL);
+    CHECK(strstr(t, "roh=0x0200") != NULL);
+    CHECK(strstr(t, "Richtung: UP=0 DN=0 LF=1 RT=0") != NULL);
+    CHECK(strstr(t, "Tasten: B1=0 B2=1 B3=0") != NULL);
+    /* POTINP: 0xFF02 hat Bit 8..11 HIGH (Ruhe), Bit 11 wurde auf 0 gezogen. */
+    CHECK(strstr(t, "CIAAPRA=0x0074  POTINP=0xF702") != NULL);
+    /* Kein "Leitung/Pin" und kein "nicht lesbar" mehr -- das ist die kurze
+     * Fassung fuer das Fenster. */
+    CHECK(strstr(t, "Leitung") == NULL);
+    CHECK(strstr(t, "nicht lesbar") == NULL);
+    CHECK(strlen(t) < V4_JOY_DIREKT_MAX);
+
+    v4_test_case("Kurzzeile: ungueltige Argumente liefern 0");
+    CHECK_EQ(v4_joy_direkt_kurz_text(NULL, 0, t, sizeof(t)), 0u);
+    CHECK_EQ(v4_joy_direkt_kurz_text(&st, -1, t, sizeof(t)), 0u);
+    CHECK_EQ(v4_joy_direkt_kurz_text(&st, 2, t, sizeof(t)), 0u);
+    CHECK_EQ(v4_joy_direkt_kurz_text(&st, 0, NULL, 100u), 0u);
+}
+
 /* ------------------------------------------------------------------ */
 /* Die Protokoll-/Herzzeile: beide Buchsen direkt, ohne I2C           */
 /* ------------------------------------------------------------------ */
@@ -880,6 +925,7 @@ int test_joyport(void)
     test_joy_debug_text();
     test_joy_vergleich_text();
     test_joy_direkt_text();
+    test_joy_direkt_kurz_text();
     test_joy_direkt_protokoll();
 
     test_joy_randfaelle();

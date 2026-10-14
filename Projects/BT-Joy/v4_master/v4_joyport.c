@@ -682,6 +682,52 @@ size_t v4_joy_direkt_text(const v4_joy_t *st, int port, char *out, size_t cap)
 }
 
 /*
+ * Kurzfassung der Direktanzeige fuer das Fenster (siehe v4_joyport.h):
+ * vier Zeilen statt dreizehn. Gleiche Werte, gleiche Reihenfolge -- nur ohne
+ * die Zeile-fuer-Zeile-Zuordnung "Leitung -> Pin".
+ */
+size_t v4_joy_direkt_kurz_text(const v4_joy_t *st, int port,
+                               char *out, size_t cap)
+{
+    size_t   n = 0u;
+    uint8_t  maske;
+    char     namen[64];
+    uint8_t  b1;
+    uint8_t  b2;
+    uint8_t  b3;
+
+    if (out == NULL || cap == 0u) {
+        return 0u;
+    }
+    out[0] = '\0';
+    if (st == NULL || port < 0 || port >= (int)V4P_PORT_COUNT) {
+        return 0u;
+    }
+
+    maske = v4_joy_maske(st, port);
+    (void)v4_joy_richtungen_text(maske, namen, sizeof(namen));
+
+    b1 = feuer_bit(&st->roh, s_feuer[port][0].quelle, s_feuer[port][0].bit);
+    b2 = feuer_bit(&st->roh, s_feuer[port][1].quelle, s_feuer[port][1].bit);
+    b3 = feuer_bit(&st->roh, s_feuer[port][2].quelle, s_feuer[port][2].bit);
+
+    tx_add(out, cap, &n, "direkt=0x%02X %s  stabil=%s  roh=0x%04X\n",
+           (unsigned)maske, namen,
+           (st->richtung_stabil[port] != 0u) ? "ja" : "nein",
+           (unsigned)st_zaehler_roh(st, port));
+    tx_add(out, cap, &n, "Richtung: UP=%u DN=%u LF=%u RT=%u\n",
+           (unsigned)((maske & V4P_IN_ST_UP)    ? 1u : 0u),
+           (unsigned)((maske & V4P_IN_ST_DOWN)  ? 1u : 0u),
+           (unsigned)((maske & V4P_IN_ST_LEFT)  ? 1u : 0u),
+           (unsigned)((maske & V4P_IN_ST_RIGHT) ? 1u : 0u));
+    tx_add(out, cap, &n, "Tasten: B1=%u B2=%u B3=%u (Pegel 1=High)\n",
+           (unsigned)b1, (unsigned)b2, (unsigned)b3);
+    tx_add(out, cap, &n, "CIAAPRA=0x%04X  POTINP=0x%04X",
+           (unsigned)st->roh.ciaapra, (unsigned)st->roh.potinp);
+    return n;
+}
+
+/*
  * Beide Buchsen DIREKT, in EINER Zeile, ohne jeden I2C-Wert.
  *
  * Diese Zeile hat die alte Vergleichszeile (`vergleich_teil`) ersetzt: die
