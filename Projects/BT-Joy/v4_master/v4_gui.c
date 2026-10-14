@@ -473,7 +473,7 @@ typedef char gui_taste_eintraege_mit_null[
  */
 static const char *const gui_taste_kurz_eintraege[] = {
     "keine", "A", "B", "X", "Y", "L1", "R1", "L2", "R2", "L3", "R3",
-    "Start", "Select", "Home", "Gr.1", "Gr.2", "Gr.3", NULL
+    "Start", "Sel", "Home", "Grp1", "Grp2", "Grp3", NULL
 };
 
 typedef char gui_taste_kurz_eintraege_mit_null[
@@ -636,6 +636,19 @@ static int      s_live_on = 1;      /* Live-Aktualisierung an            */
  * der zweite Teil des Befunds "die Auswahl-/Anzeigefelder bleiben leer".
  */
 static int      s_liste_auto;
+/*
+ * 1 = die Gegenstelle sucht SELBST (ihr Scan laeuft schon); die Oberflaeche
+ * will nur die Fundtabelle LESEN. Dann darf sie weder SCAN_START noch
+ * SCAN_STOP senden -- sonst braeche sie die Suche ab, die sie gar nicht
+ * gestartet hat.
+ */
+static int      s_scan_nur_lesen;
+/*
+ * Scan-Generation, deren Fundtabelle schon in der Liste steht. Damit wird die
+ * Liste JE SUCHLAUF genau einmal geholt -- ohne Knopfdruck und ohne
+ * Dauerlast.
+ */
+static unsigned s_liste_gen = 0xFFFFFFFFu;
 
 static int      s_link_down_shown;  /* 0/1: was zuletzt im Log stand      */
 static int      s_sd_warned;        /* Audio-Firmware-Warnung einmalig    */
@@ -1809,10 +1822,8 @@ static void gui_show_portcfg(void)
                        "D-Pad + A/B/Start,\n"
                        "beides = alle Richtungen + Gruppe 1/2/3, eigene = "
                        "passt zu keiner Variante.\n"
-                       "duo = EIN Controller auf beiden Ports; es setzt nur "
-                       "die Betriebsarten\n"
-                       "und sperrt die Geraeteauswahl des duo-Ports (kein "
-                       "zweiter Controller).");
+                       "Geraet: genau EIN Port je Geraet; fuer BEIDE Ports ist "
+                       "duo da (Seite Maus).");
         set(s_cfghint, MUIA_Text_Contents, (IPTR)hint);
     }
 
@@ -1829,7 +1840,11 @@ static void gui_show_portcfg(void)
         } else {
             (void)snprintf(hint, sizeof(hint),
                            "Tempo und Totzone gelten JE PORT. Klick schaltet "
-                           "weiter, die rechte Maustaste oeffnet die Liste.");
+                           "weiter, die rechte Maustaste oeffnet die Liste.\n"
+                           "duo = EIN Controller auf beiden Ports (die eine "
+                           "Maus, die andere Joystick); es setzt nur die\n"
+                           "Betriebsarten und sperrt die Geraeteauswahl des "
+                           "duo-Ports (kein zweiter Controller).");
         }
         set(s_maushint, MUIA_Text_Contents, (IPTR)hint);
     }
@@ -1849,27 +1864,65 @@ static void gui_show_portcfg(void)
  */
 static void gui_mindestmasse_melden(void)
 {
-    Object     *obj[5];
-    const char *name[5];
+    Object     *obj[3];
+    const char *name[3];
     int         i;
 
-    obj[0] = s_root;          name[0] = "Fensterinhalt";
-    obj[1] = s_seiten;        name[1] = "Seitengruppe (Maximum ueber alle Seiten)";
-    obj[2] = s_seite_anzeige; name[2] = "Seite Anzeige";
-    obj[3] = s_seite_ports;   name[3] = "Seite Ports";
-    obj[4] = s_seite_maus;    name[4] = "Seite Maus";
+    /*
+     * WARUM NICHT MUIM_AskMinMax: der Aufruf von aussen lieferte am Geraet
+     * durchgehend "0x0" (Mitschnitt 16.10.2026, 13:35:30) -- die Methode ist
+     * fuer das Layout INNERHALB einer Klasse gedacht. Gemessen wird deshalb mit
+     * den dokumentierten LESENDEN Attributen MUIA_Width/Height/Left/Top;
+     * die sind nach dem Oeffnen gueltig (MUI_Area.doc: "valid between
+     * MUIM_Show/Hide").
+     */
+    obj[0] = s_root;   name[0] = "Fensterinhalt";
+    obj[1] = s_scroll; name[1] = "Seitenbereich (sichtbar)";
+    obj[2] = s_seiten; name[2] = "Seitengruppe (alle Seiten)";
 
-    for (i = 0; i < 5; i++) {
-        struct MUI_MinMax mm;
+    for (i = 0; i < 3; i++) {
+        IPTR w = 0, h = 0, l = 0, t = 0;
 
         if (obj[i] == NULL) {
             continue;
         }
-        memset(&mm, 0, sizeof(mm));
-        DoMethod(obj[i], MUIM_AskMinMax, &mm);
-        gui_msg("[fenster] Mindestgroesse %s: %dx%d px (Fenster %dx%d)\n",
-                name[i], (int)mm.MinWidth, (int)mm.MinHeight,
+        (void)get(obj[i], MUIA_Width,  &w);
+        (void)get(obj[i], MUIA_Height, &h);
+        (void)get(obj[i], MUIA_LeftEdge, &l);
+        (void)get(obj[i], MUIA_TopEdge,  &t);
+        gui_msg("[fenster] %s: %ldx%ld px bei %ld,%ld (Fenster %dx%d)\n",
+                name[i], (long)w, (long)h, (long)l, (long)t,
                 s_fenster_w, s_fenster_h);
+    }
+
+    /*
+     * Und die SICHTBARE Seite: nur ihre Groesse ist gueltig (verdeckte Seiten
+     * sind nicht aufgebaut, MUI liefert dort 0). Ist sie hoeher als der
+     * Seitenbereich, muss gescrollt werden -- genau das sagt diese Zeile.
+     */
+    {
+        IPTR    v = 0;
+        Object *p = NULL;
+        const char *pn = "?";
+
+        if (s_seite != NULL) {
+            (void)get(s_seite, MUIA_Cycle_Active, &v);
+        }
+        if (v == 0) {
+            p = s_seite_anzeige; pn = "Seite Anzeige";
+        } else if (v == 1) {
+            p = s_seite_ports;   pn = "Seite Ports";
+        } else {
+            p = s_seite_maus;    pn = "Seite Maus";
+        }
+        if (p != NULL) {
+            IPTR w = 0, h = 0;
+
+            (void)get(p, MUIA_Width,  &w);
+            (void)get(p, MUIA_Height, &h);
+            gui_msg("[fenster] %s (sichtbar): %ldx%ld px\n", pn,
+                    (long)w, (long)h);
+        }
     }
 }
 
@@ -2320,6 +2373,20 @@ static void act_scan_start(int automatisch)
     s_scan_hard        = GUI_SCAN_MAX_TICKS;
     s_scan_poll        = 0u;
     s_scan_nachgefasst = 0;
+    s_scan_nur_lesen   = 0;         /* wir haben die Suche gestartet */
+}
+
+/*
+ * NUR LESEN: die Gegenstelle sucht selbst (GET_STATUS.scan_active), und ihre
+ * Fundtabelle soll in die Liste -- OHNE eigenen SCAN_START/SCAN_STOP.
+ */
+static void gui_liste_holen(void)
+{
+    s_scan_left        = GUI_SCAN_TICKS;
+    s_scan_hard        = GUI_SCAN_MAX_TICKS;
+    s_scan_poll        = 0u;
+    s_scan_nachgefasst = 0;
+    s_scan_nur_lesen   = 1;
 }
 
 /*
@@ -2337,6 +2404,28 @@ static void gui_liste_auto(const v4p_status_t *st)
     int verbunden;
 
     if (st == NULL) {
+        return;
+    }
+    /*
+     * DER WICHTIGSTE FALL (Auftrag 16.10.2026): die Gegenstelle hat Geraete
+     * GEFUNDEN (dev_count > 0), ohne dass die Oberflaeche gesucht hat -- z.B.
+     * weil der ESP32 nach dem Einschalten selbst scannt. Dann wird die Tabelle
+     * JE SCAN-GENERATION genau einmal gelesen. Vorher blieb die Liste leer, bis
+     * jemand "Neu suchen" drueckte; im Mitschnitt vom 16.10.2026 stand
+     * "Geraete 1" in der Zustandszeile, aber keine einzige [scan]-Zeile.
+     */
+    if (st->dev_count > 0u && st->scan_gen != s_liste_gen
+        && s_scan_left == 0u && s_scan_hard == 0u) {
+        s_liste_gen = st->scan_gen;
+        /*
+         * Diese Zeile ist der Nachweis im Mitschnitt: sie erscheint OHNE
+         * Knopfdruck, sobald die Gegenstelle Funde meldet. Danach folgen
+         * DEV_COUNT/DEV_GET und "[scan] N Geraet(e) in der Liste".
+         */
+        gui_msg("[scan] Gegenstelle meldet %u Fund(e) (Scan-Generation %u) -- "
+                "die Liste wird automatisch gelesen\n",
+                (unsigned)st->dev_count, (unsigned)st->scan_gen);
+        gui_liste_holen();
         return;
     }
     verbunden = (st->state == V4P_STATE_CONNECTED
@@ -2404,12 +2493,27 @@ static void gui_scan_tick(void)
     }
     s_scan_poll = 0u;
 
+    /*
+     * Das DEV_GET-Layout haengt am Faehigkeitsbit V4P_CAP_DEV_STATE (fw_ver 6:
+     * Verbunden-Byte VOR name_len). Ist noch kein GET_INFO gelaufen, waere das
+     * Layout unbekannt und die Namen kaemen als Muell heraus -- genau die
+     * Falle vom 16.10.2026. Deshalb hier EINMAL nachfragen.
+     */
+    if (S.info_valid == 0) {
+        v4p_info_t info;
+
+        if (v4_get_info(&M, &info) == V4P_ST_OK) {
+            v4_state_put_info(&S, &info, v4_check_info(&info));
+        }
+    }
+
     rc = v4_dev_count(&M, &count);
     (void)v4_state_note(&S, rc);
     if (rc != V4P_ST_OK) {
         gui_msg("[scan] DEV_COUNT: %s\n", v4_strerror(rc));
-        s_scan_left = 0u;
-        s_scan_hard = 0u;
+        s_scan_left      = 0u;
+        s_scan_hard      = 0u;
+        s_scan_nur_lesen = 0;
         return;
     }
     if (count == 0u) {
@@ -2433,11 +2537,17 @@ static void gui_scan_tick(void)
                 "Reichweite?\n",
                 (gui_scan_laeuft() != 0) ? "laeuft noch" : "beendet",
                 S.status_valid ? (unsigned)S.status.scan_gen : 0u);
-        /* Sicher ist sicher: den Scan der Gegenstelle beenden, damit Funk und
-         * Strom nicht weiterlaufen. */
-        (void)v4_scan_stop(&M);
-        s_scan_left = 0u;
-        s_scan_hard = 0u;
+        /*
+         * Den Scan der Gegenstelle NUR beenden, wenn WIR ihn gestartet haben.
+         * Laeuft er auf der ESP32-Seite (Einschaltscan), gehoert er ihr --
+         * ein SCAN_STOP von hier waere ein Eingriff ohne Auftrag.
+         */
+        if (s_scan_nur_lesen == 0) {
+            (void)v4_scan_stop(&M);
+        }
+        s_scan_left      = 0u;
+        s_scan_hard      = 0u;
+        s_scan_nur_lesen = 0;
         return;
     }
 
@@ -2465,9 +2575,15 @@ static void gui_scan_tick(void)
     v4_state_put_devs(&S, tab, n);
     v4_dbg_devs(tab, n);
     gui_devices_fill();
+    /* Diese Scan-Generation steht jetzt in der Liste -- gleich welcher Weg sie
+     * geholt hat (Knopf oder automatisch). */
+    if (S.status_valid != 0) {
+        s_liste_gen = S.status.scan_gen;
+    }
     gui_msg("[scan] %u Geraet(e) in der Liste\n", (unsigned)s_devn);
-    s_scan_left = 0u;
-    s_scan_hard = 0u;
+    s_scan_left      = 0u;
+    s_scan_hard      = 0u;
+    s_scan_nur_lesen = 0;
 }
 
 /* Doppelklick in der Liste oder der Knopf: verbinden. */
@@ -3708,12 +3824,12 @@ static int gui_build(void)
                                     End,
                                     Child, TextObject,
                                         MUIA_Text_Contents, (IPTR)"Port 0",
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         MUIA_Text_PreParse, (IPTR)"\33b",
                                     End,
                                     Child, TextObject,
                                         MUIA_Text_Contents, (IPTR)"Port 1",
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         MUIA_Text_PreParse, (IPTR)"\33b",
                                     End,
                                 End,
@@ -3725,7 +3841,7 @@ static int gui_build(void)
                                         MUIA_Text_PreParse, (IPTR)"\33l",
                                     End,
                                     Child, HGroup,
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         Child, s_dev0 = CycleObject,
                                             MUIA_Cycle_Entries,
                                                 (IPTR)s_dev_eintraege,
@@ -3733,7 +3849,7 @@ static int gui_build(void)
                                         End,
                                     End,
                                     Child, HGroup,
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         Child, s_dev1 = CycleObject,
                                             MUIA_Cycle_Entries,
                                                 (IPTR)s_dev_eintraege,
@@ -3749,7 +3865,7 @@ static int gui_build(void)
                                         MUIA_Text_PreParse, (IPTR)"\33l",
                                     End,
                                     Child, HGroup,
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         Child, s_beitrag0 = CycleObject,
                                             MUIA_Cycle_Entries,
                                                 (IPTR)gui_beitrag_eintraege,
@@ -3757,7 +3873,7 @@ static int gui_build(void)
                                         End,
                                     End,
                                     Child, HGroup,
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         Child, s_beitrag1 = CycleObject,
                                             MUIA_Cycle_Entries,
                                                 (IPTR)gui_beitrag_eintraege,
@@ -3773,7 +3889,7 @@ static int gui_build(void)
                                         MUIA_Text_PreParse, (IPTR)"\33l",
                                     End,
                                     Child, HGroup,
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         Child, s_rdir0 = TextObject,
                                             MUIA_Text_Contents, (IPTR)"?",
                                             MUIA_Text_SetMin, FALSE,
@@ -3781,7 +3897,7 @@ static int gui_build(void)
                                         End,
                                     End,
                                     Child, HGroup,
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         Child, s_rdir1 = TextObject,
                                             MUIA_Text_Contents, (IPTR)"?",
                                             MUIA_Text_SetMin, FALSE,
@@ -3797,7 +3913,7 @@ static int gui_build(void)
                                         MUIA_Text_PreParse, (IPTR)"\33l",
                                     End,
                                     Child, HGroup,
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         Child, s_b0[0] = CycleObject,
                                             MUIA_Cycle_Entries,
                                                 (IPTR)gui_taste_kurz_eintraege,
@@ -3815,7 +3931,7 @@ static int gui_build(void)
                                         End,
                                     End,
                                     Child, HGroup,
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         Child, s_b1[0] = CycleObject,
                                             MUIA_Cycle_Entries,
                                                 (IPTR)gui_taste_kurz_eintraege,
@@ -3829,40 +3945,6 @@ static int gui_build(void)
                                         Child, s_b1[2] = CycleObject,
                                             MUIA_Cycle_Entries,
                                                 (IPTR)gui_taste_kurz_eintraege,
-                                            MUIA_Weight, 0,
-                                        End,
-                                    End,
-                                End,
-                                /*
-                                 * duo (fw_ver 6): EIN Controller auf BEIDEN
-                                 * Buchsen -- die eine als Maus, die andere
-                                 * als Joystick. Das Auswahlfeld setzt NUR die
-                                 * Betriebsarten; die Geraetezuordnung bleibt
-                                 * unangetastet. Der Klartext daneben sagt, was
-                                 * der Wert bedeutet, damit niemand "Port 1
-                                 * Maus" fuer eine Geraetezuordnung haelt.
-                                 */
-                                Child, HGroup,
-                                    MUIA_Weight, 0,
-                                    Child, TextObject,
-                                        MUIA_Text_Contents, (IPTR)"duo",
-                                        MUIA_FixWidth, 96,
-                                        MUIA_Text_PreParse, (IPTR)"\33l",
-                                    End,
-                                    Child, HGroup,
-                                        MUIA_FixWidth, 250,
-                                        Child, s_duo = CycleObject,
-                                            MUIA_Cycle_Entries,
-                                                (IPTR)gui_duo_eintraege,
-                                            MUIA_Disabled, TRUE,
-                                            MUIA_Weight, 0,
-                                        End,
-                                    End,
-                                    Child, HGroup,
-                                        MUIA_FixWidth, 250,
-                                        Child, s_duotext = TextObject,
-                                            MUIA_Text_Contents, (IPTR)"?",
-                                            MUIA_Text_SetMin, FALSE,
                                             MUIA_Weight, 0,
                                         End,
                                     End,
@@ -3896,12 +3978,12 @@ static int gui_build(void)
                                     End,
                                     Child, TextObject,
                                         MUIA_Text_Contents, (IPTR)"Port 0",
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         MUIA_Text_PreParse, (IPTR)"\33b",
                                     End,
                                     Child, TextObject,
                                         MUIA_Text_Contents, (IPTR)"Port 1",
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         MUIA_Text_PreParse, (IPTR)"\33b",
                                     End,
                                 End,
@@ -3913,7 +3995,7 @@ static int gui_build(void)
                                         MUIA_Text_PreParse, (IPTR)"\33l",
                                     End,
                                     Child, HGroup,
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         Child, TextObject,
                                             MUIA_Text_Contents, (IPTR)"Tempo",
                                             MUIA_Text_SetMin, FALSE,
@@ -3926,7 +4008,7 @@ static int gui_build(void)
                                             MUIA_Weight, 0,
                                         End,
                                         Child, TextObject,
-                                            MUIA_Text_Contents, (IPTR)"Totzone",
+                                            MUIA_Text_Contents, (IPTR)"Totz.",
                                             MUIA_Text_SetMin, FALSE,
                                             MUIA_Weight, 0,
                                         End,
@@ -3944,7 +4026,7 @@ static int gui_build(void)
                                                   (IPTR)"+", NULL),
                                     End,
                                     Child, HGroup,
-                                        MUIA_FixWidth, 250,
+                                        MUIA_FixWidth, 240,
                                         Child, TextObject,
                                             MUIA_Text_Contents, (IPTR)"Tempo",
                                             MUIA_Text_SetMin, FALSE,
@@ -3957,7 +4039,7 @@ static int gui_build(void)
                                             MUIA_Weight, 0,
                                         End,
                                         Child, TextObject,
-                                            MUIA_Text_Contents, (IPTR)"Totzone",
+                                            MUIA_Text_Contents, (IPTR)"Totz.",
                                             MUIA_Text_SetMin, FALSE,
                                             MUIA_Weight, 0,
                                         End,
@@ -3975,11 +4057,47 @@ static int gui_build(void)
                                                   (IPTR)"+", NULL),
                                     End,
                                 End,
+                                /*
+                                 * duo (fw_ver 6): EIN Controller auf BEIDEN
+                                 * Buchsen -- die eine als Maus, die andere
+                                 * als Joystick. Das Auswahlfeld setzt NUR die
+                                 * Betriebsarten; die Geraetezuordnung bleibt
+                                 * unangetastet. Der Klartext daneben sagt, was
+                                 * der Wert bedeutet, damit niemand "Port 1
+                                 * Maus" fuer eine Geraetezuordnung haelt.
+                                 */
+                                Child, HGroup,
+                                    MUIA_Weight, 0,
+                                    Child, TextObject,
+                                        MUIA_Text_Contents, (IPTR)"duo",
+                                        MUIA_FixWidth, 96,
+                                        MUIA_Text_PreParse, (IPTR)"\33l",
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 240,
+                                        Child, s_duo = CycleObject,
+                                            MUIA_Cycle_Entries,
+                                                (IPTR)gui_duo_eintraege,
+                                            MUIA_Disabled, TRUE,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                    Child, HGroup,
+                                        MUIA_FixWidth, 240,
+                                        Child, s_duotext = TextObject,
+                                            MUIA_Text_Contents, (IPTR)"?",
+                                            MUIA_Text_SetMin, FALSE,
+                                            MUIA_Weight, 0,
+                                        End,
+                                    End,
+                                End,
+
                                 Child, s_maushint = TextObject,
                                     MUIA_Text_Contents,
                                         (IPTR)"Tempo und Totzone gelten JE PORT. "
-                                             "Klick schaltet weiter, die rechte "
-                                             "Maustaste oeffnet die Liste.",
+                                             "duo = EIN Controller auf beiden "
+                                             "Ports; es setzt nur die "
+                                             "Betriebsarten.",
                                     MUIA_Text_PreParse, (IPTR)"\33l",
                                     MUIA_Text_SetMin, FALSE,
                                     MUIA_Weight, 0,
@@ -3990,8 +4108,8 @@ static int gui_build(void)
                     MUIA_Scrollgroup_FreeHoriz, FALSE,
                     MUIA_Scrollgroup_FreeVert, TRUE,
                     MUIA_Scrollgroup_AutoBars, TRUE,
-                    MUIA_Weight, 50,
-                    MUIA_MinHeight, 160,
+                    MUIA_Weight, 60,
+                    MUIA_MinHeight, 175,
                 End,
                 /*
                  * Die beiden Knopfreihen und die Listen stehen AUSSERHALB der
