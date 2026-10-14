@@ -333,6 +333,7 @@ static int s_schirm_h;
 static int s_schirm_sichtbar_w;        /* ViewPort: was wirklich zu sehen ist */
 static int s_schirm_sichtbar_h;
 static int s_fenster_geklemmt;         /* 1 = auf den Schirm begrenzt */
+static int s_fenster_vorgegeben;       /* 1 = -w/-h wurde angegeben   */
 static const char *s_dev_path;        /* NULL = Vorgabe der Plattform  */
 static int     s_debug_uart = 1;      /* -nodebug schaltet den Debug-UART ab */
 static int     s_trace = 0;           /* -trace: jeden Rahmen mitschreiben */
@@ -368,7 +369,9 @@ static Object *s_cfgtext;
 /*
  * Beitrag je Buchse (Bedienhilfe analog/digital/beide) und die
  * Maus-Einstellungen je Buchse (Tempo als Cycle 1..10, Totzone als Text mit
- * "-"/"+"-Knoepfen). s_cfghint ist der dynamische Hinweis unter der Tabelle:
+ * "-"/"+"-Knoepfen). (Der frueher dynamische Hinweis unter der Tabelle ist am
+ * 17.10.2026 entfallen -- jede Zeile zaehlt auf 640x360; die Beitrags-Varianten
+ * stehen als Eintraege im Auswahlfeld, duo im Hinweis der Seite "Maus".)
  * er nennt die Beitrags-Bedeutung, den "gegenstandslos"-Fall und -- wenn das
  * Faehigkeitsbit fehlt -- dass die Maus-Regler nicht verfuegbar sind.
  */
@@ -378,7 +381,6 @@ static Object *s_mtotal0, *s_mtotal1;
 static Object *s_mtot0m, *s_mtot0p, *s_mtot1m, *s_mtot1p;
 static Object *s_duo;                 /* duo-Auswahlfeld (Seite "Ports")   */
 static Object *s_duotext;             /* duo: Klartext daneben             */
-static Object *s_cfghint;             /* Hinweis auf der Seite "Ports"     */
 static Object *s_maushint;            /* Hinweis auf der Seite "Maus"      */
 /*
  * Seitenumschalter: s_seite ist das Auswahlfeld ("Anzeige"/"Konfiguration"),
@@ -885,13 +887,14 @@ static void gui_show_hid(void)
     }
 
     /*
-     * ZWEI Zeilen (17.10.2026; vorher drei): auf einem 640x360-Schirm zaehlt
-     * jede Zeile. Die wichtigen Angaben stehen VORN -- Name, Art, Transport,
-     * VID:PID --, die Zaehler dahinter duerfen am Rand abgeschnitten werden.
+     * EINE Zeile (17.10.2026; vorher zwei, davor drei): auf einem
+     * 640x360-Schirm zaehlt jede Zeile. Die wichtigen Angaben stehen VORN --
+     * Name, Art, Transport, VID:PID --, alles dahinter darf am Rand
+     * abgeschnitten werden (die Reports/Batterie stehen im Log).
      */
     (void)snprintf(buf, sizeof(buf),
-                   "Controller: %s%s\n"
-                   "Art %s, %s, %04X:%04X, Report-ID %u/%u B, Reports %u, %s",
+                   "Controller: %s%s -- %s, %s, %04X:%04X, R%u/%u B, "
+                   "%u Reports, %s",
                    (hid.name[0] != '\0') ? hid.name : "(ohne Namen)",
                    ((hid.flags & V4P_FLAG_NAME_TRUNCATED) != 0u)
                        ? " (Name gekuerzt)" : "",
@@ -1513,11 +1516,6 @@ static void gui_show_portcfg(void)
         gui_disabled_set(s_mtot0p, 1);
         gui_disabled_set(s_mtot1m, 1);
         gui_disabled_set(s_mtot1p, 1);
-        if (s_cfghint != NULL) {
-            set(s_cfghint, MUIA_Text_Contents,
-                (IPTR)"Geraet, Beitrag und Knopfquellen bleiben untaetig, bis "
-                      "die Gegenstelle die Eingangsverteilung kann.");
-        }
         if (s_maushint != NULL) {
             set(s_maushint, MUIA_Text_Contents,
                 (IPTR)"Ohne Eingangsverteilung (Faehigkeitsbit 0x0400/0x0100) "
@@ -1694,19 +1692,6 @@ static void gui_show_portcfg(void)
 
     s_cfg_sperre = 0;
 
-    /* Hinweis auf der Seite "Ports": was der Beitrag bedeutet und dass ein
-     * Geraet im ESP32 genau EINEN Port hat (duo ist der Weg fuer beide). */
-    if (s_cfghint != NULL) {
-        (void)snprintf(hint, sizeof(hint),
-                       "Beitrag: analog = Stick links + L1/R1, digital = "
-                       "D-Pad + A/B/Start,\n"
-                       "beides = alle Richtungen + Gruppe 1/2/3, eigene = "
-                       "passt zu keiner Variante.\n"
-                       "Geraet: genau EIN Port je Geraet; fuer BEIDE Ports ist "
-                       "duo da (Seite Maus).");
-        set(s_cfghint, MUIA_Text_Contents, (IPTR)hint);
-    }
-
     /* Hinweis auf der Seite "Maus". */
     if (s_maushint != NULL) {
         if (s_mousecfg_ok == 0) {
@@ -1742,8 +1727,8 @@ static void gui_show_portcfg(void)
  */
 static void gui_mindestmasse_melden(void)
 {
-    Object     *obj[3];
-    const char *name[3];
+    Object     *obj[4];
+    const char *name[4];
     int         i;
 
     /*
@@ -1754,11 +1739,12 @@ static void gui_mindestmasse_melden(void)
      * die sind nach dem Oeffnen gueltig (MUI_Area.doc: "valid between
      * MUIM_Show/Hide").
      */
-    obj[0] = s_root;   name[0] = "Fensterinhalt";
-    obj[1] = s_seiten; name[1] = "Seitengruppe (alle Seiten)";
-    obj[2] = NULL;     name[2] = NULL;
+    obj[0] = s_root;    name[0] = "Fensterinhalt";
+    obj[1] = s_seiten;  name[1] = "Seitengruppe (alle Seiten)";
+    obj[2] = s_logl;    name[2] = "Logfeld";
+    obj[3] = s_devs_lv; name[3] = "Geraeteliste";
 
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < 4; i++) {
         IPTR w = 0, h = 0, l = 0, t = 0;
 
         if (obj[i] == NULL) {
@@ -3398,6 +3384,30 @@ static void gui_fenster_an_schirm(void)
         s_schirm_h = s_schirm_sichtbar_h;
     }
 
+    /*
+     * HARTE OBERGRENZE FUER DIE VORGABE (17.10.2026).
+     *
+     * Der Schirm dieser V4 MELDET 1280x720, sichtbar ist aber nur 640x360 (der
+     * Bildschirmmodus). Ein Fenster von 700x480 liegt damit zur Haelfte
+     * ausserhalb -- der Rahmen und der Titel waren nicht zu sehen. Auf die
+     * gemeldete Schirmgroesse ist also KEIN Verlass.
+     *
+     * Deshalb gilt ohne -w/-h: die Vorgabe passt immer auf einen 640x360-Schirm
+     * (632x352 mit 8 px Rand). Wer mehr Platz hat, gibt -w/-h an (oder zieht
+     * das Fenster auf); DANN gilt nur noch die Begrenzung auf den gemeldeten
+     * Schirm.
+     */
+    if (s_fenster_vorgegeben == 0) {
+        if (s_fenster_w > 640 - GUI_SCHIRM_RAND_W) {
+            s_fenster_w        = 640 - GUI_SCHIRM_RAND_W;
+            s_fenster_geklemmt = 1;
+        }
+        if (s_fenster_h > 360 - GUI_SCHIRM_RAND_H) {
+            s_fenster_h        = 360 - GUI_SCHIRM_RAND_H;
+            s_fenster_geklemmt = 1;
+        }
+    }
+
     if (s_schirm_w > 0 && s_fenster_w > s_schirm_w - GUI_SCHIRM_RAND_W) {
         s_fenster_w        = s_schirm_w - GUI_SCHIRM_RAND_W;
         s_fenster_geklemmt = 1;
@@ -3443,6 +3453,14 @@ static int gui_build(void)
              */
             MUIA_Window_Width,      s_fenster_w,
             MUIA_Window_Height,     s_fenster_h,
+            /*
+             * Oben links statt zentriert: wenn der Schirm (wie hier) groesser
+             * GEMELDET wird, als sichtbar ist, liegt ein zentriertes Fenster
+             * unter Umstaenden mit dem Titel ausserhalb des sichtbaren
+             * Bereichs. Oben links ist der Titel immer zu sehen.
+             */
+            MUIA_Window_LeftEdge,   4,
+            MUIA_Window_TopEdge,    4,
             MUIA_Window_SizeGadget, TRUE,
             WindowContents, s_root = VGroup,
                 /*
@@ -3600,7 +3618,17 @@ static int gui_build(void)
                                     End,
                                 End,
                                 Child, s_port0 = TextObject,
-                                    MUIA_Text_Contents, (IPTR)" ",
+                                    /*
+                                     * Platzhalter mit VIER Zeilen: MUI rechnet
+                                     * die Mindesthoehe beim Oeffnen aus DIESEM
+                                     * Text. Mit einem einzeiligen Platzhalter
+                                     * wurde die Seite zu kurz reserviert und
+                                     * nach dem Fuellen beschnitten.
+                                     */
+                                    MUIA_Text_Contents,
+                                        (IPTR)"direkt=?\nRichtung: -\n"
+                                             "Tasten: -\nCIAAPRA=0x----  "
+                                             "POTINP=0x----",
                                     MUIA_Text_PreParse, (IPTR)"\33l",
                                     /* Die Portdaten sind die einzige Aussage
                                      * im Fenster; SetMin FALSE haelt die
@@ -3633,12 +3661,27 @@ static int gui_build(void)
                                     End,
                                 End,
                                 Child, s_port1 = TextObject,
-                                    MUIA_Text_Contents, (IPTR)" ",
+                                    MUIA_Text_Contents,
+                                        (IPTR)"direkt=?\nRichtung: -\n"
+                                             "Tasten: -\nCIAAPRA=0x----  "
+                                             "POTINP=0x----",
                                     MUIA_Text_PreParse, (IPTR)"\33l",
                                     MUIA_Text_SetMin, FALSE,
                                     MUIA_Weight, 0,
                                 End,
                             End,
+                        End,
+                        /*
+                         * DAS LOGFELD STEHT AUF DER ANZEIGESEITE (wie die
+                         * Geraeteliste auf "Ports"): MUIA_FixHeight haelt es
+                         * klein -- eine Listview bringt von sich aus rund
+                         * 140 px Mindesthoehe mit, und MUIA_MinHeight kann die
+                         * nicht senken (das Klassenminimum ist groesser).
+                         */
+                        Child, ListviewObject,
+                            MUIA_Listview_List, s_logl = ListObject,
+                            End,
+                            MUIA_FixHeight, 48,
                         End,
                         /*
                          * Die Rohwerte der Feuerregister, volle Fensterbreite.
@@ -3785,16 +3828,22 @@ static int gui_build(void)
                                         End,
                                     End,
                                 End,
-                                Child, s_cfghint = TextObject,
-                                    MUIA_Text_Contents,
-                                        (IPTR)"Beitrag: analog = Stick links + "
-                                             "L1/R1, digital = D-Pad + "
-                                             "A/B/Start, beides = alle "
-                                             "Richtungen + Gruppe 1/2/3, "
-                                             "eigene = passt zu keiner.",
-                                    MUIA_Text_PreParse, (IPTR)"\33l",
-                                    MUIA_Text_SetMin, FALSE,
-                                    MUIA_Weight, 0,
+                                /*
+                                 * DIE GERAETELISTE STEHT HIER, NICHT IM FESTEN
+                                 * BEREICH. WARUM (17.10.2026): eine Listview
+                                 * bringt von sich aus rund 140 px Mindesthoehe
+                                 * mit (5 sichtbare Zeilen + Balken) -- gemessen
+                                 * war der Fensterinhalt 505 px hoch bei 360 px
+                                 * Schirm. MUIA_FixHeight setzt die Hoehe FEST;
+                                 * MUIA_MinHeight konnte sie nicht senken, weil
+                                 * das Klassenminimum groesser war. Auf der
+                                 * Ports-Seite gehoert sie ohnehin hin (dort
+                                 * wird zugeordnet).
+                                 */
+                                Child, s_devs_lv = ListviewObject,
+                                    MUIA_Listview_List, s_devs = ListObject,
+                                    End,
+                                    MUIA_FixHeight, 48,
                                 End,
                             End,
                             /*
@@ -3968,18 +4017,6 @@ static int gui_build(void)
                     Child, btn_swap    = MUI_MakeObject(MUIO_Button,
                                           (IPTR)"Tauschen", NULL),
                 End,
-                Child, s_devs_lv = ListviewObject,
-                    MUIA_Listview_List, s_devs = ListObject,
-                    End,
-                    MUIA_Weight, 20,
-                    MUIA_MinHeight, 12,
-                End,
-                Child, ListviewObject,
-                    MUIA_Listview_List, s_logl = ListObject,
-                    End,
-                    MUIA_Weight, 20,
-                    MUIA_MinHeight, 12,
-                End,
             End,
         End,
     End;
@@ -4012,12 +4049,12 @@ static int gui_build(void)
         || s_mtotal0 == NULL || s_mtotal1 == NULL
         || s_mtot0m == NULL || s_mtot0p == NULL
         || s_mtot1m == NULL || s_mtot1p == NULL
-        || s_cfghint == NULL) {
+        ) {
         /* Ein fehlendes Objekt ist kein Grund weiterzumachen: die Anzeige
          * waere unvollstaendig, und ein set() darauf wuerde MUI treffen. */
         gui_msg("MUI: Objektbaum unvollstaendig (port0=%d "
                 "port1=%d log=%d cfg=%d dev=%d/%d btn=%d/%d "
-                "wirkt=%d/%d beitrag=%d/%d maus=%d/%d/%d/%d hint=%d "
+                "wirkt=%d/%d beitrag=%d/%d maus=%d/%d/%d/%d "
                 "seiten=%d duo=%d) -- Abbruch\n",
                 (s_port0 != NULL), (s_port1 != NULL),
                 (s_logl != NULL), (s_cfgtext != NULL),
@@ -4027,7 +4064,6 @@ static int gui_build(void)
                 (s_beitrag0 != NULL), (s_beitrag1 != NULL),
                 (s_mspeed0 != NULL), (s_mspeed1 != NULL),
                 (s_mtotal0 != NULL), (s_mtotal1 != NULL),
-                (s_cfghint != NULL),
                 (s_root != NULL), (s_duo != NULL));
         return -1;
     }
@@ -4174,9 +4210,11 @@ int main(int argc, char **argv)
                 return 1;
             }
             if (ist_breite) {
-                s_fenster_w = wert;
+                s_fenster_w       = wert;
+                s_fenster_vorgegeben = 1;
             } else {
-                s_fenster_h = wert;
+                s_fenster_h       = wert;
+                s_fenster_vorgegeben = 1;
             }
         } else {
             usage();
