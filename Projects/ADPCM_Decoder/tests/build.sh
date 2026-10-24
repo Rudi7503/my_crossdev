@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+BASE=/home/papa/Vampire_V4/ApolloCrossDev
+PREFIX=$BASE/Compilers/GCC-6.50-Latest
+VASM=$PREFIX/bin/vasmm68k_mot
+CC=$PREFIX/bin/m68k-amigaos-gcc
+INC="-I$PREFIX/m68k-amigaos/ndk32-include/Include_H -I$PREFIX/m68k-amigaos/sys-include"
+cd "$(dirname "$0")"
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -m68881 -opt-speed -I"$PREFIX/m68k-amigaos/DevPac/Include" -o decoder_4bit.o ../decoder_4bit.s
+"$CC" -noixemul -O0 -m68080 -m68881 -fno-inline $INC -c golden_test.c -o golden_test.o
+"$CC" -noixemul -O0 -m68080 -m68881 -fno-inline $INC golden_test.o decoder_4bit.o -o golden_test -lm
+echo "built $(pwd)/golden_test"

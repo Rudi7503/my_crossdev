@@ -1,0 +1,6 @@
+ADPCM 4-BIT SECTION PROFILE (instrumented)
+STEREO;blocks=512;total=834803;prim=298430;prim_calls=7680;prim_avg=38.9;sec=298876;sec_calls=7680;sec_avg=38.9;rest=237497;rest_per_block=463.9
+STEREO2;blocks=512;total=852630;prim=315790;prim_calls=7680;prim_avg=41.1;sec=299432;sec_calls=7680;sec_avg=39.0;rest=237408;rest_per_block=463.7
+MS;blocks=512;total=1015195;prim=351198;prim_calls=7680;prim_avg=45.7;sec=298702;sec_calls=7680;sec_avg=38.9;rest=365295;rest_per_block=713.5
+MS2;blocks=512;total=946615;prim=319949;prim_calls=7680;prim_avg=41.7;sec=299713;sec_calls=7680;sec_avg=39.0;rest=326953;rest_per_block=638.6
+MONO;blocks=512;total=838098;prim=620780;prim_calls=15360;prim_avg=40.4;sec=0;sec_calls=0;sec_avg=0.0;rest=217318;rest_per_block=424.4
