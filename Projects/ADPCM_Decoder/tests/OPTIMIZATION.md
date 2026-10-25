@@ -393,3 +393,16 @@ add.l   d6,d2
 
 Golden + 100× PASS. Golden 512: MS **614.851**, Mono **475.884**.
 Produktiv: **Fresh9**; Fresh7-Backup: `experiments/decoder_4bit_fresh7_prod.s`.
+
+## Fresh10–Fresh14 – Stereo-Unroll und Alignment
+
+- **Fresh10:** Stereo-Byte-Rest unrolled → Stereo **826**, aber Mono **845**
+  (Layout-/I-Cache-Effekt).
+- **Fresh11:** + 32-Byte-Alignment Mono → **829 / 917 / 738**.
+- **Fresh12:** zusätzlich MS-Alignment → **MS 1390, Mono 1342** (verworfen).
+- **Fresh13:** Fresh9 + Mono-Alignment → **848 / 919 / 733** (kein Gewinn).
+- **Fresh14:** Fresh11 + **64-Byte-Mono-Alignment** → **829 / 918 / 732**
+  → **übernommen**.
+
+Golden + 100× PASS. Golden 512: MS **656.143**, Mono **477.321**.
+Produktiv: **Fresh14**; Fresh9-Backup: `experiments/decoder_4bit_fresh9_prod.s`.

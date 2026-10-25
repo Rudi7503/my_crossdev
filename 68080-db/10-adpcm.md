@@ -122,3 +122,11 @@ Statt positiver Word-Tabelle + Vorzeichenbranch: **1424 `dc.l`-Einträge**
 
 **Messung:** Stereo 978→**848**, MS 1027→**922**, Mono 819→**732**.
 Golden/Repeat PASS. **Gut:** Tabelle ersetzt Branch durch Daten.
+
+## Fresh14 – Stereo-Unroll + 64-Byte-Mono-Alignment
+
+Stereo-Byte-Rest fest unrolled, Mono-Funktion auf 64 Byte ausgerichtet.
+Messung: **829 / 918 / 732** (Stereo/MS/Mono). Gegenüber Fresh9:
+Stereo 848→829, MS 922→918, Mono 732 unverändert. Golden/Repeat PASS.
+**Gut:** Byte-Rest ohne Loop; **Vorsicht:** Layout kann Mono stark kosten
+(Fresh10: 845), daher Alignment Pflicht.

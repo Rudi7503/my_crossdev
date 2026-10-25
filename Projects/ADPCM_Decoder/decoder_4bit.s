@@ -236,14 +236,15 @@ _decode_4bit_stereo_asm:
             subq.l  #1,a2
             cmpa.l  #0,a2
             bne     .st_chunk
-            movea.l #3,a2
-.st_byte:
             move.l  #0,e0
             move.b  (a0)+,e0
             F_PAIR
-            subq.l  #1,a2
-            cmpa.l  #0,a2
-            bne     .st_byte
+            move.l  #0,e0
+            move.b  (a0)+,e0
+            F_PAIR
+            move.l  #0,e0
+            move.b  (a0)+,e0
+            F_PAIR
             subq.l  #1,64(a7)
             bne     .st_block
 .st_done:
@@ -317,6 +318,7 @@ _decode_4bit_ms_asm:
             sub.l   d1,d0
             rts
 
+            align   64
 _decode_4bit_mono_asm:
             movem.l d2-d7/a2-a6,-(a7)
             movec   ccc,d0
