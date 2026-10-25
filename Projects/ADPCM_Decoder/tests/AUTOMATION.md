@@ -150,14 +150,15 @@ ALIVE;<programm>;<zaehler>
 - `golden_test` vor jedem Dekodierlauf
 - zusätzlich auf UART und stdout
 
-`tests/live_runner.py` startet den COM9-Capture, führt ASH aus und setzt
-den Idle-Timeout bei **jeder neuen seriellen Zeile** zurück (Default 20 s,
-Gesamtlimit 300 s). Bei Abbruch:
+`tests/serial_log.py` ist ein Roh-Logger (Windows Python), der COM9
+zeilenweise nach `C:\Windows\Temp\adpcm_serial_<lauf>.log` schreibt.
+`tests/live_runner.py` startet ihn, führt ASH aus und setzt den Idle-Timeout
+bei **jeder neuen seriellen Zeile** zurück (Default 20 s, Gesamtlimit 300 s).
+Bei Abbruch:
 
 - RAM-Canary weg → `REBOOT`
 - Canary da + Screenshot → `CRASH_REQUESTER`
 - sonst → `CRASH_NO_SCREENSHOT`
 
+Verifiziert: 30 `ALIVE`-Zeilen im Repeat-Lauf, plus `START`/`DONE`.
 `auto_opt.py` nutzt diesen Watchdog und liefert bei Crash Exit 4/5.
-Voraussetzung: COM9 liefert tatsächlich UART-Daten. Ist der Capture leer,
-bleibt die ASH-/Canary-Erkennung als Fallback aktiv.

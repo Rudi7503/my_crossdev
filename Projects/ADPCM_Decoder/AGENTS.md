@@ -39,6 +39,6 @@ Details: `tests/AUTOMATION.md`.
 
 ## Live-Watchdog
 
-`tests/live_runner.py` liest COM9 und resettet den Timeout bei jedem
-`ALIVE`/`DONE`. `auto_opt.py` klassifiziert Crashs über RAM-Canary +
-Screenshot. Wenn COM9 leer bleibt, zuerst serielle Verkabelung/Port prüfen.
+`tests/live_runner.py` liest COM9 über `tests/serial_log.py` und resettet
+den Timeout bei jedem `ALIVE`/`DONE`. `auto_opt.py` klassifiziert Crashs über
+RAM-Canary + Screenshot. 30 ALIVE-Zeilen im Repeat-Lauf verifiziert.
