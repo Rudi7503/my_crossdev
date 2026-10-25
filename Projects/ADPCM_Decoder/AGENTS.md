@@ -1,6 +1,6 @@
 # ADPCM Decoder – Agent Guide
 
-Produktivstand: **Opt9** in `decoder_4bit.s`.
+Produktivstand: **Fresh-Asm (unrolled 4-pair)** in `decoder_4bit.s`.
 
 ## Pflicht vor jeder Änderung
 
@@ -15,6 +15,7 @@ Ergebnisse und prüft Golden + 100×-Repeat.
 
 - `decoder_4bit.s` nur nach **Golden PASS + Repeat PASS** ändern.
 - 100×-MIN/Median ist die Referenz; AVG/Max sind durch Interrupts verrauscht.
+- Letzter Vergleich: Fresh-Asm 997/1237/963 vs Opt9 1135/1401/1196 (MIN).
 - Kandidaten unter `experiments/` ablegen, nie direkt experimentieren.
 - Ergebnisse unter `tests/auto-results/` sind generiert (gitignored).
 - Doku: `tests/OPTIMIZATION.md`, `tests/AUTOMATION.md`.

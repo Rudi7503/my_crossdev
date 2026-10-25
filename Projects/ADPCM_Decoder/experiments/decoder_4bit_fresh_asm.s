@@ -270,14 +270,18 @@ _decode_4bit_stereo_asm:
             F_PAIR
             F_PAIR
             F_PAIR
-            subq.l  #1,a2
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
             bne     .st_chunk
             movea.l #3,a2
 .st_byte:
             move.l  #0,e0
             move.b  (a0)+,e0
             F_PAIR
-            subq.l  #1,a2
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
             bne     .st_byte
             subq.l  #1,64(a7)
             bne     .st_block
@@ -320,14 +324,18 @@ _decode_4bit_ms_asm:
             F_MS_PAIR
             F_MS_PAIR
             F_MS_PAIR
-            subq.l  #1,a2
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
             bne     .ms_chunk
             movea.l #3,a2
 .ms_byte:
             move.l  #0,e0
             move.b  (a0)+,e0
             F_MS_PAIR
-            subq.l  #1,a2
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
             bne     .ms_byte
             subq.l  #1,64(a7)
             bne     .ms_block
@@ -370,7 +378,9 @@ _decode_4bit_mono_asm:
             F_MONO_NIB
             F_MONO_NIB
             F_MONO_NIB
-            subq.l  #1,a2
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
             bne     .mo_chunk
             movea.l #3,a2
 .mo_byte:
@@ -378,7 +388,9 @@ _decode_4bit_mono_asm:
             move.b  (a0)+,e0
             F_MONO_NIB
             F_MONO_NIB
-            subq.l  #1,a2
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
             bne     .mo_byte
             subq.l  #1,60(a7)
             bne     .mo_block

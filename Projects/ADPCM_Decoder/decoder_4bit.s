@@ -1,110 +1,92 @@
-; ==============================================================================
-; EXTREME OPTIMIZED 68080 ADPCM 3-BIT DECODER SUITE
-; Enthält: Stereo (L/R), Mid-Side (M/S) und Mono
-; Features: Zyklenmessung (E1), 24-Bit Little-Endian Chunk-Loader,
-;           EXG-Trick für schnelle D-Register-Shifts.
-; ==============================================================================
 
-            SECTION CODE,CODE
-            XDEF    _decode_4bit_stereo_asm
-            XDEF    _decode_4bit_ms_asm
-            XDEF    _decode_4bit_mono_asm
+            xdef    _decode_4bit_stereo_asm
+            xdef    _decode_4bit_ms_asm
+            xdef    _decode_4bit_mono_asm
 
+; Fresh independent 4-bit decoder (unrolled 4 pairs, no bsr/E2-E5 scratch).
+; Same I/O contract; tables/data copied, control flow rewritten.
 
-; ==============================================================================
-; 1. DECODER: 4-BIT STEREO
-; ==============================================================================
-; ------------------------------------------------------------------------------
-; Stereo pair body: L/R nibbles -> E2/E3, deltas -> E4/E5, then apply.
-; Uses E2-E5 as scratch; d6/d7 loop counters stay untouched.
-; ------------------------------------------------------------------------------
-ST_PAIR MACRO
+F_PAIR MACRO
             move.l  e0,d0
             andi.l  #15,d0
-            move.l  d0,e2
             lsr.l   #4,e0
-            move.l  e0,d0
-            andi.l  #15,d0
-            move.l  d0,e3
+            move.l  e0,d1
+            andi.l  #15,d1
             lsr.l   #4,e0
 
-            move.w  d3,d0
-            lsl.w   #3,d0
-            move.l  e2,d1
-            and.l   #7,d1
-            add.w   d0,d1
-            move.w  (a4,d1.w*2),d1
-            move.l  d1,e4
+            moveq   #0,d6
+            move.w  d3,d6
+            lsl.w   #3,d6
+            move.l  d0,d7
+            and.l   #7,d7
+            add.w   d6,d7
+            move.w  (a4,d7.w*2),d6
 
-            move.w  d5,d0
-            lsl.w   #3,d0
-            move.l  e3,d1
-            and.l   #7,d1
-            add.w   d0,d1
-            move.w  (a4,d1.w*2),d1
-            move.l  d1,e5
-
-            move.l  e2,d0
-            move.l  e4,d1
             btst    #3,d0
-            beq     .addL\@
-            sub.l   d1,d2
-            bra     .clampL\@
-.addL\@:
-            add.l   d1,d2
-.clampL\@:
+            beq     .ladd\@
+            sub.l   d6,d2
+            bra     .lclamp\@
+.ladd\@:
+            add.l   d6,d2
+.lclamp\@:
             cmp.l   #32767,d2
-            ble     .minL\@
+            ble     .lmin\@
             move.l  #32767,d2
-            bra     .idxL\@
-.minL\@:
+            bra     .lidx\@
+.lmin\@:
             cmp.l   #-32768,d2
-            bge     .idxL\@
+            bge     .lidx\@
             move.l  #-32768,d2
-.idxL\@:
-            move.w  d0,d1
-            andi.w  #7,d1
-            add.w   (a6,d1.w*2),d3
+.lidx\@:
+            move.w  d0,d7
+            andi.w  #7,d7
+            add.w   (a6,d7.w*2),d3
             tst.w   d3
-            bge     .idxLmax\@
+            bge     .lmax\@
             moveq   #0,d3
-            bra     .idxLdone\@
-.idxLmax\@:
+            bra     .ldone\@
+.lmax\@:
             cmp.w   #88,d3
-            ble     .idxLdone\@
+            ble     .ldone\@
             move.w  #88,d3
-.idxLdone\@:
+.ldone\@:
 
-            move.l  e3,d0
-            move.l  e5,d1
-            btst    #3,d0
-            beq     .addR\@
-            sub.l   d1,d4
-            bra     .clampR\@
-.addR\@:
-            add.l   d1,d4
-.clampR\@:
+            moveq   #0,d6
+            move.w  d5,d6
+            lsl.w   #3,d6
+            move.l  d1,d7
+            and.l   #7,d7
+            add.w   d6,d7
+            move.w  (a4,d7.w*2),d6
+
+            btst    #3,d1
+            beq     .radd\@
+            sub.l   d6,d4
+            bra     .rclamp\@
+.radd\@:
+            add.l   d6,d4
+.rclamp\@:
             cmp.l   #32767,d4
-            ble     .minR\@
+            ble     .rmin\@
             move.l  #32767,d4
-            bra     .idxR\@
-.minR\@:
+            bra     .ridx\@
+.rmin\@:
             cmp.l   #-32768,d4
-            bge     .idxR\@
+            bge     .ridx\@
             move.l  #-32768,d4
-.idxR\@:
-            move.w  d0,d1
-            andi.w  #7,d1
-            add.w   (a6,d1.w*2),d5
+.ridx\@:
+            move.w  d1,d7
+            andi.w  #7,d7
+            add.w   (a6,d7.w*2),d5
             tst.w   d5
-            bge     .idxRmax\@
+            bge     .rmax\@
             moveq   #0,d5
-            bra     .idxRdone\@
-.idxRmax\@:
+            bra     .rdone\@
+.rmax\@:
             cmp.w   #88,d5
-            ble     .idxRdone\@
+            ble     .rdone\@
             move.w  #88,d5
-.idxRdone\@:
+.rdone\@:
 
             move.w  d2,d0
             swap    d0
@@ -112,445 +94,319 @@ ST_PAIR MACRO
             move.l  d0,(a1)+
         ENDM
 
-_decode_4bit_stereo_asm:
-            movem.l d2-d7/a2-a6,-(a7)       ; 11 Register sichern (44 Bytes)
-
-            movec   ccc,d0                  ; Zyklenmessung START
-            move.l  d0,e1           
-
-            ; Parameter-Offsets (44 Bytes gesichert + 4 Bytes PC = 48 Basis)
-            move.l  48(a7),a0               ; A0 = in_buffer
-            move.l  52(a7),a1               ; A1 = out_buffer
-            move.l  56(a7),a5               ; A5 = chL
-            move.l  60(a7),a3               ; A3 = chR
-            ; 64(a7) = block_cnt
-
-            move.l  (a5),d2                 ; D2 = PCM Links
-            move.w  4(a5),d3        
-            ext.l   d3                      ; D3 = Index Links
-
-            move.l  (a3),d4                 ; D4 = PCM Rechts
-            move.w  4(a3),d5        
-            ext.l   d5                      ; D5 = Index Rechts
-
-            lea     delta_table(pc),a4       ; A4 = Pointer auf Step-Tabelle
-            lea     index_adj_table(pc),a6  ; A6 = Pointer auf Adjust-Tabelle
-
-            tst.l   64(a7)                  ; Block Count check
-            beq     .st_done
-
-.st_block_loop:
-            moveq   #2,d6           
-.st_chunk_loop:
-            movex.l (a0)+,e0                ; 32-Bit = 8 Nibbles = 4 Stereo-Paare
-            moveq   #3,d7                   ; Schleife läuft 4x
-.st_pair_loop_long:
-            ST_PAIR
-            dbf     d7,.st_pair_loop_long
-            dbf     d6,.st_chunk_loop
-
-            moveq   #2,d6                   ; 3 Bytes Rest
-.st_byte_loop:
-            move.l  #0,e0           
-            move.b  (a0)+,e0                ; 1 Byte = 2 Nibbles = 1 Stereo-Paar
-            moveq   #0,d7                   ; Schleife läuft 1x
-.st_pair_loop_byte:
-            ST_PAIR
-            dbf     d7,.st_pair_loop_byte
-            dbf     d6,.st_byte_loop
-
-            subq.l  #1,64(a7)               ; block_cnt--
-            bne     .st_block_loop
-
-.st_done:
-            move.l  56(a7),a5               ; Status in RAM zurückschreiben
-            move.l  d2,(a5)         
-            move.w  d3,4(a5)        
-            move.l  60(a7),a3       
-            move.l  d4,(a3)         
-            move.w  d5,4(a3)        
-
-            movem.l (a7)+,d2-d7/a2-a6       ; Register wiederherstellen
-            
-            movec   ccc,d0                  ; Zyklenmessung ENDE
-            move.l  e1,d1           
-            sub.l   d1,d0                   ; Return Cycles in D0
-            rts
-
-
-; ==============================================================================
-; 2. DECODER: 4-BIT MID-SIDE (M/S MATRIX)
-; ==============================================================================
-MS_PAIR MACRO
-
+F_MS_PAIR MACRO
             move.l  e0,d0
             andi.l  #15,d0
-            move.l  d0,e2
             lsr.l   #4,e0
-            move.l  e0,d0
-            andi.l  #15,d0
-            move.l  d0,e3
+            move.l  e0,d1
+            andi.l  #15,d1
             lsr.l   #4,e0
 
-            move.w  d3,d0
-            lsl.w   #3,d0
-            move.l  e2,d1
-            and.l   #7,d1
-            add.w   d0,d1
-            move.w  (a4,d1.w*2),d1
-            move.l  d1,e4
-
-            move.w  d5,d0
-            lsl.w   #3,d0
-            move.l  e3,d1
-            and.l   #7,d1
-            add.w   d0,d1
-            move.w  (a4,d1.w*2),d1
-            move.l  d1,e5
-
-            move.l  e2,d0
-            move.l  e4,d1
+            moveq   #0,d6
+            move.w  d3,d6
+            lsl.w   #3,d6
+            move.l  d0,d7
+            and.l   #7,d7
+            add.w   d6,d7
+            move.w  (a4,d7.w*2),d6
             btst    #3,d0
-            beq     .addL\@
-            sub.l   d1,d2
-            bra     .clampL\@
-.addL\@:
-            add.l   d1,d2
-.clampL\@:
+            beq     .ladd\@
+            sub.l   d6,d2
+            bra     .lclamp\@
+.ladd\@:
+            add.l   d6,d2
+.lclamp\@:
             cmp.l   #32767,d2
-            ble     .minL\@
+            ble     .lmin\@
             move.l  #32767,d2
-            bra     .idxL\@
-.minL\@:
+            bra     .lidx\@
+.lmin\@:
             cmp.l   #-32768,d2
-            bge     .idxL\@
+            bge     .lidx\@
             move.l  #-32768,d2
-.idxL\@:
-            move.w  d0,d1
-            andi.w  #7,d1
-            add.w   (a6,d1.w*2),d3
+.lidx\@:
+            move.w  d0,d7
+            andi.w  #7,d7
+            add.w   (a6,d7.w*2),d3
             tst.w   d3
-            bge     .idxLmax\@
+            bge     .lmax\@
             moveq   #0,d3
-            bra     .idxLdone\@
-.idxLmax\@:
+            bra     .ldone\@
+.lmax\@:
             cmp.w   #88,d3
-            ble     .idxLdone\@
+            ble     .ldone\@
             move.w  #88,d3
-.idxLdone\@:
+.ldone\@:
 
-            move.l  e3,d0
-            move.l  e5,d1
-            btst    #3,d0
-            beq     .addR\@
-            sub.l   d1,d4
-            bra     .clampR\@
-.addR\@:
-            add.l   d1,d4
-.clampR\@:
+            moveq   #0,d6
+            move.w  d5,d6
+            lsl.w   #3,d6
+            move.l  d1,d7
+            and.l   #7,d7
+            add.w   d6,d7
+            move.w  (a4,d7.w*2),d6
+            btst    #3,d1
+            beq     .radd\@
+            sub.l   d6,d4
+            bra     .rclamp\@
+.radd\@:
+            add.l   d6,d4
+.rclamp\@:
             cmp.l   #32767,d4
-            ble     .minR\@
+            ble     .rmin\@
             move.l  #32767,d4
-            bra     .idxR\@
-.minR\@:
+            bra     .ridx\@
+.rmin\@:
             cmp.l   #-32768,d4
-            bge     .idxR\@
+            bge     .ridx\@
             move.l  #-32768,d4
-.idxR\@:
-            move.w  d0,d1
-            andi.w  #7,d1
-            add.w   (a6,d1.w*2),d5
+.ridx\@:
+            move.w  d1,d7
+            andi.w  #7,d7
+            add.w   (a6,d7.w*2),d5
             tst.w   d5
-            bge     .idxRmax\@
+            bge     .rmax\@
             moveq   #0,d5
-            bra     .idxRdone\@
-.idxRmax\@:
+            bra     .rdone\@
+.rmax\@:
             cmp.w   #88,d5
-            ble     .idxRdone\@
+            ble     .rdone\@
             move.w  #88,d5
-.idxRdone\@:
+.rdone\@:
 
             move.l  d2,d0
             add.l   d4,d0
             move.l  d2,d1
             sub.l   d4,d1
-
             cmp.l   #32767,d0
-            ble     .msLmin\@
+            ble     .mlmin\@
             move.l  #32767,d0
-            bra     .msR\@
-.msLmin\@:
+            bra     .mr\@
+.mlmin\@:
             cmp.l   #-32768,d0
-            bge     .msR\@
+            bge     .mr\@
             move.l  #-32768,d0
-.msR\@:
+.mr\@:
             cmp.l   #32767,d1
-            ble     .msRmin\@
+            ble     .mrmin\@
             move.l  #32767,d1
-            bra     .msPack\@
-.msRmin\@:
+            bra     .mpack\@
+.mrmin\@:
             cmp.l   #-32768,d1
-            bge     .msPack\@
+            bge     .mpack\@
             move.l  #-32768,d1
-.msPack\@:
+.mpack\@:
             swap    d0
             move.w  d1,d0
             move.l  d0,(a1)+
         ENDM
 
-_decode_4bit_ms_asm:
-            movem.l d2-d7/a2-a6,-(a7)
-
-            movec   ccc,d0                  
-            move.l  d0,e1           
-
-            move.l  48(a7),a0               ; A0 = in_buffer
-            move.l  52(a7),a1               ; A1 = out_buffer
-            move.l  56(a7),a5               ; A5 = chMid
-            move.l  60(a7),a3               ; A3 = chSide
-
-            move.l  (a5),d2                 ; D2 = PCM Mid
-            move.w  4(a5),d3        
-            ext.l   d3                      ; D3 = Index Mid
-
-            move.l  (a3),d4                 ; D4 = PCM Side
-            move.w  4(a3),d5        
-            ext.l   d5                      ; D5 = Index Side
-
-            lea     delta_table(pc),a4       
-            lea     index_adj_table(pc),a6
-            
-            tst.l   64(a7)                  
-            beq     .ms_done
-
-.ms_block_loop:
-            moveq   #2,d6           
-.ms_chunk_loop:
-            movex.l (a0)+,e0        
-            moveq   #3,d7                   ; 4 M/S-Paare
-.ms_pair_loop_long:
-            MS_PAIR
-            dbf     d7,.ms_pair_loop_long
-            dbf     d6,.ms_chunk_loop
-
-            moveq   #2,d6                   ; 3 Bytes Rest
-.ms_byte_loop:
-            move.l  #0,e0           
-            move.b  (a0)+,e0        
-            moveq   #0,d7                   ; 1 M/S Paar
-.ms_pair_loop_byte:
-            MS_PAIR
-            dbf     d7,.ms_pair_loop_byte
-            dbf     d6,.ms_byte_loop
-
-            subq.l  #1,64(a7)
-            bne     .ms_block_loop
-
-.ms_done:
-            move.l  56(a7),a5               ; M/S Status ins RAM zurück
-            move.l  d2,(a5)         
-            move.w  d3,4(a5)        
-            move.l  60(a7),a3       
-            move.l  d4,(a3)         
-            move.w  d5,4(a3)        
-
-            movem.l (a7)+,d2-d7/a2-a6       
-            
-            movec   ccc,d0                  
-            move.l  e1,d1           
-            sub.l   d1,d0                   
-            rts
-
-
-; ==============================================================================
-; 3. DECODER: 4-BIT MONO
-; ==============================================================================
-_decode_4bit_mono_asm:
-            movem.l d2-d7/a2-a6,-(a7)       
-
-            movec   ccc,d0                  
-            move.l  d0,e1           
-
-            ; Mono hat nur 3 Pointer (in, out, chMono), Offset verschiebt sich
-            move.l  48(a7),a0               ; A0 = in_buffer
-            move.l  52(a7),a1               ; A1 = out_buffer
-            move.l  56(a7),a5               ; A5 = chMono
-            ; 60(a7) = block_cnt
-
-            move.l  (a5),d2                 ; D2 = PCM Mono
-            move.w  4(a5),d3        
-            ext.l   d3                      ; D3 = Index Mono
-
-            lea     delta_table(pc),a4       
-            lea     index_adj_table(pc),a6
-            
-            tst.l   60(a7)                  ; Mono block_cnt Check
-            beq     .mo_done
-
-.mo_block_loop:
-            moveq   #2,d6           
-.mo_chunk_loop:
-            movex.l (a0)+,e0        
-            moveq   #7,d7                   ; 8 Mono-Samples pro Longword
-.mo_sample_loop_long:
-            move.l  e0,d0           
-            andi.l  #15,d0           
-            bsr     decode_primary          
-
-            move.w  d2,(a1)+                ; Schreibt 16-Bit Mono RAM
-            
-            lsr.l   #4,e0           
-            dbf     d7,.mo_sample_loop_long
-            dbf     d6,.mo_chunk_loop
-
-            moveq   #2,d6                   ; 3 Bytes Rest
-.mo_byte_loop:
-            move.l  #0,e0           
-            move.b  (a0)+,e0        
-            moveq   #1,d7                   ; 2 Mono-Samples pro Byte
-.mo_sample_loop_byte:
+F_MONO_NIB MACRO
             move.l  e0,d0
             andi.l  #15,d0
-            bsr     decode_primary
-
-            move.w  d2,(a1)+                ; 16-Bit Mono Write
-
             lsr.l   #4,e0
-            dbf     d7,.mo_sample_loop_byte
-            dbf     d6,.mo_byte_loop
 
-            subq.l  #1,60(a7)               ; block_cnt--
-            bne     .mo_block_loop
-
-.mo_done:
-            move.l  56(a7),a5               ; Mono Status ins RAM zurück
-            move.l  d2,(a5)         
-            move.w  d3,4(a5)        
-
-            movem.l (a7)+,d2-d7/a2-a6       
-            
-            movec   ccc,d0                  
-            move.l  e1,d1           
-            sub.l   d1,d0                   
-            rts
-
-
-; ==============================================================================
-; ZENTRALE SUBROUTINEN (Standard 4-Bit IMA ADPCM Logik)
-; ==============================================================================
-
-; ------------------------------------------------------------------------------
-; decode_primary: Arbeitet fix auf D2 (PCM) und D3 (Index)
-; ------------------------------------------------------------------------------
-decode_primary:
-            exg     d6,a2                   ; TRICK: Wir parken D6 in A2, um D6 als Rechenregister frei zu haben!
-            
-                        ; exact delta = delta_table[index*8 + (nibble&7)]
+            moveq   #0,d6
             move.w  d3,d6
             lsl.w   #3,d6
-            move.l  d0,d1
-            and.l   #7,d1
-            add.w   d6,d1
-            move.w  (a4,d1.w*2),d1
-            btst    #3,d0           
-            beq     .add_delta_P
-            sub.l   d1,d2                   ; Negativ: PCM -= delta
-            bra     .clamp_pcm_P    
-.add_delta_P:
-            add.l   d1,d2                   ; Positiv: PCM += delta
+            move.l  d0,d7
+            and.l   #7,d7
+            add.w   d6,d7
+            move.w  (a4,d7.w*2),d6
+            btst    #3,d0
+            beq     .madd\@
+            sub.l   d6,d2
+            bra     .mclamp\@
+.madd\@:
+            add.l   d6,d2
+.mclamp\@:
+            cmp.l   #32767,d2
+            ble     .mmin\@
+            move.l  #32767,d2
+            bra     .midx\@
+.mmin\@:
+            cmp.l   #-32768,d2
+            bge     .midx\@
+            move.l  #-32768,d2
+.midx\@:
+            move.w  d0,d7
+            andi.w  #7,d7
+            add.w   (a6,d7.w*2),d3
+            tst.w   d3
+            bge     .mmax\@
+            moveq   #0,d3
+            bra     .mdone\@
+.mmax\@:
+            cmp.w   #88,d3
+            ble     .mdone\@
+            move.w  #88,d3
+.mdone\@:
+            move.w  d2,(a1)+
+        ENDM
 
-.clamp_pcm_P:
-            cmp.l   #32767,d2       
-            ble     .check_min_P    
-            move.l  #32767,d2       
-            bra     .update_idx_P   
-.check_min_P:
-            cmp.l   #-32768,d2      
-            bge     .update_idx_P   
-            move.l  #-32768,d2      
+_decode_4bit_stereo_asm:
+            movem.l d2-d7/a2-a6,-(a7)
+            movec   ccc,d0
+            move.l  d0,e1
+            move.l  48(a7),a0
+            move.l  52(a7),a1
+            move.l  56(a7),a5
+            move.l  60(a7),a3
+            move.l  (a5),d2
+            move.w  4(a5),d3
+            ext.l   d3
+            move.l  (a3),d4
+            move.w  4(a3),d5
+            ext.l   d5
+            lea     delta_table,a4
+            lea     index_adj_table,a6
+            tst.l   64(a7)
+            beq     .st_done
+.st_block:
+            movea.l #3,a2
+.st_chunk:
+            movex.l (a0)+,e0
+            F_PAIR
+            F_PAIR
+            F_PAIR
+            F_PAIR
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
+            bne     .st_chunk
+            movea.l #3,a2
+.st_byte:
+            move.l  #0,e0
+            move.b  (a0)+,e0
+            F_PAIR
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
+            bne     .st_byte
+            subq.l  #1,64(a7)
+            bne     .st_block
+.st_done:
+            move.l  56(a7),a5
+            move.l  d2,(a5)
+            move.w  d3,4(a5)
+            move.l  60(a7),a3
+            move.l  d4,(a3)
+            move.w  d5,4(a3)
+            movem.l (a7)+,d2-d7/a2-a6
+            movec   ccc,d0
+            move.l  e1,d1
+            sub.l   d1,d0
+            rts
 
-.update_idx_P:
-            move.w  d0,d1                   ; d1 = Nibble
-            andi.w  #7,d1                   ; Sign-Bit maskieren (Amplitude 0-7)
-            move.w  (a6,d1.w*2),d1          ; Index Adjust aus Tabelle laden
-            add.w   d1,d3                   ; Index += Adjust
+_decode_4bit_ms_asm:
+            movem.l d2-d7/a2-a6,-(a7)
+            movec   ccc,d0
+            move.l  d0,e1
+            move.l  48(a7),a0
+            move.l  52(a7),a1
+            move.l  56(a7),a5
+            move.l  60(a7),a3
+            move.l  (a5),d2
+            move.w  4(a5),d3
+            ext.l   d3
+            move.l  (a3),d4
+            move.w  4(a3),d5
+            ext.l   d5
+            lea     delta_table,a4
+            lea     index_adj_table,a6
+            tst.l   64(a7)
+            beq     .ms_done
+.ms_block:
+            movea.l #3,a2
+.ms_chunk:
+            movex.l (a0)+,e0
+            F_MS_PAIR
+            F_MS_PAIR
+            F_MS_PAIR
+            F_MS_PAIR
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
+            bne     .ms_chunk
+            movea.l #3,a2
+.ms_byte:
+            move.l  #0,e0
+            move.b  (a0)+,e0
+            F_MS_PAIR
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
+            bne     .ms_byte
+            subq.l  #1,64(a7)
+            bne     .ms_block
+.ms_done:
+            move.l  56(a7),a5
+            move.l  d2,(a5)
+            move.w  d3,4(a5)
+            move.l  60(a7),a3
+            move.l  d4,(a3)
+            move.w  d5,4(a3)
+            movem.l (a7)+,d2-d7/a2-a6
+            movec   ccc,d0
+            move.l  e1,d1
+            sub.l   d1,d0
+            rts
 
-            tst.w   d3              
-            bge     .idx_max_P      
-            moveq   #0,d3           
-            bra     .idx_done_P                     
-.idx_max_P:
-            cmp.w   #88,d3          
-            ble     .idx_done_P     
-            move.w  #88,d3          
-.idx_done_P:
-            exg     d6,a2                   ; TRICK: Loop-Counter (D6) wiederherstellen!
-            rts                     
+_decode_4bit_mono_asm:
+            movem.l d2-d7/a2-a6,-(a7)
+            movec   ccc,d0
+            move.l  d0,e1
+            move.l  48(a7),a0
+            move.l  52(a7),a1
+            move.l  56(a7),a5
+            move.l  (a5),d2
+            move.w  4(a5),d3
+            ext.l   d3
+            lea     delta_table,a4
+            lea     index_adj_table,a6
+            tst.l   60(a7)
+            beq     .mo_done
+.mo_block:
+            movea.l #3,a2
+.mo_chunk:
+            movex.l (a0)+,e0
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
+            bne     .mo_chunk
+            movea.l #3,a2
+.mo_byte:
+            move.l  #0,e0
+            move.b  (a0)+,e0
+            F_MONO_NIB
+            F_MONO_NIB
+            move.l  a2,d6
+            subq.l  #1,d6
+            move.l  d6,a2
+            bne     .mo_byte
+            subq.l  #1,60(a7)
+            bne     .mo_block
+.mo_done:
+            move.l  56(a7),a5
+            move.l  d2,(a5)
+            move.w  d3,4(a5)
+            movem.l (a7)+,d2-d7/a2-a6
+            movec   ccc,d0
+            move.l  e1,d1
+            sub.l   d1,d0
+            rts
 
-; ------------------------------------------------------------------------------
-; decode_secondary: Arbeitet fix auf D4 (PCM) und D5 (Index)
-; ------------------------------------------------------------------------------
-decode_secondary:
-            exg     d6,a2                   ; TRICK: D6 für Mathe freimachen
-            
-                        ; exact delta = delta_table[index*8 + (nibble&7)]
-            move.w  d5,d6
-            lsl.w   #3,d6
-            move.l  d0,d1
-            and.l   #7,d1
-            add.w   d6,d1
-            move.w  (a4,d1.w*2),d1
-            btst    #3,d0           
-            beq     .add_delta_S
-            sub.l   d1,d4           
-            bra     .clamp_pcm_S    
-.add_delta_S:
-            add.l   d1,d4           
-
-.clamp_pcm_S:
-            cmp.l   #32767,d4       
-            ble     .check_min_S    
-            move.l  #32767,d4       
-            bra     .update_idx_S   
-.check_min_S:
-            cmp.l   #-32768,d4      
-            bge     .update_idx_S   
-            move.l  #-32768,d4      
-
-.update_idx_S:
-            move.w  d0,d1
-            andi.w  #7,d1
-            move.w  (a6,d1.w*2),d1  
-            add.w   d1,d5           
-
-            tst.w   d5              
-            bge     .idx_max_S      
-            moveq   #0,d5           
-            bra     .idx_done_S                     
-.idx_max_S:
-            cmp.w   #88,d5          
-            ble     .idx_done_S     
-            move.w  #88,d5          
-.idx_done_S:
-            exg     d6,a2                   ; TRICK: Loop-Counter wiederherstellen!
-            rts                     
-
-; ------------------------------------------------------------------------------
-; STATISCHE TABELLEN (Shared)
-; ------------------------------------------------------------------------------
-
-; ADPCM 4-Bit Index Adjustment Table (für Amplituden 0 bis 7)
+            section code,code
 index_adj_table:
             dc.w    -1, -1, -1, -1, 2, 4, 6, 8
-
-; ADPCM Step Table
-step_table:
-            dc.w    7,8,9,10,11,12,13,14,16,17,19,21,23,25,28,31
-            dc.w    34,37,41,45,50,55,60,66,73,80,88,97,107,118,130,143
-            dc.w    157,173,190,209,230,253,279,307,337,371,408,449,494,544,598,658
-            dc.w    724,796,876,963,1060,1166,1282,1411,1552,1707,1878,2066,2272,2499,2749,3024
-            dc.w    3327,3660,4026,4428,4871,5358,5894,6484,7132,7845,8630,9493,10442,11487,12635,13899
-            dc.w    15289,16818,18500,20350,22385,24623,27086,29794,32767
 delta_table:
             dc.w    0,1,3,4,7,8,10,11,1,3,5,7,9,11,13,15
             dc.w    1,3,5,7,10,12,14,16,1,3,6,8,11,13,16,18

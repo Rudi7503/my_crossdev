@@ -190,3 +190,24 @@ PC: 00009DC6
 
 Das ist kein gültiger Kandidat; die unrolled Makro-/Kontrollflussstruktur
 muss neu geprüft werden. Produktiv bleibt **Opt9**.
+
+## Fresh-Asm – erfolgreich, neuer Produktivstand
+
+Nach zwei Fixes läuft die unabhängige unrolled Asm-Version bit-exakt:
+
+1. `d6` vor jedem Tabellenzugriff nullen (High-Word).
+2. Chunk-Zähler nicht mit `subq.l #1,a2` + `bne` (Adressregister setzt keine
+   Flags), sondern über `d6` mit `subq` und Rückkopie.
+
+Golden **PASS**, 100× **PASS**:
+
+| Modus | Opt9 MIN/Med | Fresh-Asm MIN/Med |
+|---|---:|---:|
+| Stereo | 1135 / 1135 | **997 / 997** |
+| MS | 1401 / 1402 | **1237 / 1237** |
+| Mono | 1196 / 1196 | **963 / 963** |
+
+Golden 512: Stereo **589.315**, MS **715.725**, Mono **566.197**.
+
+Gegenüber Baseline: Stereo ~35,5 %, MS ~34,1 %, Mono ~40,7 % schneller.
+`decoder_4bit.s` = Fresh-Asm; Opt9-Backup: `experiments/decoder_4bit_opt9_prod.s`.

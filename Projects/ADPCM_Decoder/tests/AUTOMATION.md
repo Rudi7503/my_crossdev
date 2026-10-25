@@ -84,7 +84,7 @@ Ergebnisdateien; der serielle Mitschnitt ist optional.
 
 ## Aktueller Stand
 
-- Produktiv: **Opt9** (exakte Delta-Tabelle, E2–E5 L/R/MS-Pair, Matrix inline)
+- Produktiv: **Fresh-Asm** (unrolled 4-Pair, d0/d1-Nibbles, d6/d7-Temps, keine bsr-Kette)
 - Golden + 100×: PASS
 - Letzter automatisierter Lauf: `tests/auto-results/opt9-20261025-110250`
 - Optimierungsverlauf: `tests/OPTIMIZATION.md`
