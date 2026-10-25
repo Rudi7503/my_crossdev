@@ -247,3 +247,14 @@ Nach jeder Änderung:
 Erster neuer Mikrobenchmark: **AMX-007 `PADDW`** – MIN 5, Median 5,
 Baseline 5, `check_log.py` OK. Kein Vorteil gegenüber `PADDB`; keine
 signed Saturation, daher für ADPCM nur begrenzt nutzbar.
+
+## Core-Version
+
+Alle Ergebnisse in diesem Projekt beziehen sich auf:
+
+- **Apollo Core 11350**
+- PCR 1088 / Revision 1
+- VCoreRev 0
+
+`auto_opt.py` speichert `core-before.json`, `core-after.json` und
+`core_before`/`core_after` in `summary.json`.

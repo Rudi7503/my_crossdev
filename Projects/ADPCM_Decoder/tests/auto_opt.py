@@ -95,6 +95,28 @@ def v4_alive(timeout: int = 8) -> bool:
         return False
 
 
+def read_core() -> dict:
+    """Read the V4 core identity; always store it with results."""
+    core = {'apollo_core': None, 'vcore_rev': None, 'raw': ''}
+    try:
+        r = ash_run('C:ApolloControl CORE', timeout=10)
+        core['raw'] = (r.stdout + r.stderr).strip()
+        nums = re.findall(r'\b(\d+)\b', core['raw'])
+        if nums:
+            core['apollo_core'] = int(nums[-1])
+    except Exception as e:
+        core['raw'] = f'CORE error: {e}'
+    try:
+        ash_run('C:ApolloControl SETENV', timeout=10)
+        r = ash_run('C:Type ENV:VCoreRev', timeout=10)
+        nums = re.findall(r'\b(\d+)\b', r.stdout + r.stderr)
+        if nums:
+            core['vcore_rev'] = int(nums[-1])
+    except Exception:
+        pass
+    return core
+
+
 def wait_alive(seconds: int = 90) -> bool:
     end = time.time() + seconds
     while time.time() < end:
@@ -217,6 +239,9 @@ def main() -> int:
     stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
     outdir = TESTS / 'auto-results' / f'{args.version}-{stamp}'
     outdir.mkdir(parents=True)
+    core_before = read_core()
+    (outdir / 'core-before.json').write_text(json.dumps(core_before, indent=2))
+    print(f'CORE before: {core_before}', flush=True)
     print(f'== build {args.source} ({args.version}) ==', flush=True)
     golden, repeat, _ = build(Path(args.source), args.version)
 
@@ -263,7 +288,10 @@ def main() -> int:
     if not vals:
         print('REPEAT FAILED', file=sys.stderr)
         return 3
+    core_after = read_core()
+    (outdir / 'core-after.json').write_text(json.dumps(core_after, indent=2))
     summary = {'version': args.version, 'source': args.source,
+               'core_before': core_before, 'core_after': core_after,
                'repeat': {k: {'min': v[0], 'median': v[1]} for k, v in vals.items()}}
     (outdir / 'summary.json').write_text(json.dumps(summary, indent=2))
     print(f'== DONE -> {outdir} ==', flush=True)

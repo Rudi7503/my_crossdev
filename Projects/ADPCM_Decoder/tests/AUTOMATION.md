@@ -162,3 +162,17 @@ Bei Abbruch:
 
 Verifiziert: 30 `ALIVE`-Zeilen im Repeat-Lauf, plus `START`/`DONE`.
 `auto_opt.py` nutzt diesen Watchdog und liefert bei Crash Exit 4/5.
+
+## Core-Version in Ergebnissen
+
+Jeder `auto_opt.py`-Lauf schreibt:
+
+```text
+core-before.json
+core-after.json
+summary.json  (core_before/core_after)
+```
+
+Quelle: `C:ApolloControl CORE` und `ENV:VCoreRev`.
+Aktuell: **Core 11350, PCR 1088/1, VCoreRev 0**.
+Ergebnisse ohne Core-Datei sind für Vergleiche nicht zulässig.

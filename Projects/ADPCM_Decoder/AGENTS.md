@@ -59,3 +59,14 @@ Nach jeder Änderung:
 Jede Änderung braucht einen Mikrobenchmark (100×, MIN/Median, Baseline)
 **und** End-to-End Golden/Repeat. Bei Regression oder Verbesserung den Grund
 dokumentieren. Ergebnisse in `tests/OPTIMIZATION.md` und `68080-db/`.
+
+## Core-Version ist Pflicht
+
+Jedes Ergebnis muss die Core-Version enthalten:
+
+- `core-before.json` / `core-after.json`
+- `core_before` / `core_after` in `summary.json`
+- Harness-Logs: `CORE;<PCR-ID>;<PCR-REV>;<VCoreRev>`
+
+Vergleiche nur Ergebnisse derselben Core-Version. Aktuell: **Core 11350,
+PCR 1088/1, VCoreRev 0**.
