@@ -159,3 +159,20 @@ Damit sind AMMX, Pipe 2/3 und Fusing **nicht vollständig ausgenutzt**.
 Der Fresh-C-Versuch zeigt, dass ein reiner C-Neubau ohne ABI-/Alignment-
 Korrektur nicht trägt; ein neuer Asm-Ansatz wäre der nächste sinnvolle
 Vergleich.
+
+## Frischer unrolled Asm-Entwurf (experimentell, noch nicht verifiziert)
+
+`experiments/decoder_4bit_fresh_asm.s` ist eine unabhängige Neuimplementierung:
+
+- 4 Paare pro MOVEX unrolled
+- `d0/d1` = L/R-Nibbles, `d6/d7` = Temps
+- `a2` = Chunk-Zähler
+- keine E2–E5-Scratch, keine `bsr`-Kette
+
+Erster Lauf: V4 nicht mehr erreichbar (Absturz/Reset). Ursache im Entwurf:
+`d6` wurde nur als Wort aus der Delta-Tabelle geladen, danach aber als Long
+verrechnet (High-Word-Müll). `moveq #0,d6` vor jedem Tabellenzugriff ist
+eingebaut; **Verifikation steht noch aus**, weil die V4 neu gebootet werden muss.
+
+Produktiv bleibt Opt9. Der Fresh-Asm-Kandidat ist ausdrücklich nicht
+freigegeben.

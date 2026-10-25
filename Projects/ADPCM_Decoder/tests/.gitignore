@@ -17,3 +17,6 @@ __pycache__/
 /golden_test_fresh
 /repeat_test_fresh
 /get_ccc.o
+/decoder_fresh_asm.o
+/golden_test_freshasm
+/repeat_test_freshasm
