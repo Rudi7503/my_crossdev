@@ -13,4 +13,12 @@
     uart_puts("DONE;" prog ";" TEST_VERSION "\n"); \
     uart_flush(); \
 } while (0)
+static inline void test_alive(const char *prog, unsigned n) {
+    char buf[96];
+    snprintf(buf, sizeof(buf), "ALIVE;%s;%u\n", prog, n);
+    printf("%s", buf);
+    fflush(stdout);
+    uart_puts(buf);
+    uart_flush();
+}
 #endif

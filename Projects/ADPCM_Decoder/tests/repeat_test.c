@@ -32,6 +32,7 @@ static void run(const char*name,int mode){
     int16_t out[30]; uint32_t cyc[100]; int fail=0;
     for(int i=0;i<100;i++){Chan l=bl,r=br; if(mode==2)decode_4bit_mono_asm(in,out,&l,1); else if(mode==1)decode_4bit_ms_asm(in,out,&l,&r,1); else decode_4bit_stereo_asm(in,out,&l,&r,1);}
     for(int i=0;i<100;i++){
+        if((i % 10) == 0) test_alive(name, (unsigned)i);
         Chan l=bl,r=br;
         if(mode==2)cyc[i]=decode_4bit_mono_asm(in,out,&l,1);
         else if(mode==1)cyc[i]=decode_4bit_ms_asm(in,out,&l,&r,1);

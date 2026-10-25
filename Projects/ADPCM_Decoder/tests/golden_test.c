@@ -111,6 +111,7 @@ static int run_case(const char *name, int mode, uint32_t blocks, int edge) {
     uart_puts("CASE;"); uart_puts(name); uart_puts("\n"); uart_flush();
     memset(asmout, 0xA5, sizeof(asmout));
     asmout[30 * blocks] = (int16_t)0x5A5A;
+    test_alive(name, blocks);
     uint32_t cycles;
     if (mode == 2) cycles = decode_4bit_mono_asm(inbuf, asmout, &al, blocks);
     else if (mode == 1) cycles = decode_4bit_ms_asm(inbuf, asmout, &al, &ar, blocks);

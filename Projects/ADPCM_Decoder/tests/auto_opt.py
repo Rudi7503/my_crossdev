@@ -9,9 +9,11 @@ Usage:
   python3 tests/auto_opt.py --source experiments/decoder_4bit_opt8.s --version opt8
 """
 from __future__ import annotations
-import argparse, json, os, re, subprocess, sys, time
+import argparse, io, json, os, re, struct, subprocess, sys, time
 from pathlib import Path
 from datetime import datetime
+from PIL import Image
+from live_runner import run_with_watchdog
 
 BASE = Path('/home/papa/Vampire_V4/ApolloCrossDev')
 PROJ = BASE / 'Projects/ADPCM_Decoder'
@@ -83,6 +85,56 @@ def acp_download(name: str, outdir: Path) -> Path:
     if not target.exists():
         raise SystemExit(f'download missing: {name}')
     return target
+
+
+def v4_alive(timeout: int = 8) -> bool:
+    try:
+        r = subprocess.run([str(ASH), IP, 'version'], text=True, capture_output=True, timeout=timeout)
+        return r.returncode == 0 and 'Kickstart' in (r.stdout + r.stderr)
+    except Exception:
+        return False
+
+
+def wait_alive(seconds: int = 90) -> bool:
+    end = time.time() + seconds
+    while time.time() < end:
+        if v4_alive(4):
+            return True
+        time.sleep(2)
+    return False
+
+
+def canary_exists(canary: str) -> bool:
+    try:
+        r = ash_run(f'C:List {canary}', timeout=10)
+        out = r.stdout + r.stderr
+        return 'object not found' not in out and 'Directory' in out
+    except Exception:
+        return False
+
+
+def screenshot_crash(outdir: Path) -> Path | None:
+    try:
+        ash_run('C:grabrtgwb savefile=RAM:crash.bmp frontscreen bmp quiet', timeout=25)
+        target = outdir / 'crash.bmp'
+        target.unlink(missing_ok=True)
+        sh([ACP, f'{IP}:RAM/crash.bmp', win_path(outdir)])
+        if not target.exists():
+            return None
+        raw = bytearray(target.read_bytes())
+        w, h = struct.unpack_from('<ii', raw, 18)
+        bpp = struct.unpack_from('<H', raw, 28)[0]
+        if bpp == 24:
+            struct.pack_into('<I', raw, 34, w * h * 3)
+        img = Image.open(io.BytesIO(raw)).convert('RGB')
+        r, g, b = img.split()
+        img = Image.merge('RGB', (b, g, r))
+        png = outdir / 'crash.png'
+        img.save(png)
+        return png
+    except Exception as e:
+        print(f'crash screenshot failed: {e}', file=sys.stderr)
+        return None
 
 
 def ash_run(cmd: str, timeout: int = 180) -> subprocess.CompletedProcess:
@@ -171,21 +223,40 @@ def main() -> int:
     print('== upload ==', flush=True)
     acp_upload(golden, repeat)
 
+    def run_one(label: str, cmd: str, phase: str, idle: float = 20.0) -> tuple[bool, str]:
+        canary = f'RAM:canary_{args.version}_{phase}_{stamp}'
+        ash_run(f'C:MakeDir {canary}')
+        print(f'== run {label} ==', flush=True)
+        rc, ash_out, timed_out, serial = run_with_watchdog(cmd, outdir, idle=idle, max_total=300)
+        (outdir / f'{phase}.ash.txt').write_text(ash_out or '')
+        (outdir / f'{phase}.serial.txt').write_text(serial or '')
+        if not canary_exists(canary):
+            if not v4_alive():
+                wait_alive(90)
+            print(f'{label}: REBOOT detected', file=sys.stderr)
+            return False, 'REBOOT'
+        if timed_out or rc not in (0, None):
+            shot = screenshot_crash(outdir)
+            state = 'CRASH_REQUESTER' if shot else 'CRASH_NO_SCREENSHOT'
+            print(f'{label}: {state}', file=sys.stderr)
+            return False, state
+        return True, 'OK'
+
     if not args.skip_golden:
-        print('== run golden ==', flush=True)
-        r = ash_run('RAM:golden_test_auto')
+        ok, state = run_one('golden', 'RAM:golden_test_auto', 'golden')
+        if not ok:
+            return 4 if state == 'REBOOT' else 5
         gp = acp_download('ADPCM_GOLDEN.txt', outdir)
         ok, text = parse_golden(gp)
-        (outdir / 'golden.ash.txt').write_text(r.stdout + r.stderr)
         print(text, flush=True)
         if not ok:
             print('GOLDEN FAILED', file=sys.stderr)
             return 2
 
-    print('== run repeat ==', flush=True)
-    r = ash_run('RAM:repeat_test_auto')
+    ok, state = run_one('repeat', 'RAM:repeat_test_auto', 'repeat')
+    if not ok:
+        return 4 if state == 'REBOOT' else 5
     rp = acp_download('ADPCM_REPEAT.txt', outdir)
-    (outdir / 'repeat.ash.txt').write_text(r.stdout + r.stderr)
     vals = parse_repeat(rp)
     text = rp.read_text(errors='replace')
     print(text, flush=True)

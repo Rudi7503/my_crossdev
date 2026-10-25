@@ -36,3 +36,9 @@ python3 tests/crash_check.py --command C:Reboot --name reboot
 Zustände: `NO_CRASH`, `REBOOT`, `CRASH_REQUESTER`, `CRASH_NO_SCREENSHOT`,
 `V4_DOWN`. Die RAM-Canary unterscheidet Reboot von Requester.
 Details: `tests/AUTOMATION.md`.
+
+## Live-Watchdog
+
+`tests/live_runner.py` liest COM9 und resettet den Timeout bei jedem
+`ALIVE`/`DONE`. `auto_opt.py` klassifiziert Crashs über RAM-Canary +
+Screenshot. Wenn COM9 leer bleibt, zuerst serielle Verkabelung/Port prüfen.

@@ -137,3 +137,27 @@ ausgeführt und die BMP per ACP geholt.
 
 Der Crash-Requester blockiert die Workbench; der ASH-Server läuft weiter,
 deshalb funktioniert der Screenshot trotzdem.
+
+## Live-Heartbeats und Watchdog
+
+Die Tests senden während des Laufs:
+
+```text
+ALIVE;<programm>;<zaehler>
+```
+
+- `repeat_test` alle 10 Wiederholungen
+- `golden_test` vor jedem Dekodierlauf
+- zusätzlich auf UART und stdout
+
+`tests/live_runner.py` startet den COM9-Capture, führt ASH aus und setzt
+den Idle-Timeout bei **jeder neuen seriellen Zeile** zurück (Default 20 s,
+Gesamtlimit 300 s). Bei Abbruch:
+
+- RAM-Canary weg → `REBOOT`
+- Canary da + Screenshot → `CRASH_REQUESTER`
+- sonst → `CRASH_NO_SCREENSHOT`
+
+`auto_opt.py` nutzt diesen Watchdog und liefert bei Crash Exit 4/5.
+Voraussetzung: COM9 liefert tatsächlich UART-Daten. Ist der Capture leer,
+bleibt die ASH-/Canary-Erkennung als Fallback aktiv.
