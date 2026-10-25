@@ -226,3 +226,5 @@ Der Guard prüft die Sequenzen statisch. Ein Verstoß ist ein Build-Fehler, kein
    Nicht-AMMX-68080-Cores sauber abbricht statt undefiniert zu laufen.
 
 - [10-adpcm.md](10-adpcm.md) – verifizierte ADPCM-4-Bit-Case-Study (gut/schlecht, Messwerte)
+
+- [11-adpcm-candidates.md](11-adpcm-candidates.md) – ADPCM-Instruktionskandidaten, gemessen vs. geschätzt

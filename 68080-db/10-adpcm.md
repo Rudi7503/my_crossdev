@@ -67,3 +67,6 @@ ernsthafte Kandidat, braucht aber einen anderen Datenfluss.
   FUS move+add bleibt der Weg.
 - `MIN.L`/`MAX.L`: assembliert, aber V4-Reset; nicht verwenden.
 - `subq.l #1,a2` + `bne`: Adressregister setzt keine Flags; Zähler über D.
+
+Siehe [11-adpcm-candidates.md](11-adpcm-candidates.md) für die
+Instruktions-/Schätzungsmatrix (gemessen vs. Hypothese).
