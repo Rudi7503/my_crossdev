@@ -1,7 +1,7 @@
 # 10 – ADPCM-4-Bit Case Study (verifiziert)
 
 **Projekt:** `Projects/ADPCM_Decoder`  
-**CPU:** Apollo 68080 / Vampire V4  
+**CPU:** Apollo 68080 / Vampire V4 / Core **11350** (ApolloControl), PCR 1088/1, VCoreRev 0  
 **Messung:** 100 Warmup + 100 Läufe, State-Reset, C-Referenz; MIN/Median.
 
 ## Ergebnis
