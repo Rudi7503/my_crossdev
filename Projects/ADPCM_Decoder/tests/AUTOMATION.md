@@ -84,7 +84,7 @@ Ergebnisdateien; der serielle Mitschnitt ist optional.
 
 ## Aktueller Stand
 
-- Produktiv: **Fresh14** (Signed-32-Bit-Delta-Tabelle, Stereo-Byte-Unroll, 64-Byte-Mono-Alignment, MS/Mono unrolled; d0/d1-Nibbles)
+- Produktiv: **Fresh15** (Signed-32-Bit-Delta-Tabelle, Stereo voll unrolled, 64-Byte-Mono-Alignment, MS/Mono unrolled; d0/d1-Nibbles)
 - Golden + 100×: PASS
 - Letzter automatisierter Lauf: `tests/auto-results/opt9-20261025-110250`
 - Optimierungsverlauf: `tests/OPTIMIZATION.md`

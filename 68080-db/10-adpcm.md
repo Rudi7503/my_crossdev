@@ -130,3 +130,9 @@ Messung: **829 / 918 / 732** (Stereo/MS/Mono). Gegenüber Fresh9:
 Stereo 848→829, MS 922→918, Mono 732 unverändert. Golden/Repeat PASS.
 **Gut:** Byte-Rest ohne Loop; **Vorsicht:** Layout kann Mono stark kosten
 (Fresh10: 845), daher Alignment Pflicht.
+
+## Fresh15 – Stereo voll unrolled
+
+3×MOVEX-Chunk-Loop entfernt; Stereo komplett unrolled. Messung:
+**784 / 920 / 729**. Golden/Repeat PASS. Gegenüber Fresh14: Stereo 829→784,
+MS 918→920, Mono 732→729. **Gut:** keine Loop-Overheads mehr im Stereo-Pfad.

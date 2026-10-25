@@ -1,6 +1,6 @@
 # ADPCM Decoder – Agent Guide
 
-Produktivstand: **Fresh14 (Signed-32-Bit-Delta-Tabelle, Stereo-Byte-Unroll, 64-Byte-Mono-Alignment, MS/Mono unrolled)** in `decoder_4bit.s`.
+Produktivstand: **Fresh15 (Signed-32-Bit-Delta-Tabelle, Stereo voll unrolled, 64-Byte-Mono-Alignment, MS/Mono unrolled)** in `decoder_4bit.s`.
 
 ## Pflicht vor jeder Änderung
 

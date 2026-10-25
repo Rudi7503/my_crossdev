@@ -226,16 +226,21 @@ _decode_4bit_stereo_asm:
             tst.l   64(a7)
             beq     .st_done
 .st_block:
-            movea.l #3,a2
-.st_chunk:
             movex.l (a0)+,e0
             F_PAIR
             F_PAIR
             F_PAIR
             F_PAIR
-            subq.l  #1,a2
-            cmpa.l  #0,a2
-            bne     .st_chunk
+            movex.l (a0)+,e0
+            F_PAIR
+            F_PAIR
+            F_PAIR
+            F_PAIR
+            movex.l (a0)+,e0
+            F_PAIR
+            F_PAIR
+            F_PAIR
+            F_PAIR
             move.l  #0,e0
             move.b  (a0)+,e0
             F_PAIR

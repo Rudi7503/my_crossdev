@@ -406,3 +406,17 @@ Produktiv: **Fresh9**; Fresh7-Backup: `experiments/decoder_4bit_fresh7_prod.s`.
 
 Golden + 100× PASS. Golden 512: MS **656.143**, Mono **477.321**.
 Produktiv: **Fresh14**; Fresh9-Backup: `experiments/decoder_4bit_fresh9_prod.s`.
+
+## Fresh15 – Stereo voll unrolled (übernommen)
+
+Auch der 3×MOVEX-Chunk-Loop ist entfernt; Stereo ist komplett unrolled.
+Alignment Mono bleibt 64 Byte.
+
+| Modus | Fresh14 | **Fresh15** |
+|---|---:|---:|
+| Stereo | 829 | **784** |
+| MS | 918 | 920 |
+| Mono | 732 | 729 |
+
+Golden + 100× PASS. Golden 512: MS **616.910**, Mono **459.075**.
+Produktiv: **Fresh15**; Fresh14-Backup: `experiments/decoder_4bit_fresh14_prod.s`.
