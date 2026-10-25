@@ -73,4 +73,4 @@ PCR 1088/1, VCoreRev 0**.
 
 ## Amiga-Fernsteuerung
 
-`Tools/amiga_tool.py` (amiagent 0.13.2, Port 7846) ist der lokale CLI-Bridge; Token nur in `~/.config/apollo-agent/env`. Kein Cline/API-Key nötig. Details: `Tools/AMIGA-TOOL.md`.
+`Tools/amiga_tool.py` (amiagent 0.13.2, Port 7846) ist der lokale CLI-Bridge; **Autostart aktiv** aus `S:Startup-Sequence`. Token nur lokal, nicht im Git. Kein Cline/API-Key nötig. Details: `Tools/AMIGA-TOOL.md`.

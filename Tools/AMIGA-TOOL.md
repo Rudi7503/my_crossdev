@@ -6,6 +6,8 @@
 - Agent auf der V4: `C:amiagent.020`, Port **7846**
 - Der 68080-Build liegt als `C:amiagent` daneben, wird aber nicht verwendet;
   der offizielle 020-Build lauscht zuverlässig.
+- **Autostart aktiv** in `S:Startup-Sequence` (nach `S:Network-Startup`,
+  vor `EndCLI`). Backup: `S:Startup-Sequence.bak2`.
 - Token: lokal in `~/.config/apollo-agent/env` (mode 600), **nicht im Repo**.
 - Kein Cline, kein DeepSeek-API-Key, kein MCP nötig – der Harness ruft das
   CLI über Bash auf.
@@ -44,5 +46,6 @@
 
 - TCP **plain**, Token im Klartext; nur vertrautes LAN, **kein Portforwarding**.
 - Token und DeepSeek-API-Key sind getrennt; Token niemals in Chat/Git.
-- Agent läuft **manuell**; Autostart ist noch nicht aktiv und braucht Freigabe.
+- Agent startet **automatisch** nach dem Netzwerk; Token liegt nur lokal in
+  `S:Startup-Sequence`, nicht im Git.
 - `amiga_tool.py` führt nur explizite Aufrufe aus.
