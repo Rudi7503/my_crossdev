@@ -17,3 +17,8 @@ golden_test
 golden_test_*
 repeat_test_*
 *.log
+pcm_ovf_v4
+pipe_test
+profile_test
+profile_test3
+repeat_test
