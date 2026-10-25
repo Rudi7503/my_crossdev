@@ -359,3 +359,11 @@ wegen des Integrationsfehlers verworfen.
 - Also liegt der Fehler in der **Mono-Integration/Makro**, nicht in der Arithmetik.
 - Ein `ext.l`-only-Gegenversuch konnte wegen V4/ASH-Blockade nicht sauber laufen.
 - **Kein Fresh8-Performancegewinn nachweisbar**; Fresh7 bleibt Produktivstand.
+
+## Fresh8 – kein Performancegewinn, keine stabile Integration
+
+- `ext.l`-only: Golden/Repeat PASS, aber Mono **833** statt 819 → teurer.
+- `add.w/sub.w`-only im Mono-Makro: Crash **Line 1111 F**.
+- Fresh8 gesamt: Crash **Line 1010**.
+- Operation isoliert: 917504/917504 PASS.
+- **Fazit:** Fresh8 nicht übernehmen; Fresh7 bleibt Produktivstand.
