@@ -136,3 +136,9 @@ Stereo 848→829, MS 922→918, Mono 732 unverändert. Golden/Repeat PASS.
 3×MOVEX-Chunk-Loop entfernt; Stereo komplett unrolled. Messung:
 **784 / 920 / 729**. Golden/Repeat PASS. Gegenüber Fresh14: Stereo 829→784,
 MS 918→920, Mono 732→729. **Gut:** keine Loop-Overheads mehr im Stereo-Pfad.
+
+## Fresh15 bleibt – Layout-Fallen
+
+Fresh16 (Tabelle 64-Byte-aligned) und Fresh17 (Stereo-Funktion 64-Byte-aligned)
+verschlechtern Stereo auf ~897/898. **Nicht übernehmen.** Beststand bleibt
+Fresh15: **784 / 920 / 729**.

@@ -420,3 +420,12 @@ Alignment Mono bleibt 64 Byte.
 
 Golden + 100× PASS. Golden 512: MS **616.910**, Mono **459.075**.
 Produktiv: **Fresh15**; Fresh14-Backup: `experiments/decoder_4bit_fresh14_prod.s`.
+
+## Fresh16/Fresh17 – Layout-Varianten (verworfen)
+
+- **Fresh16:** Delta-Tabelle auf 64 Byte ausgerichtet → Stereo **897** (statt 784), MS 919, Mono 730. **Verworfen.**
+- **Fresh17:** Stereo-Funktion auf 64 Byte ausgerichtet → Stereo **898**, MS 919, Mono 730. **Verworfen.**
+
+**Fresh15 bleibt Produktivstand: 784 / 920 / 729.**
+Layout-Änderungen sind auf dem 68080 extrem empfindlich; nur mit vollständigem
+100×-Lauf übernehmen.
