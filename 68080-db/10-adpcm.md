@@ -113,3 +113,12 @@ verifizieren, nicht direkt in den Decoder patchen.
 PCM-Operation isoliert per ASM: **917504/917504 PASS**. Fresh8-Mono-Patch
 allein crasht aber mit Line 1010. Fehler liegt in der Mono-Makrointegration,
 nicht in `add.w/sub.w + bvc`. Kein Performancegewinn messbar; Fresh7 bleibt.
+
+## Fresh9 – Signed-32-Bit-Delta-Tabelle
+
+Statt positiver Word-Tabelle + Vorzeichenbranch: **1424 `dc.l`-Einträge**
+(Nibble 0–15 signed). Lookup `lsl.w #4` + `move.l (a4,d7.w*4),d6` +
+`add.l d6,state`. Vorzeichenbranch, `and #7` und `ext.l` entfallen.
+
+**Messung:** Stereo 978→**848**, MS 1027→**922**, Mono 819→**732**.
+Golden/Repeat PASS. **Gut:** Tabelle ersetzt Branch durch Daten.

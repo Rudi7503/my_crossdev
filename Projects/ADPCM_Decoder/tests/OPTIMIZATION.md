@@ -367,3 +367,29 @@ wegen des Integrationsfehlers verworfen.
 - Fresh8 gesamt: Crash **Line 1010**.
 - Operation isoliert: 917504/917504 PASS.
 - **Fazit:** Fresh8 nicht übernehmen; Fresh7 bleibt Produktivstand.
+
+## Fresh9 – Signed-32-Bit-Delta-Tabelle (übernommen)
+
+Die Tabelle enthält jetzt pro Index **16 Einträge** (Nibble 0–15) als
+**signed 32-Bit-Deltas** (`dc.l`, 1424 Einträge). Dafür entfallen:
+
+- `btst/beq/sub/bra/add` (Vorzeichenbranch)
+- `and.l #7,d7` (Nibble-Maske)
+- `ext.l d6`
+
+Lookup:
+
+```asm
+lsl.w   #4,d6
+move.l  (a4,d7.w*4),d6
+add.l   d6,d2
+```
+
+| Modus | Fresh7 | **Fresh9** |
+|---|---:|---:|
+| Stereo | 978 | **848** |
+| MS | 1027 | **922** |
+| Mono | 819 | **732** |
+
+Golden + 100× PASS. Golden 512: MS **614.851**, Mono **475.884**.
+Produktiv: **Fresh9**; Fresh7-Backup: `experiments/decoder_4bit_fresh7_prod.s`.

@@ -230,7 +230,7 @@ def main() -> int:
     global IP
     ap = argparse.ArgumentParser()
     ap.add_argument('--source', default=str(PROJ / 'decoder_4bit.s'))
-    ap.add_argument('--version', default='fresh7')
+    ap.add_argument('--version', default='fresh9')
     ap.add_argument('--ip', default=IP)
     ap.add_argument('--skip-golden', action='store_true')
     args = ap.parse_args()
