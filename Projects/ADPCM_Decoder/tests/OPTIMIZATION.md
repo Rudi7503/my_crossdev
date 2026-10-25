@@ -225,3 +225,12 @@ Gegenüber Baseline: Stereo ~35,5 %, MS ~34,1 %, Mono ~40,7 % schneller.
 
 Golden Fresh3: Stereo 674.513, MS 716.661, Mono 556.172.
 `decoder_4bit.s` = Fresh3; Fresh-Asm-Backup: `experiments/decoder_4bit_fresh_prod.s`.
+
+## Negativtests (nicht dokumentiert / nicht nutzbar)
+
+- `PADDSW`/`PSUBSW`: vasm 2.0d kennt die Mnemonics nicht.
+- `PACK` (generisches 32→16): illegale Operandentypen.
+- `LEA (d2,d4.l),d0`: nicht encodierbar (Basis muss Adressregister sein).
+- `MIN.L`/`MAX.L`: assembliert, aber die V4 resettet (nicht nutzbar).
+- `subq.l #1,a2` + `bne`: Adressregister setzt keine Flags.
+- Reiner C-Neubau: nicht bit-exakt (ABI/Alignment).

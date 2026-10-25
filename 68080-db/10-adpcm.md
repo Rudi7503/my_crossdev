@@ -57,3 +57,13 @@ Fresh3 = **ca. 35–50 %** schneller als Baseline; alle Golden/Repeat PASS.
 **Fazit:** Die größten Gewinne kamen aus exakter Tabelle, weniger Branches,
 Unrolling und Registerwahl – nicht aus AMMX. AMMX bleibt der nächste
 ernsthafte Kandidat, braucht aber einen anderen Datenfluss.
+
+## Negativtests (neu getestet)
+
+- `PADDSW`/`PSUBSW`: vasm 2.0d akzeptiert die Mnemonics nicht; kein
+  signed-saturating AMMX-Pfad über diesen Assembler.
+- `PACK` (generisch): illegale Operandentypen; `PACK3216` ist RGB565-spezifisch.
+- `LEA (d2,d4.l),d0`: nicht encodierbar (Basis muss ein Adressregister sein).
+  FUS move+add bleibt der Weg.
+- `MIN.L`/`MAX.L`: assembliert, aber V4-Reset; nicht verwenden.
+- `subq.l #1,a2` + `bne`: Adressregister setzt keine Flags; Zähler über D.
