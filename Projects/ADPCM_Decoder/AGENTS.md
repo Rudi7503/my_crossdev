@@ -25,3 +25,14 @@ Ergebnisse und prüft Golden + 100×-Repeat.
 - ACP/ASH: `C:\Program Files\ApolloExplorer`
 - Toolchain: `Compilers/GCC-6.50-Latest`
 - Server startet automatisch aus `S:Startup-Sequence` (1.4.0).
+
+## Crash-Erkennung
+
+```bash
+python3 tests/crash_check.py --binary tests/golden_test_opt5 --name opt5
+python3 tests/crash_check.py --command C:Reboot --name reboot
+```
+
+Zustände: `NO_CRASH`, `REBOOT`, `CRASH_REQUESTER`, `CRASH_NO_SCREENSHOT`,
+`V4_DOWN`. Die RAM-Canary unterscheidet Reboot von Requester.
+Details: `tests/AUTOMATION.md`.

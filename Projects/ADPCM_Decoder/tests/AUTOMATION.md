@@ -88,3 +88,52 @@ Ergebnisdateien; der serielle Mitschnitt ist optional.
 - Golden + 100×: PASS
 - Letzter automatisierter Lauf: `tests/auto-results/opt9-20261025-110250`
 - Optimierungsverlauf: `tests/OPTIMIZATION.md`
+
+## Crash-Erkennung
+
+`tests/crash_check.py` führt ein Binary oder einen ASH-Befehl aus und
+klassifiziert den Ausgang:
+
+| Zustand | Bedeutung | Exit |
+|---|---|---:|
+| `NO_CRASH` | ASH kam normal zurück | 0 |
+| `REBOOT` | V4 war weg und kam zurück | 10 |
+| `CRASH_REQUESTER` | V4 lebt, Software-Failure-Screenshot | 11 |
+| `CRASH_NO_SCREENSHOT` | V4 lebt, Screenshot fehlgeschlagen | 12 |
+| `V4_DOWN` | V4 kam nicht zurück | 13 |
+
+### RAM-Canary
+
+Vor dem Lauf wird `RAM:canary_<name>_<zeit>` per `C:MakeDir` angelegt.
+Nach dem Lauf:
+
+- Canary **weg** → V4 wurde rebootet (`REBOOT`)
+- Canary **da** + Screenshot → Crash-Requester
+- Canary **da** + ASH normal → `NO_CRASH`
+
+### Beispiele
+
+```bash
+python3 tests/crash_check.py --binary tests/golden_test_opt5 --name opt5
+python3 tests/crash_check.py --command C:Reboot --name reboot
+python3 tests/crash_check.py --command version --name normal
+```
+
+Crash-Screenshot:
+
+```text
+tests/crash-results/<name>-<zeit>/crash.png
+```
+
+Bei erkanntem Requester wird `C:grabrtgwb savefile=RAM:crash.bmp frontscreen bmp quiet`
+ausgeführt und die BMP per ACP geholt.
+
+### Verifizierte Fälle
+
+- `golden_test_opt5` → `CRASH_REQUESTER`
+  - Software Failure, `8000000A - Line 1010 (A) Emulator error`
+- `C:Reboot` → `REBOOT`
+- `version` → `NO_CRASH`
+
+Der Crash-Requester blockiert die Workbench; der ASH-Server läuft weiter,
+deshalb funktioniert der Screenshot trotzdem.

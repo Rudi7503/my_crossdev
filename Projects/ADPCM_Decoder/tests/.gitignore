@@ -11,3 +11,5 @@
 /repeat_test_auto
 __pycache__/
 *.pyc
+/crash-results/
+/crash_fixture
