@@ -234,3 +234,16 @@ Golden Fresh3: Stereo 674.513, MS 716.661, Mono 556.172.
 - `MIN.L`/`MAX.L`: assembliert, aber die V4 resettet (nicht nutzbar).
 - `subq.l #1,a2` + `bne`: Adressregister setzt keine Flags.
 - Reiner C-Neubau: nicht bit-exakt (ABI/Alignment).
+
+## Mikrobenchmark-Gate (Pflicht)
+
+Nach jeder Änderung:
+
+1. relevanten Mikrobenchmark (100×, MIN/Median, Baseline) laufen lassen
+2. End-to-End Golden + 100×
+3. bei besser/schlechter: **warum** in dieser Datei/DB notieren
+4. committen und pushen
+
+Erster neuer Mikrobenchmark: **AMX-007 `PADDW`** – MIN 5, Median 5,
+Baseline 5, `check_log.py` OK. Kein Vorteil gegenüber `PADDB`; keine
+signed Saturation, daher für ADPCM nur begrenzt nutzbar.

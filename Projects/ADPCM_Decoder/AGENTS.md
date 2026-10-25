@@ -53,3 +53,9 @@ Nach jeder Änderung:
 3. `git add` der Quellen/Tests/Doku
 4. **committen und pushen** – nichts Unpushed liegen lassen
 5. Generierte Binaries/Logs bleiben gitignored
+
+## Mikrobenchmark-Gate
+
+Jede Änderung braucht einen Mikrobenchmark (100×, MIN/Median, Baseline)
+**und** End-to-End Golden/Repeat. Bei Regression oder Verbesserung den Grund
+dokumentieren. Ergebnisse in `tests/OPTIMIZATION.md` und `68080-db/`.

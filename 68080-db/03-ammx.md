@@ -472,3 +472,26 @@ Formate braucht man `vperm`/`packuswb` oder eigene Masken.
 6. **E-Register task-sicher machen.** Das Harness setzt `ori #$800,sr`
    (Apollo-Bit, SR-Bit 11). Ohne dieses Bit sind E0–E23 über einen Task-Wechsel
    hinweg nicht garantiert stabil (PRM S. 8).
+
+## AMX-007: Vier 16-Bit-Lane-Additionen mit PADDW
+
+**Kategorie:** AMMX / Vektorarithmetik  
+**Status:** VERIFIZIERT (gemessen – Vampire V4, 2026-10-25)  
+**Beleg:** PRM S. 52 (`PADDW`); Sequenz `seq/AMX-007.i`
+
+`PADDW` addiert vier 16-Bit-Lanes unabhängig, **ohne Sättigung**.
+Gemessen mit Harness v5 (100 Läufe):
+
+- `BASELINE = 5`
+- `MIN = 5`, `Median = 5`, `MAX = 21`, `AVG = 5`
+- `check_log.py`: **OK**, 100/100 `RES`, `NET_MIN = 0`
+- `CORE = PCR:1088/1`
+
+Vergleich zu `PADDB` (AMX-002): gleicher MIN/Median (5), also **kein
+zusätzlicher Taktvorteil** durch breitere Lanes; der Nutzen liegt in der
+Lane-Breite, nicht in weniger Zyklen.
+
+**Grenze:** `PADDW` sättigt nicht. Für ADPCM-PCM/Matrix braucht man
+signed-saturating `PADDSW`/`PSUBSW`; diese Mnemonics werden von vasm 2.0d
+nicht akzeptiert (siehe `10-adpcm.md`). `PADDW` ist daher nur für
+nachfolgend geclampte 16-Bit-Zwischenwerte interessant.
