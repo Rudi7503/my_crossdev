@@ -272,3 +272,25 @@ Idee: `btst #3` + `beq/sub/bra/add` durch `btst/sne/ext/eor/sub/add` ersetzen.
 **Schlechter** (4,6 % / 6,2 % / 10,3 %). Die Maske kostet 3–4 zusätzliche
 Instruktionen; der 68080-Branch-Predictor verkraftet das 50/50-Vorzeichen
 besser als erwartet. **Nicht übernommen.**
+
+## Fresh6 – cmpa-Chunk-Zähler (übernommen)
+
+`subq.l #1,a2` setzt keine Flags; bisher wurde über `d6` zurückkopiert.
+Jetzt:
+
+```asm
+subq.l  #1,a2
+cmpa.l  #0,a2
+bne     loop
+```
+
+Eine Instruktion weniger pro Chunk. Ergebnis:
+
+| Modus | Fresh3 | Fresh6 |
+|---|---:|---:|
+| Stereo | 1001 | **980** |
+| MS | 1047 | 1046 |
+| Mono | 816 | 816 |
+
+Golden Fresh6: Stereo 596.528, MS 713.774, Mono 565.790.
+Produktiv: **Fresh6**; Fresh3-Backup: `experiments/decoder_4bit_fresh3_prod.s`.

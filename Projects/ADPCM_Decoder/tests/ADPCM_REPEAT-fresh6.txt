@@ -1,0 +1,4 @@
+ADPCM 4-BIT 100x REPEAT (state reset, C reference)
+STEREO;runs=100;min=980;median=980;max=1556;avg=1024.7;p95=1363;PASS
+MS;runs=100;min=1046;median=1046;max=4029;avg=1248.9;p95=2721;PASS
+MONO;runs=100;min=816;median=816;max=7558;avg=1175.7;p95=3077;PASS

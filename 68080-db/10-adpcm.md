@@ -78,3 +78,17 @@ Instruktions-/Schätzungsmatrix (gemessen vs. Hypothese).
 `btst/sne/ext/eor/sub/add` statt `btst/beq/sub/add`: 1047/1112/900 statt
 1001/1047/816. Mehr Instruktionen schlagen den gesparten Branch.
 Lehre: **Branchless ist nicht automatisch schneller**; bei 68080 erst messen.
+
+## Fresh6 – `subq` + `cmpa` statt D-Rückkopie
+
+Adressregister-`subq` setzt keine Flags. `cmpa.l #0,An` setzt sie explizit
+und spart die Rückkopie über `d6`:
+
+```asm
+subq.l  #1,a2
+cmpa.l  #0,a2
+bne     loop
+```
+
+Gemessen: Stereo 1001 → **980**, MS 1047 → 1046, Mono 816 → 816.
+**Gut** für Adressregister-Zähler; ein `cmpa` ist billiger als drei Moves.

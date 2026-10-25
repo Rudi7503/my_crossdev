@@ -270,18 +270,16 @@ _decode_4bit_stereo_asm:
             F_PAIR
             F_PAIR
             F_PAIR
-            move.l  a2,d6
-            subq.l  #1,d6
-            move.l  d6,a2
+            subq.l  #1,a2
+            cmpa.l  #0,a2
             bne     .st_chunk
             movea.l #3,a2
 .st_byte:
             move.l  #0,e0
             move.b  (a0)+,e0
             F_PAIR
-            move.l  a2,d6
-            subq.l  #1,d6
-            move.l  d6,a2
+            subq.l  #1,a2
+            cmpa.l  #0,a2
             bne     .st_byte
             subq.l  #1,64(a7)
             bne     .st_block
