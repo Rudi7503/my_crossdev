@@ -495,3 +495,31 @@ Lane-Breite, nicht in weniger Zyklen.
 signed-saturating `PADDSW`/`PSUBSW`; diese Mnemonics werden von vasm 2.0d
 nicht akzeptiert (siehe `10-adpcm.md`). `PADDW` ist daher nur für
 nachfolgend geclampte 16-Bit-Zwischenwerte interessant.
+
+## AMX-008: 16-Bit-Lane-Max mit PCMPGTW + BSEL (gemessen)
+
+**Kategorie:** AMMX / branchless 16-Bit  
+**Status:** VERIFIZIERT (gemessen – V4, 100×, 2026-10-25)  
+**Sequenzen:** `seq/AMX-008.i` (AMMX), `seq/AMX-009.i` (branchless scalar)
+
+```asm
+        load    (a0)+,e0
+        load    (a1)+,e1
+        pand    e0,e0,e3
+        pcmpgtw e0,e1,e2
+        bsel    e1,e2,e3
+        store   e3,(a2)+
+```
+
+Skalarreferenz: 4× `cmp/sge/ext/and/not/and/or`.
+
+| Variante | MIN | Median | MAX |
+|---|---:|---:|---:|
+| AMMX PCMPGTW+BSEL | **7** | **7** | 7 |
+| branchless scalar | 33 | 33 | 33 |
+
+**4,7×** schneller für vier 16-Bit-Maxima. `PCMPGTL` (32-Bit) ist mit vasm
+2.0d **nicht** verfügbar. Für ADPCM sind PCM- und MS-Summen 32-Bit; die
+16-Bit-Variante ist deshalb **kein direkter Clamp-Ersatz**. Sie wäre nur für
+bereits 16-Bit-breite Werte (z. B. Index) interessant – dort ist der
+E-Setup-Aufwand pro Einzelwert zu hoch.

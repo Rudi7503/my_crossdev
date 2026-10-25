@@ -23,7 +23,7 @@ muss vor einer Übernahme gemessen werden.
 |---|---|---:|---|
 | `PADDW` + anschließendes Clamping | 4×16-Bit-Lanes, aber Clamp bleibt skalar | **0–3 %** (MS-Matrix) | nur bei 4-Lane-Batch sinnvoll; für 2 Lanes (L/R) kein Vorteil |
 | `PADDSW`/`PSUBSW` (falls verfügbar) | Add+Clamp in einer Instruktion | **5–12 %** MS, **3–8 %** PCM | Tool/CPU nicht verfügbar; nicht verwenden |
-| `PCMPGTB`/`BSEL` | branchless Clamp/Select | **2–6 %** | braucht eigenen 100×-Mikrobenchmark |
+| `PCMPGTW`/`BSEL` | 4×16-Bit-Max | **7** (AMMX) vs **33** (Skalar) | **gemessen 4,7×**; `PCMPGTL` fehlt, PCM/MS sind 32-Bit → für ADPCM-Clamps **nicht direkt** nutzbar |
 | `PACK3216` | Packen L/R | **0 %** | falsches Format (RGB565) |
 | explizites Fusing `move+add` | Matrix | **0–2 %** | eventuell schon CPU-seitig fusioniert |
 | Pipe-3-Scheduling | unabhängige L/R-Arbeit | **0–5 %** | IEP3 war 0; erst Pipe-Messung |

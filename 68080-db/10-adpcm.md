@@ -70,3 +70,5 @@ ernsthafte Kandidat, braucht aber einen anderen Datenfluss.
 
 Siehe [11-adpcm-candidates.md](11-adpcm-candidates.md) für die
 Instruktions-/Schätzungsmatrix (gemessen vs. Hypothese).
+
+- `PCMPGTW`/`BSEL`: 4×16-Bit-Max in 7 Takten vs 33 Skalar (4,7×), aber kein 32-Bit-`PCMPGTL`; ADPCM-PCM/MS-Clamps bleiben 32-Bit.
