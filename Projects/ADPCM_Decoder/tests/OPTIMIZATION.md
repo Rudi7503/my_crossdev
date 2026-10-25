@@ -351,3 +351,11 @@ belastbar; keine Produktivänderung.
 `pcm_asm_test` (7 Deltas × 2 Vorzeichen × 65536 PCM-Werte) gegen 32-Bit-ASM-
 Referenz: **917504/917504 PASS**. Die Operation ist korrekt; Fresh8 bleibt
 wegen des Integrationsfehlers verworfen.
+
+## Fresh8-Diagnose
+
+- Frischer ASM-Test: PCM-Operation `add.w/sub.w + bvc` **917504/917504 PASS**.
+- Fresh8 **nur im Mono-Makro** (`F_MONO_NIB`) → reproduzierbar **Line 1010**.
+- Also liegt der Fehler in der **Mono-Integration/Makro**, nicht in der Arithmetik.
+- Ein `ext.l`-only-Gegenversuch konnte wegen V4/ASH-Blockade nicht sauber laufen.
+- **Kein Fresh8-Performancegewinn nachweisbar**; Fresh7 bleibt Produktivstand.

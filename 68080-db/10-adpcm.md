@@ -107,3 +107,9 @@ Golden/Repeat PASS. **Gut:** weniger Instruktionen im häufigen In-Range-Fall.
 **Line-1010-Crash** im Golden-Test. Nicht sicher; Fresh7 bleibt Produktiv.
 Lehre: 16-Bit-Overflow-Clamping für den 32-Bit-PCM-State erst isoliert
 verifizieren, nicht direkt in den Decoder patchen.
+
+## Fresh8 – Diagnose
+
+PCM-Operation isoliert per ASM: **917504/917504 PASS**. Fresh8-Mono-Patch
+allein crasht aber mit Line 1010. Fehler liegt in der Mono-Makrointegration,
+nicht in `add.w/sub.w + bvc`. Kein Performancegewinn messbar; Fresh7 bleibt.
