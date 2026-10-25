@@ -5,3 +5,9 @@
 /profile_test
 /profile_test3
 /pipe_test
+/auto-build/
+/auto-results/
+/golden_test_auto
+/repeat_test_auto
+__pycache__/
+*.pyc
