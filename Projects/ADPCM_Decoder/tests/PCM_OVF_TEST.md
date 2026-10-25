@@ -20,11 +20,26 @@ Ziel: `add.w`/`sub.w` + `bvc`-Clamp gegen C-Referenz prüfen, ohne den Decoder.
 
 ## Status
 
-Test gebaut als `pcm_ovf_v5`; V4 war beim Lauf nicht stabil erreichbar
-(Ping 50 %, ASH-Timeout). Nach Power-Cycle:
+Der große Test (`pcm_ovf_v5`, ~4,8 Mio. Calls) lief nach 240 s nicht durch;
+V4 verlor dabei Netz/ASH. Zusätzlich gebaut: **`pcm_one32`** (nur drei
+Einzelaufrufe) als kleinster ABI/Logik-Test.
+
+V4 ist aktuell nur sporadisch erreichbar (Ping 50 %, ACP/ASH-Fehler).
+Nach Power-Cycle:
 
 ```bash
 ram:pcm_ovf_v5
 ```
 
 Erwartung: `PCM_OVF;checked=...;PASS`.
+
+
+## Minimaltest
+
+`pcm_one32` prüft:
+
+- `pcm_ovf(-1, 1, 0)` → 0
+- `pcm_ovf(32767, 1, 0)` → 32767
+- `pcm_ovf(-32768, 1, 1)` → -32768
+
+Das ist der erste Lauf nach dem Neustart; erst danach den großen Test.

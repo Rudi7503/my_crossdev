@@ -332,3 +332,11 @@ und `ext.l` ersetzen. Golden-Test stürzt reproduzierbar mit **Line 1010
 
 Fresh7 bleibt Produktivstand. Die Ursache ist nicht isoliert; der Ansatz darf
 erst nach einem separaten Minimal-Harness-Test wiederverwendet werden.
+
+
+## PCM-Overflow-Mikrotest (offen)
+
+Isolierter Test `tests/pcm_ovf.s` + `pcm_ovf_test.c`; C-`int` ist auf
+m68k-amigaos **16 Bit**, daher `int32_t` und Long-Argumente. Der große Test
+läuft noch nicht stabil durch; V4 verliert während des Laufs das Netz.
+Fresh7 bleibt Produktivstand.
