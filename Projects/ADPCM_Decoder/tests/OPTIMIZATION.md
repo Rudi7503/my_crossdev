@@ -323,3 +323,12 @@ PASS.
 
 Golden Fresh7: MS **698.715**, Mono **551.802**.
 Produktiv: **Fresh7**; Fresh6-Backup: `experiments/decoder_4bit_fresh6_prod.s`.
+
+## Fresh8 – 16-Bit-Overflow-PCM (verworfen, Crash)
+
+Versuch: PCM-`add.l`/`sub.l` + zwei Clamps durch `add.w`/`sub.w` + `bvc`
+und `ext.l` ersetzen. Golden-Test stürzt reproduzierbar mit **Line 1010
+(8000000A)** ab (auch nach Neustart). **Nicht übernommen.**
+
+Fresh7 bleibt Produktivstand. Die Ursache ist nicht isoliert; der Ansatz darf
+erst nach einem separaten Minimal-Harness-Test wiederverwendet werden.

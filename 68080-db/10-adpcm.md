@@ -100,3 +100,10 @@ Vorzeichens von `mid` auf ±32767/−32768 geklemmt. Kein 32-Bit-Clamp-Pfad.
 
 Gemessen: MS **1046 → 1027**, Stereo 980 → 978, Mono 819 (Rauschen).
 Golden/Repeat PASS. **Gut:** weniger Instruktionen im häufigen In-Range-Fall.
+
+## Fresh8 – PCM-Word-Overflow (verworfen)
+
+`add.w`/`sub.w` + `bvc` + `ext.l` für PCM-Clamps: reproduzierbarer
+**Line-1010-Crash** im Golden-Test. Nicht sicher; Fresh7 bleibt Produktiv.
+Lehre: 16-Bit-Overflow-Clamping für den 32-Bit-PCM-State erst isoliert
+verifizieren, nicht direkt in den Decoder patchen.
