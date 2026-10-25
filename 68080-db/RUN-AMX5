@@ -1,0 +1,6 @@
+; RUN-AMX5 - C2P crash candidate with fixed stack counters
+CD "Ram Disk:"
+If NOT EXISTS "Ram Disk:LOGS"
+    MakeDir "Ram Disk:LOGS"
+EndIf
+AMX-005-PERF3

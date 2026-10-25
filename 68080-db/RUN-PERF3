@@ -1,0 +1,7 @@
+; RUN-PERF3 - FUS-001 + AMX-001 with fixed stack counters
+CD "Ram Disk:"
+If NOT EXISTS "Ram Disk:LOGS"
+    MakeDir "Ram Disk:LOGS"
+EndIf
+FUS-001-PERF3
+AMX-001-PERF3

@@ -1,0 +1,6 @@
+; RUN-ONE - create LOGS and run the v5 AMX-001 counter test
+CD "Ram Disk:"
+If NOT EXISTS "Ram Disk:LOGS"
+    MakeDir "Ram Disk:LOGS"
+EndIf
+AMX-001-PERF

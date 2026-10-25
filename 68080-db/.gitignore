@@ -1,0 +1,7 @@
+measurements/
+bin/
+bin-*/
+entry-backup-*/
+a.out
+*.o
+build-*/

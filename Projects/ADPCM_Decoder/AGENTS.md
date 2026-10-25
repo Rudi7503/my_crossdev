@@ -43,3 +43,13 @@ Details: `tests/AUTOMATION.md`.
 `tests/live_runner.py` liest COM9 über `tests/serial_log.py` und resettet
 den Timeout bei jedem `ALIVE`/`DONE`. `auto_opt.py` klassifiziert Crashs über
 RAM-Canary + Screenshot. 30 ALIVE-Zeilen im Repeat-Lauf verifiziert.
+
+## GitHub-Pflicht
+
+Nach jeder Änderung:
+
+1. `python3 tests/auto_opt.py` bzw. passenden Test ausführen
+2. Ergebnis/Doku aktualisieren
+3. `git add` der Quellen/Tests/Doku
+4. **committen und pushen** – nichts Unpushed liegen lassen
+5. Generierte Binaries/Logs bleiben gitignored
