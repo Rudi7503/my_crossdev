@@ -294,3 +294,32 @@ Eine Instruktion weniger pro Chunk. Ergebnis:
 
 Golden Fresh6: Stereo 596.528, MS 713.774, Mono 565.790.
 Produktiv: **Fresh6**; Fresh3-Backup: `experiments/decoder_4bit_fresh3_prod.s`.
+
+## Fresh7 – 16-Bit-Overflow-Matrix (übernommen)
+
+MS-Matrix ohne 32-Bit-Clamp-Ketten:
+
+```asm
+move.w  d2,d0
+add.w   d4,d0
+bvc.s   .mlok\@
+tst.w   d2
+bge.s   .mlmax\@
+move.w  #-32768,d0
+bra.s   .mlok\@
+.mlmax\@:
+move.w  #32767,d0
+.mlok\@:
+```
+
+Bei Überlauf entscheidet das Vorzeichen von `mid` über Min/Max. Golden/Repeat
+PASS.
+
+| Modus | Fresh6 | Fresh7 |
+|---|---:|---:|
+| Stereo | 980 | **978** |
+| MS | 1046 | **1027** |
+| Mono | 816 | 819 |
+
+Golden Fresh7: MS **698.715**, Mono **551.802**.
+Produktiv: **Fresh7**; Fresh6-Backup: `experiments/decoder_4bit_fresh6_prod.s`.

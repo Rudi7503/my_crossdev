@@ -1,6 +1,6 @@
 # ADPCM Decoder – Agent Guide
 
-Produktivstand: **Fresh6 (Stereo geloopt mit cmpa-Zähler, MS/Mono unrolled)** in `decoder_4bit.s`.
+Produktivstand: **Fresh7 (Stereo cmpa, MS/Mono unrolled, 16-Bit-Overflow-Matrix)** in `decoder_4bit.s`.
 
 ## Pflicht vor jeder Änderung
 

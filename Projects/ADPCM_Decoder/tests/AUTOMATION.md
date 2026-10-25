@@ -84,7 +84,7 @@ Ergebnisdateien; der serielle Mitschnitt ist optional.
 
 ## Aktueller Stand
 
-- Produktiv: **Fresh6** (Stereo geloopt mit cmpa-Zähler, MS/Mono unrolled; d0/d1-Nibbles, d6/d7-Temps)
+- Produktiv: **Fresh7** (Stereo cmpa, MS/Mono unrolled, 16-Bit-Overflow-Matrix; d0/d1-Nibbles, d6/d7-Temps)
 - Golden + 100×: PASS
 - Letzter automatisierter Lauf: `tests/auto-results/opt9-20261025-110250`
 - Optimierungsverlauf: `tests/OPTIMIZATION.md`

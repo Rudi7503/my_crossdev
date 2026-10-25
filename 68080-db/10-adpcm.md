@@ -92,3 +92,11 @@ bne     loop
 
 Gemessen: Stereo 1001 → **980**, MS 1047 → 1046, Mono 816 → 816.
 **Gut** für Adressregister-Zähler; ein `cmpa` ist billiger als drei Moves.
+
+## Fresh7 – 16-Bit-Overflow-Matrix
+
+MS-Matrix mit `add.w`/`sub.w` + `bvc`; nur bei Überlauf wird anhand des
+Vorzeichens von `mid` auf ±32767/−32768 geklemmt. Kein 32-Bit-Clamp-Pfad.
+
+Gemessen: MS **1046 → 1027**, Stereo 980 → 978, Mono 819 (Rauschen).
+Golden/Repeat PASS. **Gut:** weniger Instruktionen im häufigen In-Range-Fall.

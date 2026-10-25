@@ -174,28 +174,26 @@ F_MS_PAIR MACRO
             move.w  #88,d5
 .rdone\@:
 
-            move.l  d2,d0
-            add.l   d4,d0
-            move.l  d2,d1
-            sub.l   d4,d1
-            cmp.l   #32767,d0
-            ble     .mlmin\@
-            move.l  #32767,d0
-            bra     .mr\@
-.mlmin\@:
-            cmp.l   #-32768,d0
-            bge     .mr\@
-            move.l  #-32768,d0
-.mr\@:
-            cmp.l   #32767,d1
-            ble     .mrmin\@
-            move.l  #32767,d1
-            bra     .mpack\@
-.mrmin\@:
-            cmp.l   #-32768,d1
-            bge     .mpack\@
-            move.l  #-32768,d1
-.mpack\@:
+            move.w  d2,d0
+            add.w   d4,d0
+            bvc.s   .mlok\@
+            tst.w   d2
+            bge.s   .mlmax\@
+            move.w  #-32768,d0
+            bra.s   .mlok\@
+.mlmax\@:
+            move.w  #32767,d0
+.mlok\@:
+            move.w  d2,d1
+            sub.w   d4,d1
+            bvc.s   .mrok\@
+            tst.w   d2
+            bge.s   .mrmax\@
+            move.w  #-32768,d1
+            bra.s   .mrok\@
+.mrmax\@:
+            move.w  #32767,d1
+.mrok\@:
             swap    d0
             move.w  d1,d0
             move.l  d0,(a1)+
