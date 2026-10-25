@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include "uart_asm.h"
+#include "lifecycle.h"
 typedef struct __attribute__((packed, aligned(2))) { int32_t pcm; int16_t index; } Chan;
 extern uint32_t decode_4bit_stereo_asm(const uint8_t*,int16_t*,void*,void*,uint32_t);
 extern uint32_t decode_4bit_ms_asm(const uint8_t*,int16_t*,void*,void*,uint32_t);
@@ -36,11 +36,11 @@ static void run(const char *name,int mode){
 }
 int main(void){
     __asm__ __volatile__("ori.w #0x0800,%%sr" ::: "cc");
-    uart_init(); uart_puts("BEGIN;PIPE3\n"); uart_flush();
+    TEST_START("pipe_test");
     rep=fopen("Ram Disk:ADPCM_PIPE.txt","w"); if(!rep)rep=stdout;
     fprintf(rep,"ADPCM 4-BIT PIPE USAGE (512 blocks, 128 warmup)\n");
     run("STEREO",0); run("MS",1); run("MONO",2);
-    uart_puts("END\n"); uart_flush();
+    TEST_DONE("pipe_test");
     if(rep!=stdout)fclose(rep);
     return 0;
 }

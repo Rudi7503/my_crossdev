@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#include "uart_asm.h"
+#include "lifecycle.h"
 typedef struct __attribute__((packed, aligned(2))) { int32_t pcm; int16_t index; } Chan;
 extern uint32_t decode_4bit_stereo_asm(const uint8_t*,int16_t*,void*,void*,uint32_t);
 extern uint32_t decode_4bit_ms_asm(const uint8_t*,int16_t*,void*,void*,uint32_t);
@@ -49,4 +49,4 @@ static void run(const char*name,int mode){
             name,sorted[0],sorted[50],sorted[99],sum/100.0,sorted[95],fail?"FAIL":"PASS");
     printf("REPEAT;%s;min=%u;median=%u;avg=%.1f;%s\n",name,sorted[0],sorted[50],sum/100.0,fail?"FAIL":"PASS");
 }
-int main(void){__asm__ __volatile__("ori.w #0x0800,%%sr":::"cc");uart_init();uart_puts("BEGIN;REPEATOPT\n"); uart_flush();rep=fopen("Ram Disk:ADPCM_REPEAT.txt","w");if(!rep)rep=stdout;fprintf(rep,"ADPCM 4-BIT 100x REPEAT (state reset, C reference)\n");run("STEREO",0);run("MS",1);run("MONO",2);if(rep!=stdout)fclose(rep);return 0;}
+int main(void){__asm__ __volatile__("ori.w #0x0800,%%sr":::"cc");TEST_START("repeat_test");rep=fopen("Ram Disk:ADPCM_REPEAT.txt","w");if(!rep)rep=stdout;fprintf(rep,"ADPCM 4-BIT 100x REPEAT (state reset, C reference)\n");run("STEREO",0);run("MS",1);run("MONO",2);TEST_DONE("repeat_test");if(rep!=stdout)fclose(rep);return 0;}

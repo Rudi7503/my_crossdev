@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include "uart_asm.h"
+#include "lifecycle.h"
 
 typedef struct __attribute__((packed, aligned(2))) { int32_t pcm; int16_t index; } Chan;
 
@@ -145,8 +145,7 @@ static int run_case(const char *name, int mode, uint32_t blocks, int edge) {
 
 int main(void) {
     __asm__ __volatile__("ori.w #0x0800,%%sr" ::: "cc");
-    uart_init();
-    uart_puts("BEGIN;GOLDENOPT\n"); uart_flush(); /* Apollo E-register task state */
+    TEST_START("golden_test"); /* Apollo E-register task state */
     rep = fopen("Ram Disk:ADPCM_GOLDEN.txt", "w");
     if (!rep) rep = stdout;
     fprintf(rep, "ADPCM 4-BIT GOLDEN TEST\n");
@@ -162,7 +161,7 @@ int main(void) {
 
     fprintf(rep, "RESULT;%s\n", fail ? "FAIL" : "PASS");
     printf("RESULT;%s\n", fail ? "FAIL" : "PASS");
-    uart_puts("END\n");
+    TEST_DONE("golden_test");
     if (rep != stdout) fclose(rep);
     return fail ? 1 : 0;
 }

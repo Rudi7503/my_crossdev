@@ -181,6 +181,123 @@ _decode_4bit_stereo_asm:
 ; ==============================================================================
 ; 2. DECODER: 4-BIT MID-SIDE (M/S MATRIX)
 ; ==============================================================================
+MS_PAIR MACRO
+
+            move.l  e0,d0
+            andi.l  #15,d0
+            move.l  d0,e2
+            lsr.l   #4,e0
+            move.l  e0,d0
+            andi.l  #15,d0
+            move.l  d0,e3
+            lsr.l   #4,e0
+
+            move.w  d3,d0
+            lsl.w   #3,d0
+            move.l  e2,d1
+            and.l   #7,d1
+            add.w   d0,d1
+            move.w  (a4,d1.w*2),d1
+            move.l  d1,e4
+
+            move.w  d5,d0
+            lsl.w   #3,d0
+            move.l  e3,d1
+            and.l   #7,d1
+            add.w   d0,d1
+            move.w  (a4,d1.w*2),d1
+            move.l  d1,e5
+
+            move.l  e2,d0
+            move.l  e4,d1
+            btst    #3,d0
+            beq     .addL\@
+            sub.l   d1,d2
+            bra     .clampL\@
+.addL\@:
+            add.l   d1,d2
+.clampL\@:
+            cmp.l   #32767,d2
+            ble     .minL\@
+            move.l  #32767,d2
+            bra     .idxL\@
+.minL\@:
+            cmp.l   #-32768,d2
+            bge     .idxL\@
+            move.l  #-32768,d2
+.idxL\@:
+            move.w  d0,d1
+            andi.w  #7,d1
+            add.w   (a6,d1.w*2),d3
+            tst.w   d3
+            bge     .idxLmax\@
+            moveq   #0,d3
+            bra     .idxLdone\@
+.idxLmax\@:
+            cmp.w   #88,d3
+            ble     .idxLdone\@
+            move.w  #88,d3
+.idxLdone\@:
+
+            move.l  e3,d0
+            move.l  e5,d1
+            btst    #3,d0
+            beq     .addR\@
+            sub.l   d1,d4
+            bra     .clampR\@
+.addR\@:
+            add.l   d1,d4
+.clampR\@:
+            cmp.l   #32767,d4
+            ble     .minR\@
+            move.l  #32767,d4
+            bra     .idxR\@
+.minR\@:
+            cmp.l   #-32768,d4
+            bge     .idxR\@
+            move.l  #-32768,d4
+.idxR\@:
+            move.w  d0,d1
+            andi.w  #7,d1
+            add.w   (a6,d1.w*2),d5
+            tst.w   d5
+            bge     .idxRmax\@
+            moveq   #0,d5
+            bra     .idxRdone\@
+.idxRmax\@:
+            cmp.w   #88,d5
+            ble     .idxRdone\@
+            move.w  #88,d5
+.idxRdone\@:
+
+            move.l  d2,d0
+            add.l   d4,d0
+            move.l  d2,d1
+            sub.l   d4,d1
+
+            cmp.l   #32767,d0
+            ble     .msLmin\@
+            move.l  #32767,d0
+            bra     .msR\@
+.msLmin\@:
+            cmp.l   #-32768,d0
+            bge     .msR\@
+            move.l  #-32768,d0
+.msR\@:
+            cmp.l   #32767,d1
+            ble     .msRmin\@
+            move.l  #32767,d1
+            bra     .msPack\@
+.msRmin\@:
+            cmp.l   #-32768,d1
+            bge     .msPack\@
+            move.l  #-32768,d1
+.msPack\@:
+            swap    d0
+            move.w  d1,d0
+            move.l  d0,(a1)+
+        ENDM
+
 _decode_4bit_ms_asm:
             movem.l d2-d7/a2-a6,-(a7)
 
@@ -212,48 +329,7 @@ _decode_4bit_ms_asm:
             movex.l (a0)+,e0        
             moveq   #3,d7                   ; 4 M/S-Paare
 .ms_pair_loop_long:
-            move.l  e0,d0                   ; Mid dekodieren
-            andi.l  #15,d0           
-            bsr     decode_primary          
-
-            lsr.l   #4,e0                   ; Side dekodieren
-            move.l  e0,d0           
-            andi.l  #15,d0           
-            bsr     decode_secondary        
-
-            ; --- MATRIX (L = Mid+Side, R = Mid-Side) ---
-            move.l  d2,d0           
-            add.l   d4,d0                   ; D0 = Links
-            move.l  d2,d1           
-            sub.l   d4,d1                   ; D1 = Rechts
-
-            ; Clamping Links (D0)
-            cmp.l   #32767,d0
-            ble     .ms_chk_min_L
-            move.l  #32767,d0
-            bra     .ms_clamp_R
-.ms_chk_min_L:
-            cmp.l   #-32768,d0
-            bge     .ms_clamp_R
-            move.l  #-32768,d0
-            
-.ms_clamp_R:
-            ; Clamping Rechts (D1)
-            cmp.l   #32767,d1
-            ble     .ms_chk_min_R
-            move.l  #32767,d1
-            bra     .ms_pack
-.ms_chk_min_R:
-            cmp.l   #-32768,d1
-            bge     .ms_pack
-            move.l  #-32768,d1
-
-.ms_pack:
-            swap    d0                      ; 32-Bit Packing
-            move.w  d1,d0           
-            move.l  d0,(a1)+        
-
-            lsr.l   #4,e0           
+            MS_PAIR
             dbf     d7,.ms_pair_loop_long
             dbf     d6,.ms_chunk_loop
 
@@ -263,43 +339,7 @@ _decode_4bit_ms_asm:
             move.b  (a0)+,e0        
             moveq   #0,d7                   ; 1 M/S Paar
 .ms_pair_loop_byte:
-            move.l  e0,d0
-            andi.l  #15,d0
-            bsr     decode_primary
-            
-            lsr.l   #4,e0
-            move.l  e0,d0
-            andi.l  #15,d0
-            bsr     decode_secondary
-
-            move.l  d2,d0           
-            add.l   d4,d0                   ; D0 = Links
-            move.l  d2,d1           
-            sub.l   d4,d1                   ; D1 = Rechts
-
-            cmp.l   #32767,d0
-            ble     .ms_chk_min_L2
-            move.l  #32767,d0
-            bra     .ms_clamp_R2
-.ms_chk_min_L2:
-            cmp.l   #-32768,d0
-            bge     .ms_clamp_R2
-            move.l  #-32768,d0
-.ms_clamp_R2:
-            cmp.l   #32767,d1
-            ble     .ms_chk_min_R2
-            move.l  #32767,d1
-            bra     .ms_pack2
-.ms_chk_min_R2:
-            cmp.l   #-32768,d1
-            bge     .ms_pack2
-            move.l  #-32768,d1
-.ms_pack2:
-            swap    d0
-            move.w  d1,d0
-            move.l  d0,(a1)+
-
-            lsr.l   #4,e0
+            MS_PAIR
             dbf     d7,.ms_pair_loop_byte
             dbf     d6,.ms_byte_loop
 

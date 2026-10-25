@@ -109,3 +109,24 @@ Golden **PASS**; 100× **PASS**:
 
 MS/Mono-Quellcode ist unverändert; die Werte profitieren von Layout/Codegröße.
 `decoder_4bit.s` = Opt8; Hauptdecoder gebaut.
+
+## Opt9 – E-Register MS-Pair (final, produktiv)
+
+MS nutzt jetzt denselben E-Scratch-Pair-Body wie Stereo, gefolgt von der
+Mid/Side-Matrix:
+
+- E2/E3 = Mid/Side-Nibble
+- E4/E5 = Mid/Side-Delta
+- `d6/d7` bleiben Loop-Zähler
+- keine `bsr decode_primary/secondary` mehr im MS-Pfad
+
+Golden **PASS**; 100× **PASS**:
+
+| Modus | Opt8 MIN/Med | Opt9 MIN/Med |
+|---|---:|---:|
+| Stereo | 1136 / 1137 | 1135 / 1135 |
+| MS | 1466 / 1467 | **1399 / 1399** |
+| Mono | 1196 / 1196 | 1196 / 1197 |
+
+MS-Golden 512: **746.255** statt 800.280 (~−6,7 %).
+`decoder_4bit.s` = Opt9; Hauptdecoder gebaut.
