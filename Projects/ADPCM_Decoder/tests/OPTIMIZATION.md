@@ -340,3 +340,8 @@ Isolierter Test `tests/pcm_ovf.s` + `pcm_ovf_test.c`; C-`int` ist auf
 m68k-amigaos **16 Bit**, daher `int32_t` und Long-Argumente. Der große Test
 läuft noch nicht stabil durch; V4 verliert während des Laufs das Netz.
 Fresh7 bleibt Produktivstand.
+
+
+Minimaltest PCM-Overflow auf V4: **PASS** (`ONE32 0 32767 -32768`).
+Der große Flächentest ist wegen C-Referenz-/Loop-Problemen noch nicht
+belastbar; keine Produktivänderung.

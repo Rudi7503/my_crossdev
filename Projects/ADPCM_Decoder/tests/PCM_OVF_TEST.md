@@ -43,3 +43,21 @@ Erwartung: `PCM_OVF;checked=...;PASS`.
 - `pcm_ovf(-32768, 1, 1)` → -32768
 
 Das ist der erste Lauf nach dem Neustart; erst danach den großen Test.
+
+
+## Ergebnis Minimaltest (V4, Core 11350)
+
+```text
+ONE32 0 32767 -32768
+PASS
+```
+
+Das bestätigt die drei kritischen Fälle:
+
+- `-1 + 1 = 0`
+- `32767 + 1` → `32767` (Clamp)
+- `-32768 - 1` → `-32768` (Clamp)
+
+Der große C-Test ist noch **nicht belastbar**: Die C-Referenz liefert trotz
+`int32_t`/`volatile` Werte außerhalb int16. Das ist ein Test-/Compilerproblem,
+kein Freibrief für Fresh8. Fresh7 bleibt Produktivstand.
