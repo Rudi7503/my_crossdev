@@ -68,3 +68,5 @@ Projects/ApolloExplorer/AmigaIconReader/AmigaIconReader
 # im Index landen - dann fehlt beim Klon der Inhalt und es gibt keine
 # .gitmodules, die die Herkunft dokumentiert.
 Projects/ADPCM/
+__pycache__/
+*.pyc

@@ -70,3 +70,7 @@ Jedes Ergebnis muss die Core-Version enthalten:
 
 Vergleiche nur Ergebnisse derselben Core-Version. Aktuell: **Core 11350,
 PCR 1088/1, VCoreRev 0**.
+
+## Amiga-Fernsteuerung
+
+`Tools/amiga_tool.py` (amiagent 0.13.2, Port 7846) ist der lokale CLI-Bridge; Token nur in `~/.config/apollo-agent/env`. Kein Cline/API-Key nötig. Details: `Tools/AMIGA-TOOL.md`.
