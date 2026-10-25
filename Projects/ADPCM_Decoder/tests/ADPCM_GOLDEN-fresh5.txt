@@ -1,0 +1,14 @@
+ADPCM 4-BIT GOLDEN TEST
+  PRE;STEREO;blocks=1;ref0=-32760;al=-32768/0;ar=32767/88
+STEREO;PASS;blocks=1;cycles=2965;stateL=-32620/24;stateR=-32768/88;unwritten=0;OK
+  PRE;STEREO;blocks=512;ref0=12439;al=11625/48;ar=9117/18
+STEREO;PASS;blocks=512;cycles=590917;stateL=14146/86;stateR=32767/87;unwritten=0;OK
+  PRE;MS;blocks=1;ref0=-12277;al=-32768/0;ar=32767/88
+MS;PASS;blocks=1;cycles=7267;stateL=-32674/42;stateR=-32768/88;unwritten=0;OK
+  PRE;MS;blocks=512;ref0=-22791;al=-19165/26;ar=-3591/14
+MS;PASS;blocks=512;cycles=705556;stateL=32767/88;stateR=-12290/87;unwritten=0;OK
+  PRE;MONO;blocks=1;ref0=-32768;al=-32768/0;ar=32767/88
+MONO;PASS;blocks=1;cycles=5376;stateL=-23680/69;stateR=32767/88;unwritten=0;OK
+  PRE;MONO;blocks=512;ref0=-2386;al=-2360/35;ar=26386/42
+MONO;PASS;blocks=512;cycles=551168;stateL=8198/88;stateR=26386/42;unwritten=0;OK
+RESULT;PASS

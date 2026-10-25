@@ -258,3 +258,17 @@ Alle Ergebnisse in diesem Projekt beziehen sich auf:
 
 `auto_opt.py` speichert `core-before.json`, `core-after.json` und
 `core_before`/`core_after` in `summary.json`.
+
+## Fresh5 – branchless Vorzeichen (verworfen)
+
+Idee: `btst #3` + `beq/sub/bra/add` durch `btst/sne/ext/eor/sub/add` ersetzen.
+
+| Modus | Fresh3 | Fresh5 |
+|---|---:|---:|
+| Stereo | 1001 | 1047 |
+| MS | 1047 | 1112 |
+| Mono | 816 | 900 |
+
+**Schlechter** (4,6 % / 6,2 % / 10,3 %). Die Maske kostet 3–4 zusätzliche
+Instruktionen; der 68080-Branch-Predictor verkraftet das 50/50-Vorzeichen
+besser als erwartet. **Nicht übernommen.**

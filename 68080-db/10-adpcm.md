@@ -72,3 +72,9 @@ Siehe [11-adpcm-candidates.md](11-adpcm-candidates.md) für die
 Instruktions-/Schätzungsmatrix (gemessen vs. Hypothese).
 
 - `PCMPGTW`/`BSEL`: 4×16-Bit-Max in 7 Takten vs 33 Skalar (4,7×), aber kein 32-Bit-`PCMPGTL`; ADPCM-PCM/MS-Clamps bleiben 32-Bit.
+
+## Fresh5 – branchless Sign (verworfen)
+
+`btst/sne/ext/eor/sub/add` statt `btst/beq/sub/add`: 1047/1112/900 statt
+1001/1047/816. Mehr Instruktionen schlagen den gesparten Branch.
+Lehre: **Branchless ist nicht automatisch schneller**; bei 68080 erst messen.
