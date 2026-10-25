@@ -9,3 +9,11 @@ pcm_asm_test
 pcm_nosave_test
 one_pcm_nosave
 one_pcm_ovf_asm
+auto-build/
+auto-results/
+crash-results/
+crash_fixture
+golden_test
+golden_test_*
+repeat_test_*
+*.log
