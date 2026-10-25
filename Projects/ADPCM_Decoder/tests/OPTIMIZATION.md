@@ -345,3 +345,9 @@ Fresh7 bleibt Produktivstand.
 Minimaltest PCM-Overflow auf V4: **PASS** (`ONE32 0 32767 -32768`).
 Der große Flächentest ist wegen C-Referenz-/Loop-Problemen noch nicht
 belastbar; keine Produktivänderung.
+
+## PCM-Overflow: reiner ASM-Test PASS
+
+`pcm_asm_test` (7 Deltas × 2 Vorzeichen × 65536 PCM-Werte) gegen 32-Bit-ASM-
+Referenz: **917504/917504 PASS**. Die Operation ist korrekt; Fresh8 bleibt
+wegen des Integrationsfehlers verworfen.

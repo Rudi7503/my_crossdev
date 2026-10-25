@@ -61,3 +61,16 @@ Das bestätigt die drei kritischen Fälle:
 Der große C-Test ist noch **nicht belastbar**: Die C-Referenz liefert trotz
 `int32_t`/`volatile` Werte außerhalb int16. Das ist ein Test-/Compilerproblem,
 kein Freibrief für Fresh8. Fresh7 bleibt Produktivstand.
+
+## Reiner ASM-Test (belastbar)
+
+`pcm_asm_test` prüft 7 Deltas × 2 Vorzeichen × 65.536 PCM-Werte = **917.504**
+Fälle. Die Referenz wird in **32-Bit-ASM** berechnet, nicht in C.
+
+```text
+PCM_ASM;count=917504;expected=917504;PASS
+```
+
+Damit ist die Operation `add.w`/`sub.w` + Overflow-Clamp **bit-exakt bestätigt**.
+Fresh7 bleibt Produktivstand; Fresh8 ist damit nicht wegen der Operation,
+sondern wegen der Integration/des Patches gescheitert.
