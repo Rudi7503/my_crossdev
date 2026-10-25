@@ -1,0 +1,20 @@
+ADPCM 4-BIT GOLDEN TEST
+  PRE;STEREO;blocks=1;ref0=-32760;al=-32768/0;ar=32767/88
+  STEREO first mismatch: block=0 sample=5 asm=0 ref=-32768
+STEREO;FAIL;blocks=1;cycles=2280;stateL=-262144/24;stateR=-524288/88;unwritten=0;PCM
+  PRE;STEREO;blocks=512;ref0=12439;al=11625/48;ar=9117/18
+  STEREO first mismatch: block=1 sample=10 asm=0 ref=-32768
+STEREO;FAIL;blocks=512;cycles=889360;stateL=-247201792/86;stateR=-251658240/87;unwritten=0;PCM
+  PRE;MS;blocks=1;ref0=-12277;al=-32768/0;ar=32767/88
+  MS first mismatch: block=0 sample=1 asm=0 ref=-32768
+MS;FAIL;blocks=1;cycles=2672;stateL=-196608/42;stateR=-196608/88;unwritten=0;PCM
+  PRE;MS;blocks=512;ref0=-22791;al=-19165/26;ar=-3591/14
+  MS first mismatch: block=1 sample=5 asm=0 ref=-32768
+MS;FAIL;blocks=512;cycles=984926;stateL=-253689856/88;stateR=-253231104/87;unwritten=0;PCM
+  PRE;MONO;blocks=1;ref0=-32768;al=-32768/0;ar=32767/88
+  MONO first mismatch: block=0 sample=1 asm=0 ref=-32768
+MONO;FAIL;blocks=1;cycles=2217;stateL=-917504/69;stateR=32767/88;unwritten=0;PCM
+  PRE;MONO;blocks=512;ref0=-2386;al=-2360/35;ar=26386/42
+  MONO first mismatch: block=0 sample=17 asm=0 ref=32767
+MONO;FAIL;blocks=512;cycles=855343;stateL=-508755968/88;stateR=26386/42;unwritten=0;PCM
+RESULT;FAIL

@@ -130,3 +130,32 @@ Golden **PASS**; 100× **PASS**:
 
 MS-Golden 512: **746.255** statt 800.280 (~−6,7 %).
 `decoder_4bit.s` = Opt9; Hauptdecoder gebaut.
+
+## Unabhängige C-Neuimplementierung (verworfen)
+
+`experiments/decoder_4bit_fresh.c` wurde ohne Asm-Vorlage als reine
+C-Implementierung gebaut (`tests/build_fresh.sh`, `get_ccc.s`).
+
+Ergebnis: **Golden FAIL**, u. a.:
+
+```text
+MONO;FAIL;blocks=512;stateL=-508755968/88;PCM
+```
+
+Die C-Version ist damit weder bit-exakt noch als Performance-Vergleich
+verwertbar. Sie bleibt Experiment; produktiv ist weiterhin die Asm-Opt9.
+
+## AMMX / Pipes / Fusing – Stand
+
+- **AMMX:** nur `MOVEX.L` für den Bitstrom und `E0`–`E5` als Register/Scratch.
+  Keine AMMX-SIMD-Arithmetik (`padd/psub/pmul` = 0 Vorkommen).
+- **Parallele Pipes:** IEP-Messung (Opt3a): IEP1 ca. 76 %, IEP2 ca. 24–31 %,
+  **IEP3 = 0**. Kein explizites Pipe-Scheduling; L/R wird nicht echt
+  instruktionsparallel verwoben.
+- **Fusing/Bonding:** keine expliziten Fuse-/Bond-Paare; der Code nutzt
+  `EXG`, `BSR` und Tabellen, aber keine gezielte Fusing-Strategie.
+
+Damit sind AMMX, Pipe 2/3 und Fusing **nicht vollständig ausgenutzt**.
+Der Fresh-C-Versuch zeigt, dass ein reiner C-Neubau ohne ABI-/Alignment-
+Korrektur nicht trägt; ein neuer Asm-Ansatz wäre der nächste sinnvolle
+Vergleich.

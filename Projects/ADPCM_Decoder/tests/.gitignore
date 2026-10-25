@@ -13,3 +13,7 @@ __pycache__/
 *.pyc
 /crash-results/
 /crash_fixture
+/decoder_fresh.o
+/golden_test_fresh
+/repeat_test_fresh
+/get_ccc.o
