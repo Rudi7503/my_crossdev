@@ -176,3 +176,17 @@ eingebaut; **Verifikation steht noch aus**, weil die V4 neu gebootet werden muss
 
 Produktiv bleibt Opt9. Der Fresh-Asm-Kandidat ist ausdrücklich nicht
 freigegeben.
+
+### Fresh-Asm-Verifikation (fehlgeschlagen)
+
+Der korrigierte Fresh-Asm-Lauf (`d6`-High-Word gefixt) stürzt weiterhin ab:
+
+```text
+Software Failure
+Task: RAM:golden_test_freshasm
+Error: 80000005 - Division by zero
+PC: 00009DC6
+```
+
+Das ist kein gültiger Kandidat; die unrolled Makro-/Kontrollflussstruktur
+muss neu geprüft werden. Produktiv bleibt **Opt9**.
