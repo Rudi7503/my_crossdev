@@ -211,3 +211,17 @@ Golden 512: Stereo **589.315**, MS **715.725**, Mono **566.197**.
 
 Gegenüber Baseline: Stereo ~35,5 %, MS ~34,1 %, Mono ~40,7 % schneller.
 `decoder_4bit.s` = Fresh-Asm; Opt9-Backup: `experiments/decoder_4bit_opt9_prod.s`.
+
+## Fresh2/Fresh3 – selektives Chunk-Unrolling
+
+- **Fresh2:** alle Chunks unrolled → MS +15 %, Mono +15 %, Stereo kein Gewinn.
+- **Fresh3:** Stereo bleibt geloopet, MS/Mono unrolled → bester Kompromiss.
+
+| Modus | Fresh-Asm | Fresh3 |
+|---|---:|---:|
+| Stereo | 997 / 997 | 1001 / 1001 |
+| MS | 1237 / 1237 | **1047 / 1047** |
+| Mono | 963 / 963 | **816 / 816** |
+
+Golden Fresh3: Stereo 674.513, MS 716.661, Mono 556.172.
+`decoder_4bit.s` = Fresh3; Fresh-Asm-Backup: `experiments/decoder_4bit_fresh_prod.s`.

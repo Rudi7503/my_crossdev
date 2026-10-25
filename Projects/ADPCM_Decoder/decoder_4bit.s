@@ -317,26 +317,30 @@ _decode_4bit_ms_asm:
             tst.l   64(a7)
             beq     .ms_done
 .ms_block:
-            movea.l #3,a2
-.ms_chunk:
             movex.l (a0)+,e0
             F_MS_PAIR
             F_MS_PAIR
             F_MS_PAIR
             F_MS_PAIR
-            move.l  a2,d6
-            subq.l  #1,d6
-            move.l  d6,a2
-            bne     .ms_chunk
-            movea.l #3,a2
-.ms_byte:
+            movex.l (a0)+,e0
+            F_MS_PAIR
+            F_MS_PAIR
+            F_MS_PAIR
+            F_MS_PAIR
+            movex.l (a0)+,e0
+            F_MS_PAIR
+            F_MS_PAIR
+            F_MS_PAIR
+            F_MS_PAIR
             move.l  #0,e0
             move.b  (a0)+,e0
             F_MS_PAIR
-            move.l  a2,d6
-            subq.l  #1,d6
-            move.l  d6,a2
-            bne     .ms_byte
+            move.l  #0,e0
+            move.b  (a0)+,e0
+            F_MS_PAIR
+            move.l  #0,e0
+            move.b  (a0)+,e0
+            F_MS_PAIR
             subq.l  #1,64(a7)
             bne     .ms_block
 .ms_done:
@@ -367,8 +371,6 @@ _decode_4bit_mono_asm:
             tst.l   60(a7)
             beq     .mo_done
 .mo_block:
-            movea.l #3,a2
-.mo_chunk:
             movex.l (a0)+,e0
             F_MONO_NIB
             F_MONO_NIB
@@ -378,20 +380,36 @@ _decode_4bit_mono_asm:
             F_MONO_NIB
             F_MONO_NIB
             F_MONO_NIB
-            move.l  a2,d6
-            subq.l  #1,d6
-            move.l  d6,a2
-            bne     .mo_chunk
-            movea.l #3,a2
-.mo_byte:
+            movex.l (a0)+,e0
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            movex.l (a0)+,e0
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
+            F_MONO_NIB
             move.l  #0,e0
             move.b  (a0)+,e0
             F_MONO_NIB
             F_MONO_NIB
-            move.l  a2,d6
-            subq.l  #1,d6
-            move.l  d6,a2
-            bne     .mo_byte
+            move.l  #0,e0
+            move.b  (a0)+,e0
+            F_MONO_NIB
+            F_MONO_NIB
+            move.l  #0,e0
+            move.b  (a0)+,e0
+            F_MONO_NIB
+            F_MONO_NIB
             subq.l  #1,60(a7)
             bne     .mo_block
 .mo_done:
