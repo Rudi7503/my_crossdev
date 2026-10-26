@@ -1,18 +1,28 @@
-# 10 – ADPCM-4-Bit Case Study (verifiziert)
+# 10 – ADPCM Case Study (2/3/4/5/6-Bit & Hybrid M/S, verifiziert)
 
 **Projekt:** `Projects/ADPCM_Decoder`  
 **CPU:** Apollo 68080 / Vampire V4 / Core **11350** (ApolloControl), PCR 1088/1, VCoreRev 0  
-**Messung:** 100 Warmup + 100 Läufe, State-Reset, C-Referenz; MIN/Median.
+**Messung:** 100 Warmup + 100 Läufe (1 Block = 15 Bytes), State-Reset, C-Referenz + 512-Block-Golden; MIN/Median.
 
-## Ergebnis
+## Ergebnis 4-Bit (`decoder_4bit.s`)
 
-| Modus | Baseline | Opt9 | Fresh3 |
+| Modus | Baseline | Opt3 | Opt9 | Fresh3 | Fresh9 | **Fresh15 (Produktiv)** | Ersparnis |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Stereo | 1546 / 1548 | 1242 / 1243 | 1135 / 1135 | 1001 / 1001 | 848 / 848 | **784 / 784** | **−49,3 %** |
+| MS | 1876 / 1878 | 1526 / 1528 | 1399 / 1399 | 1047 / 1047 | 922 / 922 | **920 / 920** | **−51,0 %** |
+| Mono | 1624 / 1625 | 1256 / 1257 | 1196 / 1197 | 816 / 816 | 732 / 732 | **729 / 729** | **−55,1 %** |
+
+## Ergebnis 2-/3-/5-/6-Bit & Hybrid-M/S (Signed-32-Bit-Delta-Tabellen + Inline-Makros)
+
+| Modus | Baseline (MIN/Med) | **Signed-Table (MIN/Med)** | Ersparnis |
 |---|---:|---:|---:|
-| Stereo | 1546 / 1548 | 1135 / 1135 | 1001 / 1001 |
-| MS | 1876 / 1878 | 1401 / 1402 | **1047 / 1047** |
-| Mono | 1624 / 1625 | 1196 / 1196 | **816 / 816** |
+| 2-Bit Stereo / MS / Mono | 2443 / 2869 / 2335 | **1337 / 1763 / 1254** | **−45,3 % / −38,5 % / −46,3 %** |
+| 3-Bit Stereo / MS / Mono | 1941 / 2229 / 1805 | **1092 / 1380 / 1007** | **−43,7 % / −38,1 % / −44,2 %** |
+| 5-Bit Stereo / MS / Mono | 1356 / 1512 / 1236 | **538 / 699 / 503** | **−60,3 % / −53,8 % / −59,3 %** |
+| 6-Bit Stereo / MS / Mono | 1331 / 1457 / 1373 | **609 / 735 / 590** | **−54,2 % / −49,6 % / −57,0 %** |
+| Hybrid 3/2, 4/2, 5/3 M/S | 2411 / 2254 / 1755 | **1248 / 1358 / 958** | **−48,2 % / −39,8 % / −45,4 %** |
 
-Fresh3 = **ca. 35–50 %** schneller als Baseline; alle Golden/Repeat PASS.
+Alle 18 Modi sind über 512 Blöcke bit-exakt verifiziert (Golden PASS + 100× Repeat PASS).
 
 ## Gut (übernommen)
 
@@ -47,6 +57,12 @@ Fresh3 = **ca. 35–50 %** schneller als Baseline; alle Golden/Repeat PASS.
 - **ADP-105 – E2–E5-Scratch als Selbstzweck:**  
   Mehr E-Moves statt D-Register brachten keinen Vorteil; der D-Register-
   Unroll-Pfad ist schneller.
+- **ADP-106 – `m68k-amigaos-gcc -m68080 -O2` für C-Referenz/Test-Harnesse:**  
+  Das `-m68080`-Backend von GCC 6.5.0 emittiert bei `-O2` fehlerhafte
+  Kurz-Immediate-Opcodes (`moviw.l #-32768,d0` → `0x303d 0x8000` liefert auf
+  Core 11350 `-65536` statt `-32768`) und berechnet bei `moviw.l` innerhalb von
+  `dbf`-Schleifen ungerade Sprungziele (`51ca ffe7` → sofortiger Address-Error-Crash).
+  C-Code immer mit `-m68020 -O2` (oder `-O0`) übersetzen!
 
 ## Noch offen
 

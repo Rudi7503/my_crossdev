@@ -1,8 +1,39 @@
-# ADPCM 4-bit – Optimierung (final: Opt3)
+# ADPCM 68080 – Optimierungs-Referenz & Logbuch (Core 11350)
 
-## Produktivstand
+## Aktueller Produktivstand (Gesamtübersicht aller 18 Modi)
 
-`decoder_4bit.s` ist **Opt3**: `decode_primary` und `decode_secondary`
+Alle produktiven Decoder (`decoder_2bit.s`, `decoder_3bit.s`, `decoder_4bit.s`, `decoder_5bit.s`, `decoder_6bit.s`, `decoder_3_2ms.s`, `decoder_4_2ms.s`, `decoder_5_3ms.s`) nutzen auf **Core 11350 (PCR 1088/1, VCoreRev 0)** vorberechnete **Signed-32-Bit-Delta-Tabellen** (`dc.l`) und Inline-Makros ohne `bsr`/`rts`-Overhead und ohne `exg d6,a2`.
+
+### 100×-Repeat-Benchmark (1 Block = 15 Bytes, 100 Warmup + 100 Messläufe, MIN/Median in Takten)
+
+| Decoder / Modus | Samples/Block | Baseline (MIN/Med) | **Produktiv (MIN/Med)** | Ersparnis | Golden (512 Blöcke) |
+|---|---:|---:|---:|---:|---|
+| **2-Bit Stereo** | 30 Paare | 2443 / 2443 | **1337 / 1337** | **−45,3 %** | PASS (778.351 cyc) |
+| **2-Bit M/S** | 30 Paare | 2869 / 2869 | **1763 / 1763** | **−38,5 %** | PASS (1.002.541 cyc) |
+| **2-Bit Mono** | 60 Samples | 2335 / 2335 | **1254 / 1254** | **−46,3 %** | PASS (771.152 cyc) |
+| **3-Bit Stereo** | 20 Paare | 1941 / 1941 | **1092 / 1092** | **−43,7 %** | PASS (572.402 cyc) |
+| **3-Bit M/S** | 20 Paare | 2229 / 2229 | **1380 / 1380** | **−38,1 %** | PASS (713.650 cyc) |
+| **3-Bit Mono** | 40 Samples | 1805 / 1805 | **1007 / 1007** | **−44,2 %** | PASS (568.140 cyc) |
+| **4-Bit Stereo (`Fresh15`)** | 15 Paare | 1546 / 1548 | **784 / 784** | **−49,3 %** | PASS (589.315 cyc) |
+| **4-Bit M/S (`Fresh15`)** | 15 Paare | 1876 / 1878 | **920 / 920** | **−51,0 %** | PASS (616.910 cyc) |
+| **4-Bit Mono (`Fresh15`)** | 30 Samples | 1624 / 1625 | **729 / 729** | **−55,1 %** | PASS (459.075 cyc) |
+| **5-Bit Stereo** | 12 Paare | 1356 / 1356 | **538 / 538** | **−60,3 %** | PASS (379.266 cyc) |
+| **5-Bit M/S** | 12 Paare | 1512 / 1512 | **699 / 699** | **−53,8 %** | PASS (470.141 cyc) |
+| **5-Bit Mono** | 24 Samples | 1236 / 1236 | **503 / 503** | **−59,3 %** | PASS (349.885 cyc) |
+| **6-Bit Stereo** | 10 Paare | 1331 / 1331 | **609 / 609** | **−54,2 %** | PASS (336.226 cyc) |
+| **6-Bit M/S** | 10 Paare | 1457 / 1457 | **735 / 735** | **−49,6 %** | PASS (406.829 cyc) |
+| **6-Bit Mono** | 20 Samples | 1373 / 1373 | **590 / 590** | **−57,0 %** | PASS (328.392 cyc) |
+| **3/2-Bit Hybrid M/S** | 24 Paare | 2411 / 2411 | **1248 / 1248** | **−48,2 %** | PASS (872.075 cyc) |
+| **4/2-Bit Hybrid M/S** | 20 Paare | 2254 / 2254 | **1358 / 1358** | **−39,8 %** | PASS (765.683 cyc) |
+| **5/3-Bit Hybrid M/S** | 15 Paare | 1755 / 1755 | **958 / 958** | **−45,4 %** | PASS (909.672 cyc) |
+
+---
+
+## Chronologisches Optimierungs-Logbuch (4-Bit: Opt2 → Fresh15)
+
+### Opt3 (historischer Zwischenstand)
+
+`decode_primary` und `decode_secondary`
 berechnen das Delta über eine exakte **89×8-Tabelle**:
 
 ```text
@@ -426,6 +457,22 @@ Produktiv: **Fresh15**; Fresh14-Backup: `experiments/decoder_4bit_fresh14_prod.s
 - **Fresh16:** Delta-Tabelle auf 64 Byte ausgerichtet → Stereo **897** (statt 784), MS 919, Mono 730. **Verworfen.**
 - **Fresh17:** Stereo-Funktion auf 64 Byte ausgerichtet → Stereo **898**, MS 919, Mono 730. **Verworfen.**
 
-**Fresh15 bleibt Produktivstand: 784 / 920 / 729.**
+**Fresh15 bleibt Produktivstand (4-Bit): 784 / 920 / 729.**
 Layout-Änderungen sind auf dem 68080 extrem empfindlich; nur mit vollständigem
 100×-Lauf übernehmen.
+
+---
+
+## 2-/3-/5-/6-Bit & Hybrid-M/S (`3/2`, `4/2`, `5/3`): Signed-32-Bit-Delta-Tabellen (2026-10-26, übernommen)
+
+Das Erfolgsrezept aus `Fresh9` (vorberechnete `dc.l`-Tabelle mit vorzeichenbehafteten 32-Bit-Deltas + Inline-Makros ohne `bsr`/`rts` und ohne `exg d6,a2`, mit `d1` als einzigem Scratch-Register) wurde auf alle übrigen Decoder-Dateien übertragen:
+
+- **Backups der Originale:** `experiments/decoder_{2bit,3bit,5bit,6bit,3_2ms,4_2ms,5_3ms}_orig.s`
+- **Neue Produktiv-Implementierungen:** `decoder_{2bit,3bit,5bit,6bit,3_2ms,4_2ms,5_3ms}.s` (Kandidaten unter `experiments/decoder_*_signed.s`)
+- **Wichtiger Bugfix in `decoder_2bit_signed.s`:** Ursprünglich nutzten `DEC_L`/`DEC_R`/`DEC_M` die Register `d6` und `d7` als Scratch, die jedoch gleichzeitig die `dbf`-Schleifenzähler waren. Umstellung auf `d1` als einziges Scratch-Register behebt die Kollision und spart zudem Instruktionen.
+- **Kritischer Compiler-Befund (`m68k-amigaos-gcc -m68080 -O2`):**
+  - Die scheinbaren C-Referenz-Abweichungen (`PCM = -65536` statt `-32768`) und Abstürze beim Start von C-Test-Binaries (`debug2`, `repeat3`) lagen an fehlerhafter Code-Generierung im `-m68080`-Backend von GCC 6.5.0 bei `-O2`:
+    1. `moviw.l #-32768, d0` (Opcode `0x303d 0x8000`) schreibt auf Core 11350 `0xFFFF0000` (`-65536`).
+    2. In `rng()`-Initialisierungsschleifen berechnet GCC um `moviw.l #7679, d2` (`0x343d 0x1dff`) eine ungerade Sprungdistanz (`dbf d2, <ungerade_adresse>`, `51ca ffe7`), was sofort einen Address-Error-Guru auslöst.
+  - **Lösung:** Alle C-Test-Harnesse werden mit `-m68020 -O2` kompiliert und gegen die `vasm -m68080`-Objekte gelinkt.
+- **Ergebnis:** Alle 15 Modi in `golden_all_signed` (je 512 Blöcke) **PASS**, alle 100×-Repeat-Tests (`repeat2`, `repeat3`, `repeat5`, `repeat6`, `repeat_hybrid`) **PASS** mit **38,1 % bis 60,3 % weniger Taktzyklen** (siehe Gesamttabelle oben). Hauptprojekt `ADPCM_Decoder` baut sauber.

@@ -1,3 +1,86 @@
+
+; Signed 2-bit decode macros, one code in d0 (0..3), uses only d1 as scratch
+DEC_L MACRO
+            move.w  d3,d1
+            lsl.w   #2,d1
+            add.w   d0,d1
+            move.l  (a4,d1.w*4),d1
+            add.l   d1,d2
+            cmp.l   #32767,d2
+            ble.s   .lmin\@
+            move.l  #32767,d2
+            bra.s   .lq\@
+.lmin\@:
+            cmp.l   #-32768,d2
+            bge.s   .lq\@
+            move.l  #-32768,d2
+.lq\@:
+            add.w   (a2,d0.w*2),d3
+            tst.w   d3
+            bge.s   .lmax\@
+            moveq   #0,d3
+            bra.s   .li\@
+.lmax\@:
+            cmp.w   #88,d3
+            ble.s   .li\@
+            move.w  #88,d3
+.li\@:
+        ENDM
+
+DEC_R MACRO
+            move.w  d5,d1
+            lsl.w   #2,d1
+            add.w   d0,d1
+            move.l  (a4,d1.w*4),d1
+            add.l   d1,d4
+            cmp.l   #32767,d4
+            ble.s   .rmin\@
+            move.l  #32767,d4
+            bra.s   .rq\@
+.rmin\@:
+            cmp.l   #-32768,d4
+            bge.s   .rq\@
+            move.l  #-32768,d4
+.rq\@:
+            add.w   (a2,d0.w*2),d5
+            tst.w   d5
+            bge.s   .rmax\@
+            moveq   #0,d5
+            bra.s   .ri\@
+.rmax\@:
+            cmp.w   #88,d5
+            ble.s   .ri\@
+            move.w  #88,d5
+.ri\@:
+        ENDM
+
+DEC_M MACRO
+            move.w  d3,d1
+            lsl.w   #2,d1
+            add.w   d0,d1
+            move.l  (a4,d1.w*4),d1
+            add.l   d1,d2
+            cmp.l   #32767,d2
+            ble.s   .mmin\@
+            move.l  #32767,d2
+            bra.s   .mq\@
+.mmin\@:
+            cmp.l   #-32768,d2
+            bge.s   .mq\@
+            move.l  #-32768,d2
+.mq\@:
+            add.w   (a2,d0.w*2),d3
+            tst.w   d3
+            bge.s   .mmax\@
+            moveq   #0,d3
+            bra.s   .mi\@
+.mmax\@:
+            cmp.w   #88,d3
+            ble.s   .mi\@
+            move.w  #88,d3
+.mi\@:
+        ENDM
+
 ; ==============================================================================
 ; EXTREME OPTIMIZED 68080 ADPCM 2-BIT DECODER SUITE
 ; Enthält: Stereo (L/R), Mid-Side (M/S) und Mono
@@ -41,7 +124,8 @@ _decode_2bit_stereo_asm:
             move.w  4(a3),d5        
             ext.l   d5                      ; D5 = Index Rechts
 
-            lea     step_table(pc),a4       ; A4 = Tabelle
+            lea     delta2_table(pc),a4
+            lea     idx2_table(pc),a2       ; A4 = Tabelle
             tst.l   60(a7)                  ; Block Count check
             beq     .st_done
 
@@ -53,12 +137,12 @@ _decode_2bit_stereo_asm:
 .st_pair_loop_long:
             move.l  e0,d0                   ; Links dekodieren
             andi.l  #3,d0           
-            bsr     decode_primary          
+            DEC_L          
 
             lsr.l   #2,e0                   ; Rechts dekodieren
             move.l  e0,d0           
             andi.l  #3,d0           
-            bsr     decode_secondary        
+            DEC_R        
 
             move.w  d2,d1                   ; 32-Bit Packing [Links | Rechts]
             swap    d1              
@@ -77,12 +161,12 @@ _decode_2bit_stereo_asm:
 .st_pair_loop_byte:
             move.l  e0,d0
             andi.l  #3,d0
-            bsr     decode_primary
+            DEC_L
 
             lsr.l   #2,e0
             move.l  e0,d0
             andi.l  #3,d0
-            bsr     decode_secondary
+            DEC_R
 
             move.w  d2,d1
             swap    d1
@@ -134,7 +218,8 @@ _decode_2bit_ms_asm:
             move.w  4(a3),d5        
             ext.l   d5                      ; D5 = Index Side
 
-            lea     step_table(pc),a4       
+            lea     delta2_table(pc),a4
+            lea     idx2_table(pc),a2       
             tst.l   60(a7)                  
             beq     .ms_done
 
@@ -146,12 +231,12 @@ _decode_2bit_ms_asm:
 .ms_pair_loop_long:
             move.l  e0,d0                   ; Mid dekodieren
             andi.l  #3,d0           
-            bsr     decode_primary          
+            DEC_L          
 
             lsr.l   #2,e0                   ; Side dekodieren
             move.l  e0,d0           
             andi.l  #3,d0           
-            bsr     decode_secondary        
+            DEC_R        
 
             ; --- MATRIX (L = Mid+Side, R = Mid-Side) ---
             move.l  d2,d0           
@@ -197,12 +282,12 @@ _decode_2bit_ms_asm:
 .ms_pair_loop_byte:
             move.l  e0,d0
             andi.l  #3,d0
-            bsr     decode_primary
+            DEC_L
             
             lsr.l   #2,e0
             move.l  e0,d0
             andi.l  #3,d0
-            bsr     decode_secondary
+            DEC_R
 
             move.l  d2,d0           
             add.l   d4,d0                   ; D0 = Links
@@ -273,7 +358,8 @@ _decode_2bit_mono_asm:
             move.w  4(a5),d3        
             ext.l   d3                      ; D3 = Index Mono
 
-            lea     step_table(pc),a4       
+            lea     delta2_table(pc),a4
+            lea     idx2_table(pc),a2       
             tst.l   56(a7)                  ; Mono block_cnt Check
             beq     .mo_done
 
@@ -285,7 +371,7 @@ _decode_2bit_mono_asm:
 .mo_sample_loop_long:
             move.l  e0,d0           
             andi.l  #3,d0           
-            bsr     decode_primary          ; Dekodieren
+            DEC_M          ; Dekodieren
 
             move.w  d2,(a1)+                ; Schreibt 16-Bit Mono RAM
             
@@ -301,7 +387,7 @@ _decode_2bit_mono_asm:
 .mo_sample_loop_byte:
             move.l  e0,d0
             andi.l  #3,d0
-            bsr     decode_primary
+            DEC_M
 
             move.w  d2,(a1)+                ; 16-Bit Mono Write
 
@@ -330,112 +416,54 @@ _decode_2bit_mono_asm:
 ; ==============================================================================
 
 ; ------------------------------------------------------------------------------
-; decode_primary: Arbeitet fix auf D2 (PCM) und D3 (Index)
-; ------------------------------------------------------------------------------
-decode_primary:
-            move.w  (a4,d3.w*2),d1          ; Scaled Indexing
-            ext.l   d1              
-            move.l  d1,a2           
-            lsr.l   #1,d1           
+;
 
-            btst    #0,d0           
-            beq     .no_add_P       
-            add.l   a2,d1           
-.no_add_P:
-            btst    #1,d0           
-            beq     .add_delta_P    
-            sub.l   d1,d2           
-            bra     .clamp_pcm_P    
-.add_delta_P:
-            add.l   d1,d2           
-
-.clamp_pcm_P:
-            cmp.l   #32767,d2       
-            ble     .check_min_P    
-            move.l  #32767,d2       
-            bra     .update_idx_P   
-.check_min_P:
-            cmp.l   #-32768,d2      
-            bge     .update_idx_P   
-            move.l  #-32768,d2      
-
-.update_idx_P:
-            move.w  #-1,d1          
-            btst    #0,d0           
-            beq     .add_index_P    
-            move.w  #2,d1           
-.add_index_P:
-            add.w   d1,d3           
-
-            tst.w   d3              
-            bge     .idx_max_P      
-            moveq   #0,d3           
-            rts                     
-.idx_max_P:
-            cmp.w   #88,d3          
-            ble     .idx_done_P     
-            move.w  #88,d3          
-.idx_done_P:
-            rts                     
-
-; ------------------------------------------------------------------------------
-; decode_secondary: Arbeitet fix auf D4 (PCM) und D5 (Index)
-; ------------------------------------------------------------------------------
-decode_secondary:
-            move.w  (a4,d5.w*2),d1  
-            ext.l   d1              
-            move.l  d1,a2           
-            lsr.l   #1,d1           
-
-            btst    #0,d0           
-            beq     .no_add_S       
-            add.l   a2,d1           
-.no_add_S:
-            btst    #1,d0           
-            beq     .add_delta_S    
-            sub.l   d1,d4           
-            bra     .clamp_pcm_S    
-.add_delta_S:
-            add.l   d1,d4           
-
-.clamp_pcm_S:
-            cmp.l   #32767,d4       
-            ble     .check_min_S    
-            move.l  #32767,d4       
-            bra     .update_idx_S   
-.check_min_S:
-            cmp.l   #-32768,d4      
-            bge     .update_idx_S   
-            move.l  #-32768,d4      
-
-.update_idx_S:
-            move.w  #-1,d1          
-            btst    #0,d0           
-            beq     .add_index_S    
-            move.w  #2,d1           
-.add_index_S:
-            add.w   d1,d5           
-
-            tst.w   d5              
-            bge     .idx_max_S      
-            moveq   #0,d5           
-            rts                     
-.idx_max_S:
-            cmp.w   #88,d5          
-            ble     .idx_done_S     
-            move.w  #88,d5          
-.idx_done_S:
-            rts                     
-
-; ------------------------------------------------------------------------------
-; ADPCM STEP TABELLE
-; ------------------------------------------------------------------------------
-step_table:
-            dc.w    7,8,9,10,11,12,13,14,16,17,19,21,23,25,28,31
-            dc.w    34,37,41,45,50,55,60,66,73,80,88,97,107,118,130,143
-            dc.w    157,173,190,209,230,253,279,307,337,371,408,449,494,544,598,658
-            dc.w    724,796,876,963,1060,1166,1282,1411,1552,1707,1878,2066,2272,2499,2749,3024
-            dc.w    3327,3660,4026,4428,4871,5358,5894,6484,7132,7845,8630,9493,10442,11487,12635,13899
-            dc.w    15289,16818,18500,20350,22385,24623,27086,29794,32767
-
-            END
+            even
+delta2_table:
+            dc.l    3,10,-3,-10,4,12,-4,-12
+            dc.l    4,13,-4,-13,5,15,-5,-15
+            dc.l    5,16,-5,-16,6,18,-6,-18
+            dc.l    6,19,-6,-19,7,21,-7,-21
+            dc.l    8,24,-8,-24,8,25,-8,-25
+            dc.l    9,28,-9,-28,10,31,-10,-31
+            dc.l    11,34,-11,-34,12,37,-12,-37
+            dc.l    14,42,-14,-42,15,46,-15,-46
+            dc.l    17,51,-17,-51,18,55,-18,-55
+            dc.l    20,61,-20,-61,22,67,-22,-67
+            dc.l    25,75,-25,-75,27,82,-27,-82
+            dc.l    30,90,-30,-90,33,99,-33,-99
+            dc.l    36,109,-36,-109,40,120,-40,-120
+            dc.l    44,132,-44,-132,48,145,-48,-145
+            dc.l    53,160,-53,-160,59,177,-59,-177
+            dc.l    65,195,-65,-195,71,214,-71,-214
+            dc.l    78,235,-78,-235,86,259,-86,-259
+            dc.l    95,285,-95,-285,104,313,-104,-313
+            dc.l    115,345,-115,-345,126,379,-126,-379
+            dc.l    139,418,-139,-418,153,460,-153,-460
+            dc.l    168,505,-168,-505,185,556,-185,-556
+            dc.l    204,612,-204,-612,224,673,-224,-673
+            dc.l    247,741,-247,-741,272,816,-272,-816
+            dc.l    299,897,-299,-897,329,987,-329,-987
+            dc.l    362,1086,-362,-1086,398,1194,-398,-1194
+            dc.l    438,1314,-438,-1314,481,1444,-481,-1444
+            dc.l    530,1590,-530,-1590,583,1749,-583,-1749
+            dc.l    641,1923,-641,-1923,705,2116,-705,-2116
+            dc.l    776,2328,-776,-2328,853,2560,-853,-2560
+            dc.l    939,2817,-939,-2817,1033,3099,-1033,-3099
+            dc.l    1136,3408,-1136,-3408,1249,3748,-1249,-3748
+            dc.l    1374,4123,-1374,-4123,1512,4536,-1512,-4536
+            dc.l    1663,4990,-1663,-4990,1830,5490,-1830,-5490
+            dc.l    2013,6039,-2013,-6039,2214,6642,-2214,-6642
+            dc.l    2435,7306,-2435,-7306,2679,8037,-2679,-8037
+            dc.l    2947,8841,-2947,-8841,3242,9726,-3242,-9726
+            dc.l    3566,10698,-3566,-10698,3922,11767,-3922,-11767
+            dc.l    4315,12945,-4315,-12945,4746,14239,-4746,-14239
+            dc.l    5221,15663,-5221,-15663,5743,17230,-5743,-17230
+            dc.l    6317,18952,-6317,-18952,6949,20848,-6949,-20848
+            dc.l    7644,22933,-7644,-22933,8409,25227,-8409,-25227
+            dc.l    9250,27750,-9250,-27750,10175,30525,-10175,-30525
+            dc.l    11192,33577,-11192,-33577,12311,36934,-12311,-36934
+            dc.l    13543,40629,-13543,-40629,14897,44691,-14897,-44691
+            dc.l    16383,49150,-16383,-49150
+idx2_table:
+            dc.w    -1,2,-1,2
