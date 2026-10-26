@@ -37,8 +37,8 @@ C_INCL_SYS  = $(PREFIX)/$(TARGET)/sys-include
 C_INCL_NDK  = $(PREFIX)/$(TARGET)/ndk32-include/Include_H
 C_INCL_ALL  = -I. -I$(C_INCL_CLB) -I$(C_INCL) -I$(C_INCL_SYS) -I$(C_INCL_NDK)
 
-# Define C Options
-C_OPTIONS   = -O2 -m68080 -m68881 -ffast-math -fomit-frame-pointer -DREGPARM=4
+# Define C Options (use -m68020 for GCC to avoid broken -m68080 moviw.l/dbf opcodes; ASM uses -m68080)
+C_OPTIONS   = -O2 -m68020 -m68881 -ffast-math -fomit-frame-pointer -DREGPARM=4
 C_DEFINES   = 
 C_DEBUG     = -g
 C_FLAGS     = $(C_LIB) $(C_OPTIONS) $(C_DEBUG) $(C_DEFINES) $(C_INCL_ALL) $(C_LIBS_ALL)

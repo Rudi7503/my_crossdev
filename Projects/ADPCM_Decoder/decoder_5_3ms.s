@@ -105,25 +105,20 @@ _decode_5_3bit_ms_asm:
             lea     index_adj_3bit(pc),a6
             move.l  64(a7),d6
             beq     .ms_done
-            move.l  d6,d7
-            lsr.l   #2,d7
-            beq     .ms_byte_loop_init
-.ms_chunk_loop:
+.ms_block_loop:
+            REPT    3
             movex.l (a0)+,e0
             REPT    4
             DEC_PAIR_5_3
             ENDR
-            subq.l  #1,d7
-            bne     .ms_chunk_loop
-.ms_byte_loop_init:
-            andi.l  #3,d6
-            beq     .ms_done
-.ms_byte_loop:
+            ENDR
+            REPT    3
             moveq   #0,e0
             move.b  (a0)+,e0
             DEC_PAIR_5_3
+            ENDR
             subq.l  #1,d6
-            bne     .ms_byte_loop
+            bne     .ms_block_loop
 .ms_done:
             move.l  56(a7),a0
             move.l  d2,(a0)
