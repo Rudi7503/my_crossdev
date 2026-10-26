@@ -1,50 +1,85 @@
 
-; Signed 3-bit decode macros; code in d0 (0..7), index state d3/d5, uses only d1 as scratch
+; ==============================================================================
+; EXTREME OPTIMIZED 68080 ADPCM 3-BIT DECODER SUITE (Core 11350)
+; Enthält: Stereo (L/R), Mid-Side (M/S) und Mono (15-Byte-Block = 40 Codes)
+;
+; Optimierungen (2026-10-26):
+;   1. Vorberechnete Signed-32-Bit-Delta-Tabelle (delta3_table, 89 * 8 Longs):
+;      Direkter Tabellenzugriff (a4,d1.w*4) ersetzt die komplette 3-Bit-Shift/Branch-
+;      Kette inklusive Vorzeichenbehandlung.
+;   2. Inline-Makros (DEC_L3, DEC_R3, DEC_M3) statt bsr/rts-Subroutinen und ohne
+;      das langsame exg d6,a2 aus dem ursprünglichen Decoder.
+;   3. 32-Bit Load / 24-Bit Process Trick:
+;      movex.l (a0),e0 + addq.l #3,a0 lädt 24 nutzbare Bits (8 Codes = 4 Paare)
+;      in einem einzigen Befehl inkl. Little-Endian-Byte-Swap; 5 Chunks * 3 Bytes = 15 Bytes.
+;   4. Register-Belegung:
+;      - d0: aktueller 3-Bit-ADPCM-Code (0..7, Bit 2 = Sign, Bits 1..0 = Magnitude)
+;      - d1: einziges Scratch-Register für Tabellen-Index, Delta und 32-Bit-Pack
+;      - d2/d3: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Links/Mid/Mono
+;      - d4/d5: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Rechts/Side
+;      - d6/d7: äußerer (5 Chunks) / innerer (4 Paare bzw. 8 Mono-Samples) dbf-Zähler
+;      - e0: 32-Bit-Bitstream-Schieberegister
+;      - e1: Startwert des Hardware-Taktzählers (CCC)
+;      - a0/a1: Eingabe-Bitstream / Ausgabe-PCM-Puffer
+;      - a4: Zeiger auf delta3_table (89 * 8 signed 32-Bit Deltas)
+;      - a6: Zeiger auf index_adj_3bit (4 * 16-Bit Index-Adjust: -1, -1, +1, +2)
+; ==============================================================================
+
+; ------------------------------------------------------------------------------
+; MACRO: DEC_L3 – Dekodiert einen 3-Bit-Code in d0 (0..7) für Kanal Links / Mid
+; Aktualisiert d2 (PCM Links/Mid, geclampt auf -32768..32767) und d3 (Index 0..88).
+; Nutzt ausschließlich d1 als Scratch-Register (d6/d7 bleiben unangetastet).
+; ------------------------------------------------------------------------------
 DEC_L3 MACRO
-            move.w  d3,d1
-            lsl.w   #3,d1
-            add.w   d0,d1
-            move.l  (a4,d1.w*4),d1
-            add.l   d1,d2
-            cmp.l   #32767,d2
+            move.w  d3,d1                   ; d1 = aktueller Step-Index Links/Mid (0..88)
+            lsl.w   #3,d1                   ; d1 = index * 8 (8 Einträge pro Step-Index)
+            add.w   d0,d1                   ; d1 = index * 8 + code (0..7, inkl. Vorzeichenbit)
+            move.l  (a4,d1.w*4),d1          ; d1 = vorberechnetes signed 32-Bit-Delta aus delta3_table
+            add.l   d1,d2                   ; Neuen PCM-Wert berechnen: PCM_L += delta
+            cmp.l   #32767,d2               ; 16-Bit Sättigung ( Obere Grenze +32767 )
             ble.s   .lmin\@
             move.l  #32767,d2
             bra.s   .lq\@
 .lmin\@:
-            cmp.l   #-32768,d2
+            cmp.l   #-32768,d2              ; 16-Bit Sättigung ( Untere Grenze -32768 )
             bge.s   .lq\@
             move.l  #-32768,d2
 .lq\@:
-            andi.w  #3,d0
-            add.w   (a6,d0.w*2),d3
-            tst.w   d3
+            andi.w  #3,d0                   ; Vorzeichenbit (Bit 2) ausblenden -> Magnitude (0..3)
+            add.w   (a6,d0.w*2),d3          ; Step-Index anpassen aus index_adj_3bit (-1, -1, +1, +2)
+            tst.w   d3                      ; Index-Clamping ( Untere Grenze 0 )
             bge.s   .lmax\@
             moveq   #0,d3
             bra.s   .li\@
 .lmax\@:
-            cmp.w   #88,d3
+            cmp.w   #88,d3                  ; Index-Clamping ( Obere Grenze 88 )
             ble.s   .li\@
             move.w  #88,d3
 .li\@:
         ENDM
+
+; ------------------------------------------------------------------------------
+; MACRO: DEC_R3 – Dekodiert einen 3-Bit-Code in d0 (0..7) für Kanal Rechts / Side
+; Aktualisiert d4 (PCM Rechts/Side, geclampt auf -32768..32767) und d5 (Index 0..88).
+; ------------------------------------------------------------------------------
 DEC_R3 MACRO
-            move.w  d5,d1
-            lsl.w   #3,d1
-            add.w   d0,d1
-            move.l  (a4,d1.w*4),d1
-            add.l   d1,d4
-            cmp.l   #32767,d4
+            move.w  d5,d1                   ; d1 = aktueller Step-Index Rechts/Side (0..88)
+            lsl.w   #3,d1                   ; d1 = index * 8
+            add.w   d0,d1                   ; d1 = index * 8 + code (0..7)
+            move.l  (a4,d1.w*4),d1          ; d1 = signed 32-Bit-Delta aus delta3_table
+            add.l   d1,d4                   ; PCM_R += delta
+            cmp.l   #32767,d4               ; Clamping +32767
             ble.s   .rmin\@
             move.l  #32767,d4
             bra.s   .rq\@
 .rmin\@:
-            cmp.l   #-32768,d4
+            cmp.l   #-32768,d4              ; Clamping -32768
             bge.s   .rq\@
             move.l  #-32768,d4
 .rq\@:
-            andi.w  #3,d0
-            add.w   (a6,d0.w*2),d5
-            tst.w   d5
+            andi.w  #3,d0                   ; Magnitude (0..3) isolieren
+            add.w   (a6,d0.w*2),d5          ; Step-Index Rechts/Side anpassen
+            tst.w   d5                      ; Clamping 0..88
             bge.s   .rmax\@
             moveq   #0,d5
             bra.s   .ri\@
@@ -54,24 +89,29 @@ DEC_R3 MACRO
             move.w  #88,d5
 .ri\@:
         ENDM
+
+; ------------------------------------------------------------------------------
+; MACRO: DEC_M3 – Dekodiert einen 3-Bit-Code in d0 (0..7) für Mono
+; Aktualisiert d2 (PCM Mono) und d3 (Step-Index Mono).
+; ------------------------------------------------------------------------------
 DEC_M3 MACRO
-            move.w  d3,d1
-            lsl.w   #3,d1
-            add.w   d0,d1
-            move.l  (a4,d1.w*4),d1
-            add.l   d1,d2
-            cmp.l   #32767,d2
+            move.w  d3,d1                   ; d1 = aktueller Step-Index Mono (0..88)
+            lsl.w   #3,d1                   ; d1 = index * 8
+            add.w   d0,d1                   ; d1 = index * 8 + code (0..7)
+            move.l  (a4,d1.w*4),d1          ; d1 = signed 32-Bit-Delta aus delta3_table
+            add.l   d1,d2                   ; PCM_Mono += delta
+            cmp.l   #32767,d2               ; Clamping +32767
             ble.s   .mmin\@
             move.l  #32767,d2
             bra.s   .mq\@
 .mmin\@:
-            cmp.l   #-32768,d2
+            cmp.l   #-32768,d2              ; Clamping -32768
             bge.s   .mq\@
             move.l  #-32768,d2
 .mq\@:
-            andi.w  #3,d0
-            add.w   (a6,d0.w*2),d3
-            tst.w   d3
+            andi.w  #3,d0                   ; Magnitude (0..3) isolieren
+            add.w   (a6,d0.w*2),d3          ; Step-Index Mono anpassen
+            tst.w   d3                      ; Clamping 0..88
             bge.s   .mmax\@
             moveq   #0,d3
             bra.s   .mi\@
@@ -81,13 +121,6 @@ DEC_M3 MACRO
             move.w  #88,d3
 .mi\@:
         ENDM
-
-; ==============================================================================
-; EXTREME OPTIMIZED 68080 ADPCM 3-BIT DECODER SUITE
-; Enthält: Stereo (L/R), Mid-Side (M/S) und Mono
-; Features: Zyklenmessung (E1), 32-Bit Load / 24-Bit Process Trick,
-;           Unaligned Access (addq.l #3, a0), EXG-Trick für Shifts.
-; ==============================================================================
 
             SECTION CODE,CODE
             XDEF    _decode_3bit_stereo_asm
@@ -334,11 +367,11 @@ _decode_3bit_mono_asm:
 
 
 ; ==============================================================================
-; ZENTRALE SUBROUTINEN (Spezifische 3-Bit IMA ADPCM Logik)
+; LOOKUP-TABELLEN (3-Bit IMA ADPCM)
+; - delta3_table: 89 Step-Indizes * 8 Codes (0..7) = 712 signed 32-Bit-Deltas (dc.l)
+;   Formel: (step >> 2) + bit0*(step >> 1) + bit1*step, negiert wenn (code & 4)
+; - index_adj_3bit: Index-Anpassung für Magnitude 0..3 (-1, -1, +1, +2)
 ; ==============================================================================
-
-; ------------------------------------------------------------------------------
-;
 
             even
 delta3_table:

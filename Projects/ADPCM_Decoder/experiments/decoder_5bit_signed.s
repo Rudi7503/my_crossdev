@@ -1,21 +1,50 @@
+; ==============================================================================
+; EXTREME OPTIMIZED 68080 ADPCM 5-BIT DECODER SUITE (Core 11350)
+; Enthält: Stereo (L/R), Mid-Side (M/S) und Mono (15-Byte-Block = 24 Codes)
+;
+; Optimierungen (2026-10-26):
+;   1. Vorberechnete Signed-32-Bit-Delta-Tabelle (delta5_table, 89 * 32 Longs):
+;      Direkter Tabellenzugriff (a4,d1.w*4) ersetzt die komplette 5-Bit-IMA-
+;      Shift/Branch-Kette (bis zu 5 btst-Branches pro Sample!) + Vorzeichenprüfung.
+;   2. Inline-Makros (DEC_L5, DEC_R5) statt bsr/rts-Subroutinen pro Sample.
+;   3. Rotate-and-Load Bitstream-Trick (ror.l / movex.w / rol.l):
+;      Kombiniert die übrig gebliebenen 2, 3 bzw. 4 Rest-Bits in d7 nahtlos mit dem
+;      nächsten 16-Bit-Little-Endian-Load ohne zusätzliche Masken-Register.
+;   4. Register-Belegung:
+;      - d0: aktueller 5-Bit-ADPCM-Code (0..31, Bit 4 = Sign, Bits 3..0 = Magnitude)
+;      - d1: einziges Scratch-Register für Tabellen-Index, Delta und 32-Bit-Pack
+;      - d2/d3: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Links/Mid/Mono
+;      - d4/d5: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Rechts/Side
+;      - d7: 32-Bit-Bitstream-Schieberegister (geladen via movex.l / movex.w)
+;      - e2: Startwert des Hardware-Taktzählers (CCC) für Zyklusmessung
+;      - a0/a1: Eingabe-Bitstream / Ausgabe-PCM-Puffer
+;      - a4: Zeiger auf delta5_table (89 * 32 signed 32-Bit Deltas)
+;      - a6: Zeiger auf index_adj_5bit (16 * 16-Bit Index-Adjust)
+; ==============================================================================
+
+; ------------------------------------------------------------------------------
+; MACRO: DEC_L5 – Dekodiert einen 5-Bit-Code in d0 (0..31) für Links / Mid / Mono
+; Aktualisiert d2 (PCM Links/Mid/Mono, geclampt auf -32768..32767) und d3 (Index 0..88).
+; Nutzt ausschließlich d1 als Scratch-Register (d7 bleibt als Bitstream erhalten!).
+; ------------------------------------------------------------------------------
 DEC_L5 MACRO
-            move.w  d3,d1
-            lsl.w   #5,d1
-            add.w   d0,d1
-            move.l  (a4,d1.w*4),d1
-            add.l   d1,d2
-            cmp.l   #32767,d2
+            move.w  d3,d1                   ; d1 = aktueller Step-Index Links/Mid/Mono (0..88)
+            lsl.w   #5,d1                   ; d1 = index * 32 (32 Einträge pro Step-Index)
+            add.w   d0,d1                   ; d1 = index * 32 + code (0..31, inkl. Vorzeichenbit)
+            move.l  (a4,d1.w*4),d1          ; d1 = vorberechnetes signed 32-Bit-Delta aus delta5_table
+            add.l   d1,d2                   ; Neuen PCM-Wert berechnen: PCM_L += delta
+            cmp.l   #32767,d2               ; 16-Bit Sättigung ( Obere Grenze +32767 )
             ble.s   .lmin\@
             move.l  #32767,d2
             bra.s   .lq\@
 .lmin\@:
-            cmp.l   #-32768,d2
+            cmp.l   #-32768,d2              ; 16-Bit Sättigung ( Untere Grenze -32768 )
             bge.s   .lq\@
             move.l  #-32768,d2
 .lq\@:
-            andi.w  #15,d0
-            add.w   (a6,d0.w*2),d3
-            tst.w   d3
+            andi.w  #15,d0                  ; Vorzeichenbit (Bit 4) ausblenden -> Magnitude (0..15)
+            add.w   (a6,d0.w*2),d3          ; Step-Index anpassen aus index_adj_5bit
+            tst.w   d3                      ; Index-Clamping (0..88)
             bge.s   .lmax\@
             moveq   #0,d3
             bra.s   .li\@
@@ -25,24 +54,29 @@ DEC_L5 MACRO
             move.w  #88,d3
 .li\@:
         ENDM
+
+; ------------------------------------------------------------------------------
+; MACRO: DEC_R5 – Dekodiert einen 5-Bit-Code in d0 (0..31) für Kanal Rechts / Side
+; Aktualisiert d4 (PCM Rechts/Side, geclampt auf -32768..32767) und d5 (Index 0..88).
+; ------------------------------------------------------------------------------
 DEC_R5 MACRO
-            move.w  d5,d1
-            lsl.w   #5,d1
-            add.w   d0,d1
-            move.l  (a4,d1.w*4),d1
-            add.l   d1,d4
-            cmp.l   #32767,d4
+            move.w  d5,d1                   ; d1 = aktueller Step-Index Rechts/Side (0..88)
+            lsl.w   #5,d1                   ; d1 = index * 32
+            add.w   d0,d1                   ; d1 = index * 32 + code (0..31)
+            move.l  (a4,d1.w*4),d1          ; d1 = signed 32-Bit-Delta aus delta5_table
+            add.l   d1,d4                   ; PCM_R += delta
+            cmp.l   #32767,d4               ; Clamping +32767
             ble.s   .rmin\@
             move.l  #32767,d4
             bra.s   .rq\@
 .rmin\@:
-            cmp.l   #-32768,d4
+            cmp.l   #-32768,d4              ; Clamping -32768
             bge.s   .rq\@
             move.l  #-32768,d4
 .rq\@:
-            andi.w  #15,d0
-            add.w   (a6,d0.w*2),d5
-            tst.w   d5
+            andi.w  #15,d0                  ; Magnitude (0..15) isolieren
+            add.w   (a6,d0.w*2),d5          ; Step-Index Rechts/Side anpassen
+            tst.w   d5                      ; Clamping 0..88
             bge.s   .rmax\@
             moveq   #0,d5
             bra.s   .ri\@
@@ -52,11 +86,6 @@ DEC_R5 MACRO
             move.w  #88,d5
 .ri\@:
         ENDM
-; ==============================================================================
-; EXTREME OPTIMIZED 68080 ADPCM 5-BIT DECODER SUITE
-; Basiert auf dem genialen Rotate-and-Load Trick (ror/rol)
-; Keine Bit-Masken beim Mergen nötig! (15 Bytes = 24 Samples = 12 Paare)
-; ==============================================================================
 
             SECTION CODE,CODE
             
@@ -579,11 +608,12 @@ _decode_5bit_mono_asm:
             rts
 
 
-; ZENTRALE SUBROUTINEN WIE GEHABT... (Habe ich zur Übersicht hier gekürzt, 
-; bleiben aber exakt 1:1 gleich wie in deinem funktionierenden Code!)
-
 ; ==============================================================================
-; ZENTRALE SUBROUTINEN (5-Bit IMA ADPCM Logik)
+; LOOKUP-TABELLEN (5-Bit IMA ADPCM)
+; - index_adj_5bit: 16 Wort-Einträge für Magnitude 0..15 (-1..-1, 1,2,4,6,8,10,13,16)
+; - delta5_table:   89 Step-Indizes * 32 Codes (0..31) = 2848 signed 32-Bit-Deltas (dc.l)
+;   Formel: (step>>4) + b0*(step>>3) + b1*(step>>2) + b2*(step>>1) + b3*step,
+;           negiert wenn Sign-Bit (b4) gesetzt ist.
 ; ==============================================================================
 
 index_adj_5bit:

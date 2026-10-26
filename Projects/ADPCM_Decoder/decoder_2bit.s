@@ -1,49 +1,79 @@
 
-; Signed 2-bit decode macros, one code in d0 (0..3), uses only d1 as scratch
+; ==============================================================================
+; EXTREME OPTIMIZED 68080 ADPCM 2-BIT DECODER SUITE (Core 11350)
+; Enthält: Stereo (L/R), Mid-Side (M/S) und Mono (15-Byte-Block = 60 Codes)
+;
+; Optimierungen (2026-10-26):
+;   1. Vorberechnete Signed-32-Bit-Delta-Tabelle (delta2_table, 89 * 4 Longs):
+;      Ersetzt die klassische IMA-Shift/Branch-Kette + Vorzeichenprüfung durch
+;      einen einzigen skalierten Tabellenzugriff: move.l (a4,d1.w*4),d1.
+;   2. Inline-Makros (DEC_L, DEC_R, DEC_M) statt bsr/rts-Subroutinen pro Sample.
+;   3. Register-Allokation ohne Kollisionen:
+;      - d0: aktueller 2-Bit-ADPCM-Code (0..3, Bit 1 = Sign, Bit 0 = Magnitude)
+;      - d1: einziges Scratch-Register für Tabellen-Index, Delta und 32-Bit-Pack
+;      - d2/d3: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Links/Mid/Mono
+;      - d4/d5: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Rechts/Side
+;      - d6/d7: äußere/innere dbf-Schleifenzähler (dürfen im Makro NICHT überschrieben werden!)
+;      - e0: 32-Bit-Bitstream-Schieberegister (geladen via Endian-Swap movex.l)
+;      - e1: Startwert des Hardware-Taktzählers (CCC) für Zyklusmessung
+;      - a0/a1: Eingabe-Bitstream / Ausgabe-PCM-Puffer
+;      - a2: Zeiger auf idx2_table (4 * 16-Bit Index-Adjust: -1, +2, -1, +2)
+;      - a4: Zeiger auf delta2_table (89 * 4 signed 32-Bit Deltas)
+; ==============================================================================
+
+; ------------------------------------------------------------------------------
+; MACRO: DEC_L – Dekodiert einen 2-Bit-Code in d0 (0..3) für Kanal Links / Mid
+; Aktualisiert d2 (PCM Links/Mid, geclampt auf -32768..32767) und d3 (Index 0..88).
+; Nutzt ausschließlich d1 als Scratch-Register (d6/d7 bleiben unangetastet).
+; ------------------------------------------------------------------------------
 DEC_L MACRO
-            move.w  d3,d1
-            lsl.w   #2,d1
-            add.w   d0,d1
-            move.l  (a4,d1.w*4),d1
-            add.l   d1,d2
-            cmp.l   #32767,d2
+            move.w  d3,d1                   ; d1 = aktueller Step-Index Links/Mid (0..88)
+            lsl.w   #2,d1                   ; d1 = index * 4 (4 Einträge pro Step-Index)
+            add.w   d0,d1                   ; d1 = index * 4 + code (0..3, inkl. Vorzeichenbit)
+            move.l  (a4,d1.w*4),d1          ; d1 = vorberechnetes signed 32-Bit-Delta aus delta2_table
+            add.l   d1,d2                   ; Neuen PCM-Wert berechnen: PCM_L += delta
+            cmp.l   #32767,d2               ; 16-Bit Sättigung ( Obere Grenze +32767 )
             ble.s   .lmin\@
             move.l  #32767,d2
             bra.s   .lq\@
 .lmin\@:
-            cmp.l   #-32768,d2
+            cmp.l   #-32768,d2              ; 16-Bit Sättigung ( Untere Grenze -32768 )
             bge.s   .lq\@
             move.l  #-32768,d2
 .lq\@:
-            add.w   (a2,d0.w*2),d3
-            tst.w   d3
+            add.w   (a2,d0.w*2),d3          ; Step-Index anpassen (idx2_table enthält 4 Einträge für Code 0..3)
+            tst.w   d3                      ; Index-Clamping ( Untere Grenze 0 )
             bge.s   .lmax\@
             moveq   #0,d3
             bra.s   .li\@
 .lmax\@:
-            cmp.w   #88,d3
+            cmp.w   #88,d3                  ; Index-Clamping ( Obere Grenze 88 )
             ble.s   .li\@
             move.w  #88,d3
 .li\@:
         ENDM
 
+; ------------------------------------------------------------------------------
+; MACRO: DEC_R – Dekodiert einen 2-Bit-Code in d0 (0..3) für Kanal Rechts / Side
+; Aktualisiert d4 (PCM Rechts/Side, geclampt auf -32768..32767) und d5 (Index 0..88).
+; ------------------------------------------------------------------------------
 DEC_R MACRO
-            move.w  d5,d1
-            lsl.w   #2,d1
-            add.w   d0,d1
-            move.l  (a4,d1.w*4),d1
-            add.l   d1,d4
-            cmp.l   #32767,d4
+            move.w  d5,d1                   ; d1 = aktueller Step-Index Rechts/Side (0..88)
+            lsl.w   #2,d1                   ; d1 = index * 4
+            add.w   d0,d1                   ; d1 = index * 4 + code (0..3)
+            move.l  (a4,d1.w*4),d1          ; d1 = signed 32-Bit-Delta aus delta2_table
+            add.l   d1,d4                   ; PCM_R += delta
+            cmp.l   #32767,d4               ; Clamping +32767
             ble.s   .rmin\@
             move.l  #32767,d4
             bra.s   .rq\@
 .rmin\@:
-            cmp.l   #-32768,d4
+            cmp.l   #-32768,d4              ; Clamping -32768
             bge.s   .rq\@
             move.l  #-32768,d4
 .rq\@:
-            add.w   (a2,d0.w*2),d5
-            tst.w   d5
+            add.w   (a2,d0.w*2),d5          ; Step-Index Rechts/Side anpassen
+            tst.w   d5                      ; Clamping 0..88
             bge.s   .rmax\@
             moveq   #0,d5
             bra.s   .ri\@
@@ -54,23 +84,27 @@ DEC_R MACRO
 .ri\@:
         ENDM
 
+; ------------------------------------------------------------------------------
+; MACRO: DEC_M – Dekodiert einen 2-Bit-Code in d0 (0..3) für Mono
+; Aktualisiert d2 (PCM Mono) und d3 (Step-Index Mono).
+; ------------------------------------------------------------------------------
 DEC_M MACRO
-            move.w  d3,d1
-            lsl.w   #2,d1
-            add.w   d0,d1
-            move.l  (a4,d1.w*4),d1
-            add.l   d1,d2
-            cmp.l   #32767,d2
+            move.w  d3,d1                   ; d1 = aktueller Step-Index Mono (0..88)
+            lsl.w   #2,d1                   ; d1 = index * 4
+            add.w   d0,d1                   ; d1 = index * 4 + code (0..3)
+            move.l  (a4,d1.w*4),d1          ; d1 = signed 32-Bit-Delta aus delta2_table
+            add.l   d1,d2                   ; PCM_Mono += delta
+            cmp.l   #32767,d2               ; Clamping +32767
             ble.s   .mmin\@
             move.l  #32767,d2
             bra.s   .mq\@
 .mmin\@:
-            cmp.l   #-32768,d2
+            cmp.l   #-32768,d2              ; Clamping -32768
             bge.s   .mq\@
             move.l  #-32768,d2
 .mq\@:
-            add.w   (a2,d0.w*2),d3
-            tst.w   d3
+            add.w   (a2,d0.w*2),d3          ; Step-Index Mono anpassen
+            tst.w   d3                      ; Clamping 0..88
             bge.s   .mmax\@
             moveq   #0,d3
             bra.s   .mi\@
@@ -80,13 +114,6 @@ DEC_M MACRO
             move.w  #88,d3
 .mi\@:
         ENDM
-
-; ==============================================================================
-; EXTREME OPTIMIZED 68080 ADPCM 2-BIT DECODER SUITE
-; Enthält: Stereo (L/R), Mid-Side (M/S) und Mono
-; Features: Zyklenmessung (E1), Scaled Indexing, D-Register State-Caching,
-;           Shared Subroutines (L1-I-Cache optimiert).
-; ==============================================================================
 
             SECTION CODE,CODE
 
@@ -412,11 +439,11 @@ _decode_2bit_mono_asm:
 
 
 ; ==============================================================================
-; ZENTRALE SUBROUTINEN (Von allen Decodern geteilt)
+; LOOKUP-TABELLEN (2-Bit IMA ADPCM)
+; - delta2_table: 89 Step-Indizes * 4 Codes (0..3) = 356 signed 32-Bit-Deltas (dc.l)
+;   Formel: delta = (step >> 1) + (code & 1 ? step : 0), negiert wenn (code & 2)
+; - idx2_table:   Index-Anpassung für Code 0..3 (-1, +2, -1, +2, ohne Maskierung nutzbar)
 ; ==============================================================================
-
-; ------------------------------------------------------------------------------
-;
 
             even
 delta2_table:

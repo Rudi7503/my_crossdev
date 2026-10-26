@@ -1,26 +1,59 @@
+; ==============================================================================
+; EXTREME OPTIMIZED 68080 ADPCM 3/2-BIT HYBRID M/S DECODER (Core 11350)
+; Dekodiert Mid mit 3 Bit und Side mit 2 Bit (= 5 Bit pro M/S-Paar).
+; 15-Byte-Block = 120 Bits = 24 M/S-Paare.
+;
+; Optimierungen (2026-10-26):
+;   1. Vorberechnete Signed-32-Bit-Delta-Tabellen:
+;      - delta3_table (a4): 89 * 8 signed 32-Bit-Deltas für den 3-Bit-Mid-Kanal
+;      - delta2_table (a2): 89 * 4 signed 32-Bit-Deltas für den 2-Bit-Side-Kanal
+;   2. Inline-Makro DEC_PAIR_3_2 statt bsr/rts-Subroutinen pro Sample.
+;   3. Rotate-and-Load Bitstream-Trick (ror.l / movex.w / rol.l):
+;      Da 5 Bit pro Paar kein Teiler von 8 oder 32 sind, werden die verbleibenden
+;      2, 3 bzw. 4 Rest-Bits in d7 per ror.l an den oberen Rand rotiert, das
+;      nächste 16-Bit-Wort per movex.w geladen und per rol.l wieder bündig
+;      zusammengesetzt (identisch zum 5-Bit-Mono-Layout: 6+3+3+4+6+2 = 24 Paare).
+;   4. Register-Belegung:
+;      - d0: aktueller ADPCM-Code (0..7 für Mid, 0..3 für Side) bzw. L-Ausgang
+;      - d1: einziges Scratch-Register für Tabellen-Index, Delta und R-Ausgang
+;      - d2/d3: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Mid (3-Bit)
+;      - d4/d5: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Side (2-Bit)
+;      - d7: 32-Bit-Bitstream-Schieberegister
+;      - e2: Startwert des Hardware-Taktzählers (CCC) für Zyklusmessung
+;      - a0/a1: Eingabe-Bitstream / Ausgabe-PCM-Puffer
+;      - a4/a2: Zeiger auf delta3_table / delta2_table
+;      - a5/a6: Zeiger auf index_adj_3bit / index_adj_2bit
+; ==============================================================================
+
             SECTION CODE,CODE
             XDEF    _decode_3_2bit_ms_asm
 
+; ------------------------------------------------------------------------------
+; MACRO: DEC_PAIR_3_2 – Dekodiert 1 M/S-Paar (3-Bit Mid + 2-Bit Side = 5 Bit)
+; aus dem Bitstream-Register d7, berechnet L = Mid+Side / R = Mid-Side und
+; schreibt das gepackte 32-Bit-Stereo-Sample [L_16 | R_16] nach (a1)+.
+; ------------------------------------------------------------------------------
 DEC_PAIR_3_2 MACRO
+            ; --- 1. Mid-Kanal (3 Bit) aus d7 extrahieren & dekodieren ---
             move.l  d7,d0
-            andi.l  #7,d0
-            lsr.l   #3,d7
-            move.w  d3,d1
-            lsl.w   #3,d1
-            add.w   d0,d1
-            move.l  (a4,d1.w*4),d1
-            add.l   d1,d2
-            cmp.l   #32767,d2
+            andi.l  #7,d0                   ; d0 = 3-Bit Mid-Code (0..7, Bit 2 = Sign)
+            lsr.l   #3,d7                   ; Bitstream um 3 Bit weiterschieben
+            move.w  d3,d1                   ; d1 = Step-Index Mid (0..88)
+            lsl.w   #3,d1                   ; d1 = index * 8
+            add.w   d0,d1                   ; d1 = index * 8 + code (0..7)
+            move.l  (a4,d1.w*4),d1          ; d1 = signed 32-Bit-Delta aus delta3_table
+            add.l   d1,d2                   ; PCM_Mid += delta
+            cmp.l   #32767,d2               ; Clamping Mid (+32767)
             ble.s   .mmin\@
             move.l  #32767,d2
             bra.s   .mq\@
 .mmin\@:
-            cmp.l   #-32768,d2
+            cmp.l   #-32768,d2              ; Clamping Mid (-32768)
             bge.s   .mq\@
             move.l  #-32768,d2
 .mq\@:
-            andi.w  #3,d0
-            add.w   (a5,d0.w*2),d3
+            andi.w  #3,d0                   ; Magnitude (0..3) isolieren
+            add.w   (a5,d0.w*2),d3          ; Step-Index Mid anpassen & clampen (0..88)
             tst.w   d3
             bge.s   .mmax\@
             moveq   #0,d3
@@ -30,24 +63,25 @@ DEC_PAIR_3_2 MACRO
             ble.s   .mi\@
             move.w  #88,d3
 .mi\@:
+            ; --- 2. Side-Kanal (2 Bit) aus d7 extrahieren & dekodieren ---
             move.l  d7,d0
-            andi.l  #3,d0
-            lsr.l   #2,d7
-            move.w  d5,d1
-            lsl.w   #2,d1
-            add.w   d0,d1
-            move.l  (a2,d1.w*4),d1
-            add.l   d1,d4
-            cmp.l   #32767,d4
+            andi.l  #3,d0                   ; d0 = 2-Bit Side-Code (0..3, Bit 1 = Sign)
+            lsr.l   #2,d7                   ; Bitstream um 2 Bit weiterschieben
+            move.w  d5,d1                   ; d1 = Step-Index Side (0..88)
+            lsl.w   #2,d1                   ; d1 = index * 4
+            add.w   d0,d1                   ; d1 = index * 4 + code (0..3)
+            move.l  (a2,d1.w*4),d1          ; d1 = signed 32-Bit-Delta aus delta2_table
+            add.l   d1,d4                   ; PCM_Side += delta
+            cmp.l   #32767,d4               ; Clamping Side (+32767)
             ble.s   .smin\@
             move.l  #32767,d4
             bra.s   .sq\@
 .smin\@:
-            cmp.l   #-32768,d4
+            cmp.l   #-32768,d4              ; Clamping Side (-32768)
             bge.s   .sq\@
             move.l  #-32768,d4
 .sq\@:
-            add.w   (a6,d0.w*2),d5
+            add.w   (a6,d0.w*2),d5          ; Step-Index Side anpassen & clampen (0..88)
             tst.w   d5
             bge.s   .smax\@
             moveq   #0,d5
@@ -57,11 +91,12 @@ DEC_PAIR_3_2 MACRO
             ble.s   .si\@
             move.w  #88,d5
 .si\@:
+            ; --- 3. M/S-Matrix (L = Mid + Side, R = Mid - Side) + Clamping ---
             move.l  d2,d0
-            add.l   d4,d0
+            add.l   d4,d0                   ; d0 = Links (Mid + Side)
             move.l  d2,d1
-            sub.l   d4,d1
-            cmp.l   #32767,d0
+            sub.l   d4,d1                   ; d1 = Rechts (Mid - Side)
+            cmp.l   #32767,d0               ; Clamping Links (-32768..32767)
             ble.s   .cl1\@
             move.l  #32767,d0
             bra.s   .cr\@
@@ -70,7 +105,7 @@ DEC_PAIR_3_2 MACRO
             bge.s   .cr\@
             move.l  #-32768,d0
 .cr\@:
-            cmp.l   #32767,d1
+            cmp.l   #32767,d1               ; Clamping Rechts (-32768..32767)
             ble.s   .cr1\@
             move.l  #32767,d1
             bra.s   .pk\@
@@ -79,58 +114,67 @@ DEC_PAIR_3_2 MACRO
             bge.s   .pk\@
             move.l  #-32768,d1
 .pk\@:
-            swap    d0
+            swap    d0                      ; 32-Bit Stereo-Ausgabe [Links_16 | Rechts_16]
             move.w  d1,d0
             move.l  d0,(a1)+
         ENDM
 
+; ==============================================================================
+; HAUPTFUNKTION: _decode_3_2bit_ms_asm (15 Bytes = 24 M/S-Paare pro Block)
+; ==============================================================================
 _decode_3_2bit_ms_asm:
-            movem.l d2-d7/a2-a6,-(a7)
-            movec   ccc,d0
+            movem.l d2-d7/a2-a6,-(a7)       ; 11 Register sichern (44 Bytes)
+            movec   ccc,d0                  ; Zyklenmessung START
             move.l  d0,e2
-            move.l  48(a7),a0
-            move.l  52(a7),a1
-            move.l  56(a7),a5
-            move.l  60(a7),a3
-            move.l  (a5),d2
+            move.l  48(a7),a0               ; a0 = in_buffer
+            move.l  52(a7),a1               ; a1 = out_buffer
+            move.l  56(a7),a5               ; a5 = chMid
+            move.l  60(a7),a3               ; a3 = chSide
+            move.l  (a5),d2                 ; d2 = PCM Mid
             move.w  4(a5),d3
-            ext.l   d3
-            move.l  (a3),d4
+            ext.l   d3                      ; d3 = Step-Index Mid
+            move.l  (a3),d4                 ; d4 = PCM Side
             move.w  4(a3),d5
-            ext.l   d5
-            lea     delta3_table(pc),a4
-            lea     delta2_table(pc),a2
-            lea     index_adj_3bit(pc),a5
-            lea     index_adj_2bit(pc),a6
-            tst.l   64(a7)
+            ext.l   d5                      ; d5 = Step-Index Side
+            lea     delta3_table(pc),a4     ; a4 = Signed-32-Bit-Deltas (3-Bit Mid)
+            lea     delta2_table(pc),a2     ; a2 = Signed-32-Bit-Deltas (2-Bit Side)
+            lea     index_adj_3bit(pc),a5   ; a5 = Index-Adjust (3-Bit Mid)
+            lea     index_adj_2bit(pc),a6   ; a6 = Index-Adjust (2-Bit Side)
+            tst.l   64(a7)                  ; block_cnt == 0?
             beq     .ms_done
 .ms_block_loop:
+            ; --- Phase 1: 4 Bytes (32 Bit) laden -> 6 Paare (30 Bit), 2 Bit Rest ---
             movex.l (a0)+,d7
             REPT    6
             DEC_PAIR_3_2
             ENDR
+            ; --- Phase 2: 2 Bit Rest + 2 Bytes (16 Bit) = 18 Bit -> 3 Paare (15 Bit), 3 Bit Rest ---
             ror.l   #2,d7
             movex.w (a0)+,d7
             rol.l   #2,d7
             REPT    3
             DEC_PAIR_3_2
             ENDR
+            ; --- Phase 3: 3 Bit Rest + 2 Bytes (16 Bit) = 19 Bit -> 3 Paare (15 Bit), 4 Bit Rest ---
             ror.l   #3,d7
             movex.w (a0)+,d7
             rol.l   #3,d7
             REPT    3
             DEC_PAIR_3_2
             ENDR
+            ; --- Phase 4: 4 Bit Rest + 2 Bytes (16 Bit) = 20 Bit -> 4 Paare (20 Bit), 0 Bit Rest ---
             ror.l   #4,d7
             movex.w (a0)+,d7
             rol.l   #4,d7
             REPT    4
             DEC_PAIR_3_2
             ENDR
+            ; --- Phase 5: 4 Bytes (32 Bit) laden -> 6 Paare (30 Bit), 2 Bit Rest ---
             movex.l (a0)+,d7
             REPT    6
             DEC_PAIR_3_2
             ENDR
+            ; --- Phase 6: 2 Bit Rest + 1 Byte (8 Bit) = 10 Bit -> 2 Paare (10 Bit), 0 Bit Rest ---
             ror.l   #2,d7
             moveq   #0,d1
             move.b  (a0)+,d1
@@ -139,21 +183,24 @@ _decode_3_2bit_ms_asm:
             REPT    2
             DEC_PAIR_3_2
             ENDR
-            subq.l  #1,64(a7)
+            subq.l  #1,64(a7)               ; block_cnt--
             bne     .ms_block_loop
 .ms_done:
-            move.l  56(a7),a5
+            move.l  56(a7),a5               ; Mid/Side-Status ins RAM zurückschreiben
             move.l  d2,(a5)
             move.w  d3,4(a5)
             move.l  60(a7),a3
             move.l  d4,(a3)
             move.w  d5,4(a3)
             movem.l (a7)+,d2-d7/a2-a6
-            movec   ccc,d0
+            movec   ccc,d0                  ; Zyklenmessung ENDE
             move.l  e2,d1
             sub.l   d1,d0
             rts
 
+; ==============================================================================
+; LOOKUP-TABELLEN (3-Bit Mid & 2-Bit Side)
+; ==============================================================================
 index_adj_3bit:
             dc.w    -1, -1,  1,  2, -1, -1,  1,  2
 index_adj_2bit:

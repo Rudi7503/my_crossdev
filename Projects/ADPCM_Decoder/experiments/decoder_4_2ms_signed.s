@@ -1,52 +1,79 @@
+; ==============================================================================
+; EXTREME OPTIMIZED 68080 ADPCM 4/2-BIT HYBRID M/S DECODER (Core 11350)
+; Dekodiert Mid mit 4 Bit und Side mit 2 Bit (= 6 Bit pro M/S-Paar).
+; 15-Byte-Block = 5 Chunks * 3 Bytes (24 Bit) = 20 M/S-Paare.
+;
+; Optimierungen (2026-10-26):
+;   1. Vorberechnete Signed-32-Bit-Delta-Tabellen:
+;      - delta4_table (a4): 89 * 16 signed 32-Bit-Deltas für den 4-Bit-Mid-Kanal
+;      - delta2_table (a2): 89 * 4  signed 32-Bit-Deltas für den 2-Bit-Side-Kanal
+;   2. Direkte Inline-Dekodierung im 24-Bit-Chunk-Loop (ohne bsr/rts und ohne exg).
+;   3. 32-Bit Load / 24-Bit Process Trick:
+;      movex.l (a0),e0 + addq.l #3,a0 lädt 24 nutzbare Bits (= 4 Paare à 6 Bit)
+;      in einem einzigen Befehl inkl. Little-Endian-Byte-Swap; 5 Chunks = 15 Bytes.
+;   4. Register-Belegung:
+;      - d0: aktueller ADPCM-Code (0..15 für Mid, 0..3 für Side) bzw. L-Ausgang
+;      - d1: einziges Scratch-Register für Tabellen-Index, Delta und R-Ausgang
+;      - d2/d3: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Mid (4-Bit)
+;      - d4/d5: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Side (2-Bit)
+;      - d6/d7: äußerer (5 Chunks) / innerer (4 Paare) dbf-Schleifenzähler
+;      - e0: 32-Bit-Bitstream-Schieberegister
+;      - e1: Startwert des Hardware-Taktzählers (CCC) für Zyklusmessung
+;      - a0/a1: Eingabe-Bitstream / Ausgabe-PCM-Puffer
+;      - a4/a2: Zeiger auf delta4_table / delta2_table
+;      - a5/a6: Zeiger auf index_adj_4bit / index_adj_2bit
+; ==============================================================================
+
             SECTION CODE,CODE
             XDEF    _decode_4_2bit_ms_asm
 
 _decode_4_2bit_ms_asm:
-            movem.l d2-d7/a2-a6,-(a7)
-            movec   ccc,d0
+            movem.l d2-d7/a2-a6,-(a7)       ; 11 Register sichern (44 Bytes)
+            movec   ccc,d0                  ; Zyklenmessung START
             move.l  d0,e1
-            move.l  48(a7),a0
-            move.l  52(a7),a1
-            move.l  56(a7),a5
-            move.l  60(a7),a3
-            move.l  (a5),d2
+            move.l  48(a7),a0               ; a0 = in_buffer
+            move.l  52(a7),a1               ; a1 = out_buffer
+            move.l  56(a7),a5               ; a5 = chMid
+            move.l  60(a7),a3               ; a3 = chSide
+            move.l  (a5),d2                 ; d2 = PCM Mid
             move.w  4(a5),d3
-            ext.l   d3
-            move.l  (a3),d4
+            ext.l   d3                      ; d3 = Step-Index Mid
+            move.l  (a3),d4                 ; d4 = PCM Side
             move.w  4(a3),d5
-            ext.l   d5
-            lea     delta4_table(pc),a4
-            lea     delta2_table(pc),a2
-            lea     index_adj_4bit(pc),a5
-            lea     index_adj_2bit(pc),a6
-            tst.l   64(a7)
+            ext.l   d5                      ; d5 = Step-Index Side
+            lea     delta4_table(pc),a4     ; a4 = Signed-32-Bit-Deltas (4-Bit Mid)
+            lea     delta2_table(pc),a2     ; a2 = Signed-32-Bit-Deltas (2-Bit Side)
+            lea     index_adj_4bit(pc),a5   ; a5 = Index-Adjust (4-Bit Mid)
+            lea     index_adj_2bit(pc),a6   ; a6 = Index-Adjust (2-Bit Side)
+            tst.l   64(a7)                  ; block_cnt == 0?
             beq     .ms_done
 .ms_block_loop:
-            moveq   #4,d6
+            moveq   #4,d6                   ; 5 Chunks à 3 Bytes (24 Bit) = 15 Bytes
 .ms_chunk_loop:
-            movex.l (a0),e0
-            addq.l  #3,a0
-            moveq   #3,d7
+            movex.l (a0),e0                 ; 32 Bit Little-Endian laden
+            addq.l  #3,a0                   ; Lesezeiger um 3 Bytes (24 Bit) weiterrücken
+            moveq   #3,d7                   ; 4 M/S-Paare à 6 Bit (4 * 6 = 24 Bit)
 .ms_pair_loop:
+            ; --- 1. Mid-Kanal (4 Bit) aus e0 extrahieren & dekodieren ---
             move.l  e0,d0
-            andi.l  #15,d0
-            lsr.l   #4,e0
-            move.w  d3,d1
-            lsl.w   #4,d1
-            add.w   d0,d1
-            move.l  (a4,d1.w*4),d1
-            add.l   d1,d2
-            cmp.l   #32767,d2
+            andi.l  #15,d0                  ; d0 = 4-Bit Mid-Nibble (0..15, Bit 3 = Sign)
+            lsr.l   #4,e0                   ; Bitstream um 4 Bit weiterschieben
+            move.w  d3,d1                   ; d1 = Step-Index Mid (0..88)
+            lsl.w   #4,d1                   ; d1 = index * 16
+            add.w   d0,d1                   ; d1 = index * 16 + nibble (0..15)
+            move.l  (a4,d1.w*4),d1          ; d1 = signed 32-Bit-Delta aus delta4_table
+            add.l   d1,d2                   ; PCM_Mid += delta
+            cmp.l   #32767,d2               ; Clamping Mid (+32767)
             ble.s   .mmin
             move.l  #32767,d2
             bra.s   .mq
 .mmin:
-            cmp.l   #-32768,d2
+            cmp.l   #-32768,d2              ; Clamping Mid (-32768)
             bge.s   .mq
             move.l  #-32768,d2
 .mq:
-            andi.w  #7,d0
-            add.w   (a5,d0.w*2),d3
+            andi.w  #7,d0                   ; Magnitude (0..7) isolieren
+            add.w   (a5,d0.w*2),d3          ; Step-Index Mid anpassen & clampen (0..88)
             tst.w   d3
             bge.s   .mmax
             moveq   #0,d3
@@ -56,24 +83,25 @@ _decode_4_2bit_ms_asm:
             ble.s   .mi
             move.w  #88,d3
 .mi:
+            ; --- 2. Side-Kanal (2 Bit) aus e0 extrahieren & dekodieren ---
             move.l  e0,d0
-            andi.l  #3,d0
-            lsr.l   #2,e0
-            move.w  d5,d1
-            lsl.w   #2,d1
-            add.w   d0,d1
-            move.l  (a2,d1.w*4),d1
-            add.l   d1,d4
-            cmp.l   #32767,d4
+            andi.l  #3,d0                   ; d0 = 2-Bit Side-Code (0..3, Bit 1 = Sign)
+            lsr.l   #2,e0                   ; Bitstream um 2 Bit weiterschieben
+            move.w  d5,d1                   ; d1 = Step-Index Side (0..88)
+            lsl.w   #2,d1                   ; d1 = index * 4
+            add.w   d0,d1                   ; d1 = index * 4 + code (0..3)
+            move.l  (a2,d1.w*4),d1          ; d1 = signed 32-Bit-Delta aus delta2_table
+            add.l   d1,d4                   ; PCM_Side += delta
+            cmp.l   #32767,d4               ; Clamping Side (+32767)
             ble.s   .smin
             move.l  #32767,d4
             bra.s   .sq
 .smin:
-            cmp.l   #-32768,d4
+            cmp.l   #-32768,d4              ; Clamping Side (-32768)
             bge.s   .sq
             move.l  #-32768,d4
 .sq:
-            add.w   (a6,d0.w*2),d5
+            add.w   (a6,d0.w*2),d5          ; Step-Index Side anpassen & clampen (0..88)
             tst.w   d5
             bge.s   .smax
             moveq   #0,d5
@@ -83,11 +111,12 @@ _decode_4_2bit_ms_asm:
             ble.s   .si
             move.w  #88,d5
 .si:
+            ; --- 3. M/S-Matrix (L = Mid + Side, R = Mid - Side) + Clamping ---
             move.l  d2,d0
-            add.l   d4,d0
+            add.l   d4,d0                   ; d0 = Links (Mid + Side)
             move.l  d2,d1
-            sub.l   d4,d1
-            cmp.l   #32767,d0
+            sub.l   d4,d1                   ; d1 = Rechts (Mid - Side)
+            cmp.l   #32767,d0               ; Clamping Links (-32768..32767)
             ble.s   .ms_chk_min_L
             move.l  #32767,d0
             bra.s   .ms_clamp_R
@@ -96,7 +125,7 @@ _decode_4_2bit_ms_asm:
             bge.s   .ms_clamp_R
             move.l  #-32768,d0
 .ms_clamp_R:
-            cmp.l   #32767,d1
+            cmp.l   #32767,d1               ; Clamping Rechts (-32768..32767)
             ble.s   .ms_chk_min_R
             move.l  #32767,d1
             bra.s   .ms_pack
@@ -105,26 +134,29 @@ _decode_4_2bit_ms_asm:
             bge.s   .ms_pack
             move.l  #-32768,d1
 .ms_pack:
-            swap    d0
+            swap    d0                      ; 32-Bit Stereo-Ausgabe [Links_16 | Rechts_16]
             move.w  d1,d0
             move.l  d0,(a1)+
             dbf     d7,.ms_pair_loop
             dbf     d6,.ms_chunk_loop
-            subq.l  #1,64(a7)
+            subq.l  #1,64(a7)               ; block_cnt--
             bne     .ms_block_loop
 .ms_done:
-            move.l  56(a7),a0
+            move.l  56(a7),a0               ; Mid/Side-Status ins RAM zurückschreiben
             move.l  d2,(a0)
             move.w  d3,4(a0)
             move.l  60(a7),a0
             move.l  d4,(a0)
             move.w  d5,4(a0)
             movem.l (a7)+,d2-d7/a2-a6
-            movec   ccc,d0
+            movec   ccc,d0                  ; Zyklenmessung ENDE
             move.l  e1,d1
             sub.l   d1,d0
             rts
 
+; ==============================================================================
+; LOOKUP-TABELLEN (4-Bit Mid & 2-Bit Side)
+; ==============================================================================
 index_adj_4bit:
             dc.w    -1, -1, -1, -1,  2,  4,  6,  8
 index_adj_2bit:

@@ -1,40 +1,69 @@
 
+; ==============================================================================
+; EXTREME OPTIMIZED 68080 ADPCM 4-BIT DECODER SUITE – "Fresh15" (Core 11350)
+; Enthält: Stereo (L/R), Mid-Side (M/S) und Mono (15-Byte-Block = 30 Nibbles)
+;
+; Optimierungen (Fresh9 + Fresh14 + Fresh15):
+;   1. Vorberechnete Signed-32-Bit-Delta-Tabelle (delta_table, 89 * 16 Longs):
+;      Direkter Tabellenzugriff (a4,d7.w*4) ersetzt die komplette 4-Bit-IMA-
+;      Shift/Branch-Kette sowie die Vorzeichenverzweigung.
+;   2. Vollständig ausgerollte 15-Byte-Blöcke (keine inneren Chunk-/Paar-Loops):
+;      - 3 * movex.l (je 4 Bytes = 8 Nibbles = 4 Stereo-Paare bzw. 8 Mono-Samples)
+;      - 3 * move.b  (je 1 Byte  = 2 Nibbles = 1 Stereo-Paar  bzw. 2 Mono-Samples)
+;   3. 16-Bit-Overflow-Matrix (Fresh7) im M/S-Modus:
+;      Nutzt add.w / sub.w + bvc.s (Overflow-Flag V) statt langer 32-Bit-Clamps.
+;   4. 64-Byte-Cacheline-Alignment (align 64) vor _decode_4bit_mono_asm (Fresh14).
+;   5. Register-Belegung:
+;      - d0/d1: aktuelles 4-Bit-Nibble (0..15) für Links/Mid (d0) bzw. Rechts/Side (d1)
+;      - d2/d3: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Links/Mid/Mono
+;      - d4/d5: PCM-Prädiktor (32-Bit signed) & Step-Index (0..88) Rechts/Side
+;      - d6/d7: Scratch-Register für Tabellen-Offset und Delta
+;      - e0: 32-Bit-Bitstream-Schieberegister (geladen via Endian-Swap movex.l)
+;      - e1: Startwert des Hardware-Taktzählers (CCC) für Zyklusmessung
+;      - a0/a1: Eingabe-Bitstream / Ausgabe-PCM-Puffer
+;      - a4: Zeiger auf delta_table (89 * 16 signed 32-Bit Deltas)
+;      - a6: Zeiger auf index_adj_table (8 * 16-Bit Index-Adjust: -1,-1,-1,-1,2,4,6,8)
+; ==============================================================================
+
             xdef    _decode_4bit_stereo_asm
             xdef    _decode_4bit_ms_asm
             xdef    _decode_4bit_mono_asm
 
-; Fresh independent 4-bit decoder (unrolled 4 pairs, no bsr/E2-E5 scratch).
-; Same I/O contract; tables/data copied, control flow rewritten.
-
+; ------------------------------------------------------------------------------
+; MACRO: F_PAIR – Dekodiert 1 Stereo-Paar (2 Nibbles = 8 Bit) aus e0
+; Schreibt gepacktes 32-Bit-Sample [Links_16 | Rechts_16] nach (a1)+.
+; ------------------------------------------------------------------------------
 F_PAIR MACRO
+            ; --- Nibbles für Links (d0) und Rechts (d1) aus Bitstream (e0) holen ---
             move.l  e0,d0
-            andi.l  #15,d0
-            lsr.l   #4,e0
+            andi.l  #15,d0                  ; d0 = Nibble Links (0..15, Bit 3 = Sign)
+            lsr.l   #4,e0                   ; Bitstream 4 Bit weiterschieben
             move.l  e0,d1
-            andi.l  #15,d1
-            lsr.l   #4,e0
+            andi.l  #15,d1                  ; d1 = Nibble Rechts (0..15, Bit 3 = Sign)
+            lsr.l   #4,e0                   ; Bitstream 4 Bit weiterschieben
 
+            ; --- Kanal Links: Signed-32-Bit-Delta laden & auf PCM_L (d2) addieren ---
             moveq   #0,d6
-            move.w  d3,d6
-            lsl.w   #4,d6
+            move.w  d3,d6                   ; d6 = Step-Index Links (0..88)
+            lsl.w   #4,d6                   ; d6 = index * 16 (16 Einträge pro Step-Index)
             move.l  d0,d7
-            add.w   d6,d7
-            move.l  (a4,d7.w*4),d6
+            add.w   d6,d7                   ; d7 = index * 16 + nibble (0..15)
+            move.l  (a4,d7.w*4),d6          ; d6 = vorberechnetes signed 32-Bit-Delta
 
-            add.l   d6,d2
-            cmp.l   #32767,d2
+            add.l   d6,d2                   ; PCM_L += delta
+            cmp.l   #32767,d2               ; 16-Bit Sättigung Links (+32767)
             ble     .lmin\@
             move.l  #32767,d2
             bra     .lidx\@
 .lmin\@:
-            cmp.l   #-32768,d2
+            cmp.l   #-32768,d2              ; 16-Bit Sättigung Links (-32768)
             bge     .lidx\@
             move.l  #-32768,d2
 .lidx\@:
             move.w  d0,d7
-            andi.w  #7,d7
-            add.w   (a6,d7.w*2),d3
-            tst.w   d3
+            andi.w  #7,d7                   ; Vorzeichenbit (Bit 3) ausblenden -> Magnitude (0..7)
+            add.w   (a6,d7.w*2),d3          ; Step-Index Links anpassen
+            tst.w   d3                      ; Index-Clamping Links (0..88)
             bge     .lmax\@
             moveq   #0,d3
             bra     .ldone\@
@@ -44,27 +73,28 @@ F_PAIR MACRO
             move.w  #88,d3
 .ldone\@:
 
+            ; --- Kanal Rechts: Signed-32-Bit-Delta laden & auf PCM_R (d4) addieren ---
             moveq   #0,d6
-            move.w  d5,d6
-            lsl.w   #4,d6
+            move.w  d5,d6                   ; d6 = Step-Index Rechts (0..88)
+            lsl.w   #4,d6                   ; d6 = index * 16
             move.l  d1,d7
-            add.w   d6,d7
-            move.l  (a4,d7.w*4),d6
+            add.w   d6,d7                   ; d7 = index * 16 + nibble (0..15)
+            move.l  (a4,d7.w*4),d6          ; d6 = signed 32-Bit-Delta
 
-            add.l   d6,d4
-            cmp.l   #32767,d4
+            add.l   d6,d4                   ; PCM_R += delta
+            cmp.l   #32767,d4               ; 16-Bit Sättigung Rechts (+32767)
             ble     .rmin\@
             move.l  #32767,d4
             bra     .ridx\@
 .rmin\@:
-            cmp.l   #-32768,d4
+            cmp.l   #-32768,d4              ; 16-Bit Sättigung Rechts (-32768)
             bge     .ridx\@
             move.l  #-32768,d4
 .ridx\@:
             move.w  d1,d7
-            andi.w  #7,d7
-            add.w   (a6,d7.w*2),d5
-            tst.w   d5
+            andi.w  #7,d7                   ; Magnitude (0..7) isolieren
+            add.w   (a6,d7.w*2),d5          ; Step-Index Rechts anpassen
+            tst.w   d5                      ; Index-Clamping Rechts (0..88)
             bge     .rmax\@
             moveq   #0,d5
             bra     .rdone\@
@@ -74,28 +104,36 @@ F_PAIR MACRO
             move.w  #88,d5
 .rdone\@:
 
+            ; --- 32-Bit Stereo-Ausgabe [Links_16 | Rechts_16] ---
             move.w  d2,d0
             swap    d0
             move.w  d4,d0
             move.l  d0,(a1)+
         ENDM
 
+; ------------------------------------------------------------------------------
+; MACRO: F_MS_PAIR – Dekodiert 1 Mid/Side-Paar (2 Nibbles = 8 Bit) aus e0
+; Berechnet anschließend L = Mid + Side und R = Mid - Side über die schnelle
+; 16-Bit-Overflow-Matrix (add.w/sub.w + bvc.s) und schreibt [L_16 | R_16].
+; ------------------------------------------------------------------------------
 F_MS_PAIR MACRO
+            ; --- Nibbles für Mid (d0) und Side (d1) aus Bitstream (e0) holen ---
             move.l  e0,d0
-            andi.l  #15,d0
+            andi.l  #15,d0                  ; d0 = Nibble Mid (0..15)
             lsr.l   #4,e0
             move.l  e0,d1
-            andi.l  #15,d1
+            andi.l  #15,d1                  ; d1 = Nibble Side (0..15)
             lsr.l   #4,e0
 
+            ; --- Kanal Mid (d2/d3) dekodieren ---
             moveq   #0,d6
-            move.w  d3,d6
-            lsl.w   #4,d6
+            move.w  d3,d6                   ; d6 = Step-Index Mid (0..88)
+            lsl.w   #4,d6                   ; d6 = index * 16
             move.l  d0,d7
-            add.w   d6,d7
-            move.l  (a4,d7.w*4),d6
-            add.l   d6,d2
-            cmp.l   #32767,d2
+            add.w   d6,d7                   ; d7 = index * 16 + nibble
+            move.l  (a4,d7.w*4),d6          ; d6 = signed 32-Bit-Delta Mid
+            add.l   d6,d2                   ; PCM_Mid += delta
+            cmp.l   #32767,d2               ; Clamping Mid (-32768..32767)
             ble     .lmin\@
             move.l  #32767,d2
             bra     .lidx\@
@@ -106,7 +144,7 @@ F_MS_PAIR MACRO
 .lidx\@:
             move.w  d0,d7
             andi.w  #7,d7
-            add.w   (a6,d7.w*2),d3
+            add.w   (a6,d7.w*2),d3          ; Step-Index Mid anpassen & clampen (0..88)
             tst.w   d3
             bge     .lmax\@
             moveq   #0,d3
@@ -117,14 +155,15 @@ F_MS_PAIR MACRO
             move.w  #88,d3
 .ldone\@:
 
+            ; --- Kanal Side (d4/d5) dekodieren ---
             moveq   #0,d6
-            move.w  d5,d6
-            lsl.w   #4,d6
+            move.w  d5,d6                   ; d6 = Step-Index Side (0..88)
+            lsl.w   #4,d6                   ; d6 = index * 16
             move.l  d1,d7
-            add.w   d6,d7
-            move.l  (a4,d7.w*4),d6
-            add.l   d6,d4
-            cmp.l   #32767,d4
+            add.w   d6,d7                   ; d7 = index * 16 + nibble
+            move.l  (a4,d7.w*4),d6          ; d6 = signed 32-Bit-Delta Side
+            add.l   d6,d4                   ; PCM_Side += delta
+            cmp.l   #32767,d4               ; Clamping Side (-32768..32767)
             ble     .rmin\@
             move.l  #32767,d4
             bra     .ridx\@
@@ -135,7 +174,7 @@ F_MS_PAIR MACRO
 .ridx\@:
             move.w  d1,d7
             andi.w  #7,d7
-            add.w   (a6,d7.w*2),d5
+            add.w   (a6,d7.w*2),d5          ; Step-Index Side anpassen & clampen (0..88)
             tst.w   d5
             bge     .rmax\@
             moveq   #0,d5
@@ -146,44 +185,49 @@ F_MS_PAIR MACRO
             move.w  #88,d5
 .rdone\@:
 
+            ; --- 16-Bit-Overflow-Matrix (Fresh7): L = Mid + Side, R = Mid - Side ---
             move.w  d2,d0
-            add.w   d4,d0
-            bvc.s   .mlok\@
-            tst.w   d2
-            bge.s   .mlmax\@
-            move.w  #-32768,d0
+            add.w   d4,d0                   ; d0.w = Mid + Side (setzt V-Flag bei 16-Bit-Überlauf)
+            bvc.s   .mlok\@                 ; Kein Überlauf -> direkt weiter
+            tst.w   d2                      ; Bei Überlauf entscheidet das Vorzeichen von Mid:
+            bge.s   .mlmax\@                ; Mid >= 0 -> positiver Überlauf (+32767)
+            move.w  #-32768,d0              ; Mid <  0 -> negativer Unterlauf (-32768)
             bra.s   .mlok\@
 .mlmax\@:
             move.w  #32767,d0
 .mlok\@:
             move.w  d2,d1
-            sub.w   d4,d1
-            bvc.s   .mrok\@
-            tst.w   d2
-            bge.s   .mrmax\@
-            move.w  #-32768,d1
+            sub.w   d4,d1                   ; d1.w = Mid - Side (setzt V-Flag bei 16-Bit-Überlauf)
+            bvc.s   .mrok\@                 ; Kein Überlauf -> direkt weiter
+            tst.w   d2                      ; Bei Überlauf entscheidet das Vorzeichen von Mid:
+            bge.s   .mrmax\@                ; Mid >= 0 -> positiver Überlauf (+32767)
+            move.w  #-32768,d1              ; Mid <  0 -> negativer Unterlauf (-32768)
             bra.s   .mrok\@
 .mrmax\@:
             move.w  #32767,d1
 .mrok\@:
-            swap    d0
+            swap    d0                      ; 32-Bit Stereo-Ausgabe [Links_16 | Rechts_16]
             move.w  d1,d0
             move.l  d0,(a1)+
         ENDM
 
+; ------------------------------------------------------------------------------
+; MACRO: F_MONO_NIB – Dekodiert 1 Mono-Nibble (4 Bit) aus e0
+; Schreibt 16-Bit-Sample nach (a1)+.
+; ------------------------------------------------------------------------------
 F_MONO_NIB MACRO
             move.l  e0,d0
-            andi.l  #15,d0
-            lsr.l   #4,e0
+            andi.l  #15,d0                  ; d0 = Mono-Nibble (0..15)
+            lsr.l   #4,e0                   ; Bitstream 4 Bit weiterschieben
 
             moveq   #0,d6
-            move.w  d3,d6
-            lsl.w   #4,d6
+            move.w  d3,d6                   ; d6 = Step-Index Mono (0..88)
+            lsl.w   #4,d6                   ; d6 = index * 16
             move.l  d0,d7
-            add.w   d6,d7
-            move.l  (a4,d7.w*4),d6
-            add.l   d6,d2
-            cmp.l   #32767,d2
+            add.w   d6,d7                   ; d7 = index * 16 + nibble
+            move.l  (a4,d7.w*4),d6          ; d6 = signed 32-Bit-Delta
+            add.l   d6,d2                   ; PCM_Mono += delta
+            cmp.l   #32767,d2               ; Clamping Mono (-32768..32767)
             ble     .mmin\@
             move.l  #32767,d2
             bra     .midx\@
@@ -193,8 +237,8 @@ F_MONO_NIB MACRO
             move.l  #-32768,d2
 .midx\@:
             move.w  d0,d7
-            andi.w  #7,d7
-            add.w   (a6,d7.w*2),d3
+            andi.w  #7,d7                   ; Magnitude (0..7)
+            add.w   (a6,d7.w*2),d3          ; Step-Index Mono anpassen & clampen (0..88)
             tst.w   d3
             bge     .mmax\@
             moveq   #0,d3
@@ -204,43 +248,50 @@ F_MONO_NIB MACRO
             ble     .mdone\@
             move.w  #88,d3
 .mdone\@:
-            move.w  d2,(a1)+
+            move.w  d2,(a1)+                ; 16-Bit Mono-Sample schreiben
         ENDM
 
+; ==============================================================================
+; 1. DECODER: 4-BIT STEREO (Voll unrolled: 15 Bytes = 15 Stereo-Paare pro Block)
+; ==============================================================================
 _decode_4bit_stereo_asm:
-            movem.l d2-d7/a2-a6,-(a7)
-            movec   ccc,d0
+            movem.l d2-d7/a2-a6,-(a7)       ; 11 Register sichern (44 Bytes)
+            movec   ccc,d0                  ; Zyklenmessung START
             move.l  d0,e1
-            move.l  48(a7),a0
-            move.l  52(a7),a1
-            move.l  56(a7),a5
-            move.l  60(a7),a3
-            move.l  (a5),d2
+            move.l  48(a7),a0               ; a0 = in_buffer
+            move.l  52(a7),a1               ; a1 = out_buffer
+            move.l  56(a7),a5               ; a5 = chL (State Links)
+            move.l  60(a7),a3               ; a3 = chR (State Rechts)
+            move.l  (a5),d2                 ; d2 = PCM Links
             move.w  4(a5),d3
-            ext.l   d3
-            move.l  (a3),d4
+            ext.l   d3                      ; d3 = Step-Index Links
+            move.l  (a3),d4                 ; d4 = PCM Rechts
             move.w  4(a3),d5
-            ext.l   d5
-            lea     delta_table,a4
-            lea     index_adj_table,a6
-            tst.l   64(a7)
+            ext.l   d5                      ; d5 = Step-Index Rechts
+            lea     delta_table,a4          ; a4 = Signed-32-Bit-Delta-Tabelle
+            lea     index_adj_table,a6      ; a6 = Index-Adjust-Tabelle
+            tst.l   64(a7)                  ; block_cnt == 0?
             beq     .st_done
 .st_block:
+            ; --- Chunk 1: 4 Bytes (32 Bit Little-Endian via movex.l) = 4 Paare ---
             movex.l (a0)+,e0
             F_PAIR
             F_PAIR
             F_PAIR
             F_PAIR
+            ; --- Chunk 2: 4 Bytes = 4 Paare ---
             movex.l (a0)+,e0
             F_PAIR
             F_PAIR
             F_PAIR
             F_PAIR
+            ; --- Chunk 3: 4 Bytes = 4 Paare ---
             movex.l (a0)+,e0
             F_PAIR
             F_PAIR
             F_PAIR
             F_PAIR
+            ; --- Restbytes 13..15: je 1 Byte = 1 Paar (zusammen 3 Paare) ---
             move.l  #0,e0
             move.b  (a0)+,e0
             F_PAIR
@@ -250,40 +301,44 @@ _decode_4bit_stereo_asm:
             move.l  #0,e0
             move.b  (a0)+,e0
             F_PAIR
-            subq.l  #1,64(a7)
+            subq.l  #1,64(a7)               ; block_cnt--
             bne     .st_block
 .st_done:
-            move.l  56(a7),a5
+            move.l  56(a7),a5               ; Kanal-Status Links zurückschreiben
             move.l  d2,(a5)
             move.w  d3,4(a5)
-            move.l  60(a7),a3
+            move.l  60(a7),a3               ; Kanal-Status Rechts zurückschreiben
             move.l  d4,(a3)
             move.w  d5,4(a3)
             movem.l (a7)+,d2-d7/a2-a6
-            movec   ccc,d0
+            movec   ccc,d0                  ; Zyklenmessung ENDE
             move.l  e1,d1
-            sub.l   d1,d0
+            sub.l   d1,d0                   ; Verbrauchte Taktzyklen in d0 zurückgeben
             rts
 
+; ==============================================================================
+; 2. DECODER: 4-BIT MID-SIDE (Voll unrolled: 15 Bytes = 15 M/S-Paare pro Block)
+; ==============================================================================
 _decode_4bit_ms_asm:
-            movem.l d2-d7/a2-a6,-(a7)
-            movec   ccc,d0
+            movem.l d2-d7/a2-a6,-(a7)       ; 11 Register sichern (44 Bytes)
+            movec   ccc,d0                  ; Zyklenmessung START
             move.l  d0,e1
-            move.l  48(a7),a0
-            move.l  52(a7),a1
-            move.l  56(a7),a5
-            move.l  60(a7),a3
-            move.l  (a5),d2
+            move.l  48(a7),a0               ; a0 = in_buffer
+            move.l  52(a7),a1               ; a1 = out_buffer
+            move.l  56(a7),a5               ; a5 = chMid
+            move.l  60(a7),a3               ; a3 = chSide
+            move.l  (a5),d2                 ; d2 = PCM Mid
             move.w  4(a5),d3
-            ext.l   d3
-            move.l  (a3),d4
+            ext.l   d3                      ; d3 = Step-Index Mid
+            move.l  (a3),d4                 ; d4 = PCM Side
             move.w  4(a3),d5
-            ext.l   d5
+            ext.l   d5                      ; d5 = Step-Index Side
             lea     delta_table,a4
             lea     index_adj_table,a6
-            tst.l   64(a7)
+            tst.l   64(a7)                  ; block_cnt == 0?
             beq     .ms_done
 .ms_block:
+            ; --- 3 * 4 Bytes (je 4 M/S-Paare) + 3 * 1 Byte (je 1 M/S-Paar) ---
             movex.l (a0)+,e0
             F_MS_PAIR
             F_MS_PAIR
@@ -308,37 +363,41 @@ _decode_4bit_ms_asm:
             move.l  #0,e0
             move.b  (a0)+,e0
             F_MS_PAIR
-            subq.l  #1,64(a7)
+            subq.l  #1,64(a7)               ; block_cnt--
             bne     .ms_block
 .ms_done:
-            move.l  56(a7),a5
+            move.l  56(a7),a5               ; Mid/Side-Status zurückschreiben
             move.l  d2,(a5)
             move.w  d3,4(a5)
             move.l  60(a7),a3
             move.l  d4,(a3)
             move.w  d5,4(a3)
             movem.l (a7)+,d2-d7/a2-a6
-            movec   ccc,d0
+            movec   ccc,d0                  ; Zyklenmessung ENDE
             move.l  e1,d1
             sub.l   d1,d0
             rts
 
-            align   64
+; ==============================================================================
+; 3. DECODER: 4-BIT MONO (64-Byte aligned, voll unrolled: 15 Bytes = 30 Samples)
+; ==============================================================================
+            align   64                      ; 68080 I-Cacheline-Alignment (Fresh14)
 _decode_4bit_mono_asm:
-            movem.l d2-d7/a2-a6,-(a7)
-            movec   ccc,d0
+            movem.l d2-d7/a2-a6,-(a7)       ; 11 Register sichern (44 Bytes)
+            movec   ccc,d0                  ; Zyklenmessung START
             move.l  d0,e1
-            move.l  48(a7),a0
-            move.l  52(a7),a1
-            move.l  56(a7),a5
-            move.l  (a5),d2
+            move.l  48(a7),a0               ; a0 = in_buffer
+            move.l  52(a7),a1               ; a1 = out_buffer
+            move.l  56(a7),a5               ; a5 = chMono (Hinweis: 1 Pointer weniger als Stereo!)
+            move.l  (a5),d2                 ; d2 = PCM Mono
             move.w  4(a5),d3
-            ext.l   d3
+            ext.l   d3                      ; d3 = Step-Index Mono
             lea     delta_table,a4
             lea     index_adj_table,a6
-            tst.l   60(a7)
+            tst.l   60(a7)                  ; block_cnt liegt bei Mono auf 60(a7)!
             beq     .mo_done
 .mo_block:
+            ; --- 3 * 4 Bytes (je 8 Mono-Nibbles) + 3 * 1 Byte (je 2 Mono-Nibbles) ---
             movex.l (a0)+,e0
             F_MONO_NIB
             F_MONO_NIB
@@ -378,18 +437,24 @@ _decode_4bit_mono_asm:
             move.b  (a0)+,e0
             F_MONO_NIB
             F_MONO_NIB
-            subq.l  #1,60(a7)
+            subq.l  #1,60(a7)               ; block_cnt--
             bne     .mo_block
 .mo_done:
-            move.l  56(a7),a5
+            move.l  56(a7),a5               ; Mono-Status zurückschreiben
             move.l  d2,(a5)
             move.w  d3,4(a5)
             movem.l (a7)+,d2-d7/a2-a6
-            movec   ccc,d0
+            movec   ccc,d0                  ; Zyklenmessung ENDE
             move.l  e1,d1
             sub.l   d1,d0
             rts
 
+; ==============================================================================
+; LOOKUP-TABELLEN (4-Bit IMA ADPCM)
+; - index_adj_table: 8 Wort-Einträge für Magnitude 0..7 (-1,-1,-1,-1, +2,+4,+6,+8)
+; - delta_table:     89 Step-Indizes * 16 Nibbles (0..15) = 1424 signed 32-Bit-Deltas
+;   Formel: (step>>3) + b0*(step>>2) + b1*(step>>1) + b2*step, negiert wenn b3=1
+; ==============================================================================
             section code,code
 index_adj_table:
             dc.w    -1, -1, -1, -1, 2, 4, 6, 8
