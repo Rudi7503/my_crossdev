@@ -4,8 +4,13 @@
         section .text,code
         xdef    _fft_float_asm
         xdef    _fft_fixed_asm
+        xdef    _get_ccc
         xref    _bit_reverse_float
         xref    _bit_reverse_fixed
+
+_get_ccc:
+        movec.l CCC,d0
+        rts
 
 ; ======================================================================
 ; void fft_float_asm(complex_float *x, int n, const complex_float *tw)
@@ -30,19 +35,19 @@ _fft_float_asm:
         jsr     _bit_reverse_float
         addq.l  #8,sp
 
-        ; 4. Stage loop: len = 2, 4, 8, ..., n
-        moveq   #2,d3                   ; d3 = len
+        ; 4. Stage setup: initial len = 2
+        moveq   #2,d3                   ; d3 = len = 2
+        moveq   #1,d4                   ; d4 = half = 1
+        move.l  #2048,d5                ; d5 = tw_stride = 2048
+        move.l  d2,d0
+        lsr.l   #1,d0                   ; num_blocks = n / 2
+        move.l  d0,a0                   ; a0 = initial num_blocks
+        moveq   #16,d7                  ; d7 = step = len * 8 = 16 bytes
+        move.l  d7,a1                   ; a1 = step bytes
 
 .flt_stage_loop:
-        cmp.l   d2,d3
+        cmp.l   d2,d3                   ; len > n ?
         bhi     .flt_done
-
-        move.l  d3,d4
-        lsr.l   #1,d4                   ; d4 = half = len / 2
-
-        move.l  #4096,d5
-        divu.w  d3,d5                   ; d5 = tw_stride = 4096 / len
-        and.l   #$ffff,d5
 
         ; Loop j = 0 .. half-1
         clr.l   d6                      ; d6 = j
@@ -69,13 +74,9 @@ _fft_float_asm:
         lsl.l   #3,d7                   ; half * 8 bytes
         lea     (a5,d7.l),a6            ; a6 = v_ptr = &x[j + half]
 
-        move.l  d3,d7
-        lsl.l   #3,d7                   ; d7 = step = len * 8 bytes
-
-        ; Number of blocks = n / len
-        move.l  d2,d0
-        divu.w  d3,d0
-        and.l   #$ffff,d0               ; d0 = num_blocks
+        ; Number of blocks for this j
+        move.l  a0,d0                   ; d0 = num_blocks
+        move.l  a1,d7                   ; d7 = step bytes
 
         ; Check for j == 0 special case (no multiplications)
         tst.l   d6
@@ -144,6 +145,14 @@ _fft_float_asm:
 
 .flt_j_done:
         lsl.l   #1,d3                   ; len <<= 1
+        lsl.l   #1,d4                   ; half <<= 1
+        lsr.l   #1,d5                   ; tw_stride >>= 1
+        move.l  a0,d0
+        lsr.l   #1,d0                   ; num_blocks >>= 1
+        move.l  d0,a0
+        move.l  a1,d7
+        lsl.l   #1,d7                   ; step <<= 1
+        move.l  d7,a1
         bra     .flt_stage_loop
 
 .flt_done:
@@ -161,7 +170,18 @@ _fft_fixed_asm:
         move.l  12(sp),a1               ; a1 = tw
 
         movem.l d2-d7/a2-a5,-(sp)
-        link.w  a6,#-32
+        link.w  a6,#-40
+
+        ; Frame layout:
+        ; -4(a6)  : n
+        ; -8(a6)  : len
+        ; -12(a6) : half
+        ; -16(a6) : tw_stride
+        ; -20(a6) : j
+        ; -24(a6) : num_blocks
+        ; -28(a6) : step (bytes)
+        ; -32(a6) : wr
+        ; -36(a6) : wi
 
         move.l  a0,a2                   ; a2 = x
         move.l  d0,-4(a6)               ; n
@@ -173,47 +193,40 @@ _fft_fixed_asm:
         jsr     _bit_reverse_fixed
         addq.l  #8,sp
 
-        ; 2. Stage loop: len = 2, 4, ..., n
+        ; 2. Stage setup: initial len = 2
         move.l  #2,-8(a6)               ; len = 2
+        move.l  #1,-12(a6)              ; half = 1
+        move.l  #2048,-16(a6)           ; tw_stride = 2048
+        move.l  -4(a6),d0
+        lsr.l   #1,d0
+        move.l  d0,-24(a6)              ; num_blocks = n / 2
+        move.l  #8,-28(a6)              ; step = len * 4 = 8 bytes
 
 .fix_stage_loop:
         move.l  -8(a6),d0               ; len
-        cmp.l   -4(a6),d0               ; cmp n, len
+        cmp.l   -4(a6),d0               ; len > n ?
         bhi     .fix_done
-
-        move.l  d0,d1
-        lsr.l   #1,d1                   ; half = len / 2
-        move.l  d1,-12(a6)              ; save half
-
-        move.l  #4096,d2
-        divu.w  d0,d2
-        and.l   #$ffff,d2
-        move.l  d2,-16(a6)              ; save tw_stride = 4096 / len
-
-        move.l  d0,d1
-        lsl.l   #2,d1                   ; step = len * 4 bytes
-        move.l  d1,-24(a6)              ; save step
 
         ; Loop j = 0 .. half-1
         clr.l   -20(a6)                 ; j = 0
 
 .fix_j_loop:
         move.l  -20(a6),d0              ; j
-        cmp.l   -12(a6),d0              ; cmp half, j
+        cmp.l   -12(a6),d0              ; j >= half ?
         bge     .fix_j_done
 
         ; tw_idx = j * tw_stride
-        move.l  d0,d1
-        mulu.w  -16(a6),d1              ; tw_idx
+        move.l  -16(a6),d1
+        mulu.w  d0,d1                   ; tw_idx = tw_stride * j
         lsl.l   #2,d1                   ; tw_idx * 4 bytes
         lea     (a3,d1.l),a4            ; &tw[tw_idx]
 
         move.w  (a4),d2
         ext.l   d2
-        move.l  d2,-28(a6)              ; wr
+        move.l  d2,-32(a6)              ; wr
         move.w  2(a4),d2
         ext.l   d2
-        move.l  d2,-32(a6)              ; wi
+        move.l  d2,-36(a6)              ; wi
 
         ; Start u_ptr = &x[j]
         move.l  d0,d1
@@ -225,12 +238,8 @@ _fft_fixed_asm:
         lsl.l   #2,d1                   ; half * 4 bytes
         lea     (a4,d1.l),a5            ; a5 = v_ptr = &x[j + half]
 
-        ; Number of blocks = n / len
-        move.l  -4(a6),d0               ; n
-        divu.w  -8(a6),d0               ; n / len
-        and.l   #$ffff,d0               ; d0 = num_blocks
-
-        move.l  -24(a6),a1              ; a1 = step bytes
+        move.l  -24(a6),d0              ; d0 = num_blocks
+        move.l  -28(a6),a1              ; a1 = step bytes
 
         ; Check if j == 0
         tst.l   -20(a6)
@@ -238,23 +247,27 @@ _fft_fixed_asm:
 
 .fix_j0_loop:
         move.w  (a4),d1                 ; ur
+        ext.l   d1
         move.w  2(a4),d2                ; ui
+        ext.l   d2
         move.w  (a5),d3                 ; vr
+        ext.l   d3
         move.w  2(a5),d4                ; vi
+        ext.l   d4
 
         ; Real: (ur + vr) >> 1, (ur - vr) >> 1
-        move.w  d1,d5
-        add.w   d3,d1
-        sub.w   d3,d5
-        asr.w   #1,d1
-        asr.w   #1,d5
+        move.l  d1,d5
+        add.l   d3,d1
+        sub.l   d3,d5
+        asr.l   #1,d1
+        asr.l   #1,d5
 
         ; Imag: (ui + vi) >> 1, (ui - vi) >> 1
-        move.w  d2,d6
-        add.w   d4,d2
-        sub.w   d4,d6
-        asr.w   #1,d2
-        asr.w   #1,d6
+        move.l  d2,d6
+        add.l   d4,d2
+        sub.l   d4,d6
+        asr.l   #1,d2
+        asr.l   #1,d6
 
         ; Store
         move.w  d1,(a4)
@@ -270,8 +283,8 @@ _fft_fixed_asm:
 
 .fix_general_loop:
         ; Preload wr into d2, wi into d3
-        move.l  -28(a6),d2              ; wr
-        move.l  -32(a6),d3              ; wi
+        move.l  -32(a6),d2              ; wr
+        move.l  -36(a6),d3              ; wi
 
 .fix_gen_blk:
         ; Load v
@@ -306,21 +319,23 @@ _fft_fixed_asm:
 
         ; Load u
         move.w  (a4),d1                 ; ur
+        ext.l   d1
         move.w  2(a4),d4                ; ui
+        ext.l   d4
 
-        ; ur + tr, ur - tr, >> 1
-        move.w  d1,d7
-        add.w   d5,d1
-        sub.w   d5,d7
-        asr.w   #1,d1                   ; u'_r
-        asr.w   #1,d7                   ; v'_r
+        ; ur + tr, ur - tr, >> 1 (in 32-bit to prevent overflow!)
+        move.l  d1,d7
+        add.l   d5,d1
+        sub.l   d5,d7
+        asr.l   #1,d1                   ; u'_r
+        asr.l   #1,d7                   ; v'_r
 
-        ; ui + ti, ui - ti, >> 1
-        move.w  d4,d5
-        add.w   d6,d4
-        sub.w   d6,d5
-        asr.w   #1,d4                   ; u'_i
-        asr.w   #1,d5                   ; v'_i
+        ; ui + ti, ui - ti, >> 1 (in 32-bit to prevent overflow!)
+        move.l  d4,d5
+        add.l   d6,d4
+        sub.l   d6,d5
+        asr.l   #1,d4                   ; u'_i
+        asr.l   #1,d5                   ; v'_i
 
         ; Store
         move.w  d1,(a4)
@@ -341,6 +356,23 @@ _fft_fixed_asm:
         move.l  -8(a6),d0
         lsl.l   #1,d0
         move.l  d0,-8(a6)               ; len <<= 1
+
+        move.l  -12(a6),d0
+        lsl.l   #1,d0
+        move.l  d0,-12(a6)              ; half <<= 1
+
+        move.l  -16(a6),d0
+        lsr.l   #1,d0
+        move.l  d0,-16(a6)              ; tw_stride >>= 1
+
+        move.l  -24(a6),d0
+        lsr.l   #1,d0
+        move.l  d0,-24(a6)              ; num_blocks >>= 1
+
+        move.l  -28(a6),d0
+        lsl.l   #1,d0
+        move.l  d0,-28(a6)              ; step <<= 1
+
         bra     .fix_stage_loop
 
 .fix_done:

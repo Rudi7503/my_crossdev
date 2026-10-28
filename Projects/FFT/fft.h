@@ -35,10 +35,6 @@ void fft_float_asm(complex_float *x, int n, const complex_float *tw);
 void fft_fixed_asm(complex_int16 *x, int n, const complex_int16 *tw);
 
 /* Hardware cycle counter on Apollo 68080 */
-static inline uint32_t get_ccc(void) {
-    uint32_t c;
-    __asm__ __volatile__(".word 0x4e7a, 0x080f" : "=d"(c)); /* movec CCC, d0 */
-    return c;
-}
+uint32_t get_ccc(void);
 
 #endif /* FFT_H */
