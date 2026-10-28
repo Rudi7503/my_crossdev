@@ -51,6 +51,6 @@ Da die 68080 FPU an das 1-Befehl/Takt-Limit gebunden ist, bietet AMMX SIMD (64-B
 |:---|:---:|:---:|:---:|:---:|:---:|
 | **2x2** | 111 Takte | 60 Takte | **27 Takte** | **17 Takte** | **6.53x schneller** |
 | **3x3** | 301 Takte | 203 Takte | **87 Takte** | **34 Takte** | **8.85x schneller** |
-| **4x4** | 599 Takte | 476 Takte | **184 Takte** | **57 Takte** | **10.51x schneller** |
+| **4x4** | 599 Takte | 476 Takte | **184 Takte** | **54 Takte** | **11.09x schneller** |
 
 *(Alle Messungen 100/100 Läufe stabil auf Vampire V4 gemessen).*
