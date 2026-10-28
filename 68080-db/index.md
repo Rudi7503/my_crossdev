@@ -36,6 +36,9 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`FUS-003`](01-fusing.md) | MOVEQ + OR.L | `01-fusing.md` | gemessen |
 | [`FUS-004`](01-fusing.md) | Zwei MOVE.L (An)+,(Am)+ werden zu einem 64-Bit-Move | `01-fusing.md` | gemessen |
 | [`FUS-005`](01-fusing.md) | Zwei CLR.L (An)+ werden zu einem Quad-Clear | `01-fusing.md` | gemessen |
+| [`FIX-001`](12-matrix.md) | 2x2 Matrix-Multiplikation (16-Bit Fixed-Point AMMX SIMD) | `12-matrix.md` | gemessen |
+| [`FIX-002`](12-matrix.md) | 3x3 Matrix-Multiplikation (16-Bit Fixed-Point AMMX SIMD) | `12-matrix.md` | gemessen |
+| [`FIX-003`](12-matrix.md) | 4x4 Matrix-Multiplikation (16-Bit Fixed-Point AMMX SIMD) | `12-matrix.md` | gemessen |
 | [`MEM-001`](06-memory.md) | Zwei Long-Writes an einer Quad-Grenze ausrichten | `06-memory.md` | gemessen |
 | [`MEM-002`](06-memory.md) | TOUCH mit 12–15 Takten Vorlauf | `06-memory.md` | gemessen |
 | [`MEM-003`](06-memory.md) | Sequentielle Loads lösen den Auto-Prefetch aus | `06-memory.md` | gemessen |
@@ -70,6 +73,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **Speicher/Cache** (5): [`MEM-001`](06-memory.md), [`MEM-002`](06-memory.md), [`MEM-003`](06-memory.md), [`MEM-004`](06-memory.md), [`MEM-005`](06-memory.md)
 - **Patterns** (5): [`PAT-001`](07-patterns.md), [`PAT-002`](07-patterns.md), [`PAT-003`](07-patterns.md), [`PAT-004`](07-patterns.md), [`PAT-005`](07-patterns.md)
 - **Matrix (FPU)** (3): [`MAT-001`](12-matrix.md), [`MAT-002`](12-matrix.md), [`MAT-003`](12-matrix.md)
+- **Matrix (Fixed-Point AMMX)** (3): [`FIX-001`](12-matrix.md), [`FIX-002`](12-matrix.md), [`FIX-003`](12-matrix.md)
 - **Antipatterns** (6): [`ANTI-001`](08-antipatterns.md), [`ANTI-002`](08-antipatterns.md), [`ANTI-003`](08-antipatterns.md), [`ANTI-004`](08-antipatterns.md), [`ANTI-005`](08-antipatterns.md), [`ANTI-006`](08-antipatterns.md)
 
 ## Sequenzen und Logs

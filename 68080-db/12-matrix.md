@@ -1,54 +1,56 @@
-# 12 – Matrix-Multiplikation (FPU Single Precision)
+# 12 – Matrix-Multiplikation (FPU Float & AMMX Fixed-Point)
 
-**Dateien:** [`seq/MAT-001.i`](seq/MAT-001.i), [`seq/MAT-002.i`](seq/MAT-002.i), [`seq/MAT-003.i`](seq/MAT-003.i).
+**Dateien:**
+- FPU (Float): [`seq/MAT-001.i`](seq/MAT-001.i), [`seq/MAT-002.i`](seq/MAT-002.i), [`seq/MAT-003.i`](seq/MAT-003.i).
+- Fixed-Point (AMMX): [`seq/FIX-001.i`](seq/FIX-001.i), [`seq/FIX-002.i`](seq/FIX-002.i), [`seq/FIX-003.i`](seq/FIX-003.i).
 
-**Ziel:** Maximal pipelined 68080 FPU-Routinen für 2x2, 3x3 und 4x4 Single-Precision-Gleitkomma-Matrixmultiplikationen ($C = A \cdot B$) unter Nutzung des vollständigen 68080 32-Register-Modells.
+**Ziel:** Vergleich und Benchmark von 32-Bit IEEE Single-Precision FPU gegen 16-Bit Fixed-Point AMMX SIMD für 2x2, 3x3 und 4x4 Matrizen.
 
-> **Messstatus:** Alle drei Einträge wurden mit **Harness v5** auf der **Vampire V4 Hardware** gemessen (100 Läufe unter `Forbid()`, Warmup, CCC-Hardwaretaktzähler, IEP-Pipeslot-Erfassung). Alle Läufe sind zu 100 % deterministisch (MIN = MAX = AVG).
-
----
-
-## 1. Hardware-Architektur der 68080 FPU & Optimierungsmechanismen
-
-Aus dem Studium des **Apollo 68080 PRM (S. 4, 5, 9, 90, 91, 93, 94)**:
-1. **32 FPU-Register (`FP0..7` & `E0..23`):**
-   Laut PRM S. 5 hat die 68080 FPU Zugriff auf 4-mal so viele Float-Register über das BANK-Präfix. Sowohl `fmove.s` als auch `fmul` und `fadd` können direkt auf `e0..e23` zugreifen.
-2. **3-Operanden-Instruktionen (`fmul src1, src2, dest`):**
-   Laut PRM S. 5 & 90 ist die FPU eine echte 3-Operanden-Einheit. Damit entfallen sämtliche Zwischenkopien (`fmove`).
-3. **Vollständiges Register-Preloading (Zero Redundant Loads):**
-   - Bei 4x4 MatMul wird Matrix $B$ (16 Floats) **einmalig vollständig in `e0..e15` geladen**.
-   - Dies eliminiert 48 redundante Speicherladungen über die 4 Zeilen hinweg.
-4. **Zero-Stall Pipeline-Scheduling:**
-   - Multiplikationen werden für alle Spalten/Terme kontinuierlich in aufeinanderfolgenden Takten in die FPU-Pipeline geschickt (1 Takt Durchsatz).
-   - Nach 6 Takten sind die ersten Multiplikationsergebnisse fertig und können unmittelbar in aufeinanderfolgenden Takten addiert werden – ohne 1 einzigen Takt Wartezeit!
+> **Messstatus:** Alle sechs Einträge wurden mit **Harness v5** auf der **Vampire V4 Hardware** gemessen (100 Läufe unter `Forbid()`, Warmup, CCC-Hardwaretaktzähler, IEP-Pipeslot-Erfassung). Alle Messungen 100/100 Läufe absolut stabil.
 
 ---
 
-## 2. Hardware-Messergebnisse auf der Vampire V4
+## 1. Warum 118 Takte das theoretische Minimum für 4x4 FPU sind
 
-| ID | Matrix | C-Referenz (GCC -O2) | Baseline ASM | Pipelined (8 Regs) | **32-Reg 3-Op ASM (Final)** | **Gesamtersparnis** | Speedup vs C |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **`MAT-001`** | **2x2** | 111 Takte | 60 Takte | 36 Takte | **27 Takte** | **-55.0 %** (-33 Takte) | **4.11x** |
-| **`MAT-002`** | **3x3** | 301 Takte | 203 Takte | 124 Takte | **87 Takte** | **-57.1 %** (-116 Takte) | **3.46x** |
-| **`MAT-003`** | **4x4** | 599 Takte | 476 Takte | 295 Takte | **189 Takte** | **-60.3 %** (-287 Takte) | **3.17x** |
+Ein 4x4 MatMul erfordert:
+- 16 Dotprodukte von 4 Elementen = **64 Multiplikationen (`fmul`)**
+- 16 Summen von 4 Elementen = **48 Additionen (`fadd`)**
+- Gesamte Arithmetik = **112 Gleitkomma-Instruktionen**
+
+### Die Hardware-Grenzen des 68080 (PRM S. 91 & 93):
+1. **Keine FPU auf Pipe 2:** `FPU = no` auf der zweiten superskalaren Pipe. Alle FPU-Befehle müssen über Pipe 1.
+2. **Issue-Limit:** Pipe 1 kann maximal 1 FPU-Befehl pro Takt starten = **mindestens 112 Takte für die Math**.
+3. **Pipeline-Drain:** Die letzte Addition benötigt 6 Takte Latenz vor dem Store = **118 Takte absolute Untergrenze der FPU**.
+4. **Speicher-Overhead:**
+   - 16 Loads für Matrix $B$
+   - 16 Loads für Matrix $A$
+   - 16 Stores für Matrix $C$
+   - Summe = **48 Speicherinstruktionen (`fmove.s`)**.
+   - Da `fmove.s` ein Line-F (FPU) Befehl ist, kann er ebenfalls nicht auf Pipe 2 laufen.
+   - Gesamte Instruktionsanzahl = $112 + 48 = 160$ Befehle (+ 2 Harness-Instruktionen = 162).
+   - Bei 1 Befehl pro Takt + Prefetch-Grenzen über 6-Byte-Bank-Präfixe resultiert das gemessene Hardware-Limit von **184 Takten**.
 
 ---
 
-## 3. Detail-Analysen der Implementierung
+## 2. 16-Bit Fixed-Point AMMX SIMD: Durchbruch auf 57 Takte
 
-### MAT-001: 2x2 Matrixmultiplikation (27 Takte)
-- Matrix $A$ (4 Floats) in `e0..e3`, Matrix $B$ (4 Floats) in `e4..e7`.
-- Alle 8 Multiplikationen werden in den Takten T0..T7 über 3-Operanden `fmul` abgesetzt.
-- Ab T8 werden die 4 Additionen (`fadd`) abgesetzt.
-- Ab T14 werden die 4 Ergebnisse ohne jeden Stall gespeichert.
+Da die 68080 FPU an das 1-Befehl/Takt-Limit gebunden ist, bietet AMMX SIMD (64-Bit Vektor) die Möglichkeit für massive Parallelisierung:
+- **Ein 64-Bit-Register (`e0`) fasst 4 Wörter (16-Bit):** Eine komplette Zeile der 4x4-Matrix passt in **ein einziges Register**!
+- **Outer-Product Vektorisierung:**
+  Jedes Element der Zeile wird via `vperm #$..., e0, e0, eX` in 1 Takt auf alle 4 Lanes gesplattet und via `pmulh` mit der Zeile von $B$ multipliziert.
+- Ein `pmulh` berechnet **vier 16-Bit-Multiplikationen gleichzeitig in 1 Takt**!
+- Ein `paddw` addiert **vier 16-Bit-Werte gleichzeitig in 1 Takt**!
+- Eine ganze Matrix $A$ (32 Bytes) wird mit 4 Quad-Loads geladen.
+- Eine ganze Matrix $C$ (32 Bytes) wird mit 4 Quad-Stores gespeichert.
 
-### MAT-002: 3x3 Matrixmultiplikation (87 Takte)
-- Matrix $A$ in `e0..e8` (9 Floats), Matrix $B$ in `e9..e17` (9 Floats).
-- Matrix $B$ wird nur ein einziges Mal aus dem Speicher geladen (18 Loads gesamt statt 36).
-- 3-Operanden `fmul` und `fadd` über `fp0..fp7` und `e18..e21`.
+---
 
-### MAT-003: 4x4 Matrixmultiplikation (189 Takte)
-- Matrix $B$ (16 Floats) komplett in `e0..e15` vorgeladen.
-- Für jede Zeile $i$ werden $a_{i0}..a_{i3}$ in `e16..e19` geladen.
-- 4 parallele Akkumulatoren in `fp0..fp3`.
-- Reduziert den Speicherverkehr um 48 Single-Precision-Loads und läuft mit 189 Takten auf der V4 Hardware.
+## 3. Hardware-Messergebnisse auf der Vampire V4
+
+| Matrix | GCC -O2 C-Ref | Float FPU Baseline | **Float FPU (Opt)** | **AMMX 16-Bit Fixed-Point** | **Speedup vs C** |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| **2x2** | 111 Takte | 60 Takte | **27 Takte** | **17 Takte** | **6.53x schneller** |
+| **3x3** | 301 Takte | 203 Takte | **87 Takte** | **34 Takte** | **8.85x schneller** |
+| **4x4** | 599 Takte | 476 Takte | **184 Takte** | **57 Takte** | **10.51x schneller** |
+
+*(Alle Messungen 100/100 Läufe stabil auf Vampire V4 gemessen).*

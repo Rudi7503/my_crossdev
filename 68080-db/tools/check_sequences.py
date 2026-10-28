@@ -24,7 +24,7 @@ DIRECTIVE = re.compile(
     r"^\s*(include|section|incbin|org|equ\s|macro|endm|rts|rte|bra|bsr|jsr|jmp|dbra|dbf)\b",
     re.I | re.M,
 )
-ID_RE = re.compile(r"^(FUS|BND|AMX|REG|TIM|MEM|PAT|ANTI|MAT|FPU)-\d{3}$")
+ID_RE = re.compile(r"^(FUS|BND|AMX|REG|TIM|MEM|PAT|ANTI|MAT|FPU|FIX)-\d{3}$")
 
 
 def code_only(text: str) -> str:
