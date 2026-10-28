@@ -95,3 +95,30 @@ Das Python-CLI [`Tools/amiga_tool.py`](file:///home/papa/Vampire_V4/ApolloCrossD
 - Jede Assembler-Optimierung muss **100 % bit-exakt** gegen eine C-Referenz verifiziert werden.
 - CCC-Hardware-Zykluszähler (`movec ccc,d0`) zur Zeitmessung heranziehen.
 - Nach erfolgreichem Testen alle Änderungen committen und auf GitHub (`origin/main`) pushen.
+
+---
+
+## 6. Häufige Absturzursachen auf der 68080 / V4 & Pre-Flight-Prüfliste
+
+Vor jedem Upload und Ausführen von Assembler-Code auf der echten V4-Hardware muss folgende Prüfliste strikt abgearbeitet werden, um Core-Halts, Line-F-Traps und Guru Meditations zu verhindern:
+
+### 1. Stack-Symmetrie (Kritisch)
+- **Problem:** Bedingte `push`/`pop`-Befehle in verzweigten Pfaden (z. B. `movem.l -(sp)` nur bei $j > 0$, aber gemeinsames `movem.l (sp)+` am Schleifenende) verschieben den Stack-Pointer. Beim abschließenden `rts` springt die CPU in beliebige Speicherbereiche -> sofortiger Double Bus Fault / Halt.
+- **Regel:** Niemals dynamische Pushes in bedingten Schleifenzweigen durchführen. Wenn lokaler Speicher benötigt wird, immer einen festen Stack-Frame via `link.w a6,#-Size` / `unlk a6` anlegen oder Variablen in dedizierten Stack-Slots verwalten.
+
+### 2. Register-Aliasing & Clobbering in geschachtelten Schleifen
+- **Problem:** Ein Register, das eine Schleifenobergrenze oder einen Zähler der äußeren Schleife hält (z. B. `d4` für `half`), wird im inneren Rechenkern für temporäre Daten überschrieben. Dies führt zu Endlosschleifen oder unkontrollierten Speicherzugriffen.
+- **Regel:** Vor dem Schreiben jedes Assembler-Blocks eine explizite Register-Belegungstabelle führen. Schleifenvariablen der äußeren Schleife müssen entweder in Callee-Saved Registern (`d2–d7`) verbleiben (die innen unberührt bleiben) oder im Stack-Frame (`-X(a6)`).
+
+### 3. Callee-Saved Register (ABI-Erhalt)
+- **Scratch (flüchtig):** `d0, d1, a0, a1, fp0, fp1`
+- **Preserved (strikt zu sichern):** `d2–d7, a2–a6, fp2–fp7`
+- **Besondere Falle `a2`:** `a2` wird von GCC/libnix als Frame-/Context-Pointer für `printf`/`vfprintf` genutzt. Wird `a2` in einer Unterroutine verändert und nicht wiederhergestellt, stürzt das nachfolgende `printf` mit `0x80000004` (Illegal Instruction) ab.
+
+### 4. Instruktions-Restriktionen der 68k / 68080
+- **`subq.l #1, An`:** Verändert die Condition Codes (Z-Flag) **nicht**! Ein nachfolgendes `bne` prüft ein altes Flag und führt zu einer Endlosschleife.
+- **Immediate-Shifts:** `asr.l #imm, Dn` / `lsl.l #imm, Dn` akzeptieren nur Werte von `1..8`. Größere Shifts müssen über ein Register (`asr.l Dx, Dy`) oder kaskadiert (`asr.l #8`, `asr.l #7`) realisiert werden.
+- **Adressregister als Arithmetik-Ziel:** `muls`, `mulu`, `asr`, `lsr` dürfen **nicht** auf Adressregister (`An`) zielen.
+- **Memory-Shifts:** `lsl.l #1, (ea)` ist im 68k-Befehlssatz ungültig (nur Word `lsl.w (ea)` ist erlaubt). Long-Shifts müssen über Datenregister abgewickelt werden.
+- **68040-Mnemonics:** Niemals `fsmul` oder `fsadd` verwenden; immer standardkonformes `fmul.s` / `fadd.s` bzw. 3-Operanden `fmul fp0,fp2,fp4`.
+
