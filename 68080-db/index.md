@@ -17,6 +17,9 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`AMX-004`](03-ammx.md) | Branchless Byte-Auswahl mit PCMPGTB + BSEL | `03-ammx.md` | gemessen |
 | [`AMX-005`](03-ammx.md) | Chunky-to-Planar mit C2P | `03-ammx.md` | gemessen |
 | [`AMX-006`](03-ammx.md) | 32-Bit-ARGB zu RGB565 mit PACK3216 | `03-ammx.md` | gemessen |
+| [`AMX-007`](03-ammx.md) | Vier 16-Bit-Lane-Additionen mit PADDW | `03-ammx.md` | gemessen |
+| [`AMX-008`](03-ammx.md) | 16-Bit-Lane-Max mit PCMPGTW + BSEL | `03-ammx.md` | gemessen |
+| [`AMX-010`](03-ammx.md) | PACKSSWB-Emulation (Signed Saturation Word zu Byte mit Bias) | `03-ammx.md` | vorbereitet |
 | [`ANTI-001`](08-antipatterns.md) | NOP zwischen MOVE und abhängigem ADD | `08-antipatterns.md` | gemessen |
 | [`ANTI-002`](08-antipatterns.md) | 68060-Scheduling durch Einschub einer unabhängigen Instruktion | `08-antipatterns.md` | gemessen |
 | [`ANTI-003`](08-antipatterns.md) | Word-Updates statt Long-Updates | `08-antipatterns.md` | gemessen |

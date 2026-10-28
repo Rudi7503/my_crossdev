@@ -523,3 +523,80 @@ Skalarreferenz: 4× `cmp/sge/ext/and/not/and/or`.
 16-Bit-Variante ist deshalb **kein direkter Clamp-Ersatz**. Sie wäre nur für
 bereits 16-Bit-breite Werte (z. B. Index) interessant – dort ist der
 E-Setup-Aufwand pro Einzelwert zu hoch.
+
+## AMX-010: Emulation von PACKSSWB (Signed Saturation Word-zu-Byte mit PACKUSWB + Bias-Trick)
+
+**Kategorie:** AMMX / Audio & Sättigung  
+**Status:** VORBEREITET (Offline bit-exakt verifiziert, V4-Messung vorbereitet)  
+**Beleg:** PRM S. 52 (`PACKUSWB`), S. 46 (`LOAD`), S. 67 (`PSUBB`)
+
+### Problem
+
+AMMX besitzt `PACKUSWB` (Pack Signed Word to Unsigned Byte mit Unsigned Saturation auf `0..255`),
+besitzt jedoch **kein** `PACKSSWB` (Pack Signed Word to Signed Byte mit Sättigung auf `-128..+127`).
+Werden beispielsweise mehrere 8-Bit-Audiokanäle (z. B. 4 Paula-Kanäle) in 16-Bit-Worten addiert,
+können Summen den Bereich `[-128, +127]` überschreiten. Um diese ohne Verzweigungen wieder sättigend
+in 8-Bit-Signed-PCM zurückzuführen, fehlt eine direkte Instruktion.
+
+### Fehlerhafter Entwurf (Asymmetrie- & Vorzeichen-Bug)
+
+```asm
+        load.w  #$007f,e2       ; Bug: 127 statt 128
+        load.w  #$7f7f,e3
+.loop:
+        paddw   (a0)+,e2,e0     ; 4 Worte laden & +127
+        paddw   (a0)+,e2,e1     ; 4 Worte laden & +127
+        packuswb e0,e1,e0       ; 8 Worte -> 8 unsigned Bytes (0..255)
+        psubb   e3,e0,e0        ; -127
+        store   e0,(a1)+
+        dbra    d0,.loop
+```
+
+**Probleme dieses Entwurfs:**
+1. **Asymmetrie:** Im 8-Bit-Zweierkomplement reicht der Wertebereich von `-128` bis `+127`.
+   - Ein gültiger Wert `-128` ergibt mit `+127`: `-1`. `PACKUSWB` schneidet auf `0` ab. Nach `0 - 127` entsteht **`-127`** (Verfälschung eines gültigen Minimalwerts).
+   - Bei einem Überlauf `+128` ergibt `+128 + 127 = 255`. Nach `255 - 127` entsteht **`+128`** – in signed 8-Bit ist dies binär `$80` = **`-128`** (katastrophaler Vorzeichen-Flip!).
+2. **Pipeline-Stalls:** Jede Instruktion in der Schleife hängt direkt vom Ergebnis der vorherigen ab (`paddw` → `packuswb` → `psubb` → `store`). Auf dem 68080 entstehen dadurch vermeidbare RAW-Latenzen.
+3. **Falsch für 16-Bit-Fullscale-Audio:** Falls für normales 16-Bit-PCM gedacht: `PACKUSWB` führt **keinen Rechtsshift** (`>> 8`) durch. Alle Amplituden > 255 werden hart abgeschnitten.
+
+### Korrigierter & optimierter 68080-Ansatz
+
+**Mathematisch korrekter Bias:** `$0080` (128) und `$8080` (128).
+- `[-128, +127] + 128` bildet exakt auf `[0, 255]` ab.
+- Unterläufe `< -128` werden von `PACKUSWB` auf `0` geclampt (`0 - 128 = -128`).
+- Überläufe `> +127` werden auf `255` geclampt (`255 - 128 = +127`).
+- Keine Vorzeichen-Flips, perfekte Punktsymmetrie.
+
+**2-fach entflochtene Schleife (Pipelining / Unrolling):**
+Verarbeitet 16 Worte (32 Bytes In → 16 Bytes Out) pro Iteration.
+Durch das Verschränken zweier Datenströme (`e0/e1` und `e4/e5`) laufen Speicher- und
+Rechenoperationen parallel auf den dualen 68080-Pipes:
+
+```asm
+; Setup außerhalb der Schleife:
+        load.w  #$0080,e2       ; Bias +128 in jedes der 4 Worte
+        load.w  #$8080,e3       ; Bias -128 in jedes der 8 Bytes
+
+.loop_unrolled:
+        ; Phase 1: 8 Worte Block A & 8 Worte Block B laden & vorspannen
+        paddw   (a0)+,e2,e0     ; Worte 0..3 Block A
+        paddw   (a0)+,e2,e1     ; Worte 4..7 Block A
+        paddw   (a0)+,e2,e4     ; Worte 0..3 Block B
+        paddw   (a0)+,e2,e5     ; Worte 4..7 Block B
+
+        ; Phase 2: Unsigned Saturation Packen (0..255)
+        packuswb e0,e1,e0       ; 8 Bytes Block A
+        packuswb e4,e5,e4       ; 8 Bytes Block B
+
+        ; Phase 3: Bias abziehen -> Signed Two's Complement (-128..+127)
+        psubb   e3,e0,e0
+        psubb   e3,e4,e4
+
+        ; Phase 4: 16 Bytes wegschreiben
+        store   e0,(a1)+
+        store   e4,(a1)+
+
+        subq.l  #1,d0
+        bne.s   .loop_unrolled
+```
+
