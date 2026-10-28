@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "ammx_pack.h"
+#include "lifecycle.h"
 
 #define NUM_SAMPLES 65536
 
@@ -38,6 +39,7 @@ static int verify_against_ref(const char *name, const int8_t *test_out, uint32_t
 
 int main(int argc, char **argv)
 {
+    TEST_START("AMMX_Pack");
     printf("================================================================\n");
     printf("  APOLLO 68080 AMMX PACKSSWB (Word zu Signed Byte mit Saturation)\n");
     printf("  Verifikation ASM gegen C-Referenz ueber alle 65536 Werte\n");
@@ -63,7 +65,9 @@ int main(int argc, char **argv)
     /* 5. Verifikation */
     int ok = 1;
     ok &= verify_against_ref("Baseline ASM (8 Worte/Loop)", base_out, NUM_SAMPLES);
+    test_alive("AMMX_Pack", 1);
     ok &= verify_against_ref("Optimized ASM (16 Worte/Loop)", opt_out, NUM_SAMPLES);
+    test_alive("AMMX_Pack", 2);
 
     if (ok) {
         printf("\n>>> ERGEBNIS: AMMX PACKSSWB 100%% BIT-EXAKT PASS! <<<\n");
@@ -102,6 +106,8 @@ int main(int argc, char **argv)
         printf("Speedup Opt vs C:        %.2fx schneller\n", (double)c_cyc / (double)opt_cyc);
         printf("Speedup Opt vs Baseline: %.2fx schneller\n", (double)base_cyc / (double)opt_cyc);
     }
+
+    TEST_DONE("AMMX_Pack");
 
     return ok ? 0 : 20;
 }

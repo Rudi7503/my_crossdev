@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "matrix_mul.h"
+#include "lifecycle.h"
 
 #define EPSILON 0.0001f
 
@@ -270,6 +271,7 @@ static void benchmark(void)
 
 int main(int argc, char **argv)
 {
+    TEST_START("Matrix_Mul");
     printf("================================================================\n");
     printf("  APOLLO 68080 MATRIX-MULTIPLIKATION (2x2, 3x3, 4x4)\n");
     printf("  Verifikation ASM gegen C-Referenz + Cycle Benchmark\n");
@@ -277,8 +279,11 @@ int main(int argc, char **argv)
 
     int ok = 1;
     ok &= test_2x2();
+    test_alive("Matrix_Mul", 2);
     ok &= test_3x3();
+    test_alive("Matrix_Mul", 3);
     ok &= test_4x4();
+    test_alive("Matrix_Mul", 4);
 
     if (ok) {
         printf("\n>>> ERGEBNIS: ALLE MATRIX-TESTS ERFOLGREICH (100%% BIT-EXAKT) <<<\n");
@@ -287,6 +292,7 @@ int main(int argc, char **argv)
     }
 
     benchmark();
+    TEST_DONE("Matrix_Mul");
 
     return ok ? 0 : 20;
 }

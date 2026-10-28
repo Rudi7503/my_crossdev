@@ -12,17 +12,20 @@ TARGET_EXE  = AMMX_Pack
 
 all: $(TARGET_EXE)
 
-$(TARGET_EXE): main.o ammx_pack_c.o ammx_pack_asm.o
+$(TARGET_EXE): main.o ammx_pack_c.o ammx_pack_asm.o uart_asm.o
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 	@echo "Build successful: $(TARGET_EXE)"
 
-main.o: main.c ammx_pack.h
+main.o: main.c ammx_pack.h lifecycle.h uart_asm.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 ammx_pack_c.o: ammx_pack_c.c ammx_pack.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 ammx_pack_asm.o: ammx_pack_asm.s
+	$(VASM) $(SFLAGS) $< -o $@
+
+uart_asm.o: uart_asm.s
 	$(VASM) $(SFLAGS) $< -o $@
 
 clean:

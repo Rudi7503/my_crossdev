@@ -39,42 +39,44 @@ _get_ccc:
 ; c11 = a10*b01 + a11*b11
 ; ==============================================================================
 _matmul_2x2_asm:
-            move.l  4(a7),a0                ; a0 = pointer A
-            move.l  8(a7),a1                ; a1 = pointer B
-            move.l  12(a7),a2               ; a2 = pointer Out (C)
+            move.l  a2,-(sp)                ; a2 sichern (Preserved Register)
+            move.l  8(sp),a0                ; a0 = pointer A
+            move.l  12(sp),a1               ; a1 = pointer B
+            move.l  16(sp),a2               ; a2 = pointer Out (C)
 
             ; --- Zeile 0, Spalte 0: c00 ---
             fmove.s (a0),fp0                ; a00
-            fsmul.s (a1),fp0                ; a00 * b00
+            fmul.s (a1),fp0                ; a00 * b00
             fmove.s 4(a0),fp1               ; a01
-            fsmul.s 8(a1),fp1               ; a01 * b10
-            fsadd   fp1,fp0
+            fmul.s 8(a1),fp1               ; a01 * b10
+            fadd    fp1,fp0
             fmove.s fp0,(a2)                ; c00 speichern
 
             ; --- Zeile 0, Spalte 1: c01 ---
             fmove.s (a0),fp0                ; a00
-            fsmul.s 4(a1),fp0               ; a00 * b01
+            fmul.s 4(a1),fp0               ; a00 * b01
             fmove.s 4(a0),fp1               ; a01
-            fsmul.s 12(a1),fp1              ; a01 * b11
-            fsadd   fp1,fp0
+            fmul.s 12(a1),fp1              ; a01 * b11
+            fadd    fp1,fp0
             fmove.s fp0,4(a2)               ; c01 speichern
 
             ; --- Zeile 1, Spalte 0: c10 ---
             fmove.s 8(a0),fp0               ; a10
-            fsmul.s (a1),fp0                ; a10 * b00
+            fmul.s (a1),fp0                ; a10 * b00
             fmove.s 12(a0),fp1              ; a11
-            fsmul.s 8(a1),fp1               ; a11 * b10
-            fsadd   fp1,fp0
+            fmul.s 8(a1),fp1               ; a11 * b10
+            fadd    fp1,fp0
             fmove.s fp0,8(a2)               ; c10 speichern
 
             ; --- Zeile 1, Spalte 1: c11 ---
             fmove.s 8(a0),fp0               ; a10
-            fsmul.s 4(a1),fp0               ; a10 * b01
+            fmul.s 4(a1),fp0               ; a10 * b01
             fmove.s 12(a0),fp1              ; a11
-            fsmul.s 12(a1),fp1              ; a11 * b11
-            fsadd   fp1,fp0
+            fmul.s 12(a1),fp1              ; a11 * b11
+            fadd    fp1,fp0
             fmove.s fp0,12(a2)              ; c11 speichern
 
+            move.l  (sp)+,a2                ; a2 wiederherstellen
             rts
 
 ; ==============================================================================
@@ -83,10 +85,11 @@ _matmul_2x2_asm:
 ; und multipliziert sie mit den 3 Spalten von B.
 ; ==============================================================================
 _matmul_3x3_asm:
-            fmovem.x fp2-fp5,-(a7)          ; 4 FPU-Register sichern (48 Bytes)
-            move.l  52(a7),a0               ; a0 = pointer A (48 Bytes FPU + 4 Bytes PC)
-            move.l  56(a7),a1               ; a1 = pointer B
-            move.l  60(a7),a2               ; a2 = pointer Out (C)
+            move.l  a2,-(sp)                ; a2 sichern
+            move.l  8(sp),a0                ; a0 = pointer A
+            move.l  12(sp),a1               ; a1 = pointer B
+            move.l  16(sp),a2               ; a2 = pointer Out (C)
+            fmovem.x fp2-fp5,-(sp)          ; 4 FPU-Register sichern
 
             ; -----------------------------------------------------------
             ; ZEILE 0
@@ -97,35 +100,35 @@ _matmul_3x3_asm:
 
             ; c00 = a00*b00 + a01*b10 + a02*b20
             fmove.x fp2,fp0
-            fsmul.s (a1),fp0
+            fmul.s (a1),fp0
             fmove.x fp3,fp1
-            fsmul.s 12(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 12(a1),fp1
+            fadd    fp1,fp0
             fmove.x fp4,fp1
-            fsmul.s 24(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 24(a1),fp1
+            fadd    fp1,fp0
             fmove.s fp0,(a2)+
 
             ; c01 = a00*b01 + a01*b11 + a02*b21
             fmove.x fp2,fp0
-            fsmul.s 4(a1),fp0
+            fmul.s 4(a1),fp0
             fmove.x fp3,fp1
-            fsmul.s 16(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 16(a1),fp1
+            fadd    fp1,fp0
             fmove.x fp4,fp1
-            fsmul.s 28(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 28(a1),fp1
+            fadd    fp1,fp0
             fmove.s fp0,(a2)+
 
             ; c02 = a00*b02 + a01*b12 + a02*b22
             fmove.x fp2,fp0
-            fsmul.s 8(a1),fp0
+            fmul.s 8(a1),fp0
             fmove.x fp3,fp1
-            fsmul.s 20(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 20(a1),fp1
+            fadd    fp1,fp0
             fmove.x fp4,fp1
-            fsmul.s 32(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 32(a1),fp1
+            fadd    fp1,fp0
             fmove.s fp0,(a2)+
 
             ; -----------------------------------------------------------
@@ -137,35 +140,35 @@ _matmul_3x3_asm:
 
             ; c10
             fmove.x fp2,fp0
-            fsmul.s (a1),fp0
+            fmul.s (a1),fp0
             fmove.x fp3,fp1
-            fsmul.s 12(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 12(a1),fp1
+            fadd    fp1,fp0
             fmove.x fp4,fp1
-            fsmul.s 24(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 24(a1),fp1
+            fadd    fp1,fp0
             fmove.s fp0,(a2)+
 
             ; c11
             fmove.x fp2,fp0
-            fsmul.s 4(a1),fp0
+            fmul.s 4(a1),fp0
             fmove.x fp3,fp1
-            fsmul.s 16(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 16(a1),fp1
+            fadd    fp1,fp0
             fmove.x fp4,fp1
-            fsmul.s 28(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 28(a1),fp1
+            fadd    fp1,fp0
             fmove.s fp0,(a2)+
 
             ; c12
             fmove.x fp2,fp0
-            fsmul.s 8(a1),fp0
+            fmul.s 8(a1),fp0
             fmove.x fp3,fp1
-            fsmul.s 20(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 20(a1),fp1
+            fadd    fp1,fp0
             fmove.x fp4,fp1
-            fsmul.s 32(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 32(a1),fp1
+            fadd    fp1,fp0
             fmove.s fp0,(a2)+
 
             ; -----------------------------------------------------------
@@ -177,38 +180,39 @@ _matmul_3x3_asm:
 
             ; c20
             fmove.x fp2,fp0
-            fsmul.s (a1),fp0
+            fmul.s (a1),fp0
             fmove.x fp3,fp1
-            fsmul.s 12(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 12(a1),fp1
+            fadd    fp1,fp0
             fmove.x fp4,fp1
-            fsmul.s 24(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 24(a1),fp1
+            fadd    fp1,fp0
             fmove.s fp0,(a2)+
 
             ; c21
             fmove.x fp2,fp0
-            fsmul.s 4(a1),fp0
+            fmul.s 4(a1),fp0
             fmove.x fp3,fp1
-            fsmul.s 16(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 16(a1),fp1
+            fadd    fp1,fp0
             fmove.x fp4,fp1
-            fsmul.s 28(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 28(a1),fp1
+            fadd    fp1,fp0
             fmove.s fp0,(a2)+
 
             ; c22
             fmove.x fp2,fp0
-            fsmul.s 8(a1),fp0
+            fmul.s 8(a1),fp0
             fmove.x fp3,fp1
-            fsmul.s 20(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 20(a1),fp1
+            fadd    fp1,fp0
             fmove.x fp4,fp1
-            fsmul.s 32(a1),fp1
-            fsadd   fp1,fp0
+            fmul.s 32(a1),fp1
+            fadd    fp1,fp0
             fmove.s fp0,(a2)+
 
             fmovem.x (a7)+,fp2-fp5          ; FPU-Register wiederherstellen
+            move.l  (sp)+,a2                ; a2 wiederherstellen
             rts
 
 ; ==============================================================================
@@ -221,12 +225,11 @@ _matmul_3x3_asm:
 ; Schleife läuft 4x für die 4 Zeilen von A (oder unrolled).
 ; ==============================================================================
 _matmul_4x4_asm:
-            fmovem.x fp2-fp7,-(a7)          ; 6 FPU-Register sichern (72 Bytes)
-            move.l  d2,-(a7)                ; Schleifenzähler sichern (4 Bytes)
-            ; Gesamt-Stack-Offset: 72 + 4 + 4 (PC) = 80 Bytes
-            move.l  80(a7),a0               ; a0 = pointer A
-            move.l  84(a7),a1               ; a1 = pointer B
-            move.l  88(a7),a2               ; a2 = pointer Out (C)
+            movem.l d2/a2,-(sp)             ; d2 und a2 sichern
+            move.l  12(sp),a0               ; a0 = pointer A
+            move.l  16(sp),a1               ; a1 = pointer B
+            move.l  20(sp),a2               ; a2 = pointer Out (C)
+            fmovem.x fp2-fp7,-(sp)          ; 6 FPU-Register sichern
 
             moveq   #3,d2                   ; 4 Zeilen (3 bis 0)
 
@@ -236,61 +239,61 @@ _matmul_4x4_asm:
             ; -----------------------------------------------------------
             fmove.s (a0)+,fp0               ; fp0 = a_i0
             fmove.x fp0,fp4
-            fsmul.s (a1),fp4                ; fp4 = a_i0 * b00
+            fmul.s (a1),fp4                ; fp4 = a_i0 * b00
             fmove.x fp0,fp5
-            fsmul.s 4(a1),fp5               ; fp5 = a_i0 * b01
+            fmul.s 4(a1),fp5               ; fp5 = a_i0 * b01
             fmove.x fp0,fp6
-            fsmul.s 8(a1),fp6               ; fp6 = a_i0 * b02
+            fmul.s 8(a1),fp6               ; fp6 = a_i0 * b02
             fmove.x fp0,fp7
-            fsmul.s 12(a1),fp7              ; fp7 = a_i0 * b03
+            fmul.s 12(a1),fp7              ; fp7 = a_i0 * b03
 
             ; -----------------------------------------------------------
             ; Term 1: + a_i1 * Row_1(B)
             ; -----------------------------------------------------------
             fmove.s (a0)+,fp0               ; fp0 = a_i1
             fmove.x fp0,fp1
-            fsmul.s 16(a1),fp1              ; a_i1 * b10
-            fsadd   fp1,fp4
+            fmul.s 16(a1),fp1              ; a_i1 * b10
+            fadd    fp1,fp4
             fmove.x fp0,fp2
-            fsmul.s 20(a1),fp2              ; a_i1 * b11
-            fsadd   fp2,fp5
+            fmul.s 20(a1),fp2              ; a_i1 * b11
+            fadd    fp2,fp5
             fmove.x fp0,fp3
-            fsmul.s 24(a1),fp3              ; a_i1 * b12
-            fsadd   fp3,fp6
-            fsmul.s 28(a1),fp0              ; a_i1 * b13
-            fsadd   fp0,fp7
+            fmul.s 24(a1),fp3              ; a_i1 * b12
+            fadd    fp3,fp6
+            fmul.s 28(a1),fp0              ; a_i1 * b13
+            fadd    fp0,fp7
 
             ; -----------------------------------------------------------
             ; Term 2: + a_i2 * Row_2(B)
             ; -----------------------------------------------------------
             fmove.s (a0)+,fp0               ; fp0 = a_i2
             fmove.x fp0,fp1
-            fsmul.s 32(a1),fp1              ; a_i2 * b20
-            fsadd   fp1,fp4
+            fmul.s 32(a1),fp1              ; a_i2 * b20
+            fadd    fp1,fp4
             fmove.x fp0,fp2
-            fsmul.s 36(a1),fp2              ; a_i2 * b21
-            fsadd   fp2,fp5
+            fmul.s 36(a1),fp2              ; a_i2 * b21
+            fadd    fp2,fp5
             fmove.x fp0,fp3
-            fsmul.s 40(a1),fp3              ; a_i2 * b22
-            fsadd   fp3,fp6
-            fsmul.s 44(a1),fp0              ; a_i2 * b23
-            fsadd   fp0,fp7
+            fmul.s 40(a1),fp3              ; a_i2 * b22
+            fadd    fp3,fp6
+            fmul.s 44(a1),fp0              ; a_i2 * b23
+            fadd    fp0,fp7
 
             ; -----------------------------------------------------------
             ; Term 3: + a_i3 * Row_3(B)
             ; -----------------------------------------------------------
             fmove.s (a0)+,fp0               ; fp0 = a_i3
             fmove.x fp0,fp1
-            fsmul.s 48(a1),fp1              ; a_i3 * b30
-            fsadd   fp1,fp4
+            fmul.s 48(a1),fp1              ; a_i3 * b30
+            fadd    fp1,fp4
             fmove.x fp0,fp2
-            fsmul.s 52(a1),fp2              ; a_i3 * b31
-            fsadd   fp2,fp5
+            fmul.s 52(a1),fp2              ; a_i3 * b31
+            fadd    fp2,fp5
             fmove.x fp0,fp3
-            fsmul.s 56(a1),fp3              ; a_i3 * b32
-            fsadd   fp3,fp6
-            fsmul.s 60(a1),fp0              ; a_i3 * b33
-            fsadd   fp0,fp7
+            fmul.s 56(a1),fp3              ; a_i3 * b32
+            fadd    fp3,fp6
+            fmul.s 60(a1),fp0              ; a_i3 * b33
+            fadd    fp0,fp7
 
             ; -----------------------------------------------------------
             ; Zeile i speichern (4 Floats = 16 Bytes)
@@ -302,6 +305,6 @@ _matmul_4x4_asm:
 
             dbf     d2,.row_loop
 
-            move.l  (a7)+,d2
-            fmovem.x (a7)+,fp2-fp7
+            fmovem.x (sp)+,fp2-fp7
+            movem.l (sp)+,d2/a2
             rts

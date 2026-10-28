@@ -16,17 +16,20 @@ TARGET_EXE  = Matrix_Mul
 
 all: $(TARGET_EXE)
 
-$(TARGET_EXE): main.o matrix_mul_c.o matrix_mul_asm.o
+$(TARGET_EXE): main.o matrix_mul_c.o matrix_mul_asm.o uart_asm.o
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 	@echo "Build successful: $(TARGET_EXE)"
 
-main.o: main.c matrix_mul.h
+main.o: main.c matrix_mul.h lifecycle.h uart_asm.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 matrix_mul_c.o: matrix_mul_c.c matrix_mul.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 matrix_mul_asm.o: matrix_mul_asm.s
+	$(VASM) $(SFLAGS) $< -o $@
+
+uart_asm.o: uart_asm.s
 	$(VASM) $(SFLAGS) $< -o $@
 
 clean:
