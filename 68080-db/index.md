@@ -41,6 +41,9 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`MEM-003`](06-memory.md) | Sequentielle Loads lösen den Auto-Prefetch aus | `06-memory.md` | gemessen |
 | [`MEM-004`](06-memory.md) | 32-Byte-Burst mit acht Long-Loads füllen | `06-memory.md` | gemessen |
 | [`MEM-005`](06-memory.md) | 64-Bit-Load/Store statt zweier 32-Bit-Zugriffe | `06-memory.md` | gemessen |
+| [`MAT-001`](12-matrix.md) | 2x2 Matrix-Multiplikation (FPU Single Precision) | `12-matrix.md` | gemessen |
+| [`MAT-002`](12-matrix.md) | 3x3 Matrix-Multiplikation (FPU Single Precision) | `12-matrix.md` | gemessen |
+| [`MAT-003`](12-matrix.md) | 4x4 Matrix-Multiplikation (FPU Single Precision) | `12-matrix.md` | gemessen |
 | [`PAT-001`](07-patterns.md) | Kopierschleife mit 16 Byte pro Iteration | `07-patterns.md` | gemessen |
 | [`PAT-002`](07-patterns.md) | Clear-Schleife mit 8 Byte pro Iteration | `07-patterns.md` | gemessen |
 | [`PAT-003`](07-patterns.md) | Zeiger in der EA-Einheit fortschreiben | `07-patterns.md` | gemessen |
@@ -66,6 +69,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **Timing** (5): [`TIM-001`](05-timing.md), [`TIM-002`](05-timing.md), [`TIM-003`](05-timing.md), [`TIM-004`](05-timing.md), [`TIM-005`](05-timing.md)
 - **Speicher/Cache** (5): [`MEM-001`](06-memory.md), [`MEM-002`](06-memory.md), [`MEM-003`](06-memory.md), [`MEM-004`](06-memory.md), [`MEM-005`](06-memory.md)
 - **Patterns** (5): [`PAT-001`](07-patterns.md), [`PAT-002`](07-patterns.md), [`PAT-003`](07-patterns.md), [`PAT-004`](07-patterns.md), [`PAT-005`](07-patterns.md)
+- **Matrix (FPU)** (3): [`MAT-001`](12-matrix.md), [`MAT-002`](12-matrix.md), [`MAT-003`](12-matrix.md)
 - **Antipatterns** (6): [`ANTI-001`](08-antipatterns.md), [`ANTI-002`](08-antipatterns.md), [`ANTI-003`](08-antipatterns.md), [`ANTI-004`](08-antipatterns.md), [`ANTI-005`](08-antipatterns.md), [`ANTI-006`](08-antipatterns.md)
 
 ## Sequenzen und Logs

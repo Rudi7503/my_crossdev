@@ -37,6 +37,7 @@ ausgibt.
 | [`07-patterns.md`](07-patterns.md) | Übergreifende Idiome | 5 |
 | [`08-antipatterns.md`](08-antipatterns.md) | Was den 68080 bremst | 6 |
 | [`09-harness.md`](09-harness.md) | Mess-Harness: Aufbau, Build, Fallstricke | – |
+| [`12-matrix.md`](12-matrix.md) | Matrix-Multiplikation (FPU Single Precision) | 3 |
 
 **Summe: 42 Einträge**, jeder mit Vorher/Nachher-Code, Hardware-Mechanismus,
 Registerliste und Messblock. Jeder Eintrag endet mit der **verbatim

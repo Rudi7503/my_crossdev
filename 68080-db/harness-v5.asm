@@ -58,6 +58,7 @@ SERPER_115200   equ     30              ; SERPER_BAUD(3546895,115200)
         section code,code
 _start:
         movem.l d0-d7/a0-a6,-(sp)
+        fmovem.x fp2-fp7,-(sp)
         move.l  4.w,a6
         move.l  a6,exec_base
 
@@ -131,6 +132,7 @@ _start:
         bsr     print_all
         bsr     close_output
 
+        fmovem.x (sp)+,fp2-fp7
         movem.l (sp)+,d0-d7/a0-a6
         moveq   #0,d0
         rts

@@ -80,4 +80,4 @@ for seq in seq/*.i; do
 done
 
 echo "built $count entries with $VASM (build=$BUILD_DIR bin=$BIN_DIR)"
-"$VASM" 2>&1 | head -n 4 || true
+"$VASM" </dev/null 2>&1 | head -n 4 || true
