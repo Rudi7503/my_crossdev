@@ -1,66 +1,75 @@
 ; seq/MAT-003.i - 4x4 single-precision float matrix multiplication (C = A * B)
-; Fully pipelined 68080 FPU scheduling (4 concurrent column accumulators)
+; Fully unrolled 32-register 3-operand FPU execution - Matrix B preloaded in e0..e15
 ; Inputs:  a0 = matrix A (4x4, 64 bytes), a1 = matrix B (4x4, 64 bytes)
 ; Output:  a2 = matrix C (4x4, 64 bytes)
-; Uses:    fp0, fp1, fp2, fp3, fp4, fp5, fp6, a0, a1, a2
+; Uses:    e0-e23, fp0-fp3, a0, a1, a2
 ; MUST NOT touch: d5, d6, d7, a5, a6, a7
 
+        ; 1. Preload entire Matrix B into e0..e15 (16 loads ONCE for all 4 rows!)
+        fmove.s (a1),e0         ; b00
+        fmove.s 4(a1),e1        ; b01
+        fmove.s 8(a1),e2        ; b02
+        fmove.s 12(a1),e3       ; b03
+        fmove.s 16(a1),e4       ; b10
+        fmove.s 20(a1),e5       ; b11
+        fmove.s 24(a1),e6       ; b12
+        fmove.s 28(a1),e7       ; b13
+        fmove.s 32(a1),e8       ; b20
+        fmove.s 36(a1),e9       ; b21
+        fmove.s 40(a1),e10      ; b22
+        fmove.s 44(a1),e11      ; b23
+        fmove.s 48(a1),e12      ; b30
+        fmove.s 52(a1),e13      ; b31
+        fmove.s 56(a1),e14      ; b32
+        fmove.s 60(a1),e15      ; b33
+
         ; ==================== ROW 0 ====================
+        fmove.s (a0),e16        ; a00
+        fmove.s 4(a0),e17       ; a01
+        fmove.s 8(a0),e18       ; a02
+        fmove.s 12(a0),e19      ; a03
+
         ; Term 0: a00 * b0x
-        fmove.s (a0),fp4        ; a00
-        fmove.s (a1),fp0        ; b00
-        fmul    fp4,fp0         ; fp0 = a00 * b00 (Col 0)
-        fmove.s 4(a1),fp1       ; b01
-        fmul    fp4,fp1         ; fp1 = a00 * b01 (Col 1)
-        fmove.s 8(a1),fp2       ; b02
-        fmul    fp4,fp2         ; fp2 = a00 * b02 (Col 2)
-        fmove.s 12(a1),fp3      ; b03
-        fmul    fp4,fp3         ; fp3 = a00 * b03 (Col 3)
+        fmul    e16,e0,fp0      ; fp0 = a00 * b00
+        fmul    e16,e1,fp1      ; fp1 = a00 * b01
+        fmul    e16,e2,fp2      ; fp2 = a00 * b02
+        fmul    e16,e3,fp3      ; fp3 = a00 * b03
 
         ; Term 1: a01 * b1x
-        fmove.s 4(a0),fp4       ; a01
-        fmove.s 16(a1),fp5      ; b10
-        fmul    fp4,fp5
-        fmove.s 20(a1),fp6      ; b11
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a01 * b10
-        fmove.s 24(a1),fp5      ; b12
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a01 * b11
-        fmove.s 28(a1),fp6      ; b13
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a01 * b12
-        fadd    fp6,fp3         ; fp3 += a01 * b13
+        fmul    e17,e4,e20
+        fmul    e17,e5,e21
+        fmul    e17,e6,e22
+        fmul    e17,e7,e23
+
+        ; Add Term 0 + Term 1
+        fadd    fp0,e20,fp0
+        fadd    fp1,e21,fp1
+        fadd    fp2,e22,fp2
+        fadd    fp3,e23,fp3
 
         ; Term 2: a02 * b2x
-        fmove.s 8(a0),fp4       ; a02
-        fmove.s 32(a1),fp5      ; b20
-        fmul    fp4,fp5
-        fmove.s 36(a1),fp6      ; b21
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a02 * b20
-        fmove.s 40(a1),fp5      ; b22
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a02 * b21
-        fmove.s 44(a1),fp6      ; b23
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a02 * b22
-        fadd    fp6,fp3         ; fp3 += a02 * b23
+        fmul    e18,e8,e20
+        fmul    e18,e9,e21
+        fmul    e18,e10,e22
+        fmul    e18,e11,e23
+
+        ; Add + Term 2
+        fadd    fp0,e20,fp0
+        fadd    fp1,e21,fp1
+        fadd    fp2,e22,fp2
+        fadd    fp3,e23,fp3
 
         ; Term 3: a03 * b3x
-        fmove.s 12(a0),fp4      ; a03
-        fmove.s 48(a1),fp5      ; b30
-        fmul    fp4,fp5
-        fmove.s 52(a1),fp6      ; b31
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a03 * b30 -> c00
-        fmove.s 56(a1),fp5      ; b32
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a03 * b31 -> c01
-        fmove.s 60(a1),fp6      ; b33
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a03 * b32 -> c02
-        fadd    fp6,fp3         ; fp3 += a03 * b33 -> c03
+        fmul    e19,e12,e20
+        fmul    e19,e13,e21
+        fmul    e19,e14,e22
+        fmul    e19,e15,e23
+
+        ; Add + Term 3 (complete Row 0!)
+        fadd    fp0,e20,fp0     ; c00
+        fadd    fp1,e21,fp1     ; c01
+        fadd    fp2,e22,fp2     ; c02
+        fadd    fp3,e23,fp3     ; c03
 
         ; Store Row 0
         fmove.s fp0,(a2)
@@ -69,61 +78,52 @@
         fmove.s fp3,12(a2)
 
         ; ==================== ROW 1 ====================
+        fmove.s 16(a0),e16      ; a10
+        fmove.s 20(a0),e17      ; a11
+        fmove.s 24(a0),e18      ; a12
+        fmove.s 28(a0),e19      ; a13
+
         ; Term 0: a10 * b0x
-        fmove.s 16(a0),fp4      ; a10
-        fmove.s (a1),fp0        ; b00
-        fmul    fp4,fp0         ; fp0 = a10 * b00 (Col 0)
-        fmove.s 4(a1),fp1       ; b01
-        fmul    fp4,fp1         ; fp1 = a10 * b01 (Col 1)
-        fmove.s 8(a1),fp2       ; b02
-        fmul    fp4,fp2         ; fp2 = a10 * b02 (Col 2)
-        fmove.s 12(a1),fp3      ; b03
-        fmul    fp4,fp3         ; fp3 = a10 * b03 (Col 3)
+        fmul    e16,e0,fp0
+        fmul    e16,e1,fp1
+        fmul    e16,e2,fp2
+        fmul    e16,e3,fp3
 
         ; Term 1: a11 * b1x
-        fmove.s 20(a0),fp4      ; a11
-        fmove.s 16(a1),fp5      ; b10
-        fmul    fp4,fp5
-        fmove.s 20(a1),fp6      ; b11
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a11 * b10
-        fmove.s 24(a1),fp5      ; b12
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a11 * b11
-        fmove.s 28(a1),fp6      ; b13
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a11 * b12
-        fadd    fp6,fp3         ; fp3 += a11 * b13
+        fmul    e17,e4,e20
+        fmul    e17,e5,e21
+        fmul    e17,e6,e22
+        fmul    e17,e7,e23
+
+        ; Add Term 0 + Term 1
+        fadd    fp0,e20,fp0
+        fadd    fp1,e21,fp1
+        fadd    fp2,e22,fp2
+        fadd    fp3,e23,fp3
 
         ; Term 2: a12 * b2x
-        fmove.s 24(a0),fp4      ; a12
-        fmove.s 32(a1),fp5      ; b20
-        fmul    fp4,fp5
-        fmove.s 36(a1),fp6      ; b21
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a12 * b20
-        fmove.s 40(a1),fp5      ; b22
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a12 * b21
-        fmove.s 44(a1),fp6      ; b23
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a12 * b22
-        fadd    fp6,fp3         ; fp3 += a12 * b23
+        fmul    e18,e8,e20
+        fmul    e18,e9,e21
+        fmul    e18,e10,e22
+        fmul    e18,e11,e23
+
+        ; Add + Term 2
+        fadd    fp0,e20,fp0
+        fadd    fp1,e21,fp1
+        fadd    fp2,e22,fp2
+        fadd    fp3,e23,fp3
 
         ; Term 3: a13 * b3x
-        fmove.s 28(a0),fp4      ; a13
-        fmove.s 48(a1),fp5      ; b30
-        fmul    fp4,fp5
-        fmove.s 52(a1),fp6      ; b31
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a13 * b30 -> c10
-        fmove.s 56(a1),fp5      ; b32
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a13 * b31 -> c11
-        fmove.s 60(a1),fp6      ; b33
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a13 * b32 -> c12
-        fadd    fp6,fp3         ; fp3 += a13 * b33 -> c13
+        fmul    e19,e12,e20
+        fmul    e19,e13,e21
+        fmul    e19,e14,e22
+        fmul    e19,e15,e23
+
+        ; Add + Term 3 (complete Row 1!)
+        fadd    fp0,e20,fp0     ; c10
+        fadd    fp1,e21,fp1     ; c11
+        fadd    fp2,e22,fp2     ; c12
+        fadd    fp3,e23,fp3     ; c13
 
         ; Store Row 1
         fmove.s fp0,16(a2)
@@ -132,61 +132,52 @@
         fmove.s fp3,28(a2)
 
         ; ==================== ROW 2 ====================
+        fmove.s 32(a0),e16      ; a20
+        fmove.s 36(a0),e17      ; a21
+        fmove.s 40(a0),e18      ; a22
+        fmove.s 44(a0),e19      ; a23
+
         ; Term 0: a20 * b0x
-        fmove.s 32(a0),fp4      ; a20
-        fmove.s (a1),fp0        ; b00
-        fmul    fp4,fp0         ; fp0 = a20 * b00 (Col 0)
-        fmove.s 4(a1),fp1       ; b01
-        fmul    fp4,fp1         ; fp1 = a20 * b01 (Col 1)
-        fmove.s 8(a1),fp2       ; b02
-        fmul    fp4,fp2         ; fp2 = a20 * b02 (Col 2)
-        fmove.s 12(a1),fp3      ; b03
-        fmul    fp4,fp3         ; fp3 = a20 * b03 (Col 3)
+        fmul    e16,e0,fp0
+        fmul    e16,e1,fp1
+        fmul    e16,e2,fp2
+        fmul    e16,e3,fp3
 
         ; Term 1: a21 * b1x
-        fmove.s 36(a0),fp4      ; a21
-        fmove.s 16(a1),fp5      ; b10
-        fmul    fp4,fp5
-        fmove.s 20(a1),fp6      ; b11
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a21 * b10
-        fmove.s 24(a1),fp5      ; b12
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a21 * b11
-        fmove.s 28(a1),fp6      ; b13
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a21 * b12
-        fadd    fp6,fp3         ; fp3 += a21 * b13
+        fmul    e17,e4,e20
+        fmul    e17,e5,e21
+        fmul    e17,e6,e22
+        fmul    e17,e7,e23
+
+        ; Add Term 0 + Term 1
+        fadd    fp0,e20,fp0
+        fadd    fp1,e21,fp1
+        fadd    fp2,e22,fp2
+        fadd    fp3,e23,fp3
 
         ; Term 2: a22 * b2x
-        fmove.s 40(a0),fp4      ; a22
-        fmove.s 32(a1),fp5      ; b20
-        fmul    fp4,fp5
-        fmove.s 36(a1),fp6      ; b21
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a22 * b20
-        fmove.s 40(a1),fp5      ; b22
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a22 * b21
-        fmove.s 44(a1),fp6      ; b23
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a22 * b22
-        fadd    fp6,fp3         ; fp3 += a22 * b23
+        fmul    e18,e8,e20
+        fmul    e18,e9,e21
+        fmul    e18,e10,e22
+        fmul    e18,e11,e23
+
+        ; Add + Term 2
+        fadd    fp0,e20,fp0
+        fadd    fp1,e21,fp1
+        fadd    fp2,e22,fp2
+        fadd    fp3,e23,fp3
 
         ; Term 3: a23 * b3x
-        fmove.s 44(a0),fp4      ; a23
-        fmove.s 48(a1),fp5      ; b30
-        fmul    fp4,fp5
-        fmove.s 52(a1),fp6      ; b31
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a23 * b30 -> c20
-        fmove.s 56(a1),fp5      ; b32
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a23 * b31 -> c21
-        fmove.s 60(a1),fp6      ; b33
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a23 * b32 -> c22
-        fadd    fp6,fp3         ; fp3 += a23 * b33 -> c23
+        fmul    e19,e12,e20
+        fmul    e19,e13,e21
+        fmul    e19,e14,e22
+        fmul    e19,e15,e23
+
+        ; Add + Term 3 (complete Row 2!)
+        fadd    fp0,e20,fp0     ; c20
+        fadd    fp1,e21,fp1     ; c21
+        fadd    fp2,e22,fp2     ; c22
+        fadd    fp3,e23,fp3     ; c23
 
         ; Store Row 2
         fmove.s fp0,32(a2)
@@ -195,61 +186,52 @@
         fmove.s fp3,44(a2)
 
         ; ==================== ROW 3 ====================
+        fmove.s 48(a0),e16      ; a30
+        fmove.s 52(a0),e17      ; a31
+        fmove.s 56(a0),e18      ; a32
+        fmove.s 60(a0),e19      ; a33
+
         ; Term 0: a30 * b0x
-        fmove.s 48(a0),fp4      ; a30
-        fmove.s (a1),fp0        ; b00
-        fmul    fp4,fp0         ; fp0 = a30 * b00 (Col 0)
-        fmove.s 4(a1),fp1       ; b01
-        fmul    fp4,fp1         ; fp1 = a30 * b01 (Col 1)
-        fmove.s 8(a1),fp2       ; b02
-        fmul    fp4,fp2         ; fp2 = a30 * b02 (Col 2)
-        fmove.s 12(a1),fp3      ; b03
-        fmul    fp4,fp3         ; fp3 = a30 * b03 (Col 3)
+        fmul    e16,e0,fp0
+        fmul    e16,e1,fp1
+        fmul    e16,e2,fp2
+        fmul    e16,e3,fp3
 
         ; Term 1: a31 * b1x
-        fmove.s 52(a0),fp4      ; a31
-        fmove.s 16(a1),fp5      ; b10
-        fmul    fp4,fp5
-        fmove.s 20(a1),fp6      ; b11
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a31 * b10
-        fmove.s 24(a1),fp5      ; b12
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a31 * b11
-        fmove.s 28(a1),fp6      ; b13
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a31 * b12
-        fadd    fp6,fp3         ; fp3 += a31 * b13
+        fmul    e17,e4,e20
+        fmul    e17,e5,e21
+        fmul    e17,e6,e22
+        fmul    e17,e7,e23
+
+        ; Add Term 0 + Term 1
+        fadd    fp0,e20,fp0
+        fadd    fp1,e21,fp1
+        fadd    fp2,e22,fp2
+        fadd    fp3,e23,fp3
 
         ; Term 2: a32 * b2x
-        fmove.s 56(a0),fp4      ; a32
-        fmove.s 32(a1),fp5      ; b20
-        fmul    fp4,fp5
-        fmove.s 36(a1),fp6      ; b21
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a32 * b20
-        fmove.s 40(a1),fp5      ; b22
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a32 * b21
-        fmove.s 44(a1),fp6      ; b23
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a32 * b22
-        fadd    fp6,fp3         ; fp3 += a32 * b23
+        fmul    e18,e8,e20
+        fmul    e18,e9,e21
+        fmul    e18,e10,e22
+        fmul    e18,e11,e23
+
+        ; Add + Term 2
+        fadd    fp0,e20,fp0
+        fadd    fp1,e21,fp1
+        fadd    fp2,e22,fp2
+        fadd    fp3,e23,fp3
 
         ; Term 3: a33 * b3x
-        fmove.s 60(a0),fp4      ; a33
-        fmove.s 48(a1),fp5      ; b30
-        fmul    fp4,fp5
-        fmove.s 52(a1),fp6      ; b31
-        fmul    fp4,fp6
-        fadd    fp5,fp0         ; fp0 += a33 * b30 -> c30
-        fmove.s 56(a1),fp5      ; b32
-        fmul    fp4,fp5
-        fadd    fp6,fp1         ; fp1 += a33 * b31 -> c31
-        fmove.s 60(a1),fp6      ; b33
-        fmul    fp4,fp6
-        fadd    fp5,fp2         ; fp2 += a33 * b32 -> c32
-        fadd    fp6,fp3         ; fp3 += a33 * b33 -> c33
+        fmul    e19,e12,e20
+        fmul    e19,e13,e21
+        fmul    e19,e14,e22
+        fmul    e19,e15,e23
+
+        ; Add + Term 3 (complete Row 3!)
+        fadd    fp0,e20,fp0     ; c30
+        fadd    fp1,e21,fp1     ; c31
+        fadd    fp2,e22,fp2     ; c32
+        fadd    fp3,e23,fp3     ; c33
 
         ; Store Row 3
         fmove.s fp0,48(a2)
