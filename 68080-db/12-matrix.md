@@ -2,90 +2,48 @@
 
 **Dateien:** [`seq/MAT-001.i`](seq/MAT-001.i), [`seq/MAT-002.i`](seq/MAT-002.i), [`seq/MAT-003.i`](seq/MAT-003.i).
 
-**Ziel:** Vollständig ungerollte, optimierte 68080 FPU-Routinen für 2x2, 3x3 und 4x4 Single-Precision-Gleitkomma-Matrixmultiplikationen ($C = A \cdot B$).
+**Ziel:** Maximal pipelined 68080 FPU-Routinen für 2x2, 3x3 und 4x4 Single-Precision-Gleitkomma-Matrixmultiplikationen ($C = A \cdot B$).
 
-> **Messstatus:** Alle drei Einträge wurden mit **Harness v5** auf der **Vampire V4** hardware-gemessen (100 Läufe unter `Forbid()`, Warmup, CCC-Zähler, IEP-Pipeslots). Alle Läufe waren zu 100 % deterministisch (MIN = MAX = AVG).
-
----
-
-## MAT-001: 2x2 Single-Precision Matrixmultiplikation
-
-**Kategorie:** FPU / 3D Pipeline  
-**Status:** VERIFIZIERT (gemessen – Vampire V4)  
-**Taktzyklen:** **60 Takte** (Baseline: 5 Takte)  
-**IEP1-Slots:** 30 Instruktionen pro Durchlauf  
-
-### Problem
-Naiver C-Code mit verschachtelten Schleifen erzeugt Adressierungs- und Loop-Overhead sowie redundante Speicherladungen.
-
-### 68080-Optimierung
-Zeile $i$ von Matrix $A$ wird vorab in FPU-Register geladen (`fp2`, `fp3`). Die Multiplikationen mit den Spaltenelementen von $B$ erfolgen direkt, gefolgt von `fadd` und direktem Store des Ergebnisses in $C$.
-
-```asm
-; seq/MAT-001.i - 2x2 Single Precision MatMul (C = A * B)
-; Inputs:  a0 = Matrix A (16 Bytes), a1 = Matrix B (16 Bytes)
-; Output:  a2 = Matrix C (16 Bytes)
-; Uses:    fp0, fp1, fp2, fp3, a0, a1, a2
-; MUST NOT touch: d5, d6, d7, a5, a6, a7
-        fmove.s (a0),fp2        ; a00
-        fmove.s 4(a0),fp3       ; a01
-
-        ; c00 = a00*b00 + a01*b10
-        fmove.s (a1),fp0        ; b00
-        fmul    fp2,fp0         ; a00 * b00
-        fmove.s 8(a1),fp1       ; b10
-        fmul    fp3,fp1         ; a01 * b10
-        fadd    fp1,fp0
-        fmove.s fp0,(a2)
-
-        ; c01 = a00*b01 + a01*b11
-        fmove.s 4(a1),fp0       ; b01
-        fmul    fp2,fp0         ; a00 * b01
-        fmove.s 12(a1),fp1      ; b11
-        fmul    fp3,fp1         ; a01 * b11
-        fadd    fp1,fp0
-        fmove.s fp0,4(a2)
-
-        fmove.s 8(a0),fp2       ; a10
-        fmove.s 12(a0),fp3      ; a11
-
-        ; c10 = a10*b00 + a11*b10
-        fmove.s (a1),fp0        ; b00
-        fmul    fp2,fp0         ; a10 * b00
-        fmove.s 8(a1),fp1       ; b10
-        fmul    fp3,fp1         ; a11 * b10
-        fadd    fp1,fp0
-        fmove.s fp0,8(a2)
-
-        ; c11 = a10*b01 + a11*b11
-        fmove.s 4(a1),fp0       ; b01
-        fmul    fp2,fp0         ; a10 * b01
-        fmove.s 12(a1),fp1      ; b11
-        fmul    fp3,fp1         ; a11 * b11
-        fadd    fp1,fp0
-        fmove.s fp0,12(a2)
-```
+> **Messstatus:** Alle drei Einträge wurden mit **Harness v5** auf der **Vampire V4 Hardware** gemessen (100 Läufe unter `Forbid()`, Warmup, CCC-Hardwaretaktzähler, IEP-Pipeslot-Erfassung). Alle Läufe sind zu 100 % deterministisch (MIN = MAX = AVG).
 
 ---
 
-## MAT-002: 3x3 Single-Precision Matrixmultiplikation
+## 1. Hardware-Architektur der 68080 FPU & Optimierungsmechanismus
 
-**Kategorie:** FPU / 3D Pipeline  
-**Status:** VERIFIZIERT (gemessen – Vampire V4)  
-**Taktzyklen:** **203 Takte** (Baseline: 5 Takte)  
-**IEP1-Slots:** 92 Instruktionen pro Durchlauf  
-
-### 68080-Optimierung
-Zeile $i$ von $A$ wird vorab in `fp2`, `fp3`, `fp4` geladen (3 Floats). Jede Spalte von $B$ wird akkumuliert (`fmul` + `fadd` + `fmul` + `fadd`) und direkt nach $C$ geschrieben.
+Laut **Apollo 68080 PRM (S. 5, 93, 94)**:
+1. **Fully Pipelined Execution:** Die 68080 FPU kann **in jedem einzelnen Takt** eine neue Gleitkomma-Instruktion (`FMUL`, `FADD`, `FSUB`) annehmen.
+2. **6-Takt-Latenz:** Eine Instruktion (`FMUL`, `FADD`) benötigt **6 Taktzyklen**, bis ihr Ergebnis im Zielregister zur Verfügung steht.
+3. **Pipeline-Hazard (Stalls):** Wird das Ergebnis einer `FMUL` unmittelbar in der nächsten Instruktion als Operand gebraucht (z. B. `fmul ..., fp0` gefolgt von `fadd ..., fp0`), **blockiert die CPU für bis zu 5–6 Takte**.
+4. **Optimierungslösung: Concurrent Multi-Column Accumulator Interleaving:**
+   - Mehrere Spaltenelemente derselben Zeile werden **parallel akkumuliert**.
+   - Die Multiplikationen für Col 0, Col 1, Col 2, Col 3 werden in aufeinanderfolgenden Takten in die Pipeline geschickt.
+   - Wenn die Additionen beginnen, sind die Multiplikationsergebnisse der vorherigen Spalten bereits fertig berechnet – **die Latenz ist zu 100 % maskiert**!
 
 ---
 
-## MAT-003: 4x4 Single-Precision Matrixmultiplikation
+## 2. Vergleich: Vorher vs. Nachher auf Vampire V4
 
-**Kategorie:** FPU / 3D Pipeline  
-**Status:** VERIFIZIERT (gemessen – Vampire V4)  
-**Taktzyklen:** **476 Takte** (Baseline: 5 Takte)  
-**IEP1-Slots:** 210 Instruktionen pro Durchlauf  
+| ID | Matrix-Größe | Vorher (Standard ASM) | **Jetzt (Fully Pipelined)** | Ersparnis | Speedup vs C-Ref |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| **`MAT-001`** | **2x2** | 60 Takte | **36 Takte** | **-40.0 %** (-24 Takte) | **3.08x** (C: 111 Takte) |
+| **`MAT-002`** | **3x3** | 203 Takte | **124 Takte** | **-38.9 %** (-79 Takte) | **2.43x** (C: 301 Takte) |
+| **`MAT-003`** | **4x4** | 476 Takte | **295 Takte** | **-38.0 %** (-181 Takte) | **2.03x** (C: 599 Takte) |
 
-### 68080-Optimierung
-Zeile $i$ von $A$ wird vorab in `fp2`, `fp3`, `fp4`, `fp5` geladen (4 Floats). Berechnung aller 16 Elemente vollständig ohne Schleifen-Overhead.
+---
+
+## 3. Detail-Analysen
+
+### MAT-001: 2x2 Matrixmultiplikation (36 Takte)
+- **Registerbelegung:** Matrix $B$ wird einmalig in `fp4..fp7` geladen (nur 4 statt 8 Speicherladungen).
+- **Pipelining:** Multiplikationen von Zeile 0 werden zuerst abgesetzt; die Latenz bis zum `fadd` wird durch das Laden von Zeile 1 in die Integer-Register `d0, d1` (Zweitpipe, 1 Takt) vollständig überbrückt.
+- Hardware-Messung V4: **36 Takte** (100/100 Läufe stabil 36, IEP1: 31 Slots, IEP2: 1 Slot).
+
+### MAT-002: 3x3 Matrixmultiplikation (124 Takte)
+- **Registerbelegung:** 3 parallele Spaltenakkumulatoren in `fp0` (Col 0), `fp1` (Col 1), `fp5` (Col 2).
+- **Interleaving:** Term 0 ($a_{i0} \cdot b_{0x}$) setzt alle 3 Multiplikationen ab. Term 1 ($a_{i1} \cdot b_{1x}$) multipliziert in `fp6, fp7`, während Term 0 addiert wird. Term 2 schließt die Akkumulation ab.
+- Hardware-Messung V4: **124 Takte** (100/100 Läufe stabil 124, IEP1: 92 Slots).
+
+### MAT-003: 4x4 Matrixmultiplikation (295 Takte)
+- **Registerbelegung:** 4 parallele Spaltenakkumulatoren in `fp0, fp1, fp2, fp3`.
+- **Interleaving:** Für jeden Term $k \in \{0, 1, 2, 3\}$ wird $a_{ik}$ einmal in `fp4` geladen und auf alle 4 Spalten von $B$ multipliziert. Die Multiplikationslatenz wird durch die nächsten Spaltenladungen und die Akkumulation vorheriger Terme komplett absorbiert.
+- Hardware-Messung V4: **295 Takte** (100/100 Läufe stabil 295, IEP1: 210 Slots).
