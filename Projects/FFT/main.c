@@ -14,6 +14,14 @@ static const int test_sizes[] = {64, 128, 256, 512, 1024, 2048, 4096};
 extern void fft_breakdown_ammx(complex_int16 *x, int n, const complex_int16 *tw,
                                uint32_t *t_br, uint32_t *t_stg1, uint32_t *t_mid, uint32_t *t_last);
 
+static void *malloc_aligned(size_t size, void **raw_out) {
+    void *p = malloc(size + 64);
+    if (!p) { *raw_out = NULL; return NULL; }
+    *raw_out = p;
+    uintptr_t addr = (uintptr_t)p;
+    return (void *)((addr + 63) & ~(uintptr_t)63);
+}
+
 int main(void) {
     printf("=================================================================================================================================\n");
     printf(" Apollo 68080 FFT Benchmark & Validation Suite\n");
@@ -36,11 +44,12 @@ int main(void) {
     for (int t = 0; t < NUM_TESTS; t++) {
         int n = test_sizes[t];
 
-        complex_float *fc = (complex_float *)malloc(n * sizeof(complex_float));
-        complex_float *fa = (complex_float *)malloc(n * sizeof(complex_float));
-        complex_int16 *xc = (complex_int16 *)malloc(n * sizeof(complex_int16));
-        complex_int16 *xa = (complex_int16 *)malloc(n * sizeof(complex_int16));
-        complex_int16 *xm = (complex_int16 *)malloc(n * sizeof(complex_int16));
+        void *raw_fc, *raw_fa, *raw_xc, *raw_xa, *raw_xm;
+        complex_float *fc = (complex_float *)malloc_aligned(n * sizeof(complex_float), &raw_fc);
+        complex_float *fa = (complex_float *)malloc_aligned(n * sizeof(complex_float), &raw_fa);
+        complex_int16 *xc = (complex_int16 *)malloc_aligned(n * sizeof(complex_int16), &raw_xc);
+        complex_int16 *xa = (complex_int16 *)malloc_aligned(n * sizeof(complex_int16), &raw_xa);
+        complex_int16 *xm = (complex_int16 *)malloc_aligned(n * sizeof(complex_int16), &raw_xm);
 
         if (!fc || !fa || !xc || !xa || !xm) {
             printf("Memory allocation failed for N=%d!\n", n);
@@ -133,6 +142,15 @@ int main(void) {
             all_passed = 0;
             printf(" [Debug FAIL: ok_f=%d (max_fdiff=%e), ok_s=%d (max_xdiff=%d), ok_m=%d (max_mdiff=%d)]\n",
                    ok_f, (double)max_fdiff, ok_s, max_xdiff, ok_m, max_mdiff);
+            for (int i = 0; i < n; i++) {
+                int dr = abs(xc[i].r - xm[i].r);
+                int di = abs(xc[i].i - xm[i].i);
+                if (dr > 20 || di > 20) {
+                    printf("   First mismatch at i=%d: C=(%d,%d) AMMX=(%d,%d) diff=(%d,%d)\n",
+                           i, xc[i].r, xc[i].i, xm[i].r, xm[i].i, dr, di);
+                    break;
+                }
+            }
         }
 
         double spd_f = (double)cyc_fc / (double)(cyc_fa ? cyc_fa : 1);
@@ -168,11 +186,11 @@ int main(void) {
             printf("   - Total AMMX Time:     %7lu cycles\n\n", (unsigned long)(t_br + t_stg1 + t_mid + t_last));
         }
 
-        free(fc);
-        free(fa);
-        free(xc);
-        free(xa);
-        free(xm);
+        free(raw_fc);
+        free(raw_fa);
+        free(raw_xc);
+        free(raw_xa);
+        free(raw_xm);
     }
 
     printf("------------------------------------------------------------------------------------------------------------------------------------\n");

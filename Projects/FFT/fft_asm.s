@@ -588,14 +588,40 @@ _fft_fixed_ammx:
         subq.l  #1,d0
         bne.s   .ammx_stg1_vec
 
-        ; 4. Stages 2..log2(N): len = 4, 8, ..., n
-        moveq   #4,d2                   ; d2 = len = 4
-        moveq   #2,d3                   ; d3 = half = 2
-        move.l  #4096,d4                ; d4 = tw_offset1 = tw_stride * 4 (1024 * 4 = 4096)
-        move.l  #8192,d5                ; d5 = tw_step = tw_stride * 8 = 8192
+        ; 4. Stage 2: len = 4, half = 2 (Vectorized with AMMX, W0=1, W1=-i, 0 twiddle lookups!)
+        move.l  12(sp),d0               ; n
+        lsr.l   #2,d0                   ; num_quads = n / 4
+        move.l  8(sp),a0                ; a0 = &x[0]
+
+.ammx_stg2_vec:
+        load    (a0)+,e0                ; [u0, u1]
+        load    (a0)+,e1                ; [v0, v1]
+
+        pmulh   e10,e0,e2
+        psubw   e2,e11,e0               ; e0 = u_half = [u0, u1]
+
+        pmulh   e10,e1,e3
+        psubw   e3,e11,e1               ; e1 = v_half = [v0, v1]
+
+        psubw   e1,e11,e4               ; e4 = -v_half
+        vperm   #$012367cd,e1,e4,e5     ; e5 = T = [v0.r, v0.i, v1.i, -v1.r]
+
+        bflyw   e5,e0,e12:e13           ; e12 = u', e13 = v'
+
+        store   e12,-16(a0)
+        store   e13,-8(a0)
+
+        subq.l  #1,d0
+        bne.s   .ammx_stg2_vec
+
+        ; 5. Stages 3..log2(N): len = 8, 16, ..., n
+        moveq   #8,d2                   ; d2 = len = 8
+        moveq   #4,d3                   ; d3 = half = 4
+        move.l  #2048,d4                ; d4 = tw_offset1 = tw_stride * 4 (512 * 4 = 2048)
+        move.l  #4096,d5                ; d5 = tw_step = tw_stride * 8 = 4096
         move.l  12(sp),d6               ; n
-        lsr.l   #2,d6                   ; d6 = num_blocks = n / 4
-        moveq   #16,d0                  ; step = len * 4 = 16 bytes
+        lsr.l   #3,d6                   ; d6 = num_blocks = n / 8
+        moveq   #32,d0                  ; step = len * 4 = 32 bytes
         move.l  d0,a6                   ; a6 = step
 
 .ammx_stage_loop:
@@ -635,6 +661,7 @@ _fft_fixed_ammx:
         move.l  d6,d0                   ; d0 = num_blocks
 
 .ammx_blk_loop:
+
         load    (a0),e6                 ; load u = [u0, u1]
         load    (a1),e0                 ; load v = [v0, v1]
 
@@ -797,13 +824,34 @@ _fft_breakdown_ammx:
         movec.l CCC,d0
         move.l  d0,32(sp)               ; start_mid
 
-        moveq   #4,d2                   ; len = 4
-        moveq   #2,d3                   ; half = 2
-        move.l  #4096,d4                ; tw_offset1
-        move.l  #8192,d5                ; tw_step
+        ; Stage 2 Vectorized
+        move.l  12(sp),d0
+        lsr.l   #2,d0
+        move.l  8(sp),a0
+
+.bd_stg2:
+        load    (a0)+,e0
+        load    (a0)+,e1
+        pmulh   e10,e0,e2
+        psubw   e2,e11,e0
+        pmulh   e10,e1,e3
+        psubw   e3,e11,e1
+        psubw   e1,e11,e4
+        vperm   #$012367cd,e1,e4,e5
+        bflyw   e5,e0,e12:e13
+        store   e12,-16(a0)
+        store   e13,-8(a0)
+        subq.l  #1,d0
+        bne.s   .bd_stg2
+
+        ; Stages 3..log2(N)
+        moveq   #8,d2                   ; len = 8
+        moveq   #4,d3                   ; half = 4
+        move.l  #2048,d4                ; tw_offset1
+        move.l  #4096,d5                ; tw_step
         move.l  12(sp),d6               ; n
-        lsr.l   #2,d6                   ; num_blocks
-        moveq   #16,d0
+        lsr.l   #3,d6                   ; num_blocks = n / 8
+        moveq   #32,d0
         move.l  d0,a6
 
 .bd_stage_loop:
@@ -833,6 +881,7 @@ _fft_breakdown_ammx:
         move.l  d6,d0
 
 .bd_blk_loop:
+
         load    (a0),e6
         load    (a1),e0
         pmulh   e10,e6,e7

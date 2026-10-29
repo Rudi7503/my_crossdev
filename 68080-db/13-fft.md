@@ -5,12 +5,13 @@
 - Fixed-Point Skalar: [`seq/FFT-002.i`](seq/FFT-002.i) (16-Bit Q1.15 Skalar-Schmetterling)
 - Fixed-Point AMMX SIMD: [`seq/FFT-003.i`](seq/FFT-003.i) (16-Bit Q1.15 AMMX Doppel-Schmetterling mit Drehfaktoren)
 - AMMX Stufe 1 Vektorisiert: [`seq/FFT-004.i`](seq/FFT-004.i) (16-Bit Q1.15 AMMX Stufe 1, 0 Drehfaktoren)
+- AMMX Stufe 2 Vektorisiert: [`seq/FFT-006.i`](seq/FFT-006.i) (16-Bit Q1.15 AMMX Stufe 2, W0=1, W1=-i, 0 Drehfaktor-Loads)
 - Tabellen-Bitreversal: [`seq/FFT-005.i`](seq/FFT-005.i) (Tabellen-beschleunigtes In-Place Swap-Paar)
 - Vollständige Algorithmen-Suite: [`Projects/FFT/`](../Projects/FFT/) (`main.c`, `fft_c.c`, `fft_asm.s`)
 
 **Ziel:** Optimierung, theoretische Grenzwertanalyse und Hardware-Benchmarking von Radix-2 Cooley-Tukey FFT-Transformationen auf dem Apollo 68080 für 32-Bit Gleitkomma (FPU) und 16-Bit Festkomma (Skalar vs. AMMX SIMD) über alle Größen $N \in \{64, 128, 256, 512, 1024, 2048, 4096\}$.
 
-> **Messstatus:** Alle fünf Kernsequenzen wurden mit **Harness v5** auf der **Vampire V4 Hardware** gemessen (100 Läufe unter `Forbid()`, Warmup, CCC-Hardwaretaktzähler, IEP-Pipeslot-Erfassung). Alle Messungen 100/100 Läufe absolut stabil (MIN=MAX=AVG). Zudem wurde die vollständige Benchmark-Reihe ($N=64 \dots 4096$) auf der V4 gegen die bitgenaue C-Referenz (`-O2 -m68020 -m68881`) validiert.
+> **Messstatus:** Alle sechs Kernsequenzen wurden mit **Harness v5** auf der **Vampire V4 Hardware** gemessen (100 Läufe unter `Forbid()`, Warmup, CCC-Hardwaretaktzähler, IEP-Pipeslot-Erfassung). Alle Messungen 100/100 Läufe absolut stabil (MIN=MAX=AVG). Zudem wurde die vollständige Benchmark-Reihe ($N=64 \dots 4096$) auf der V4 gegen die bitgenaue C-Referenz (`-O2 -m68020 -m68881`) validiert.
 
 ---
 
@@ -59,6 +60,13 @@ In Stufe 1 ($len = 2$) sind alle Drehfaktoren $W = 1.0 + 0i$.
 - Jedes Vertauschen benötigt lediglich 4 Speicherzugriffe: `move.l (a0, d0.w*4), d2` / `move.l (a0, d1.w*4), d3` und Überkreuz-Stores.
 - **Gemessenes Minimum:** **8 Takte** pro Vertauschung.
 
+### F. Stufe 2 AMMX Vektorisierung (`FFT-006.i`): 14 Takte für 2 Schmetterlinge (= 7.0 Takte / Butterfly!)
+In Stufe 2 ($len = 4$) existieren nur zwei Drehfaktoren: $W_0 = 1.0$ und $W_1 = -i$.
+- Keine Speicherzugriffe für Drehfaktoren notwendig.
+- Die Multiplikation mit $-i$ entspricht exakt dem Tausch von Real- und Imaginärteil mit Negation: $(v_r + i v_i)(-i) = v_i - i v_r$.
+- Mit `psubw e1, e11, e4` (Negation) und einem einzigen `vperm #$012367cd, e1, e4, e5` wird der gesamte Vektor $T = [v_{0r}, v_{0i}, v_{1i}, -v_{1r}]$ in nur 1 Takt synthetisiert.
+- **Gemessenes Minimum:** **14 Takte** für 2 Schmetterlinge $\rightarrow$ **7.0 Takte pro Schmetterling**!
+
 ---
 
 ## 3. Harness-v5 Messergebnisse (Isolierte Mikrobenchmarks)
@@ -71,6 +79,7 @@ Gemessen auf **Vampire V4 (Core Release, PCR: 1088/1)**:
 | [`FFT-002`](seq/FFT-002.i) | 16-Bit Fixed | Integer Skalar (1 Butterfly) | **31** | 31.0 | 26 | **31.0 Takte** | 28 | 12 | 1.00x |
 | [`FFT-003`](seq/FFT-003.i) | 16-Bit Fixed | AMMX SIMD (2 Butterflies m. Twiddles) | **17** | 17.0 | 12 | **8.5 Takte** | 18 | 0 | **3.65x schneller** |
 | [`FFT-004`](seq/FFT-004.i) | 16-Bit Fixed | AMMX SIMD Stufe 1 (2 Butterflies) | **15** | 15.0 | 10 | **7.5 Takte** | 33 | 1 | **4.13x schneller** |
+| [`FFT-006`](seq/FFT-006.i) | 16-Bit Fixed | AMMX SIMD Stufe 2 (2 Butterflies, W0=1, W1=-i) | **14** | 14.0 | 9 | **7.0 Takte** | 32 | 0 | **4.43x schneller** |
 | [`FFT-005`](seq/FFT-005.i) | 16-Bit Fixed | Bit-Reversal Swap-Paar (4 Bytes) | **8** | 8.0 | 3 | **8.0 Takte** | 9 | 0 | **3.88x schneller** |
 
 ---
@@ -87,7 +96,7 @@ Gemessen mit `Projects/FFT/FFT` direkt auf der Vampire V4 Hardware, validiert ge
 | **512** | 147.790 | 71.232 | **2.07x** | 129.081 | 78.380 | **1.65x** | **23.544** | **5.48x** | **3.33x** | 1 / 12 | PASS |
 | **1024** | 349.892 | 152.376 | **2.30x** | 231.622 | 162.319 | **1.43x** | **50.421** | **4.59x** | **3.22x** | 1 / 13 | PASS |
 | **2048** | 740.642 | 347.607 | **2.13x** | 495.863 | 387.005 | **1.28x** | **108.908** | **4.55x** | **3.55x** | 1 / 15 | PASS |
-| **4096** | 1.588.415 | 720.812 | **2.20x** | 1.084.396 | 808.186 | **1.34x** | **236.217** | **4.59x** | **3.42x** | 1 / 17 | PASS |
+| **4096** | 1.593.489 | 725.954 | **2.20x** | 1.089.549 | 861.087 | **1.27x** | **224.571** | **4.85x** | **3.83x** | 1 / 17 | PASS |
 
 *(Alle 7 Größen 100 % fehlerfrei und bitgenau / DSP-akkurat auf echter Hardware validiert).*
 
@@ -99,8 +108,8 @@ Die Detailzeitmessung für die 4096-Punkte AMMX SIMD Transformation auf der V4 z
 
 | Phase | Zyklen | Anteil | Erläuterung |
 |:---|:---:|:---:|:---|
-| **Bit-Reversal** | 22.249 | 10.0 % | Tabellen-beschleunigte 2016 Vertauschungen (vorher 96.491 cyc) |
-| **Stufe 1 (Vektorisiert)** | 13.362 | 6.0 % | Kontinuierliche 2-Schmetterling-Blöcke ohne Drehfaktor-Arithmetik |
-| **Stufen 2–11 (Mittelstufen)** | 161.226 | 72.6 % | Register-basiertes Zeiger-Fortschreiten (`tw_ptr`, `u_base`, `v_base`) |
-| **Stufe 12 (Streaming-Endstufe)** | 25.150 | 11.3 % | Kontinuierliches Streaming mit `(a4)+` und `(a5)+` (6.1 Takte / Butterfly!) |
-| **Gesamtzeit (Core)** | **221.987** | **100 %** | Entspricht **4.88x Beschleunigung** gegenüber C-Referenz |
+| **Bit-Reversal** | 19.183 | 9.1 % | Tabellen-beschleunigte 2016 Vertauschungen (vorher 96.491 cyc) |
+| **Stufe 1 (Vektorisiert)** | 12.561 | 5.9 % | Kontinuierliche 2-Schmetterling-Blöcke ohne Drehfaktor-Arithmetik |
+| **Stufen 2–11 (Mittelstufen)** | 155.434 | 73.6 % | Stufe 2 vektorisiert (`vperm`), 64-Byte Burst-Alignment |
+| **Stufe 12 (Streaming-Endstufe)** | 23.973 | 11.4 % | Kontinuierliches Streaming mit `(a4)+` und `(a5)+` (5.85 Takte / Butterfly!) |
+| **Gesamtzeit (Core)** | **211.151** | **100 %** | Entspricht **5.16x Beschleunigung** gegenüber C-Referenz |
