@@ -43,6 +43,7 @@ ausgibt.
 | [`15-mdct.md`](15-mdct.md) | Audio MDCT / IMDCT Engine (MP3 / AAC / Vorbis Subband Decoding) | 1 |
 | [`16-jpeg.md`](16-jpeg.md) | JPEG End-to-End Decoding Pipeline (Fused IDCT + PACKUSWB) | 1 |
 | [`17-mpeg.md`](17-mpeg.md) | MPEG-1/2 Video Motion Compensation & Fused Residual IDCT | 1 |
+| [`18-h264.md`](18-h264.md) | H.264 / AVC 4x4 Core IDCT, Hadamard & Fused Motion Comp | 1 |
 
 **Summe: 42 Einträge**, jeder mit Vorher/Nachher-Code, Hardware-Mechanismus,
 Registerliste und Messblock. Jeder Eintrag endet mit der **verbatim

@@ -42,6 +42,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`DCT-009`](15-mdct.md) | MP3 18-Sample 50% Overlap-Add Kernel (AMMX SIMD paddw) | `15-mdct.md` | gemessen |
 | [`DCT-010`](16-jpeg.md) | JPEG Fused Transpose + Level-Shift (+128) + PACKUSWB 8-Bit Store Kernel | `16-jpeg.md` | gemessen |
 | [`DCT-011`](17-mpeg.md) | MPEG Video Fused MC Transpose + Ref Unpack + Residual Add + PACKUSWB Store | `17-mpeg.md` | gemessen |
+| [`DCT-012`](18-h264.md) | H.264 4x4 2D Hadamard Transform (AMMX SIMD Butterfly + VPERM Transposition) | `18-h264.md` | gemessen |
 | [`FUS-001`](01-fusing.md) | MOVE.L + ADD.L zur 3-Operanden-Fusion | `01-fusing.md` | gemessen |
 | [`FUS-002`](01-fusing.md) | MOVE.L + NEG.L | `01-fusing.md` | gemessen |
 | [`FUS-003`](01-fusing.md) | MOVEQ + OR.L | `01-fusing.md` | gemessen |
@@ -93,6 +94,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **Audio MDCT / IMDCT** (1): [`DCT-009`](15-mdct.md)
 - **JPEG End-to-End Pipeline** (1): [`DCT-010`](16-jpeg.md)
 - **MPEG-1/2 Video Motion Compensation** (1): [`DCT-011`](17-mpeg.md)
+- **H.264 / AVC Video Pipeline** (1): [`DCT-012`](18-h264.md)
 - **Fast Fourier Transform (FFT)** (5): [`FFT-001`](13-fft.md), [`FFT-002`](13-fft.md), [`FFT-003`](13-fft.md), [`FFT-004`](13-fft.md), [`FFT-005`](13-fft.md), [`FFT-006`](13-fft.md)
 - **Matrix (FPU)** (3): [`MAT-001`](12-matrix.md), [`MAT-002`](12-matrix.md), [`MAT-003`](12-matrix.md)
 - **Matrix (Fixed-Point AMMX)** (3): [`FIX-001`](12-matrix.md), [`FIX-002`](12-matrix.md), [`FIX-003`](12-matrix.md)
