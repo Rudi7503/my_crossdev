@@ -32,7 +32,7 @@
 
 ## 2. Zusammenfassung der Messungen auf Core 1088/1
 
-Alle 42 kanonischen Sequenzen sowie die erweiterten Signal- und Transformations-Bibliotheken (Matrix, FFT, DCT, MDCT, JPEG, MPEG, H.264) wurden auf diesem Core gemessen und verifiziert:
+Alle 71 kanonischen Sequenzen (565 V4-Dateilogs total) sowie die erweiterten Signal- und Transformations-Bibliotheken (Matrix, FFT, DCT, MDCT, JPEG, MPEG, H.264) wurden auf diesem Core gemessen und verifiziert:
 - **Jitterfreiheit:** 10/10 v5-Messdurchgänge mit 100/100 Läufen absolut jitterfrei (`MIN == MAX == AVG` bei sauberem Cache-Warmup).
 - **Baseline:** 5 Takte für Harness-Overhead (nicht abgezogen, Rohdaten exakt protokolliert).
 - **Validierung:** 100% aller Logs besitzen `FILESTAT;1;0` und gültige `PERF`-Zählerblöcke.

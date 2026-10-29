@@ -527,8 +527,8 @@ E-Setup-Aufwand pro Einzelwert zu hoch.
 ## AMX-010: Emulation von PACKSSWB (Signed Saturation Word-zu-Byte mit PACKUSWB + Bias-Trick)
 
 **Kategorie:** AMMX / Audio & Sättigung  
-**Status:** VORBEREITET (Offline bit-exakt verifiziert, V4-Messung vorbereitet)  
-**Beleg:** PRM S. 52 (`PACKUSWB`), S. 46 (`LOAD`), S. 67 (`PSUBB`)
+**Status:** VERIFIZIERT (gemessen – Vampire V4 Core 1088/1, 10 × 100 Läufe, Harness v5)  
+**Beleg:** PRM S. 52 (`PACKUSWB`), S. 46 (`LOAD`), S. 67 (`PSUBB`); Sequenz `seq/AMX-010.i`
 
 ### Problem
 
@@ -599,6 +599,19 @@ Rechenoperationen parallel auf den dualen 68080-Pipes:
         subq.l  #1,d0
         bne.s   .loop_unrolled
 ```
+
+### Messung auf Vampire V4 (Harness v5, 10 × 100 Läufe)
+- **Basis-Variante (`AMX-010.i` – 8 Worte zu 8 Bytes):**
+  - `BASELINE = 5`
+  - `MIN = 7` Takte (in allen 10 Läufen identisch)
+  - `Median = 7`, `AVG = 7`, `MAX = 7` (100% jitter-free)
+  - `IEP1 = 7`, `IEP2 = 0`, `IEP3 = 0` pro Lauf
+- **2-fach entflochtene Variante (`AMX-011.i` – 16 Worte zu 16 Bytes):**
+  - `BASELINE = 5`
+  - `MIN = 12` Takte (in allen 10 Läufen identisch)
+  - `Median = 12`, `AVG = 12`, `MAX = 12` (100% jitter-free)
+  - `IEP1 = 11`, `IEP2 = 1`, `IEP3 = 0` pro Lauf
+  - **Durchsatz:** Nur **0,75 Takte pro vorzeichenbehaftetem Word**!
 
 
 ---
