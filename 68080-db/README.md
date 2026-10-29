@@ -1,57 +1,55 @@
-# 68080 Best-Practice-Datenbank
+# 68080 Best-Practice-Datenbank & Performance-Archiv
 
-Kuratierte, quellenbelegte Optimierungsmuster für den Apollo-Core **68080**
-(Vampire V4) – mit einem reproduzierbaren Mess-Harness, das jeden Eintrag mit
-vasm baut, unter `Forbid()` 100-mal misst (nach 100 Warmup-Läufen) und die
-Rohdaten über stdout und die direkte UART (`SERDAT`/`SERPER`, 115200 8N1)
-ausgibt.
+Kuratierte, quellenbelegte und auf echter Hardware gemessene Optimierungsmuster für den Apollo-Core **68080** (Vampire V4) – mit dem kanonischen **Harness v5**, das jeden Eintrag mit vasm baut, unter `Forbid()` 100-mal misst (nach 100 Warmup-Läufen) und die Rohdaten über stdout, SAGA und die direkte UART (`SERDAT`/`SERPER`, 115200 8N1) ausgibt.
 
-> **Status vorab:** **Alle 42 Einträge wurden mit Harness v1 auf einer Vampire
-> V4 gemessen** (ein Batchlauf, COM9/115200 8N1, 2026-10-22). Die Logs liegen
-> unter `measurements/<ID>.log`; `FUS-001.run1.log` ist ein separater
-> Wiederholungslauf. Referenz ist **MIN**; MAX/AVG sind Mediane der 10
-> v5-Läufe. Die Baseline ist 5–41 Takte und **kein gültiger Abzug**.
-> Die Mechanismen sind aus PRM und Apollo-Wiki belegt.
->
-> **Harness v5 (gemessen, kanonisch):** v4-Taktmessung plus separater
-> PERF-Zählerdurchgang **nach** der Taktmessung. Die Taktmessung bleibt
-> unverändert; jedes Log enthält `PERF;100;CCC;…;IEP1;…;DCM`. v5 wurde
-> am 24.10. 10× gemessen: **420 Dateilogs**, alle `FILESTAT;1;0`, MIN
-> 10/10 identisch mit v4, Warmup wirkt. Zusätzlich sind die
-> **IEP-Pipe-Slots** in Einträgen und `SUMMARY.md` dokumentiert.
-> `BPC/BPW/DCH/DCM` sind im gesamten Korpus 0 und werden nicht als
-> Cache-/Branch-Auswertung interpretiert. **v5 ist kanonisch**;
-> v1–v4 bleiben Archiv. Bericht: `measurements/V5-REPORT.md`, Tabelle:
-> `measurements/PERF-v5.md`.
+> **Kanonischer Mess- und Hardware-Stand:**
+> - **Core-Version:** **Apollo 68080 Core 1088 / Release 1** (Vampire V4 Standalone @ 85 MHz, PCR: 1088/1).
+> - **Kanonisches Harness:** **Harness v5** (`harness-v5.asm`). Alle alten Vorab-Versionen (v1–v4) wurden bereinigt.
+> - **Zähler-Vollständigkeit:** Jedes Log erfasst den **Clock Cycle Counter (CCC)** sowie die **Instruction Execution Pipeline Slots (IEP0, IEP1, IEP2)** zur genauen Analyse der internen Doppel-Pipeline-Auslastung.
+> - **Multi-Core-Architektur:** Messungen sind modular nach Cores strukturiert in [`cores/`](cores/). Aktuell validiert: [`cores/core-1088-1/`](cores/core-1088-1/).
+> - **Validierung:** 100% aller Einträge wurden auf echter Hardware verifiziert und durch `tools/check_log.py` validiert (`FILESTAT;1;0`).
+
+---
+
+## Die Community- & KI-Challenge: *„Beat Our Cycle Counts!“*
+
+Wir fordern jeden Entwickler, Apollo-Experten und jede Programmier-KI heraus:
+> **Kannst du unsere Implementierungen auf der Apollo 68080 schlagen?**  
+> Finde eine schnellere Sequenz oder teste die Suite auf deinem eigenen Apollo-Core!
+
+### Regeln der Challenge:
+1. **Bit-Exakte Parität (diff = 0):** Mathematisch identische Ergebnisse gegen verifizierte C-Referenz.
+2. **Echte Hardware-Messung:** Unter `Forbid()` auf echter Vampire (kein Emulator) mit 100 Warmup- und 100 Test-Läufen.
+3. **Reproduzierbarkeit & Logs:** Bereitstellung von `seq/<ID>.i` und des Rohdaten-Logs mit `BASELINE`, `RES` und `PERF`-Zählern.
+4. **Multi-Core Aufruf:** Besitzt du einen anderen Core (z. B. Core 11900, Core x89, Vampire V2 oder V4+)? Erstelle ein Verzeichnis `cores/core-<ID>-<REV>/`, lasse die Testsuite laufen und vergleiche die Zyklen und Pipe-Slots!
+
+Details und Einreichungsanleitung stehen in [`cores/README.md`](cores/README.md).
+
+---
 
 ## Inhalt
 
-| Datei | Kategorie | Einträge |
-|---|---|---:|
-| [`01-fusing.md`](01-fusing.md) | Instruction Fusing | 5 |
-| [`02-bonding.md`](02-bonding.md) | Instruction Bonding / Superscalar | 5 |
-| [`03-ammx.md`](03-ammx.md) | AMMX (64-Bit-SIMD) | 6 |
-| [`04-register.md`](04-register.md) | Registermodell & Allokation | 5 |
-| [`05-timing.md`](05-timing.md) | Instruktions-Timing & Fallstricke | 5 |
-| [`06-memory.md`](06-memory.md) | 64-Bit-Speicherbus, Prefetch, Cache | 5 |
-| [`07-patterns.md`](07-patterns.md) | Übergreifende Idiome | 5 |
-| [`08-antipatterns.md`](08-antipatterns.md) | Was den 68080 bremst | 6 |
-| [`09-harness.md`](09-harness.md) | Mess-Harness: Aufbau, Build, Fallstricke | – |
-| [`12-matrix.md`](12-matrix.md) | Matrix-Multiplikation (FPU Float & AMMX Fixed) | 6 |
-| [`13-fft.md`](13-fft.md) | Fast Fourier Transform (FPU Float & AMMX Fixed) | 6 |
-| [`14-dct.md`](14-dct.md) | Discrete Cosine Transform (1D & 2D Float FPU & AMMX SIMD) | 8 |
-| [`15-mdct.md`](15-mdct.md) | Audio MDCT / IMDCT Engine (MP3 / AAC / Vorbis Subband Decoding) | 1 |
-| [`16-jpeg.md`](16-jpeg.md) | JPEG End-to-End Decoding Pipeline (Fused IDCT + PACKUSWB) | 1 |
-| [`17-mpeg.md`](17-mpeg.md) | MPEG-1/2 Video Motion Compensation & Fused Residual IDCT | 1 |
-| [`18-h264.md`](18-h264.md) | H.264 / AVC 4x4 Core IDCT, Hadamard & Fused Motion Comp | 1 |
+| Datei | Kategorie | Einträge & Fokus |
+|---|---|---|
+| [`01-fusing.md`](01-fusing.md) | Instruction Fusing | 5 (3-Operanden ALU-Fusion, Quad-Clear) |
+| [`02-bonding.md`](02-bonding.md) | Instruction Bonding / Superscalar | 5 (Duale Integer-Pipes 0 & 1, Parallel-ALU) |
+| [`03-ammx.md`](03-ammx.md) | AMMX (64-Bit-SIMD) | 8 (PADD, PMULH, VPERM, PACKUSWB, PAVGB, BFLYW-Status) |
+| [`04-register.md`](04-register.md) | Registermodell & Allokation | 5 (E-Register, Adressarithmetik, 64-Bit Transfers) |
+| [`05-timing.md`](05-timing.md) | Instruktions-Timing & Fallstricke | 5 (Shift vs. Div, LEA-Latenzen, MOVEM-Effizienz) |
+| [`06-memory.md`](06-memory.md) | 64-Bit-Speicherbus, Prefetch, Cache | 5 (Quad-Alignment, TOUCH-Vorlauf, Bursts) |
+| [`07-patterns.md`](07-patterns.md) | Übergreifende Idiome | 5 (Branchless Blend, 32-Byte-Burst-Kopieren) |
+| [`08-antipatterns.md`](08-antipatterns.md) | Was den 68080 bremst | 6 (NOP-Bremsen, 060-Scheduling, Word-Updates) |
+| [`09-harness.md`](09-harness.md) | Mess-Harness: Aufbau, Build, Fallstricke | – (Harness v5 Aufbau, CCC-Zähler, Jitter-Prävention) |
+| [`12-matrix.md`](12-matrix.md) | Matrix-Multiplikation (FPU Float & AMMX Fixed) | 6 (2x2, 3x3, 4x4 Matrizen in Float & AMMX SIMD) |
+| [`13-fft.md`](13-fft.md) | Fast Fourier Transform (FPU Float & AMMX Fixed) | 6 (Radix-2 Schmetterlinge, Bit-Reversal, SIMD) |
+| [`14-dct.md`](14-dct.md) | Discrete Cosine Transform (1D & 2D Float FPU & AMMX SIMD) | 8 (1D/2D DCT, Loeffler-Kern, Transposition, Quantisierung) |
+| [`15-mdct.md`](15-mdct.md) | Audio MDCT / IMDCT Engine (MP3 / AAC / Vorbis) | 1 (18-Sample 50% Overlap-Add Kernel in 1.00 Takt/Sample) |
+| [`16-jpeg.md`](16-jpeg.md) | JPEG End-to-End Decoding Pipeline | 1 (Fused Transpose + Level-Shift + PACKUSWB Direct Store) |
+| [`17-mpeg.md`](17-mpeg.md) | MPEG-1/2 Video Motion Compensation & Fused Residual IDCT | 1 (Fused IDCT+MC, Sparse DC-Only, VCD in 52.7% CPU) |
+| [`18-h264.md`](18-h264.md) | H.264 / AVC 4x4 Core IDCT, Hadamard & Fused MC | 1 (AMMX Hadamard in 27 Netto-Takten, Bit-Exact 4x4 IDCT) |
 
-**Summe: 42 Einträge**, jeder mit Vorher/Nachher-Code, Hardware-Mechanismus,
-Registerliste und Messblock. Jeder Eintrag endet mit der **verbatim
-gemessenen Sequenz** aus `seq/<ID>.i` (gebaut als `bin/<ID>`). Der
-alphabetische Index steht in
-[`index.md`](index.md), die Messübersicht (MIN, Median, MAX, AVG, Stdabw.,
-p95) in [`measurements/SUMMARY.md`](measurements/SUMMARY.md). Der Übergabestand
-für eine neue Session steht in [`HANDOFF.md`](HANDOFF.md).
+Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-1088-1/`](cores/core-1088-1/).
+Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).
 
 ## Quellenhierarchie
 

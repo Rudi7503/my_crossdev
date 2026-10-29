@@ -1,8 +1,0 @@
-; RUN-RAW - run RAW diagnostics
-CD "Ram Disk:"
-If NOT EXISTS "Ram Disk:LOGS"
-    MakeDir "Ram Disk:LOGS"
-EndIf
-FUS-001-RAW
-AMX-001-RAW
-PAT-005-RAW

@@ -1,7 +1,0 @@
-; RUN-PERF2 - FUS-001 + AMX-001 with stack-based counters
-CD "Ram Disk:"
-If NOT EXISTS "Ram Disk:LOGS"
-    MakeDir "Ram Disk:LOGS"
-EndIf
-FUS-001-PERF2
-AMX-001-PERF2
