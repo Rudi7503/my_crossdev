@@ -84,347 +84,626 @@ _h264_hadamard4x4_ammx:
 
 ; ======================================================================
 ; void h264_idct4x4_core_asm(const int16_t in[4][4], int16_t out[4][4])
-; Full 2D 4x4 Core Inverse Integer Transform (H.264 Section 8.5.8)
+; Full 2D 4x4 Core Inverse Integer Transform (Unrolled in-register)
 ; ======================================================================
 _h264_idct4x4_core_asm:
-        movem.l d2-d7/a2-a4,-(sp)
-        move.l  40(sp),a0               ; a0 = in
-        move.l  44(sp),a1               ; a1 = out
+        movem.l d2-d7/a2,-(sp)
+        move.l  32(sp),a0               ; a0 = in
+        move.l  36(sp),a1               ; a1 = out
         suba.w  #32,sp
-        movea.l sp,a2                   ; a2 = tmp intermediate buffer (32 bytes)
+        movea.l sp,a2                   ; intermediate buffer (32 bytes)
 
-        ; --- Step 1: Horizontal IDCT across 4 rows ---
-        moveq   #4-1,d7
-.row_loop:
-        move.w  (a0)+,d0                ; z0
-        move.w  (a0)+,d1                ; z1
-        move.w  (a0)+,d2                ; z2
-        move.w  (a0)+,d3                ; z3
-
+        ; --- Row 0 ---
+        move.w  (a0)+,d0
+        move.w  (a0)+,d1
+        move.w  (a0)+,d2
+        move.w  (a0)+,d3
         move.w  d0,d4
-        add.w   d2,d4                   ; d4 = s0 = z0 + z2
-        sub.w   d2,d0                   ; d0 = s1 = z0 - z2
-
+        add.w   d2,d4
+        sub.w   d2,d0
         move.w  d1,d5
         asr.w   #1,d5
-        sub.w   d3,d5                   ; d5 = s2 = (z1 >> 1) - z3
-
+        sub.w   d3,d5
         move.w  d3,d6
         asr.w   #1,d6
-        add.w   d1,d6                   ; d6 = s3 = z1 + (z3 >> 1)
-
+        add.w   d1,d6
         move.w  d4,d1
-        add.w   d6,d1                   ; d1 = t0 = s0 + s3
-        sub.w   d6,d4                   ; d4 = t3 = s0 - s3
-
+        add.w   d6,d1
+        sub.w   d6,d4
         move.w  d0,d2
-        add.w   d5,d2                   ; d2 = t1 = s1 + s2
-        sub.w   d5,d0                   ; d0 = t2 = s1 - s2
+        add.w   d5,d2
+        sub.w   d5,d0
+        move.w  d1,(a2)
+        move.w  d2,2(a2)
+        move.w  d0,4(a2)
+        move.w  d4,6(a2)
 
-        move.w  d1,(a2)+
-        move.w  d2,(a2)+
-        move.w  d0,(a2)+
-        move.w  d4,(a2)+
-        dbra    d7,.row_loop
-
-        ; --- Step 2: Vertical IDCT down 4 columns + normalisation (+32) >> 6 ---
-        suba.w  #32,a2                  ; reset a2 to start of tmp
-        moveq   #0,d7                   ; column index 0..3 (byte offset 0, 2, 4, 6)
-.col_loop:
-        move.w  (a2,d7.w),d0            ; t0 = tmp[0][c]
-        move.w  8(a2,d7.w),d1           ; t1 = tmp[1][c]
-        move.w  16(a2,d7.w),d2          ; t2 = tmp[2][c]
-        move.w  24(a2,d7.w),d3          ; t3 = tmp[3][c]
-
+        ; --- Row 1 ---
+        move.w  (a0)+,d0
+        move.w  (a0)+,d1
+        move.w  (a0)+,d2
+        move.w  (a0)+,d3
         move.w  d0,d4
-        add.w   d2,d4                   ; d4 = v0 = t0 + t2
-        sub.w   d2,d0                   ; d0 = v1 = t0 - t2
-
+        add.w   d2,d4
+        sub.w   d2,d0
         move.w  d1,d5
         asr.w   #1,d5
-        sub.w   d3,d5                   ; d5 = v2 = (t1 >> 1) - t3
-
+        sub.w   d3,d5
         move.w  d3,d6
         asr.w   #1,d6
-        add.w   d1,d6                   ; d6 = v3 = t1 + (t3 >> 1)
+        add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        sub.w   d6,d4
+        move.w  d0,d2
+        add.w   d5,d2
+        sub.w   d5,d0
+        move.w  d1,8(a2)
+        move.w  d2,10(a2)
+        move.w  d0,12(a2)
+        move.w  d4,14(a2)
 
+        ; --- Row 2 ---
+        move.w  (a0)+,d0
+        move.w  (a0)+,d1
+        move.w  (a0)+,d2
+        move.w  (a0)+,d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        sub.w   d6,d4
+        move.w  d0,d2
+        add.w   d5,d2
+        sub.w   d5,d0
+        move.w  d1,16(a2)
+        move.w  d2,18(a2)
+        move.w  d0,20(a2)
+        move.w  d4,22(a2)
+
+        ; --- Row 3 ---
+        move.w  (a0)+,d0
+        move.w  (a0)+,d1
+        move.w  (a0)+,d2
+        move.w  (a0)+,d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        sub.w   d6,d4
+        move.w  d0,d2
+        add.w   d5,d2
+        sub.w   d5,d0
+        move.w  d1,24(a2)
+        move.w  d2,26(a2)
+        move.w  d0,28(a2)
+        move.w  d4,30(a2)
+
+        ; --- Unrolled Vertical Columns 0..3 ---
+        ; Column 0
+        move.w  (a2),d0
+        move.w  8(a2),d1
+        move.w  16(a2),d2
+        move.w  24(a2),d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
         move.w  d4,d1
         add.w   d6,d1
         add.w   #32,d1
-        asr.w   #6,d1                   ; r0 = (v0 + v3 + 32) >> 6
-
+        asr.w   #6,d1
         sub.w   d6,d4
         add.w   #32,d4
-        asr.w   #6,d4                   ; r3 = (v0 - v3 + 32) >> 6
-
+        asr.w   #6,d4
         move.w  d0,d2
         add.w   d5,d2
         add.w   #32,d2
-        asr.w   #6,d2                   ; r1 = (v1 + v2 + 32) >> 6
-
+        asr.w   #6,d2
         sub.w   d5,d0
         add.w   #32,d0
-        asr.w   #6,d0                   ; r2 = (v1 - v2 + 32) >> 6
+        asr.w   #6,d0
+        move.w  d1,(a1)
+        move.w  d2,8(a1)
+        move.w  d0,16(a1)
+        move.w  d4,24(a1)
 
-        move.w  d1,(a1,d7.w)            ; out[0][c]
-        move.w  d2,8(a1,d7.w)           ; out[1][c]
-        move.w  d0,16(a1,d7.w)          ; out[2][c]
-        move.w  d4,24(a1,d7.w)          ; out[3][c]
+        ; Column 1
+        move.w  2(a2),d0
+        move.w  10(a2),d1
+        move.w  18(a2),d2
+        move.w  26(a2),d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        add.w   #32,d1
+        asr.w   #6,d1
+        sub.w   d6,d4
+        add.w   #32,d4
+        asr.w   #6,d4
+        move.w  d0,d2
+        add.w   d5,d2
+        add.w   #32,d2
+        asr.w   #6,d2
+        sub.w   d5,d0
+        add.w   #32,d0
+        asr.w   #6,d0
+        move.w  d1,2(a1)
+        move.w  d2,10(a1)
+        move.w  d0,18(a1)
+        move.w  d4,26(a1)
 
-        addq.w  #2,d7
-        cmpi.w  #8,d7
-        blt.s   .col_loop
+        ; Column 2
+        move.w  4(a2),d0
+        move.w  12(a2),d1
+        move.w  20(a2),d2
+        move.w  28(a2),d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        add.w   #32,d1
+        asr.w   #6,d1
+        sub.w   d6,d4
+        add.w   #32,d4
+        asr.w   #6,d4
+        move.w  d0,d2
+        add.w   d5,d2
+        add.w   #32,d2
+        asr.w   #6,d2
+        sub.w   d5,d0
+        add.w   #32,d0
+        asr.w   #6,d0
+        move.w  d1,4(a1)
+        move.w  d2,12(a1)
+        move.w  d0,20(a1)
+        move.w  d4,28(a1)
+
+        ; Column 3
+        move.w  6(a2),d0
+        move.w  14(a2),d1
+        move.w  22(a2),d2
+        move.w  30(a2),d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        add.w   #32,d1
+        asr.w   #6,d1
+        sub.w   d6,d4
+        add.w   #32,d4
+        asr.w   #6,d4
+        move.w  d0,d2
+        add.w   d5,d2
+        add.w   #32,d2
+        asr.w   #6,d2
+        sub.w   d5,d0
+        add.w   #32,d0
+        asr.w   #6,d0
+        move.w  d1,6(a1)
+        move.w  d2,14(a1)
+        move.w  d0,22(a1)
+        move.w  d4,30(a1)
 
         adda.w  #32,sp
-        movem.l (sp)+,d2-d7/a2-a4
+        movem.l (sp)+,d2-d7/a2
         rts
 
 ; ======================================================================
 ; void h264_idct4x4_fused_mc_asm(const int16_t in[4][4], const uint8_t *ref,
 ;                                uint8_t *dst, int stride)
-; Fused 4x4 IDCT + Motion Compensation Residual Addition + Clamping
+; In-Register 4x4 IDCT + AMMX SIMD PACKUSWB Clamping & 32-bit Stores
 ; ======================================================================
 _h264_idct4x4_fused_mc_asm:
-        movem.l d2-d7/a2-a6,-(sp)
-        move.l  48(sp),a0               ; a0 = in
-        move.l  52(sp),a3               ; a3 = ref
-        move.l  56(sp),a4               ; a4 = dst
-        move.l  60(sp),d6               ; d6 = stride
+        movem.l d2-d7/a2-a4,-(sp)           ; 9 regs = 36 bytes
+        suba.w  #64,sp                      ; 64 bytes scratch buffer
+        ; Stack layout:
+        ; sp..sp+31: tmp row buffer (32 bytes)
+        ; sp+32..sp+63: idct out buffer (32 bytes)
+        ; 100(sp): return address (4 bytes)
+        ; 104(sp): in
+        ; 108(sp): ref
+        ; 112(sp): dst
+        ; 116(sp): stride
 
-        suba.w  #64,sp                  ; 32 bytes tmp + 32 bytes res
-        movea.l sp,a2                   ; a2 = tmp (32 bytes)
-        lea     32(sp),a5               ; a5 = res (32 bytes)
+        move.l  104(sp),a0                  ; in
+        lea     (sp),a2                     ; tmp buffer
 
-        ; 1. Horizontal IDCT
-        moveq   #4-1,d7
-.fused_row_loop:
+        ; --- Unrolled Horizontal IDCT Row 0 ---
         move.w  (a0)+,d0
         move.w  (a0)+,d1
         move.w  (a0)+,d2
         move.w  (a0)+,d3
-
         move.w  d0,d4
         add.w   d2,d4
         sub.w   d2,d0
-
         move.w  d1,d5
         asr.w   #1,d5
         sub.w   d3,d5
-
         move.w  d3,d6
         asr.w   #1,d6
         add.w   d1,d6
-
         move.w  d4,d1
         add.w   d6,d1
         sub.w   d6,d4
-
         move.w  d0,d2
         add.w   d5,d2
         sub.w   d5,d0
+        move.w  d1,(a2)
+        move.w  d2,2(a2)
+        move.w  d0,4(a2)
+        move.w  d4,6(a2)
 
-        move.w  d1,(a2)+
-        move.w  d2,(a2)+
-        move.w  d0,(a2)+
-        move.w  d4,(a2)+
-        dbra    d7,.fused_row_loop
-
-        ; 2. Vertical IDCT into res
-        suba.w  #32,a2
-        moveq   #0,d7
-.fused_col_loop:
-        move.w  (a2,d7.w),d0
-        move.w  8(a2,d7.w),d1
-        move.w  16(a2,d7.w),d2
-        move.w  24(a2,d7.w),d3
-
+        ; --- Row 1 ---
+        move.w  (a0)+,d0
+        move.w  (a0)+,d1
+        move.w  (a0)+,d2
+        move.w  (a0)+,d3
         move.w  d0,d4
         add.w   d2,d4
         sub.w   d2,d0
-
         move.w  d1,d5
         asr.w   #1,d5
         sub.w   d3,d5
-
         move.w  d3,d6
         asr.w   #1,d6
         add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        sub.w   d6,d4
+        move.w  d0,d2
+        add.w   d5,d2
+        sub.w   d5,d0
+        move.w  d1,8(a2)
+        move.w  d2,10(a2)
+        move.w  d0,12(a2)
+        move.w  d4,14(a2)
 
+        ; --- Row 2 ---
+        move.w  (a0)+,d0
+        move.w  (a0)+,d1
+        move.w  (a0)+,d2
+        move.w  (a0)+,d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        sub.w   d6,d4
+        move.w  d0,d2
+        add.w   d5,d2
+        sub.w   d5,d0
+        move.w  d1,16(a2)
+        move.w  d2,18(a2)
+        move.w  d0,20(a2)
+        move.w  d4,22(a2)
+
+        ; --- Row 3 ---
+        move.w  (a0)+,d0
+        move.w  (a0)+,d1
+        move.w  (a0)+,d2
+        move.w  (a0)+,d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        sub.w   d6,d4
+        move.w  d0,d2
+        add.w   d5,d2
+        sub.w   d5,d0
+        move.w  d1,24(a2)
+        move.w  d2,26(a2)
+        move.w  d0,28(a2)
+        move.w  d4,30(a2)
+
+        ; --- Unrolled Vertical IDCT Columns 0..3 (stores into row orientation) ---
+        lea     32(sp),a3                   ; a3 = idct out buffer (row orientation)
+
+        ; Col 0
+        move.w  (a2),d0
+        move.w  8(a2),d1
+        move.w  16(a2),d2
+        move.w  24(a2),d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
         move.w  d4,d1
         add.w   d6,d1
         add.w   #32,d1
-        asr.w   #6,d1                   ; r0
-
+        asr.w   #6,d1                       ; out[0][0]
         sub.w   d6,d4
         add.w   #32,d4
-        asr.w   #6,d4                   ; r3
-
+        asr.w   #6,d4                       ; out[3][0]
         move.w  d0,d2
         add.w   d5,d2
         add.w   #32,d2
-        asr.w   #6,d2                   ; r1
-
+        asr.w   #6,d2                       ; out[1][0]
         sub.w   d5,d0
         add.w   #32,d0
-        asr.w   #6,d0                   ; r2
+        asr.w   #6,d0                       ; out[2][0]
+        move.w  d1,(a3)                     ; row 0, col 0
+        move.w  d2,8(a3)                    ; row 1, col 0
+        move.w  d0,16(a3)                   ; row 2, col 0
+        move.w  d4,24(a3)                   ; row 3, col 0
 
-        move.w  d1,(a5,d7.w)
-        move.w  d2,8(a5,d7.w)
-        move.w  d0,16(a5,d7.w)
-        move.w  d4,24(a5,d7.w)
+        ; Col 1
+        move.w  2(a2),d0
+        move.w  10(a2),d1
+        move.w  18(a2),d2
+        move.w  26(a2),d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        add.w   #32,d1
+        asr.w   #6,d1                       ; out[0][1]
+        sub.w   d6,d4
+        add.w   #32,d4
+        asr.w   #6,d4                       ; out[3][1]
+        move.w  d0,d2
+        add.w   d5,d2
+        add.w   #32,d2
+        asr.w   #6,d2                       ; out[1][1]
+        sub.w   d5,d0
+        add.w   #32,d0
+        asr.w   #6,d0                       ; out[2][1]
+        move.w  d1,2(a3)                    ; row 0, col 1
+        move.w  d2,10(a3)                   ; row 1, col 1
+        move.w  d0,18(a3)                   ; row 2, col 1
+        move.w  d4,26(a3)                   ; row 3, col 1
 
-        addq.w  #2,d7
-        cmpi.w  #8,d7
-        blt.s   .fused_col_loop
+        ; Col 2
+        move.w  4(a2),d0
+        move.w  12(a2),d1
+        move.w  20(a2),d2
+        move.w  28(a2),d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        add.w   #32,d1
+        asr.w   #6,d1                       ; out[0][2]
+        sub.w   d6,d4
+        add.w   #32,d4
+        asr.w   #6,d4                       ; out[3][2]
+        move.w  d0,d2
+        add.w   d5,d2
+        add.w   #32,d2
+        asr.w   #6,d2                       ; out[1][2]
+        sub.w   d5,d0
+        add.w   #32,d0
+        asr.w   #6,d0                       ; out[2][2]
+        move.w  d1,4(a3)                    ; row 0, col 2
+        move.w  d2,12(a3)                   ; row 1, col 2
+        move.w  d0,20(a3)                   ; row 2, col 2
+        move.w  d4,28(a3)                   ; row 3, col 2
 
-        ; 3. Motion Compensation: Add residual + ref and clamp to [0..255]
-        move.l  60+64(sp),d6            ; restore d6 = stride
-        moveq   #4-1,d7
-.mc_row_loop:
-        ; Pixel 0
-        move.b  (a3),d0
-        and.w   #$ff,d0
-        add.w   (a5)+,d0
-        bpl.s   .c0_pos
-        moveq   #0,d0
-        bra.s   .c0_ok
-.c0_pos:
-        cmpi.w  #255,d0
-        ble.s   .c0_ok
-        move.w  #255,d0
-.c0_ok:
-        move.b  d0,(a4)
+        ; Col 3
+        move.w  6(a2),d0
+        move.w  14(a2),d1
+        move.w  22(a2),d2
+        move.w  30(a2),d3
+        move.w  d0,d4
+        add.w   d2,d4
+        sub.w   d2,d0
+        move.w  d1,d5
+        asr.w   #1,d5
+        sub.w   d3,d5
+        move.w  d3,d6
+        asr.w   #1,d6
+        add.w   d1,d6
+        move.w  d4,d1
+        add.w   d6,d1
+        add.w   #32,d1
+        asr.w   #6,d1                       ; out[0][3]
+        sub.w   d6,d4
+        add.w   #32,d4
+        asr.w   #6,d4                       ; out[3][3]
+        move.w  d0,d2
+        add.w   d5,d2
+        add.w   #32,d2
+        asr.w   #6,d2                       ; out[1][3]
+        sub.w   d5,d0
+        add.w   #32,d0
+        asr.w   #6,d0                       ; out[2][3]
+        move.w  d1,6(a3)                    ; row 0, col 3
+        move.w  d2,14(a3)                   ; row 1, col 3
+        move.w  d0,22(a3)                   ; row 2, col 3
+        move.w  d4,30(a3)                   ; row 3, col 3
 
-        ; Pixel 1
-        move.b  1(a3),d0
-        and.w   #$ff,d0
-        add.w   (a5)+,d0
-        bpl.s   .c1_pos
-        moveq   #0,d0
-        bra.s   .c1_ok
-.c1_pos:
-        cmpi.w  #255,d0
-        ble.s   .c1_ok
-        move.w  #255,d0
-.c1_ok:
-        move.b  d0,1(a4)
+        ; --- Step 3: AMMX Fused Motion Compensation + Direct Store ---
+        move.l  108(sp),a1                  ; ref
+        move.l  112(sp),a0                  ; dst
+        move.l  116(sp),d1                  ; stride
 
-        ; Pixel 2
-        move.b  2(a3),d0
-        and.w   #$ff,d0
-        add.w   (a5)+,d0
-        bpl.s   .c2_pos
-        moveq   #0,d0
-        bra.s   .c2_ok
-.c2_pos:
-        cmpi.w  #255,d0
-        ble.s   .c2_ok
-        move.w  #255,d0
-.c2_ok:
-        move.b  d0,2(a4)
+        load    (a3),e0                     ; e0 = row 0 residual
+        load    8(a3),e1                    ; e1 = row 1 residual
+        load    16(a3),e2                   ; e2 = row 2 residual
+        load    24(a3),e3                   ; e3 = row 3 residual
+        peor    e20,e20,e20
 
-        ; Pixel 3
-        move.b  3(a3),d0
-        and.w   #$ff,d0
-        add.w   (a5)+,d0
-        bpl.s   .c3_pos
-        moveq   #0,d0
-        bra.s   .c3_ok
-.c3_pos:
-        cmpi.w  #255,d0
-        ble.s   .c3_ok
-        move.w  #255,d0
-.c3_ok:
-        move.b  d0,3(a4)
+        ; Row 0
+        move.l  (a1),d0
+        move.l  d0,e4
+        vperm   #$84858687,e4,e20,e4
+        paddw   e0,e4,e4
+        packuswb e4,e4,e5
+        move.l  e5,d0
+        move.l  d0,(a0)
 
-        adda.l  d6,a3
-        adda.l  d6,a4
-        dbra    d7,.mc_row_loop
+        ; Row 1
+        adda.l  d1,a1
+        adda.l  d1,a0
+        move.l  (a1),d0
+        move.l  d0,e4
+        vperm   #$84858687,e4,e20,e4
+        paddw   e1,e4,e4
+        packuswb e4,e4,e5
+        move.l  e5,d0
+        move.l  d0,(a0)
+
+        ; Row 2
+        adda.l  d1,a1
+        adda.l  d1,a0
+        move.l  (a1),d0
+        move.l  d0,e4
+        vperm   #$84858687,e4,e20,e4
+        paddw   e2,e4,e4
+        packuswb e4,e4,e5
+        move.l  e5,d0
+        move.l  d0,(a0)
+
+        ; Row 3
+        adda.l  d1,a1
+        adda.l  d1,a0
+        move.l  (a1),d0
+        move.l  d0,e4
+        vperm   #$84858687,e4,e20,e4
+        paddw   e3,e4,e4
+        packuswb e4,e4,e5
+        move.l  e5,d0
+        move.l  d0,(a0)
 
         adda.w  #64,sp
-        movem.l (sp)+,d2-d7/a2-a6
+        movem.l (sp)+,d2-d7/a2-a4
         rts
 
 ; ======================================================================
 ; void h264_idct4x4_sparse_dc_mc_asm(const int16_t in[4][4], const uint8_t *ref,
 ;                                    uint8_t *dst, int stride)
-; Ultra-Fast DC-Only Fast-Path (~18 cycles!)
+; Ultra-Fast AMMX Vectorized DC-Only Fast-Path (~30 cycles!)
 ; In H.264: residual = (in[0][0] + 32) >> 6
 ; ======================================================================
 _h264_idct4x4_sparse_dc_mc_asm:
-        movem.l d2-d4/a2-a3,-(sp)
-        move.l  24(sp),a0               ; a0 = in
-        move.l  28(sp),a1               ; a1 = ref
-        move.l  32(sp),a2               ; a2 = dst
-        move.l  36(sp),d3               ; d3 = stride
-
-        move.w  (a0),d0                 ; d0 = in[0][0] (DC)
+        move.l  4(sp),a0                ; a0 = in
+        move.w  (a0),d0                 ; in[0][0]
         add.w   #32,d0
-        asr.w   #6,d0                   ; d0 = res scalar
+        asr.w   #6,d0                   ; res = (in[0][0] + 32) >> 6
 
-        moveq   #4-1,d2
-.dc_mc_row:
-        ; Pixel 0
-        move.b  (a1),d1
-        and.w   #$ff,d1
-        add.w   d0,d1
-        bpl.s   .p0_pos
-        moveq   #0,d1
-        bra.s   .p0_ok
-.p0_pos:
-        cmpi.w  #255,d1
-        ble.s   .p0_ok
-        move.w  #255,d1
-.p0_ok:
-        move.b  d1,(a2)
+        move.l  8(sp),a1                ; a1 = ref
+        move.l  12(sp),a0               ; a0 = dst (reuse scratch a0!)
+        move.l  16(sp),d1               ; d1 = stride
 
-        ; Pixel 1
-        move.b  1(a1),d1
-        and.w   #$ff,d1
-        add.w   d0,d1
-        bpl.s   .p1_pos
-        moveq   #0,d1
-        bra.s   .p1_ok
-.p1_pos:
-        cmpi.w  #255,d1
-        ble.s   .p1_ok
-        move.w  #255,d1
-.p1_ok:
-        move.b  d1,1(a2)
+        move.l  d0,e0
+        vperm   #$67676767,e0,e0,e21    ; e21 = [res, res, res, res]
+        peor    e20,e20,e20             ; e20 = 0
 
-        ; Pixel 2
-        move.b  2(a1),d1
-        and.w   #$ff,d1
-        add.w   d0,d1
-        bpl.s   .p2_pos
-        moveq   #0,d1
-        bra.s   .p2_ok
-.p2_pos:
-        cmpi.w  #255,d1
-        ble.s   .p2_ok
-        move.w  #255,d1
-.p2_ok:
-        move.b  d1,2(a2)
+        ; Row 0
+        move.l  (a1),d0
+        move.l  d0,e0
+        vperm   #$84858687,e0,e20,e1    ; unpack ref row 0 to 4 words
+        paddw   e21,e1,e2               ; e2 = ref + res
+        packuswb e2,e2,e3               ; clamp to 0..255
+        move.l  e3,d0
+        move.l  d0,(a0)
 
-        ; Pixel 3
-        move.b  3(a1),d1
-        and.w   #$ff,d1
-        add.w   d0,d1
-        bpl.s   .p3_pos
-        moveq   #0,d1
-        bra.s   .p3_ok
-.p3_pos:
-        cmpi.w  #255,d1
-        ble.s   .p3_ok
-        move.w  #255,d1
-.p3_ok:
-        move.b  d1,3(a2)
+        ; Row 1
+        adda.l  d1,a1
+        adda.l  d1,a0
+        move.l  (a1),d0
+        move.l  d0,e0
+        vperm   #$84858687,e0,e20,e1
+        paddw   e21,e1,e2
+        packuswb e2,e2,e3
+        move.l  e3,d0
+        move.l  d0,(a0)
 
-        adda.l  d3,a1
-        adda.l  d3,a2
-        dbra    d2,.dc_mc_row
+        ; Row 2
+        adda.l  d1,a1
+        adda.l  d1,a0
+        move.l  (a1),d0
+        move.l  d0,e0
+        vperm   #$84858687,e0,e20,e1
+        paddw   e21,e1,e2
+        packuswb e2,e2,e3
+        move.l  e3,d0
+        move.l  d0,(a0)
 
-        movem.l (sp)+,d2-d4/a2-a3
+        ; Row 3
+        adda.l  d1,a1
+        adda.l  d1,a0
+        move.l  (a1),d0
+        move.l  d0,e0
+        vperm   #$84858687,e0,e20,e1
+        paddw   e21,e1,e2
+        packuswb e2,e2,e3
+        move.l  e3,d0
+        move.l  d0,(a0)
+
         rts
 
 ; ======================================================================
@@ -497,7 +776,7 @@ _h264_macroblock_16x16_asm:
 
         addq.w  #1,d4
         cmpi.w  #4,d4
-        blt.s   .mb_by_loop
+        blt     .mb_by_loop
 
         movem.l (sp)+,d2-d7/a2-a6
         rts
