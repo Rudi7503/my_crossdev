@@ -38,7 +38,8 @@ ausgibt.
 | [`08-antipatterns.md`](08-antipatterns.md) | Was den 68080 bremst | 6 |
 | [`09-harness.md`](09-harness.md) | Mess-Harness: Aufbau, Build, Fallstricke | – |
 | [`12-matrix.md`](12-matrix.md) | Matrix-Multiplikation (FPU Float & AMMX Fixed) | 6 |
-| [`13-fft.md`](13-fft.md) | Fast Fourier Transform (FPU Float & AMMX Fixed) | 3 |
+| [`13-fft.md`](13-fft.md) | Fast Fourier Transform (FPU Float & AMMX Fixed) | 6 |
+| [`14-dct.md`](14-dct.md) | Discrete Cosine Transform (1D & 2D Float FPU & AMMX SIMD) | 4 |
 
 **Summe: 42 Einträge**, jeder mit Vorher/Nachher-Code, Hardware-Mechanismus,
 Registerliste und Messblock. Jeder Eintrag endet mit der **verbatim

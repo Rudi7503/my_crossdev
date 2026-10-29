@@ -31,6 +31,10 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`BND-003`](02-bonding.md) | Zwei unabhängige ALU-Instruktionen sind normales Superscalar | `02-bonding.md` | gemessen |
 | [`BND-004`](02-bonding.md) | MOVEM belegt Pipe 1 – unabhängige ALU daneben legen | `02-bonding.md` | gemessen |
 | [`BND-005`](02-bonding.md) | Drei unabhängige ALU-Instruktionen auf Drei-Pipe-Cores | `02-bonding.md` | gemessen |
+| [`DCT-001`](14-dct.md) | 1D 8-Punkt Float DCT (FPU Single-Precision MACs) | `14-dct.md` | gemessen |
+| [`DCT-002`](14-dct.md) | 1D 8-Punkt Fixed-Point DCT (Q1.15 Skalar MACs) | `14-dct.md` | gemessen |
+| [`DCT-003`](14-dct.md) | 1D 8-Punkt Fixed-Point DCT 2-Punkt Kern (AMMX 2-Wege Reduktion) | `14-dct.md` | gemessen |
+| [`DCT-004`](14-dct.md) | 4x4 Matrix-Transposition (16-Bit AMMX SIMD vperm) | `14-dct.md` | gemessen |
 | [`FUS-001`](01-fusing.md) | MOVE.L + ADD.L zur 3-Operanden-Fusion | `01-fusing.md` | gemessen |
 | [`FUS-002`](01-fusing.md) | MOVE.L + NEG.L | `01-fusing.md` | gemessen |
 | [`FUS-003`](01-fusing.md) | MOVEQ + OR.L | `01-fusing.md` | gemessen |
