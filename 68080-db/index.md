@@ -40,6 +40,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`DCT-007`](14-dct.md) | 8x8 16-Bit Matrix-Transposition (AMMX SIMD vperm) | `14-dct.md` | gemessen |
 | [`DCT-008`](14-dct.md) | 8x8 Block-Quantisierung (16 Quadwords AMMX Q1.15 pmulh) | `14-dct.md` | gemessen |
 | [`DCT-009`](15-mdct.md) | MP3 18-Sample 50% Overlap-Add Kernel (AMMX SIMD paddw) | `15-mdct.md` | gemessen |
+| [`DCT-010`](16-jpeg.md) | JPEG Fused Transpose + Level-Shift (+128) + PACKUSWB 8-Bit Store Kernel | `16-jpeg.md` | gemessen |
 | [`FUS-001`](01-fusing.md) | MOVE.L + ADD.L zur 3-Operanden-Fusion | `01-fusing.md` | gemessen |
 | [`FUS-002`](01-fusing.md) | MOVE.L + NEG.L | `01-fusing.md` | gemessen |
 | [`FUS-003`](01-fusing.md) | MOVEQ + OR.L | `01-fusing.md` | gemessen |
