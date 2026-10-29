@@ -27,6 +27,7 @@ void jpeg_pipeline_mcu_c(const int16_t *y_zz, const int16_t *cb_zz, const int16_
 /* 68080 Assembly & AMMX SIMD Implementations */
 void dequant_zigzag_ammx(const int16_t *src_zz, const uint16_t *qtable, int16_t *dst_raster64);
 void idct8x8_levelshift_packuswb_ammx(const int16_t *src_raster64, uint8_t *dst_pixels64);
+void idct8x8_sparse_levelshift_packuswb_ammx(const int16_t *src_raster64, uint8_t *dst_pixels64);
 void ycbcr_to_rgb565_ammx(const uint8_t *y64, const uint8_t *cb64, const uint8_t *cr64, uint16_t *rgb565_64);
 void ycbcr_to_argb32_ammx(const uint8_t *y64, const uint8_t *cb64, const uint8_t *cr64, uint32_t *argb32_64);
 void jpeg_pipeline_mcu_ammx(const int16_t *y_zz, const int16_t *cb_zz, const int16_t *cr_zz,
