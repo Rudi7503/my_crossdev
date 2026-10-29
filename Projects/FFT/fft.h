@@ -33,6 +33,7 @@ void fft_fixed_c(complex_int16 *x, int n);
 /* 68080 ASM implementations */
 void fft_float_asm(complex_float *x, int n, const complex_float *tw);
 void fft_fixed_asm(complex_int16 *x, int n, const complex_int16 *tw);
+void fft_fixed_ammx(complex_int16 *x, int n, const complex_int16 *tw);
 
 /* Hardware cycle counter on Apollo 68080 */
 uint32_t get_ccc(void);
