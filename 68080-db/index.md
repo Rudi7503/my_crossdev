@@ -39,6 +39,8 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`FFT-001`](13-fft.md) | 32-Bit Float FFT Schmetterling (FPU Single Precision) | `13-fft.md` | gemessen |
 | [`FFT-002`](13-fft.md) | 16-Bit Fixed-Point FFT Schmetterling (Q1.15 Skalar) | `13-fft.md` | gemessen |
 | [`FFT-003`](13-fft.md) | 16-Bit Fixed-Point FFT Doppel-Schmetterling (AMMX SIMD) | `13-fft.md` | gemessen |
+| [`FFT-004`](13-fft.md) | 16-Bit Fixed-Point FFT Stufe 1 Schmetterling (AMMX SIMD Vektorisiert) | `13-fft.md` | gemessen |
+| [`FFT-005`](13-fft.md) | 16-Bit Fixed-Point Tabellen-Bitreversal Swap-Paar | `13-fft.md` | gemessen |
 | [`FIX-001`](12-matrix.md) | 2x2 Matrix-Multiplikation (16-Bit Fixed-Point AMMX SIMD) | `12-matrix.md` | gemessen |
 | [`FIX-002`](12-matrix.md) | 3x3 Matrix-Multiplikation (16-Bit Fixed-Point AMMX SIMD) | `12-matrix.md` | gemessen |
 | [`FIX-003`](12-matrix.md) | 4x4 Matrix-Multiplikation (16-Bit Fixed-Point AMMX SIMD) | `12-matrix.md` | gemessen |

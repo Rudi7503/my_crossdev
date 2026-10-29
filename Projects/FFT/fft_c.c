@@ -9,6 +9,15 @@
 complex_float twiddle_float[NUM_TWIDDLES];
 complex_int16 twiddle_fixed[NUM_TWIDDLES];
 
+typedef struct {
+    uint16_t i;
+    uint16_t j;
+} swap_pair;
+
+swap_pair *fft_swap_table[7];
+uint16_t fft_swap_count[7];
+static swap_pair swap_pool[4000];
+
 void fft_init_tables(void) {
     for (int k = 0; k < NUM_TWIDDLES; k++) {
         double angle = -2.0 * PI * (double)k / (double)MAX_FFT_SIZE;
@@ -28,6 +37,31 @@ void fft_init_tables(void) {
 
         twiddle_fixed[k].r = (int16_t)qr;
         twiddle_fixed[k].i = (int16_t)qi;
+    }
+
+    /* Precompute bit-reversal swap tables for sizes 64..4096 */
+    int pool_idx = 0;
+    static const int sizes[7] = {64, 128, 256, 512, 1024, 2048, 4096};
+    for (int s = 0; s < 7; s++) {
+        int n = sizes[s];
+        fft_swap_table[s] = &swap_pool[pool_idx];
+        int count = 0;
+        int j = 0;
+        for (int i = 0; i < n - 1; i++) {
+            if (i < j) {
+                swap_pool[pool_idx].i = (uint16_t)i;
+                swap_pool[pool_idx].j = (uint16_t)j;
+                pool_idx++;
+                count++;
+            }
+            int k = n >> 1;
+            while (k <= j) {
+                j -= k;
+                k >>= 1;
+            }
+            j += k;
+        }
+        fft_swap_count[s] = (uint16_t)count;
     }
 }
 

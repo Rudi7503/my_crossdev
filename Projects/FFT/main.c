@@ -11,6 +11,9 @@
 static const int test_sizes[] = {64, 128, 256, 512, 1024, 2048, 4096};
 #define NUM_TESTS 7
 
+extern void fft_breakdown_ammx(complex_int16 *x, int n, const complex_int16 *tw,
+                               uint32_t *t_br, uint32_t *t_stg1, uint32_t *t_mid, uint32_t *t_last);
+
 int main(void) {
     printf("=================================================================================================================================\n");
     printf(" Apollo 68080 FFT Benchmark & Validation Suite\n");
@@ -128,6 +131,8 @@ int main(void) {
 
         if (!ok_f || !ok_s || !ok_m) {
             all_passed = 0;
+            printf(" [Debug FAIL: ok_f=%d (max_fdiff=%e), ok_s=%d (max_xdiff=%d), ok_m=%d (max_mdiff=%d)]\n",
+                   ok_f, (double)max_fdiff, ok_s, max_xdiff, ok_m, max_mdiff);
         }
 
         double spd_f = (double)cyc_fc / (double)(cyc_fa ? cyc_fa : 1);
@@ -151,6 +156,17 @@ int main(void) {
                max_xdiff,
                max_mdiff,
                ok ? "PASS" : "FAIL");
+
+        if (n == 4096) {
+            uint32_t t_br = 0, t_stg1 = 0, t_mid = 0, t_last = 0;
+            fft_breakdown_ammx(xm, n, twiddle_fixed, &t_br, &t_stg1, &t_mid, &t_last);
+            printf("\n   [AMMX N=4096 Cycle Breakdown]\n");
+            printf("   - Bit-Reversal:        %7lu cycles (%4.1f%%)\n", (unsigned long)t_br, 100.0 * t_br / (t_br + t_stg1 + t_mid + t_last));
+            printf("   - Stage 1 (Vector):    %7lu cycles (%4.1f%%)\n", (unsigned long)t_stg1, 100.0 * t_stg1 / (t_br + t_stg1 + t_mid + t_last));
+            printf("   - Stages 2-11 (Mid):   %7lu cycles (%4.1f%%)\n", (unsigned long)t_mid, 100.0 * t_mid / (t_br + t_stg1 + t_mid + t_last));
+            printf("   - Stage 12 (Streaming):%7lu cycles (%4.1f%%)\n", (unsigned long)t_last, 100.0 * t_last / (t_br + t_stg1 + t_mid + t_last));
+            printf("   - Total AMMX Time:     %7lu cycles\n\n", (unsigned long)(t_br + t_stg1 + t_mid + t_last));
+        }
 
         free(fc);
         free(fa);
