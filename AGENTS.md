@@ -110,17 +110,43 @@ Vor jedem Upload und Ausführen von Assembler-Code auf der echten V4-Hardware mu
 - **Problem:** Ein Register, das eine Schleifenobergrenze oder einen Zähler der äußeren Schleife hält (z. B. `d4` für `half`), wird im inneren Rechenkern für temporäre Daten überschrieben. Dies führt zu Endlosschleifen oder unkontrollierten Speicherzugriffen.
 - **Regel:** Vor dem Schreiben jedes Assembler-Blocks eine explizite Register-Belegungstabelle führen. Schleifenvariablen der äußeren Schleife müssen entweder in Callee-Saved Registern (`d2–d7`) verbleiben (die innen unberührt bleiben) oder im Stack-Frame (`-X(a6)`).
 
-### 3. Callee-Saved Register (ABI-Erhalt)
-- **Scratch (flüchtig):** `d0, d1, a0, a1, fp0, fp1`
-- **Preserved (strikt zu sichern):** `d2–d7, a2–a6, fp2–fp7`
-- **Besondere Falle `a2`:** `a2` wird von GCC/libnix als Frame-/Context-Pointer für `printf`/`vfprintf` genutzt. Wird `a2` in einer Unterroutine verändert und nicht wiederhergestellt, stürzt das nachfolgende `printf` mit `0x80000004` (Illegal Instruction) ab.
+### 3. Callee-Saved Register (ABI-Erhalt) – *Realer Absturz-Vorfall `_mc_block_prefetch`*
+- **Scratch (flüchtig – frei nutzbar):** `d0, d1, a0, a1, fp0, fp1`
+- **Preserved (strikt zu sichern vor jeder Modifikation!):** `d2–d7, a2–a6, fp2–fp7`
+- **Was beim `_mc_block_prefetch`-Crash passierte:**  
+  In einer Prefetch-Routine wurden `d2` und `a2` verwendet, ohne sie via `movem.l` auf dem Stack zu sichern. Da GCC/libnix `a2` als Kontextzeiger für `printf`/I/O und `d2` für lokale Variablen hält, zerstörte der Aufruf den Stack-Frame von `main()`. Beim anschließenden `rts` sprang die CPU ins Nirvana -> sofortiger Systemabsturz und Freeze der V4.
+- **Eiserne Regel:** Assembler-Subroutinen für C dürfen **ausschließlich** Scratch-Register (`d0-d1`, `a0-a1`) anfassen. Werden weitere Register benötigt, MUSS am Funktionskopf zwingend:
+  ```asm
+  movem.l d2-d7/a2-a6,-(sp)
+  ; ... Code ...
+  movem.l (sp)+,d2-d7/a2-a6
+  rts
+  ```
+  stehen. Keine Ausnahmen!
 
 ### 4. Instruktions-Restriktionen der 68k / 68080
+- **`BFLYW`-Privilegien-Falle (`0x80000008`):**  
+  Auf Core 1088/1 ist `bflyw` im User-Mode gesperrt oder unvollständig implementiert. Ein Aufruf erzeugt sofort eine *Privilege Violation* (`Software Failure 0x80000008`).  
+  **Regel:** Für Schmetterlinge/Butterflies immer standardkonformes AMMX `paddw` + `psubw` einsetzen!
+- **`TOUCH`-Syntax in vasm:**  
+  `touch (An)` ist in vasm syntaktisch ungültig. Es MUSS immer die indizierte Form `touch (An, Dn.w)` oder `touch (An, Dn.l)` verwendet werden (z. B. `moveq #0,d1` gefolgt von `touch (a0,d1.w)`).
+- **Adressregister als Arithmetik-Ziel:** `muls`, `mulu`, `asr`, `lsr`, `spl` dürfen **nicht** auf Adressregister (`An`) zielen. Vor der Zuweisung immer Datenregister nutzen oder über temporäre Variablen im Stack-Frame arbeiten.
 - **`subq.l #1, An`:** Verändert die Condition Codes (Z-Flag) **nicht**! Ein nachfolgendes `bne` prüft ein altes Flag und führt zu einer Endlosschleife.
 - **Immediate-Shifts:** `asr.l #imm, Dn` / `lsl.l #imm, Dn` akzeptieren nur Werte von `1..8`. Größere Shifts müssen über ein Register (`asr.l Dx, Dy`) oder kaskadiert (`asr.l #8`, `asr.l #7`) realisiert werden.
-- **Adressregister als Arithmetik-Ziel:** `muls`, `mulu`, `asr`, `lsr` dürfen **nicht** auf Adressregister (`An`) zielen.
 - **Memory-Shifts:** `lsl.l #1, (ea)` ist im 68k-Befehlssatz ungültig (nur Word `lsl.w (ea)` ist erlaubt). Long-Shifts müssen über Datenregister abgewickelt werden.
 - **68040-Mnemonics:** Niemals `fsmul` oder `fsadd` verwenden; immer standardkonformes `fmul.s` / `fadd.s` bzw. 3-Operanden `fmul fp0,fp2,fp4`.
+
+### 5. Modale Intuition Requesters ("Software Failure") & amiagent Entstörung
+- **Problem:** Stürzt ein AmigaOS-Prozess ab (z. B. durch Privilege Violation oder Nullzeiger), öffnet Intuition ein modales Systemfenster („Software Failure: Press left mouse button to continue“ bzw. Suspend/Reboot-Knöpfe). Solange dieser Requester offen ist, schließt der Kindprozess seine Streams nicht, und amiagent blockiert im Wartezustand.
+- **Lösung ohne Reboot:**  
+  Nicht den Netzstecker ziehen! Über `amiga_tool.py` kann der Dialog softwareseitig geschlossen werden:
+  ```bash
+  # Option A: UI-Klick auf den Suspend-Button
+  ./Tools/amiga_tool.py ui-click Suspend
+  # Option B: Direkter Mausklick auf den Suspend-Button (typische Koordinaten 446, 570)
+  ./Tools/amiga_tool.py click 446 570 --button left
+  ```
+  Dadurch wird die abgestürzte Task sauber beendet, amiagent wird sofort wieder frei, und ApolloOS läuft ohne Datenverlust weiter.
 
 ---
 
