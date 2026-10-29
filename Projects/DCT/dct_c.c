@@ -258,3 +258,24 @@ void idct2d_8x8_fixed_c(const int16_t *src, int16_t *dst) {
         idct1d_fixed_c(&tmp[r * DCT_SIZE], &dst[r * DCT_SIZE]);
     }
 }
+
+/* 8x8 Block Quantization (C Reference) */
+void quantize8x8_c(const int16_t *src, int16_t *dst, const uint16_t *qmatrix) {
+    for (int i = 0; i < DCT_BLOCK_SIZE; i++) {
+        int32_t val = src[i];
+        int32_t q = qmatrix[i];
+        if (q == 0) q = 1;
+        if (val >= 0) {
+            dst[i] = (int16_t)((val + (q >> 1)) / q);
+        } else {
+            dst[i] = (int16_t)((val - (q >> 1)) / q);
+        }
+    }
+}
+
+/* Fused AAN DCT + Quantization (C Reference) */
+void dct2d_8x8_aan_quant_c(const int16_t *src, int16_t *dst, const uint16_t *qmatrix_aan) {
+    int16_t tmp[DCT_BLOCK_SIZE];
+    dct2d_8x8_fixed_c(src, tmp);
+    quantize8x8_c(tmp, dst, qmatrix_aan);
+}

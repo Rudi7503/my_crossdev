@@ -30,6 +30,8 @@ int main(void) {
     /* Allocate 64-byte aligned test buffers */
     void *raw_f_in, *raw_f_out_c, *raw_f_out_asm, *raw_f_out_fa, *raw_f_rec;
     void *raw_q_in, *raw_q_out_c, *raw_q_out_s, *raw_q_out_m, *raw_q_out_fm, *raw_q_rec;
+    void *raw_q_inreg, *raw_q_rec_inreg, *raw_q_dc_in, *raw_q_dc_out, *raw_q_rec_sparse;
+    void *raw_q_quant_c, *raw_q_quant_m, *raw_q_fused, *raw_recip_q;
 
     float *f_in          = (float *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(float), &raw_f_in);
     float *f_out_c       = (float *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(float), &raw_f_out_c);
@@ -43,9 +45,20 @@ int main(void) {
     int16_t *q_out_m     = (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_q_out_m);
     int16_t *q_out_fm    = (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_q_out_fm);
     int16_t *q_rec       = (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_q_rec);
+    int16_t *q_inreg     = (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_q_inreg);
+    int16_t *q_rec_inreg = (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_q_rec_inreg);
+    int16_t *q_dc_in     = (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_q_dc_in);
+    int16_t *q_dc_out    = (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_q_dc_out);
+    int16_t *q_rec_sparse= (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_q_rec_sparse);
+    int16_t *q_quant_c   = (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_q_quant_c);
+    int16_t *q_quant_m   = (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_q_quant_m);
+    int16_t *q_fused     = (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_q_fused);
+    int16_t *recip_q     = (int16_t *)malloc_aligned(DCT_BLOCK_SIZE * sizeof(int16_t), &raw_recip_q);
 
     if (!f_in || !f_out_c || !f_out_asm || !f_out_fa || !f_rec ||
-        !q_in || !q_out_c || !q_out_s || !q_out_m || !q_out_fm || !q_rec) {
+        !q_in || !q_out_c || !q_out_s || !q_out_m || !q_out_fm || !q_rec ||
+        !q_inreg || !q_rec_inreg || !q_dc_in || !q_dc_out || !q_rec_sparse ||
+        !q_quant_c || !q_quant_m || !q_fused || !recip_q) {
         printf("ERROR: Memory allocation failed!\n");
         return 1;
     }
@@ -439,6 +452,151 @@ int main(void) {
     printf(" 2D Reconstruction Error: Float max_diff=%e, Fixed max_diff=%d LSB\n",
            (double)max_f_err, max_q_err);
 
+    printf("\n=================================================================================================================================\n");
+    printf(" Part 3: Advanced Optimizations Benchmark (In-Register 2D, Sparse Early-Exit, Fused Quantization)\n");
+    printf("---------------------------------------------------------------------------------------------------------------------------------\n");
+
+    /* 1. In-Register 2D Fast DCT & IDCT */
+    /* Warmup */
+    dct2d_8x8_fixed_fast_inreg_ammx(q_in, q_inreg);
+    idct2d_8x8_fixed_fast_inreg_ammx(q_inreg, q_rec_inreg);
+
+    t0 = get_ccc();
+    for (int i = 0; i < NUM_BLOCKS; i++) {
+        dct2d_8x8_fixed_fast_inreg_ammx(q_in, q_inreg);
+    }
+    t1 = get_ccc();
+    uint32_t cyc_2d_inreg = (t1 - t0) / NUM_BLOCKS;
+
+    t0 = get_ccc();
+    for (int i = 0; i < NUM_BLOCKS; i++) {
+        idct2d_8x8_fixed_fast_inreg_ammx(q_inreg, q_rec_inreg);
+    }
+    t1 = get_ccc();
+    uint32_t cyc_2d_iinreg = (t1 - t0) / NUM_BLOCKS;
+
+    int max_inreg_diff = 0;
+    int max_iinreg_diff = 0;
+    for (int i = 0; i < DCT_BLOCK_SIZE; i++) {
+        int d = abs(q_out_fm[i] - q_inreg[i]);
+        if (d > max_inreg_diff) max_inreg_diff = d;
+        int id = abs(q_rec[i] - q_rec_inreg[i]);
+        if (id > max_iinreg_diff) max_iinreg_diff = id;
+    }
+    printf(" 2D In-Register Fast FDCT AMMX:        %6lu cycles (%.2fx vs C, %lu cyc saved vs Fast-AMMX) [diff=%d LSB, %s]\n",
+           (unsigned long)cyc_2d_inreg, (double)cyc_2d_qc / cyc_2d_inreg,
+           (unsigned long)(cyc_2d_qfm > cyc_2d_inreg ? cyc_2d_qfm - cyc_2d_inreg : 0),
+           max_inreg_diff, (max_inreg_diff == 0) ? "PASS" : "FAIL");
+
+    printf(" 2D In-Register Fast IDCT AMMX:        %6lu cycles (%.2fx vs C, %lu cyc saved vs Fast-AMMX) [diff=%d LSB, %s]\n\n",
+           (unsigned long)cyc_2d_iinreg, (double)cyc_2d_iqc / cyc_2d_iinreg,
+           (unsigned long)(cyc_2d_iqfm > cyc_2d_iinreg ? cyc_2d_iqfm - cyc_2d_iinreg : 0),
+           max_iinreg_diff, (max_iinreg_diff == 0) ? "PASS" : "FAIL");
+
+    /* 2. Sparse / DC-Only IDCT Early-Exit */
+    memset(q_dc_in, 0, DCT_BLOCK_SIZE * sizeof(int16_t));
+    q_dc_in[0] = 1000; /* DC coefficient */
+
+    /* Warmup */
+    idct2d_8x8_sparse_ammx(q_dc_in, q_dc_out);
+    idct2d_8x8_sparse_ammx(q_inreg, q_rec_sparse);
+
+    t0 = get_ccc();
+    for (int i = 0; i < NUM_BLOCKS; i++) {
+        idct2d_8x8_sparse_ammx(q_dc_in, q_dc_out);
+    }
+    t1 = get_ccc();
+    uint32_t cyc_sparse_dc = (t1 - t0) / NUM_BLOCKS;
+
+    t0 = get_ccc();
+    for (int i = 0; i < NUM_BLOCKS; i++) {
+        idct2d_8x8_sparse_ammx(q_inreg, q_rec_sparse);
+    }
+    t1 = get_ccc();
+    uint32_t cyc_sparse_full = (t1 - t0) / NUM_BLOCKS;
+
+    /* Verify DC-only output: every pixel = round(DC / 8) */
+    int16_t expected_dc_pixel = (int16_t)((1000 + 4) >> 3);
+    int dc_pass = 1;
+    for (int i = 0; i < DCT_BLOCK_SIZE; i++) {
+        if (q_dc_out[i] != expected_dc_pixel) {
+            dc_pass = 0;
+            break;
+        }
+    }
+    int max_sparse_fallback_diff = 0;
+    for (int i = 0; i < DCT_BLOCK_SIZE; i++) {
+        int d = abs(q_rec_inreg[i] - q_rec_sparse[i]);
+        if (d > max_sparse_fallback_diff) max_sparse_fallback_diff = d;
+    }
+
+    printf(" 2D Sparse IDCT (DC-Only Fast Path):   %6lu cycles (%.1fx vs Full InReg IDCT, %.1fx vs C) [%s]\n",
+           (unsigned long)cyc_sparse_dc, (double)cyc_2d_iinreg / (cyc_sparse_dc > 0 ? cyc_sparse_dc : 1),
+           (double)cyc_2d_iqc / (cyc_sparse_dc > 0 ? cyc_sparse_dc : 1),
+           dc_pass ? "PASS" : "FAIL");
+    printf("    DC=1000 -> Pixel[0..63]=%d (expected %d)\n", q_dc_out[0], expected_dc_pixel);
+    printf(" 2D Sparse IDCT (Full Block Fallback): %6lu cycles (penalty=%ld cyc) [diff=%d LSB, %s]\n\n",
+           (unsigned long)cyc_sparse_full, (long)(cyc_sparse_full - cyc_2d_iinreg),
+           max_sparse_fallback_diff, (max_sparse_fallback_diff == 0) ? "PASS" : "FAIL");
+
+    /* 3. Quantization & Fused AAN DCT */
+    static const uint16_t jpeg_luma_quant[64] = {
+        16, 11, 10, 16, 24, 40, 51, 61,
+        12, 12, 14, 19, 26, 58, 60, 55,
+        14, 13, 16, 24, 40, 57, 69, 56,
+        14, 17, 22, 29, 51, 87, 80, 62,
+        18, 22, 37, 56, 68, 109, 103, 77,
+        24, 35, 55, 64, 81, 104, 113, 92,
+        49, 64, 78, 87, 103, 121, 120, 101,
+        72, 92, 95, 98, 112, 100, 103, 99
+    };
+    for (int i = 0; i < DCT_BLOCK_SIZE; i++) {
+        recip_q[i] = (int16_t)((32768 + (jpeg_luma_quant[i] >> 1)) / jpeg_luma_quant[i]);
+    }
+
+    /* Warmup */
+    quantize8x8_c(q_inreg, q_quant_c, jpeg_luma_quant);
+    quantize8x8_ammx(q_inreg, q_quant_m, recip_q);
+    dct2d_8x8_aan_quant_ammx(q_in, q_fused, recip_q);
+
+    t0 = get_ccc();
+    for (int i = 0; i < NUM_BLOCKS; i++) {
+        quantize8x8_c(q_inreg, q_quant_c, jpeg_luma_quant);
+    }
+    t1 = get_ccc();
+    uint32_t cyc_quant_c = (t1 - t0) / NUM_BLOCKS;
+
+    t0 = get_ccc();
+    for (int i = 0; i < NUM_BLOCKS; i++) {
+        quantize8x8_ammx(q_inreg, q_quant_m, recip_q);
+    }
+    t1 = get_ccc();
+    uint32_t cyc_quant_m = (t1 - t0) / NUM_BLOCKS;
+
+    t0 = get_ccc();
+    for (int i = 0; i < NUM_BLOCKS; i++) {
+        dct2d_8x8_aan_quant_ammx(q_in, q_fused, recip_q);
+    }
+    t1 = get_ccc();
+    uint32_t cyc_fused_m = (t1 - t0) / NUM_BLOCKS;
+
+    int max_quant_diff = 0;
+    int max_fused_diff = 0;
+    for (int i = 0; i < DCT_BLOCK_SIZE; i++) {
+        int d = abs(q_quant_c[i] - q_quant_m[i]);
+        if (d > max_quant_diff) max_quant_diff = d;
+        int fd = abs(q_quant_m[i] - q_fused[i]);
+        if (fd > max_fused_diff) max_fused_diff = fd;
+    }
+
+    printf(" 8x8 Block Quantization (C-Ref):       %6lu cycles\n", (unsigned long)cyc_quant_c);
+    printf(" 8x8 Block Quantization (AMMX SIMD):   %6lu cycles (%.2fx vs C) [diff=%d LSB, %s]\n",
+           (unsigned long)cyc_quant_m, (double)cyc_quant_c / cyc_quant_m,
+           max_quant_diff, (max_quant_diff <= 2) ? "PASS" : "FAIL");
+    printf(" 8x8 Fused AAN DCT + Quantization AMMX:%6lu cycles (vs %lu cyc separate) [%s]\n",
+           (unsigned long)cyc_fused_m, (unsigned long)(cyc_2d_inreg + cyc_quant_m),
+           (max_fused_diff == 0) ? "PASS" : "FAIL");
+
     printf("=================================================================================================================================\n");
 
     free(raw_f_in);
@@ -452,6 +610,15 @@ int main(void) {
     free(raw_q_out_m);
     free(raw_q_out_fm);
     free(raw_q_rec);
+    free(raw_q_inreg);
+    free(raw_q_rec_inreg);
+    free(raw_q_dc_in);
+    free(raw_q_dc_out);
+    free(raw_q_rec_sparse);
+    free(raw_q_quant_c);
+    free(raw_q_quant_m);
+    free(raw_q_fused);
+    free(raw_recip_q);
 
     return 0;
 }

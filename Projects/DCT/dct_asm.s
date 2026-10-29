@@ -25,6 +25,11 @@
         xdef    _idct2d_8x8_fixed_ammx
         xdef    _dct2d_8x8_fixed_fast_ammx
         xdef    _idct2d_8x8_fixed_fast_ammx
+        xdef    _dct2d_8x8_fixed_fast_inreg_ammx
+        xdef    _idct2d_8x8_fixed_fast_inreg_ammx
+        xdef    _idct2d_8x8_sparse_ammx
+        xdef    _quantize8x8_ammx
+        xdef    _dct2d_8x8_aan_quant_ammx
         xdef    _transpose8x8_ammx
         xdef    _transpose8x8_float_ammx
 
@@ -1819,6 +1824,751 @@ _idct2d_8x8_fixed_fast_ammx:
         dbra    d0,.iffix2d_scale2
 
         adda.w  #256,sp
+        movem.l (sp)+,d2/a2-a4
+        rts
+
+; ======================================================================
+; void dct2d_8x8_fixed_fast_inreg_ammx(const int16_t *src, int16_t *dst)
+; 2D 8x8 Fast Fixed DCT with inlined 1D transforms & preloaded constants
+; ======================================================================
+_dct2d_8x8_fixed_fast_inreg_ammx:
+        movem.l d2/a2-a4,-(sp)
+        move.l  20(sp),a2               ; src
+        move.l  24(sp),a3               ; dst
+        suba.w  #256,sp                 ; tmp1 (128B) and tmp2 (128B)
+        lea     (sp),a4                 ; tmp1
+
+        ; Preload constants into e16..e22 (alive for entire function!)
+        lea     _fast_c4,a0
+        load    (a0),e16                ; _fast_c4
+        load    8(a0),e17               ; _fast_c2_s2
+        load    16(a0),e18              ; _fast_s2_mc2
+        load    24(a0),e19              ; _fast_odd1
+        load    32(a0),e20              ; _fast_odd3
+        load    40(a0),e21              ; _fast_odd5
+        load    48(a0),e22              ; _fast_odd7
+
+        ; --- Step 1: Inlined Row Transforms (scaled 0.5x) ---
+        moveq   #8-1,d2
+.inreg_row1:
+        load    (a2),e0
+        load    8(a2),e1
+
+        vperm   #$67452301,e1,e1,e2
+        paddw   e2,e0,e3
+        psubw   e2,e0,e4
+
+        vperm   #$67452301,e3,e3,e5
+        paddw   e5,e3,e6
+        psubw   e5,e3,e7
+
+        pmulh   e6,e16,e8
+        vperm   #$23016745,e8,e8,e9
+        paddw   e9,e8,e10
+        psubw   e9,e8,e11
+        vperm   #$01890189,e10,e11,e13  ; [X0/2, X4/2, X0/2, X4/2]
+
+        vperm   #$01010101,e7,e7,e14
+        vperm   #$23232323,e7,e7,e15
+        pmulh   e14,e17,e2
+        pmulh   e15,e18,e3
+        paddw   e3,e2,e2                ; [X2/2, X6/2, ...]
+
+        vperm   #$018923ab,e13,e2,e14   ; e14 = [X0/2, X2/2, X4/2, X6/2]
+
+        pmulh   e4,e19,e8
+        pmulh   e4,e20,e9
+        pmulh   e4,e21,e10
+        pmulh   e4,e22,e11
+
+        vperm   #$018945cd,e8,e9,e12
+        vperm   #$23ab67ef,e8,e9,e13
+        paddw   e13,e12,e12
+        vperm   #$45670123,e12,e12,e13
+        paddw   e13,e12,e12             ; [X1/2, X3/2, ...]
+
+        vperm   #$018945cd,e10,e11,e13
+        vperm   #$23ab67ef,e10,e11,e15
+        paddw   e15,e13,e13
+        vperm   #$45670123,e13,e13,e15
+        paddw   e15,e13,e13             ; [X5/2, X7/2, ...]
+
+        vperm   #$012389ab,e12,e13,e15  ; e15 = [X1/2, X3/2, X5/2, X7/2]
+
+        vperm   #$018923ab,e14,e15,e0
+        vperm   #$45cd67ef,e14,e15,e1
+
+        store   e0,(a4)
+        store   e1,8(a4)
+        lea     16(a2),a2
+        lea     16(a4),a4
+        dbra    d2,.inreg_row1
+
+        ; --- Step 2: Inlined Transpose tmp1 -> tmp2 ---
+        lea     (sp),a0                 ; tmp1
+        lea     128(sp),a1              ; tmp2
+        load    (a0),e0
+        load    16(a0),e1
+        load    32(a0),e2
+        load    48(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e8
+        vperm   #$4567cdef,e4,e6,e9
+        vperm   #$012389ab,e5,e7,e10
+        vperm   #$4567cdef,e5,e7,e11
+        load    64(a0),e0
+        load    80(a0),e1
+        load    96(a0),e2
+        load    112(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e12
+        vperm   #$4567cdef,e4,e6,e13
+        vperm   #$012389ab,e5,e7,e14
+        vperm   #$4567cdef,e5,e7,e15
+        store   e8,(a1)
+        store   e12,8(a1)
+        store   e9,16(a1)
+        store   e13,24(a1)
+        store   e10,32(a1)
+        store   e14,40(a1)
+        store   e11,48(a1)
+        store   e15,56(a1)
+        load    8(a0),e0
+        load    24(a0),e1
+        load    40(a0),e2
+        load    56(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e8
+        vperm   #$4567cdef,e4,e6,e9
+        vperm   #$012389ab,e5,e7,e10
+        vperm   #$4567cdef,e5,e7,e11
+        load    72(a0),e0
+        load    88(a0),e1
+        load    104(a0),e2
+        load    120(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e12
+        vperm   #$4567cdef,e4,e6,e13
+        vperm   #$012389ab,e5,e7,e14
+        vperm   #$4567cdef,e5,e7,e15
+        store   e8,64(a1)
+        store   e12,72(a1)
+        store   e9,80(a1)
+        store   e13,88(a1)
+        store   e10,96(a1)
+        store   e14,104(a1)
+        store   e11,112(a1)
+        store   e15,120(a1)
+
+        ; --- Step 3: Inlined Column Transforms tmp2 -> tmp1 (normal full-scale) ---
+        lea     128(sp),a2              ; tmp2
+        lea     (sp),a4                 ; tmp1
+        moveq   #8-1,d2
+.inreg_row2:
+        load    (a2),e0
+        load    8(a2),e1
+
+        vperm   #$67452301,e1,e1,e2
+        paddw   e2,e0,e3
+        psubw   e2,e0,e4
+
+        vperm   #$67452301,e3,e3,e5
+        paddw   e5,e3,e6
+        psubw   e5,e3,e7
+
+        pmulh   e6,e16,e8
+        vperm   #$23016745,e8,e8,e9
+        paddw   e9,e8,e10
+        psubw   e9,e8,e11
+        vperm   #$01890189,e10,e11,e13
+        paddw   e13,e13,e13             ; [X0, X4, X0, X4]
+
+        vperm   #$01010101,e7,e7,e14
+        vperm   #$23232323,e7,e7,e15
+        pmulh   e14,e17,e2
+        pmulh   e15,e18,e3
+        paddw   e3,e2,e2
+        paddw   e2,e2,e2                ; [X2, X6, ...]
+
+        vperm   #$018923ab,e13,e2,e14   ; e14 = [X0, X2, X4, X6]
+
+        pmulh   e4,e19,e8
+        pmulh   e4,e20,e9
+        pmulh   e4,e21,e10
+        pmulh   e4,e22,e11
+
+        vperm   #$018945cd,e8,e9,e12
+        vperm   #$23ab67ef,e8,e9,e13
+        paddw   e13,e12,e12
+        vperm   #$45670123,e12,e12,e13
+        paddw   e13,e12,e12
+        paddw   e12,e12,e12             ; [X1, X3, ...]
+
+        vperm   #$018945cd,e10,e11,e13
+        vperm   #$23ab67ef,e10,e11,e15
+        paddw   e15,e13,e13
+        vperm   #$45670123,e13,e13,e15
+        paddw   e15,e13,e13
+        paddw   e13,e13,e13             ; [X5, X7, ...]
+
+        vperm   #$012389ab,e12,e13,e15  ; e15 = [X1, X3, X5, X7]
+
+        vperm   #$018923ab,e14,e15,e0
+        vperm   #$45cd67ef,e14,e15,e1
+
+        store   e0,(a4)
+        store   e1,8(a4)
+        lea     16(a2),a2
+        lea     16(a4),a4
+        dbra    d2,.inreg_row2
+
+        ; --- Step 4: Inlined Transpose tmp1 -> dst ---
+        lea     (sp),a0                 ; tmp1
+        move.l  a3,a1                   ; dst
+        load    (a0),e0
+        load    16(a0),e1
+        load    32(a0),e2
+        load    48(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e8
+        vperm   #$4567cdef,e4,e6,e9
+        vperm   #$012389ab,e5,e7,e10
+        vperm   #$4567cdef,e5,e7,e11
+        load    64(a0),e0
+        load    80(a0),e1
+        load    96(a0),e2
+        load    112(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e12
+        vperm   #$4567cdef,e4,e6,e13
+        vperm   #$012389ab,e5,e7,e14
+        vperm   #$4567cdef,e5,e7,e15
+        store   e8,(a1)
+        store   e12,8(a1)
+        store   e9,16(a1)
+        store   e13,24(a1)
+        store   e10,32(a1)
+        store   e14,40(a1)
+        store   e11,48(a1)
+        store   e15,56(a1)
+        load    8(a0),e0
+        load    24(a0),e1
+        load    40(a0),e2
+        load    56(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e8
+        vperm   #$4567cdef,e4,e6,e9
+        vperm   #$012389ab,e5,e7,e10
+        vperm   #$4567cdef,e5,e7,e11
+        load    72(a0),e0
+        load    88(a0),e1
+        load    104(a0),e2
+        load    120(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e12
+        vperm   #$4567cdef,e4,e6,e13
+        vperm   #$012389ab,e5,e7,e14
+        vperm   #$4567cdef,e5,e7,e15
+        store   e8,64(a1)
+        store   e12,72(a1)
+        store   e9,80(a1)
+        store   e13,88(a1)
+        store   e10,96(a1)
+        store   e14,104(a1)
+        store   e11,112(a1)
+        store   e15,120(a1)
+
+        ; --- Step 5: Double dst to restore 1.0x scale ---
+        move.l  a3,a0
+        moveq   #8-1,d0
+.inreg_scale:
+        load    (a0),e0
+        load    8(a0),e1
+        paddw   e0,e0,e0
+        paddw   e1,e1,e1
+        store   e0,(a0)
+        store   e1,8(a0)
+        lea     16(a0),a0
+        dbra    d0,.inreg_scale
+
+        adda.w  #256,sp
+        movem.l (sp)+,d2/a2-a4
+        rts
+
+; ======================================================================
+; void idct2d_8x8_fixed_fast_inreg_ammx(const int16_t *src, int16_t *dst)
+; 2D 8x8 Fast Fixed IDCT with inlined 1D transforms & preloaded constants
+; ======================================================================
+_idct2d_8x8_fixed_fast_inreg_ammx:
+        movem.l d2/a2-a4,-(sp)
+        move.l  20(sp),a2               ; src
+        move.l  24(sp),a3               ; dst
+        suba.w  #256,sp
+        lea     (sp),a4                 ; tmp1
+
+        ; Preload constants into e16..e22
+        lea     _fast_c4,a0
+        load    (a0),e16                ; _fast_c4
+        load    8(a0),e17               ; _fast_c2_s2
+        load    16(a0),e18              ; _fast_s2_mc2
+        load    24(a0),e19              ; _fast_odd1
+        load    32(a0),e20              ; _fast_odd3
+        load    40(a0),e21              ; _fast_odd5
+        load    48(a0),e22              ; _fast_odd7
+
+        ; --- Step 1: Inlined Row IDCTs (scaled 0.5x) ---
+        moveq   #8-1,d2
+.inreg_irow1:
+        load    (a2),e0
+        load    8(a2),e1
+
+        vperm   #$014589cd,e0,e1,e2
+        vperm   #$2367abef,e0,e1,e3
+
+        pmulh   e2,e16,e4
+        vperm   #$01010101,e4,e4,e5
+        vperm   #$45454545,e4,e4,e6
+        paddw   e6,e5,e7
+        psubw   e6,e5,e8
+        vperm   #$01890189,e7,e8,e9     ; [e0_val/2, e1_val/2, ...]
+
+        vperm   #$23232323,e2,e2,e14
+        vperm   #$67676767,e2,e2,e15
+        pmulh   e14,e17,e4
+        pmulh   e15,e18,e5
+        paddw   e5,e4,e4                ; [e2_val/2, e3_val/2, ...]
+
+        vperm   #$01010101,e9,e9,e5
+        vperm   #$23232323,e9,e9,e6
+        vperm   #$01010101,e4,e4,e7
+        vperm   #$23232323,e4,e4,e8
+
+        paddw   e7,e5,e10
+        psubw   e7,e5,e11
+        paddw   e8,e6,e12
+        psubw   e8,e6,e13
+
+        vperm   #$01890189,e10,e12,e14
+        vperm   #$01890189,e13,e11,e15
+        vperm   #$012389ab,e14,e15,e6   ; e6 = [s0/2, s1/2, s2/2, s3/2]
+
+        pmulh   e3,e19,e8
+        pmulh   e3,e20,e9
+        pmulh   e3,e21,e10
+        pmulh   e3,e22,e11
+
+        vperm   #$018945cd,e8,e9,e12
+        vperm   #$23ab67ef,e8,e9,e13
+        paddw   e13,e12,e12
+        vperm   #$45670123,e12,e12,e13
+        paddw   e13,e12,e12             ; [d0/2, d1/2, ...]
+
+        vperm   #$018945cd,e10,e11,e13
+        vperm   #$23ab67ef,e10,e11,e15
+        paddw   e15,e13,e13
+        vperm   #$45670123,e13,e13,e15
+        paddw   e15,e13,e13             ; [d2/2, d3/2, ...]
+
+        vperm   #$012389ab,e12,e13,e7   ; e7 = [d0/2, d1/2, d2/2, d3/2]
+
+        paddw   e7,e6,e0
+        psubw   e7,e6,e1
+        vperm   #$67452301,e1,e1,e1
+
+        store   e0,(a4)
+        store   e1,8(a4)
+        lea     16(a2),a2
+        lea     16(a4),a4
+        dbra    d2,.inreg_irow1
+
+        ; --- Step 2: Inlined Transpose tmp1 -> tmp2 ---
+        lea     (sp),a0                 ; tmp1
+        lea     128(sp),a1              ; tmp2
+        load    (a0),e0
+        load    16(a0),e1
+        load    32(a0),e2
+        load    48(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e8
+        vperm   #$4567cdef,e4,e6,e9
+        vperm   #$012389ab,e5,e7,e10
+        vperm   #$4567cdef,e5,e7,e11
+        load    64(a0),e0
+        load    80(a0),e1
+        load    96(a0),e2
+        load    112(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e12
+        vperm   #$4567cdef,e4,e6,e13
+        vperm   #$012389ab,e5,e7,e14
+        vperm   #$4567cdef,e5,e7,e15
+        store   e8,(a1)
+        store   e12,8(a1)
+        store   e9,16(a1)
+        store   e13,24(a1)
+        store   e10,32(a1)
+        store   e14,40(a1)
+        store   e11,48(a1)
+        store   e15,56(a1)
+        load    8(a0),e0
+        load    24(a0),e1
+        load    40(a0),e2
+        load    56(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e8
+        vperm   #$4567cdef,e4,e6,e9
+        vperm   #$012389ab,e5,e7,e10
+        vperm   #$4567cdef,e5,e7,e11
+        load    72(a0),e0
+        load    88(a0),e1
+        load    104(a0),e2
+        load    120(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e12
+        vperm   #$4567cdef,e4,e6,e13
+        vperm   #$012389ab,e5,e7,e14
+        vperm   #$4567cdef,e5,e7,e15
+        store   e8,64(a1)
+        store   e12,72(a1)
+        store   e9,80(a1)
+        store   e13,88(a1)
+        store   e10,96(a1)
+        store   e14,104(a1)
+        store   e11,112(a1)
+        store   e15,120(a1)
+
+        ; --- Step 3: Inlined Column IDCTs tmp2 -> tmp1 (normal full-scale) ---
+        lea     128(sp),a2              ; tmp2
+        lea     (sp),a4                 ; tmp1
+        moveq   #8-1,d2
+.inreg_irow2:
+        load    (a2),e0
+        load    8(a2),e1
+
+        vperm   #$014589cd,e0,e1,e2
+        vperm   #$2367abef,e0,e1,e3
+
+        pmulh   e2,e16,e4
+        vperm   #$01010101,e4,e4,e5
+        vperm   #$45454545,e4,e4,e6
+        paddw   e6,e5,e7
+        psubw   e6,e5,e8
+        vperm   #$01890189,e7,e8,e9
+        paddw   e9,e9,e9                ; e9 = [e0_val, e1_val, ...]
+
+        vperm   #$23232323,e2,e2,e14
+        vperm   #$67676767,e2,e2,e15
+        pmulh   e14,e17,e4
+        pmulh   e15,e18,e5
+        paddw   e5,e4,e4
+        paddw   e4,e4,e4                ; e4 = [e2_val, e3_val, ...]
+
+        vperm   #$01010101,e9,e9,e5
+        vperm   #$23232323,e9,e9,e6
+        vperm   #$01010101,e4,e4,e7
+        vperm   #$23232323,e4,e4,e8
+
+        paddw   e7,e5,e10
+        psubw   e7,e5,e11
+        paddw   e8,e6,e12
+        psubw   e8,e6,e13
+
+        vperm   #$01890189,e10,e12,e14
+        vperm   #$01890189,e13,e11,e15
+        vperm   #$012389ab,e14,e15,e6   ; e6 = [s0, s1, s2, s3]
+
+        pmulh   e3,e19,e8
+        pmulh   e3,e20,e9
+        pmulh   e3,e21,e10
+        pmulh   e3,e22,e11
+
+        vperm   #$018945cd,e8,e9,e12
+        vperm   #$23ab67ef,e8,e9,e13
+        paddw   e13,e12,e12
+        vperm   #$45670123,e12,e12,e13
+        paddw   e13,e12,e12
+        paddw   e12,e12,e12             ; [d0, d1, ...]
+
+        vperm   #$018945cd,e10,e11,e13
+        vperm   #$23ab67ef,e10,e11,e15
+        paddw   e15,e13,e13
+        vperm   #$45670123,e13,e13,e15
+        paddw   e15,e13,e13
+        paddw   e13,e13,e13             ; [d2, d3, ...]
+
+        vperm   #$012389ab,e12,e13,e7   ; e7 = [d0, d1, d2, d3]
+
+        paddw   e7,e6,e0
+        psubw   e7,e6,e1
+        vperm   #$67452301,e1,e1,e1
+
+        store   e0,(a4)
+        store   e1,8(a4)
+        lea     16(a2),a2
+        lea     16(a4),a4
+        dbra    d2,.inreg_irow2
+
+        ; --- Step 4: Inlined Transpose tmp1 -> dst ---
+        lea     (sp),a0                 ; tmp1
+        move.l  a3,a1                   ; dst
+        load    (a0),e0
+        load    16(a0),e1
+        load    32(a0),e2
+        load    48(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e8
+        vperm   #$4567cdef,e4,e6,e9
+        vperm   #$012389ab,e5,e7,e10
+        vperm   #$4567cdef,e5,e7,e11
+        load    64(a0),e0
+        load    80(a0),e1
+        load    96(a0),e2
+        load    112(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e12
+        vperm   #$4567cdef,e4,e6,e13
+        vperm   #$012389ab,e5,e7,e14
+        vperm   #$4567cdef,e5,e7,e15
+        store   e8,(a1)
+        store   e12,8(a1)
+        store   e9,16(a1)
+        store   e13,24(a1)
+        store   e10,32(a1)
+        store   e14,40(a1)
+        store   e11,48(a1)
+        store   e15,56(a1)
+        load    8(a0),e0
+        load    24(a0),e1
+        load    40(a0),e2
+        load    56(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e8
+        vperm   #$4567cdef,e4,e6,e9
+        vperm   #$012389ab,e5,e7,e10
+        vperm   #$4567cdef,e5,e7,e11
+        load    72(a0),e0
+        load    88(a0),e1
+        load    104(a0),e2
+        load    120(a0),e3
+        vperm   #$018923ab,e0,e1,e4
+        vperm   #$45cd67ef,e0,e1,e5
+        vperm   #$018923ab,e2,e3,e6
+        vperm   #$45cd67ef,e2,e3,e7
+        vperm   #$012389ab,e4,e6,e12
+        vperm   #$4567cdef,e4,e6,e13
+        vperm   #$012389ab,e5,e7,e14
+        vperm   #$4567cdef,e5,e7,e15
+        store   e8,64(a1)
+        store   e12,72(a1)
+        store   e9,80(a1)
+        store   e13,88(a1)
+        store   e10,96(a1)
+        store   e14,104(a1)
+        store   e11,112(a1)
+        store   e15,120(a1)
+
+        ; --- Step 5: Double dst to restore 1.0x scale ---
+        move.l  a3,a0
+        moveq   #8-1,d0
+.inreg_iscale:
+        load    (a0),e0
+        load    8(a0),e1
+        paddw   e0,e0,e0
+        paddw   e1,e1,e1
+        store   e0,(a0)
+        store   e1,8(a0)
+        lea     16(a0),a0
+        dbra    d0,.inreg_iscale
+
+        adda.w  #256,sp
+        movem.l (sp)+,d2/a2-a4
+        rts
+
+; ======================================================================
+; void idct2d_8x8_sparse_ammx(const int16_t *src, int16_t *dst)
+; High-performance Sparse / DC-Only IDCT Early Exit (~15-20 cycles)
+; ======================================================================
+_idct2d_8x8_sparse_ammx:
+        move.l  4(sp),a0                ; src
+        move.l  8(sp),a1                ; dst
+
+        ; Check word 1 (AC1) and words 2, 3 (AC2, AC3) of row 0
+        ; a0 points to src: word 0 is DC, word 1 is AC1
+        move.l  (a0),d0                 ; d0 = [DC (high word), AC1 (low word)]
+        tst.w   d0                      ; test low word (AC1)
+        bne     .sparse_fallback
+        tst.l   4(a0)                   ; test AC2, AC3
+        bne     .sparse_fallback
+
+        ; Check remaining 60 AC words via AMMX bitwise OR
+        load    8(a0),e0
+        load    16(a0),e1
+        load    24(a0),e2
+        load    32(a0),e3
+        por     e1,e0,e0
+        por     e3,e2,e2
+        load    40(a0),e1
+        load    48(a0),e3
+        por     e1,e0,e0
+        por     e3,e2,e2
+        load    56(a0),e1
+        load    64(a0),e3
+        por     e1,e0,e0
+        por     e3,e2,e2
+        load    72(a0),e1
+        load    80(a0),e3
+        por     e1,e0,e0
+        por     e3,e2,e2
+        load    88(a0),e1
+        load    96(a0),e3
+        por     e1,e0,e0
+        por     e3,e2,e2
+        load    104(a0),e1
+        load    112(a0),e3
+        por     e1,e0,e0
+        por     e3,e2,e2
+        load    120(a0),e1
+        por     e1,e0,e0
+        por     e2,e0,e0
+
+        ; Test if e0 is zero
+        move.l  e0,d0
+        vperm   #$45670123,e0,e0,e1
+        move.l  e1,d1
+        or.l    d1,d0
+        bne     .sparse_fallback
+
+        ; --- FAST PATH: DC-ONLY BLOCK (~15-20 CYCLES!) ---
+        ; For 2D Orthonormal IDCT: pixel = round(DC / 8)
+        move.w  (a0),d0
+        addq.w  #4,d0
+        asr.w   #3,d0                   ; d0 = round(DC / 8)
+        move.w  d0,d1
+        swap    d1
+        move.w  d0,d1                   ; d1 = [pixel, pixel]
+
+        subq.l  #8,sp
+        move.l  d1,(sp)
+        move.l  d1,4(sp)
+        load    (sp),e0                 ; e0 = [pixel, pixel, pixel, pixel]
+        addq.l  #8,sp
+
+        store   e0,(a1)
+        store   e0,8(a1)
+        store   e0,16(a1)
+        store   e0,24(a1)
+        store   e0,32(a1)
+        store   e0,40(a1)
+        store   e0,48(a1)
+        store   e0,56(a1)
+        store   e0,64(a1)
+        store   e0,72(a1)
+        store   e0,80(a1)
+        store   e0,88(a1)
+        store   e0,96(a1)
+        store   e0,104(a1)
+        store   e0,112(a1)
+        store   e0,120(a1)
+        rts
+
+.sparse_fallback:
+        move.l  a1,-(sp)
+        move.l  a0,-(sp)
+        jsr     _idct2d_8x8_fixed_fast_inreg_ammx
+        addq.l  #8,sp
+        rts
+
+; ======================================================================
+; void quantize8x8_ammx(const int16_t *src, int16_t *dst, const int16_t *recip_q)
+; Fast 8x8 block quantization (16 quadwords) using pmulh
+; ======================================================================
+_quantize8x8_ammx:
+        move.l  a2,-(sp)
+        move.l  8(sp),a0                ; src
+        move.l  12(sp),a1               ; dst
+        move.l  16(sp),a2               ; recip_q
+        moveq   #16-1,d0
+.q_loop:
+        load    (a0),e0
+        load    (a2),e1
+        pmulh   e0,e1,e2
+        paddw   e2,e2,e2                ; * 2 for Q1.15
+        store   e2,(a1)
+        lea     8(a0),a0
+        lea     8(a1),a1
+        lea     8(a2),a2
+        dbra    d0,.q_loop
+        move.l  (sp)+,a2
+        rts
+
+; ======================================================================
+; void dct2d_8x8_aan_quant_ammx(const int16_t *src, int16_t *dst, const int16_t *recip_q_aan)
+; Fused AAN 2D DCT + Quantization in a single combined call
+; ======================================================================
+_dct2d_8x8_aan_quant_ammx:
+        movem.l d2/a2-a4,-(sp)
+        move.l  20(sp),a2               ; src
+        move.l  24(sp),a3               ; dst
+        move.l  28(sp),a4               ; recip_q_aan
+
+        ; Run 2D Fast DCT into dst
+        move.l  a3,-(sp)
+        move.l  a2,-(sp)
+        jsr     _dct2d_8x8_fixed_fast_inreg_ammx
+        addq.l  #8,sp
+
+        ; Run in-place quantization on dst
+        move.l  a4,-(sp)                ; recip_q_aan
+        move.l  a3,-(sp)                ; dst (out)
+        move.l  a3,-(sp)                ; dst (in)
+        jsr     _quantize8x8_ammx
+        lea     12(sp),sp
+
         movem.l (sp)+,d2/a2-a4
         rts
 

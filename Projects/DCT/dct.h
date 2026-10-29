@@ -44,6 +44,15 @@ void dct2d_8x8_fixed_ammx(const int16_t *src, int16_t *dst);
 void idct2d_8x8_fixed_ammx(const int16_t *src, int16_t *dst);
 void dct2d_8x8_fixed_fast_ammx(const int16_t *src, int16_t *dst);
 void idct2d_8x8_fixed_fast_ammx(const int16_t *src, int16_t *dst);
+void dct2d_8x8_fixed_fast_inreg_ammx(const int16_t *src, int16_t *dst);
+void idct2d_8x8_fixed_fast_inreg_ammx(const int16_t *src, int16_t *dst);
+void idct2d_8x8_sparse_ammx(const int16_t *src, int16_t *dst);
+
+/* Quantization & Fused AAN DCT */
+void quantize8x8_c(const int16_t *src, int16_t *dst, const uint16_t *qmatrix);
+void quantize8x8_ammx(const int16_t *src, int16_t *dst, const int16_t *recip_q);
+void dct2d_8x8_aan_quant_c(const int16_t *src, int16_t *dst, const uint16_t *qmatrix_aan);
+void dct2d_8x8_aan_quant_ammx(const int16_t *src, int16_t *dst, const int16_t *recip_q_aan);
 
 /* Hardware cycle counter */
 uint32_t get_ccc(void);
