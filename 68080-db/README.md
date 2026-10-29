@@ -39,7 +39,8 @@ ausgibt.
 | [`09-harness.md`](09-harness.md) | Mess-Harness: Aufbau, Build, Fallstricke | – |
 | [`12-matrix.md`](12-matrix.md) | Matrix-Multiplikation (FPU Float & AMMX Fixed) | 6 |
 | [`13-fft.md`](13-fft.md) | Fast Fourier Transform (FPU Float & AMMX Fixed) | 6 |
-| [`14-dct.md`](14-dct.md) | Discrete Cosine Transform (1D & 2D Float FPU & AMMX SIMD) | 4 |
+| [`14-dct.md`](14-dct.md) | Discrete Cosine Transform (1D & 2D Float FPU & AMMX SIMD) | 8 |
+| [`15-mdct.md`](15-mdct.md) | Audio MDCT / IMDCT Engine (MP3 / AAC / Vorbis Subband Decoding) | 1 |
 
 **Summe: 42 Einträge**, jeder mit Vorher/Nachher-Code, Hardware-Mechanismus,
 Registerliste und Messblock. Jeder Eintrag endet mit der **verbatim

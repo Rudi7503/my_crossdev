@@ -51,10 +51,13 @@ def main() -> int:
     p = sub.add_parser('menus'); p.add_argument('--window', default='')
     p = sub.add_parser('menu-select'); p.add_argument('item'); p.add_argument('--window', default='')
     p = sub.add_parser('arexx'); p.add_argument('source')
+    sub.add_parser('break')
     a = ap.parse_args()
     c = client()
     try:
-        if a.cmd == 'probe':
+        if a.cmd == 'break':
+            print(c.break_command())
+        elif a.cmd == 'probe':
             print(c.ping())
             for k, v in c.system_info().items(): print(f'{k}: {v}')
         elif a.cmd == 'info':
@@ -80,7 +83,8 @@ def main() -> int:
         elif a.cmd == 'type':
             c.input_text(a.text); print('typed')
         elif a.cmd == 'key':
-            c.input_key(a.key, qualifiers=a.qual); print('key')
+            qual = int(a.qual) if a.qual.isdigit() else 0
+            c.input_key(a.key, qualifiers=qual); print('key')
         elif a.cmd == 'click':
             c.input_click(a.x, a.y, button=a.button, count=a.count); print('clicked')
         elif a.cmd == 'move':

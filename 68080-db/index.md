@@ -39,6 +39,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`DCT-006`](14-dct.md) | 1D 8-Punkt Fast Fixed-Point DCT (Loeffler AMMX SIMD-Kern) | `14-dct.md` | gemessen |
 | [`DCT-007`](14-dct.md) | 8x8 16-Bit Matrix-Transposition (AMMX SIMD vperm) | `14-dct.md` | gemessen |
 | [`DCT-008`](14-dct.md) | 8x8 Block-Quantisierung (16 Quadwords AMMX Q1.15 pmulh) | `14-dct.md` | gemessen |
+| [`DCT-009`](15-mdct.md) | MP3 18-Sample 50% Overlap-Add Kernel (AMMX SIMD paddw) | `15-mdct.md` | gemessen |
 | [`FUS-001`](01-fusing.md) | MOVE.L + ADD.L zur 3-Operanden-Fusion | `01-fusing.md` | gemessen |
 | [`FUS-002`](01-fusing.md) | MOVE.L + NEG.L | `01-fusing.md` | gemessen |
 | [`FUS-003`](01-fusing.md) | MOVEQ + OR.L | `01-fusing.md` | gemessen |
@@ -86,6 +87,9 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **Timing** (5): [`TIM-001`](05-timing.md), [`TIM-002`](05-timing.md), [`TIM-003`](05-timing.md), [`TIM-004`](05-timing.md), [`TIM-005`](05-timing.md)
 - **Speicher/Cache** (5): [`MEM-001`](06-memory.md), [`MEM-002`](06-memory.md), [`MEM-003`](06-memory.md), [`MEM-004`](06-memory.md), [`MEM-005`](06-memory.md)
 - **Patterns** (5): [`PAT-001`](07-patterns.md), [`PAT-002`](07-patterns.md), [`PAT-003`](07-patterns.md), [`PAT-004`](07-patterns.md), [`PAT-005`](07-patterns.md)
+- **Discrete Cosine Transform (DCT)** (8): [`DCT-001`](14-dct.md), [`DCT-002`](14-dct.md), [`DCT-003`](14-dct.md), [`DCT-004`](14-dct.md), [`DCT-005`](14-dct.md), [`DCT-006`](14-dct.md), [`DCT-007`](14-dct.md), [`DCT-008`](14-dct.md)
+- **Audio MDCT / IMDCT** (1): [`DCT-009`](15-mdct.md)
+- **Fast Fourier Transform (FFT)** (5): [`FFT-001`](13-fft.md), [`FFT-002`](13-fft.md), [`FFT-003`](13-fft.md), [`FFT-004`](13-fft.md), [`FFT-005`](13-fft.md), [`FFT-006`](13-fft.md)
 - **Matrix (FPU)** (3): [`MAT-001`](12-matrix.md), [`MAT-002`](12-matrix.md), [`MAT-003`](12-matrix.md)
 - **Matrix (Fixed-Point AMMX)** (3): [`FIX-001`](12-matrix.md), [`FIX-002`](12-matrix.md), [`FIX-003`](12-matrix.md)
 - **Antipatterns** (6): [`ANTI-001`](08-antipatterns.md), [`ANTI-002`](08-antipatterns.md), [`ANTI-003`](08-antipatterns.md), [`ANTI-004`](08-antipatterns.md), [`ANTI-005`](08-antipatterns.md), [`ANTI-006`](08-antipatterns.md)
