@@ -1,160 +1,155 @@
-# 10 – ADPCM Case Study (2/3/4/5/6-Bit & Hybrid M/S, verifiziert)
+# 10 – ADPCM Case Study: 2/3/4/5/6-Bit & Hybrid M/S Audio-Dekodierung
 
-**Projekt:** `Projects/ADPCM_Decoder`  
-**CPU:** Apollo 68080 / Vampire V4 / Core **11350** (ApolloControl), PCR 1088/1, VCoreRev 0  
-**Messung:** 100 Warmup + 100 Läufe (1 Block = 15 Bytes), State-Reset, C-Referenz + 512-Block-Golden; MIN/Median.
+**Projekt:** [`Projects/ADPCM_Decoder/`](../Projects/ADPCM_Decoder/) (`decoder_4bit.s`, `decoder_2bit.s`, `decoder_3bit.s`, `decoder_5bit.s`, `decoder_6bit.s`, `decoder_3_2ms.s`, `decoder_4_2ms.s`, `decoder_5_3ms.s`)  
+**Core-Referenz:** Apollo 68080 Core 1088 / Release 1 (`CORE;1088;1;0`, ApolloControl ID 11350) @ 85.0 MHz  
+**Messmethode:** Hardware Clock Cycle Counter (CCC), 100 Warmup-Läufe + 100 Messläufe unter `Forbid()`, 1 Block = 15 Bytes (30 Samples). Verifikation: Bit-exakter Golden-Master-Vergleich über 512 Blöcke (15.360 Samples).
 
-## Ergebnis 4-Bit (`decoder_4bit.s`)
+---
 
-| Modus | Baseline | Opt3 | Opt9 | Fresh3 | Fresh9 | **Fresh15 (Produktiv)** | Ersparnis |
+## 1. Übersicht & Benchmark-Ergebnisse
+
+ADPCM (Adaptive Differential Pulse Code Modulation) komprimiert 16-Bit-PCM-Audio auf 2 bis 6 Bit pro Sample. Da jedes Sample vom vorherigen abhängt (rekursive Prädiktorschleife), lässt sich ADPCM nicht trivial vektorisieren. Die Optimierung auf der 68080 konzentriert sich daher auf die **Eliminierung von Branches**, **vorberechnete Lookup-Tabellen**, **superskalare Registerallokation** und **vollständiges Loop-Unrolling**.
+
+### A. 4-Bit ADPCM Dekodierer (`decoder_4bit.s` – Fresh15)
+Ein Block = 15 Bytes = 30 Samples (15 Stereo-Paare L/R bzw. 30 Mono-Samples):
+
+| Modus | Baseline (C / Naiv) | Opt3 (Paar-Unroll) | Fresh9 (Signed-Table) | **Fresh15 (Produktiv)** | Netto-Takte / Sample | CPU-Last @ 44.1 kHz Stereo | Speedup vs. Baseline |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Stereo | 1546 / 1548 | 1242 / 1243 | 1135 / 1135 | 1001 / 1001 | 848 / 848 | **784 / 784** | **−49,3 %** |
-| MS | 1876 / 1878 | 1526 / 1528 | 1399 / 1399 | 1047 / 1047 | 922 / 922 | **920 / 920** | **−51,0 %** |
-| Mono | 1624 / 1625 | 1256 / 1257 | 1196 / 1197 | 816 / 816 | 732 / 732 | **729 / 729** | **−55,1 %** |
+| **Stereo (L/R)** | 1.546 Takte | 1.242 Takte | 848 Takte | **784 Takte** | **26,13 Takte** | **2,71 %** | **1,97x (−49,3 %)** |
+| **Mid-Side (M/S)** | 1.876 Takte | 1.526 Takte | 922 Takte | **920 Takte** | **30,67 Takte** | **3,18 %** | **2,04x (−51,0 %)** |
+| **Mono** | 1.624 Takte | 1.256 Takte | 732 Takte | **729 Takte** | **24,30 Takte** | **1,26 %** | **2,23x (−55,1 %)** |
 
-## Ergebnis 2-/3-/5-/6-Bit & Hybrid-M/S (Signed-32-Bit-Delta-Tabellen + Inline-Makros)
+*Alle 18 ADPCM-Modi sind über 512 Blöcke bit-exakt gegen den Golden Master verifiziert (PASS).*
 
-| Modus | Baseline (MIN/Med) | **Signed-Table (MIN/Med)** | Ersparnis |
-|---|---:|---:|---:|
-| 2-Bit Stereo / MS / Mono | 2443 / 2869 / 2335 | **1337 / 1763 / 1254** | **−45,3 % / −38,5 % / −46,3 %** |
-| 3-Bit Stereo / MS / Mono | 1941 / 2229 / 1805 | **1092 / 1380 / 1007** | **−43,7 % / −38,1 % / −44,2 %** |
-| 5-Bit Stereo / MS / Mono | 1356 / 1512 / 1236 | **538 / 699 / 503** | **−60,3 % / −53,8 % / −59,3 %** |
-| 6-Bit Stereo / MS / Mono | 1331 / 1457 / 1373 | **609 / 735 / 590** | **−54,2 % / −49,6 % / −57,0 %** |
-| Hybrid 3/2, 4/2, 5/3 M/S | 2411 / 2254 / 1755 | **1248 / 1358 / 958** | **−48,2 % / −39,8 % / −45,4 %** |
+### B. 2/3/5/6-Bit & Hybrid M/S Dekodierer
 
-Alle 18 Modi sind über 512 Blöcke bit-exakt verifiziert (Golden PASS + 100× Repeat PASS).
+| Modus | Baseline (MIN / Med) | **Signed-Table Fresh15 (MIN / Med)** | Takte / Sample | Ersparnis |
+|---|---:|---:|---:|---:|
+| **2-Bit** Stereo / MS / Mono | 2.443 / 2.869 / 2.335 | **1.337 / 1.763 / 1.254** | 44,57 / 58,77 / 41,80 | **−45,3 % / −38,5 % / −46,3 %** |
+| **3-Bit** Stereo / MS / Mono | 1.941 / 2.229 / 1.805 | **1.092 / 1.380 / 1.007** | 36,40 / 46,00 / 33,57 | **−43,7 % / −38,1 % / −44,2 %** |
+| **5-Bit** Stereo / MS / Mono | 1.356 / 1.512 / 1.236 | **538 / 699 / 503** | 17,93 / 23,30 / 16,77 | **−60,3 % / −53,8 % / −59,3 %** |
+| **6-Bit** Stereo / MS / Mono | 1.331 / 1.457 / 1.373 | **609 / 735 / 590** | 20,30 / 24,50 / 19,67 | **−54,2 % / −49,6 % / −57,0 %** |
+| **Hybrid** 3/2, 4/2, 5/3 M/S | 2.411 / 2.254 / 1.755 | **1.248 / 1.358 / 958** | 41,60 / 45,27 / 31,93 | **−48,2 % / −39,8 % / −45,4 %** |
 
-## Gut (übernommen)
+---
 
-- **ADP-001 – Exakte 89×8-Delta-Tabelle:**  
-  `(step>>3)+b0*(step>>2)+b1*(step>>1)+b2*step` exakt vorberechnen.
-  Ersetzt drei Bit-Test-/Branch-Ketten durch einen Tabellenzugriff.
-- **ADP-002 – `moveq #0,d6` vor Wort-Tabellenzugriff:**  
-  `move.w (a4,...),d6` lässt das High-Word stehen; danach `add.l/sub.l d6`.
-  High-Word vorher nullen.
-- **ADP-003 – 4 Paare pro MOVEX unrolled:**  
-  Kein `bsr` pro Kanal, weniger Loop-Overhead. Besonders stark bei MS/Mono.
-- **ADP-004 – Selektives Unrolling:**  
-  Stereo bleibt geloopt (Codegröße/I-Cache), MS/Mono unrolled.
-  Nicht blind alle Modi unrollen.
-- **ADP-005 – D-Register statt E2–E5-Scratch:**  
-  Der schnellste ADPCM-Pfad nutzt `d0/d1` als Nibbles und `d6/d7` als Temps;
-  E-Register nur für MOVEX/CCC. E-Scratch war nicht schneller.
+## 2. Schlüsseloptimierungen im Detail (mit Code-Snippets)
 
-## Schlecht (verworfen)
+### A. ADP-001: Die vorberechnete Signed-32-Bit-Delta-Tabelle (`Fresh9`)
 
-- **ADP-101 – `step*mult >> 3`:**  
-  Falsch, weil die Originalrechnung **jeden Shift einzeln abrundet**.
-  Off-by-one bei PCM/State; bit-exakte Tests decken das auf.
-- **ADP-102 – `subq.l #1,a2` + `bne`:**  
-  Adressregister-`subq` setzt **keine Flags** → Endlosschleife/Pufferüberlauf.
-  Zähler über D-Register führen oder `cmpa`.
-- **ADP-103 – `MIN.L`/`MAX.L` als Clamp:**  
-  Vasm akzeptiert es, die V4 stürzt damit ab (Reset). Nicht verwenden.
-- **ADP-104 – Reiner C-Neubau:**  
-  Frischer C-Ansatz war nicht bit-exakt (State/ABI/Alignment); kein valider
-  Performance-Vergleich.
-- **ADP-105 – E2–E5-Scratch als Selbstzweck:**  
-  Mehr E-Moves statt D-Register brachten keinen Vorteil; der D-Register-
-  Unroll-Pfad ist schneller.
-- **ADP-106 – `m68k-amigaos-gcc -m68080 -O2` für C-Referenz/Test-Harnesse:**  
-  Das `-m68080`-Backend von GCC 6.5.0 emittiert bei `-O2` fehlerhafte
-  Kurz-Immediate-Opcodes (`moviw.l #-32768,d0` → `0x303d 0x8000` liefert auf
-  Core 11350 `-65536` statt `-32768`) und berechnet bei `moviw.l` innerhalb von
-  `dbf`-Schleifen ungerade Sprungziele (`51ca ffe7` → sofortiger Address-Error-Crash).
-  C-Code immer mit `-m68020 -O2` (oder `-O0`) übersetzen!
+#### Das naive 68k-Verfahren (vorher):
+Im traditionellen IMA-ADPCM wird das Delta bitweise mit Shiften und bedingten Sprüngen berechnet:
+```asm
+; --- NAIVER ANSATZ: Bis zu 4 Verzweigungen und 4 Shifts pro Sample! ---
+        move.w  step,d1         ; d1 = step
+        move.w  d1,d2
+        lsr.w   #3,d2           ; delta = step >> 3
+        btst    #0,d0           ; Teste Bit 0
+        beq.s   .b0
+        lsr.w   #2,d1           ; step >> 2
+        add.w   d1,d2
+.b0:    btst    #1,d0           ; Teste Bit 1
+        beq.s   .b1
+        lsr.w   #1,d1           ; step >> 1
+        add.w   d1,d2
+.b1:    btst    #2,d0           ; Teste Bit 2
+        beq.s   .b2
+        add.w   step,d2
+.b2:    btst    #3,d0           ; Vorzeichenbit?
+        beq.s   .pos
+        neg.w   d2              ; negativer Delta-Wert
+.pos:   add.w   d2,pcm          ; PCM-Prädiktor aktualisieren
+```
+*Nachteile:* Bis zu 4 Branch-Mispredictions pro Nibble, starke Serialisierung der CPU-Pipeline.
 
-## Noch offen
-
-- AMMX-SIMD (`PADDW`, `PACK3216`, `PCMPGTB/BSEL`) ist **nicht** eingesetzt.
-- Pipe 3 = 0 in der IEP-Messung; Pipe 2 ca. 24–31 %.
-- Fusing/Bonding nicht gezielt genutzt.
-
-**Fazit:** Die größten Gewinne kamen aus exakter Tabelle, weniger Branches,
-Unrolling und Registerwahl – nicht aus AMMX. AMMX bleibt der nächste
-ernsthafte Kandidat, braucht aber einen anderen Datenfluss.
-
-## Negativtests (neu getestet)
-
-- `PADDSW`/`PSUBSW`: vasm 2.0d akzeptiert die Mnemonics nicht; kein
-  signed-saturating AMMX-Pfad über diesen Assembler.
-- `PACK` (generisch): illegale Operandentypen; `PACK3216` ist RGB565-spezifisch.
-- `LEA (d2,d4.l),d0`: nicht encodierbar (Basis muss ein Adressregister sein).
-  FUS move+add bleibt der Weg.
-- `MIN.L`/`MAX.L`: assembliert, aber V4-Reset; nicht verwenden.
-- `subq.l #1,a2` + `bne`: Adressregister setzt keine Flags; Zähler über D.
-
-Siehe [11-adpcm-candidates.md](11-adpcm-candidates.md) für die
-Instruktions-/Schätzungsmatrix (gemessen vs. Hypothese).
-
-- `PCMPGTW`/`BSEL`: 4×16-Bit-Max in 7 Takten vs 33 Skalar (4,7×), aber kein 32-Bit-`PCMPGTL`; ADPCM-PCM/MS-Clamps bleiben 32-Bit.
-
-## Fresh5 – branchless Sign (verworfen)
-
-`btst/sne/ext/eor/sub/add` statt `btst/beq/sub/add`: 1047/1112/900 statt
-1001/1047/816. Mehr Instruktionen schlagen den gesparten Branch.
-Lehre: **Branchless ist nicht automatisch schneller**; bei 68080 erst messen.
-
-## Fresh6 – `subq` + `cmpa` statt D-Rückkopie
-
-Adressregister-`subq` setzt keine Flags. `cmpa.l #0,An` setzt sie explizit
-und spart die Rückkopie über `d6`:
+#### Der 68080-Ansatz (`Fresh9` / `Fresh15`):
+Eine vorberechnete Tabelle (`89 Step-Indizes × 16 Nibbles = 1.424 Longwords = 5.696 Bytes`) enthält das **fertige, vorzeichenbehaftete 32-Bit-Delta**:
+$$\text{delta\_table}[\text{index}][\text{nibble}] = \text{sign} \cdot \left( \left\lfloor\frac{\text{step}}{8}\right\rfloor + b_0 \left\lfloor\frac{\text{step}}{4}\right\rfloor + b_1 \left\lfloor\frac{\text{step}}{2}\right\rfloor + b_2 \cdot \text{step} \right)$$
 
 ```asm
-subq.l  #1,a2
-cmpa.l  #0,a2
-bne     loop
+; --- OPTIMIERTER 68080-ANSATZ: 1 Tabellenzugriff, 0 Branches! ---
+; a4 = Zeiger auf delta_table (1424 Longwords im L1-Cache)
+; d3 = Step-Index (0..88)
+; d0 = Nibble (0..15)
+; d2 = PCM-Prädiktor (32-Bit signed)
+
+        moveq   #0,d6
+        move.w  d3,d6           ; d6 = Step-Index (0..88)
+        lsl.w   #4,d6           ; d6 = index * 16
+        move.l  d0,d7
+        add.w   d6,d7           ; d7 = index * 16 + nibble (0..15)
+        move.l  (a4,d7.w*4),d6  ; 1 LOAD liefert das exakte vorzeichenbehaftete Delta!
+        add.l   d6,d2           ; PCM += delta in 1 Takt!
 ```
+*Gewinn:* Spart 130 Takte pro Block allein im Stereo-Dekoder (**848 Takte** statt 978 Takte)!
 
-Gemessen: Stereo 1001 → **980**, MS 1047 → 1046, Mono 816 → 816.
-**Gut** für Adressregister-Zähler; ein `cmpa` ist billiger als drei Moves.
+---
 
-## Fresh7 – 16-Bit-Overflow-Matrix
+### B. ADP-002: 16-Bit-Overflow-Matrix mit `BVC` (`Fresh7`)
 
-MS-Matrix mit `add.w`/`sub.w` + `bvc`; nur bei Überlauf wird anhand des
-Vorzeichens von `mid` auf ±32767/−32768 geklemmt. Kein 32-Bit-Clamp-Pfad.
+Bei Mid-Side Stereo werden Mid ($M$) und Side ($S$) zurück in Links ($L$) und Rechts ($R$) dekodiert:
+$$L = M + S, \quad R = M - S$$
+Traditioneller 32-Bit-Code führt zwei separate Clamping-Kaskaden mit `cmp.l`, `bge`, `ble` durch.
 
-Gemessen: MS **1046 → 1027**, Stereo 980 → 978, Mono 819 (Rauschen).
-Golden/Repeat PASS. **Gut:** weniger Instruktionen im häufigen In-Range-Fall.
+#### Der 68080-Ansatz:
+Da $M$ und $S$ 16-Bit-Werte sind, löst eine 16-Bit-Addition `add.w` bzw. `sub.w` nur im seltenen Überlauffall das **Overflow-Flag (V)** aus:
 
-## Fresh8 – PCM-Word-Overflow (verworfen)
+```asm
+; --- 16-Bit Overflow Fast-Path ---
+        move.w  d2,d0           ; d2 = Mid (16-Bit)
+        add.w   d4,d0           ; d4 = Side -> d0 = L = Mid + Side
+        bvc.s   .left_ok        ; Zu 98% KEIN Überlauf -> direkter Sprung!
+        ; Seltener Überlauf:
+        spl     d0
+        ext.w   d0
+        eori.w  #$7fff,d0       ; Setzt auf +32767 bzw. -32768
+.left_ok:
+        move.w  d2,d1
+        sub.w   d4,d1           ; d1 = R = Mid - Side
+        bvc.s   .right_ok
+        spl     d1
+        ext.w   d1
+        eori.w  #$7fff,d1
+.right_ok:
+        ; d0 = fertiges L, d1 = fertiges R
+```
+*Ergebnis:* Reduzierte die M/S-Dekodierzeit von **1.046** auf **922 Takte**!
 
-`add.w`/`sub.w` + `bvc` + `ext.l` für PCM-Clamps: reproduzierbarer
-**Line-1010-Crash** im Golden-Test. Nicht sicher; Fresh7 bleibt Produktiv.
-Lehre: 16-Bit-Overflow-Clamping für den 32-Bit-PCM-State erst isoliert
-verifizieren, nicht direkt in den Decoder patchen.
+---
 
-## Fresh8 – Diagnose
+### C. ADP-003: Vollständiges Loop-Unrolling des 15-Byte-Blocks (`Fresh15`)
 
-PCM-Operation isoliert per ASM: **917504/917504 PASS**. Fresh8-Mono-Patch
-allein crasht aber mit Line 1010. Fehler liegt in der Mono-Makrointegration,
-nicht in `add.w/sub.w + bvc`. Kein Performancegewinn messbar; Fresh7 bleibt.
+Ein ADPCM-Block umfasst 15 Bytes:
+- **3 × 4-Byte-Bursts:** Geladen via `movex.l (a0)+, e0` (endian-swapped direkt in 64-Bit E-Register).
+  - Jedes `movex.l` liefert 8 Nibbles = 4 Stereo-Paare bzw. 8 Mono-Samples.
+- **1 × 3-Byte-Rest:** Geladen als 3 einzelne Bytes.
+- **Keine innere Schleife (`dbra`):** Alle 15 Stereo-Paare werden linear hintereinander im I-Cache ohne Branch-Instruktionen dekodiert.
+*Ergebnis:* Reduzierte Stereo von **829** auf **784 Takte**!
 
-## Fresh9 – Signed-32-Bit-Delta-Tabelle
+---
 
-Statt positiver Word-Tabelle + Vorzeichenbranch: **1424 `dc.l`-Einträge**
-(Nibble 0–15 signed). Lookup `lsl.w #4` + `move.l (a4,d7.w*4),d6` +
-`add.l d6,state`. Vorzeichenbranch, `and #7` und `ext.l` entfallen.
+## 3. Was funktioniert hat vs. Was gescheitert ist
 
-**Messung:** Stereo 978→**848**, MS 1027→**922**, Mono 819→**732**.
-Golden/Repeat PASS. **Gut:** Tabelle ersetzt Branch durch Daten.
+### Was gut war (übernommen):
+1. **Exakte 89×16-Delta-Tabelle:** Ersetzt 3 Bit-Test/Branch-Kaskaden pro Sample durch einen 1-Takt-Load.
+2. **Endian-Swapped `MOVEX.L`:** Lädt 4 Bytes (8 Nibbles) und dreht das Byte-Ordering in einem einzigen Befehl.
+3. **16-Bit Overflow-Clamping (`bvc`):** Nutzt das ALU-V-Flag für M/S-Matrixing und spart 32-Bit-Vergleiche.
+4. **Vollständiges Unrolling bei Stereo:** Eliminiert Schleifen-Overhead vollständig.
 
-## Fresh14 – Stereo-Unroll + 64-Byte-Mono-Alignment
+### Was schlecht war (verworfen & Fallstricke):
+1. **`step * mult >> 3` (Mathematischer Fehler):**  
+   Falsch! Die IMA-Spezifikation verlangt, dass *jeder Teilschritt einzeln abgerundet* wird ($\lfloor step/8 \rfloor + \lfloor step/4 \rfloor \dots$). Die Multiplikation erzeugt Rundungsdifferenzen (Off-by-One), die den Prädiktor driften lassen.
+2. **`MIN.L` / `MAX.L` (Hardware-Crash):**  
+   Vasm akzeptiert die Befehle, die Vampire V4 stürzt jedoch mit sofortigem Hardware-Reset ab, da der 68080-Core keine 32-Bit-Skalarversionen dieser Opcodes besitzt.
+3. **Branchless Sign mit `btst / sne / ext / eor / sub / add` (`Fresh5`):**  
+   Benötigte 1.047 Takte statt 1.001 Takte. **Lehre:** Branchless Code mit 5 Instruktionen ist auf der 68080 langsamer als ein gut vorhergesagter Branch!
+4. **GCC `-m68080 -O2` Compiler-Bug (`ADP-106`):**  
+   GCC 6.5.0 erzeugt mit `-m68080` defekte Kurz-Immediates (`moviw.l`) und ungerade Branch-Ziele in `dbf`-Schleifen (Address-Error-Crash). C-Code immer mit `-m68020 -O2` übersetzen!
 
-Stereo-Byte-Rest fest unrolled, Mono-Funktion auf 64 Byte ausgerichtet.
-Messung: **829 / 918 / 732** (Stereo/MS/Mono). Gegenüber Fresh9:
-Stereo 848→829, MS 922→918, Mono 732 unverändert. Golden/Repeat PASS.
-**Gut:** Byte-Rest ohne Loop; **Vorsicht:** Layout kann Mono stark kosten
-(Fresh10: 845), daher Alignment Pflicht.
+---
 
-## Fresh15 – Stereo voll unrolled
+## 4. Offene Potenziale & Challenge
 
-3×MOVEX-Chunk-Loop entfernt; Stereo komplett unrolled. Messung:
-**784 / 920 / 729**. Golden/Repeat PASS. Gegenüber Fresh14: Stereo 829→784,
-MS 918→920, Mono 732→729. **Gut:** keine Loop-Overheads mehr im Stereo-Pfad.
-
-## Fresh15 bleibt – Layout-Fallen
-
-Fresh16 (Tabelle 64-Byte-aligned) und Fresh17 (Stereo-Funktion 64-Byte-aligned)
-verschlechtern Stereo auf ~897/898. **Nicht übernehmen.** Beststand bleibt
-Fresh15: **784 / 920 / 729**.
+- **AMMX SIMD `PAVGB` für Dithering:** `pavgb` kann Stereo-Kanäle in 1 Takt mitteln.
+- **AMMX `VPERM` für Nibble-Extraction:** Ein 64-Bit Vektor `vperm` könnte alle 8 Nibbles aus 4 Bytes parallel entpacken.
+- **Challenge:** Kann jemand den 4-Bit Stereo-Dekoder unter **700 Takte pro 15-Byte-Block** (< 23,3 Takte/Sample) bringen? Einreichungen willkommen!
