@@ -52,6 +52,79 @@ void idct1d_float_c(const float *src, float *dst) {
     }
 }
 
+/* Fast 1D Float DCT (Loeffler) */
+void dct1d_float_fast_c(const float *src, float *dst) {
+    float s0 = src[0] + src[7];
+    float s1 = src[1] + src[6];
+    float s2 = src[2] + src[5];
+    float s3 = src[3] + src[4];
+
+    float d0 = src[0] - src[7];
+    float d1 = src[1] - src[6];
+    float d2 = src[2] - src[5];
+    float d3 = src[3] - src[4];
+
+    float t0 = s0 + s3;
+    float t1 = s1 + s2;
+    float t2 = s1 - s2;
+    float t3 = s0 - s3;
+
+    const float c4 = 0.35355339059327376f; /* 1/sqrt(8) */
+    const float c2 = 0.46193976625564337f; /* 0.5 * cos(pi/8) */
+    const float s2_coeff = 0.1913417161825449f; /* 0.5 * sin(pi/8) */
+
+    const float c1 = 0.4903926402016152f;  /* 0.5 * cos(1*pi/16) */
+    const float c3 = 0.4157348061512726f;  /* 0.5 * cos(3*pi/16) */
+    const float c5 = 0.27778511650980114f; /* 0.5 * cos(5*pi/16) */
+    const float c7 = 0.09754516100806413f; /* 0.5 * cos(7*pi/16) */
+
+    dst[0] = c4 * (t0 + t1);
+    dst[4] = c4 * (t0 - t1);
+    dst[2] = c2 * t3 + s2_coeff * t2;
+    dst[6] = s2_coeff * t3 - c2 * t2;
+
+    dst[1] = d0 * c1 + d1 * c3 + d2 * c5 + d3 * c7;
+    dst[3] = d0 * c3 - d1 * c7 - d2 * c1 - d3 * c5;
+    dst[5] = d0 * c5 - d1 * c1 + d2 * c7 + d3 * c3;
+    dst[7] = d0 * c7 - d1 * c5 + d2 * c3 - d3 * c1;
+}
+
+/* Fast 1D Float IDCT (Loeffler) */
+void idct1d_float_fast_c(const float *src, float *dst) {
+    const float c4 = 0.35355339059327376f;
+    const float c2 = 0.46193976625564337f;
+    const float s2_coeff = 0.1913417161825449f;
+
+    const float c1 = 0.4903926402016152f;
+    const float c3 = 0.4157348061512726f;
+    const float c5 = 0.27778511650980114f;
+    const float c7 = 0.09754516100806413f;
+
+    float e0 = c4 * (src[0] + src[4]);
+    float e1 = c4 * (src[0] - src[4]);
+    float e2 = c2 * src[2] + s2_coeff * src[6];
+    float e3 = s2_coeff * src[2] - c2 * src[6];
+
+    float s0 = e0 + e2;
+    float s1 = e1 + e3;
+    float s2 = e1 - e3;
+    float s3 = e0 - e2;
+
+    float d0 = src[1] * c1 + src[3] * c3 + src[5] * c5 + src[7] * c7;
+    float d1 = src[1] * c3 - src[3] * c7 - src[5] * c1 - src[7] * c5;
+    float d2 = src[1] * c5 - src[3] * c1 + src[5] * c7 + src[7] * c3;
+    float d3 = src[1] * c7 - src[3] * c5 + src[5] * c3 - src[7] * c1;
+
+    dst[0] = s0 + d0;
+    dst[7] = s0 - d0;
+    dst[1] = s1 + d1;
+    dst[6] = s1 - d1;
+    dst[2] = s2 + d2;
+    dst[5] = s2 - d2;
+    dst[3] = s3 + d3;
+    dst[4] = s3 - d3;
+}
+
 /* 1D 16-bit Fixed-Point DCT (Q1.15) */
 void dct1d_fixed_c(const int16_t *src, int16_t *dst) {
     for (int k = 0; k < DCT_SIZE; k++) {

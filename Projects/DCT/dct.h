@@ -12,6 +12,10 @@ void dct1d_float_c(const float *src, float *dst);
 void idct1d_float_c(const float *src, float *dst);
 void dct1d_float_asm(const float *src, float *dst);
 void idct1d_float_asm(const float *src, float *dst);
+void dct1d_float_fast_c(const float *src, float *dst);
+void idct1d_float_fast_c(const float *src, float *dst);
+void dct1d_float_fast_asm(const float *src, float *dst);
+void idct1d_float_fast_asm(const float *src, float *dst);
 
 /* 1D 16-bit Fixed-Point DCT / IDCT (8 points, Q1.15) */
 void dct1d_fixed_c(const int16_t *src, int16_t *dst);
@@ -20,12 +24,16 @@ void dct1d_fixed_scalar_asm(const int16_t *src, int16_t *dst);
 void idct1d_fixed_scalar_asm(const int16_t *src, int16_t *dst);
 void dct1d_fixed_ammx(const int16_t *src, int16_t *dst);
 void idct1d_fixed_ammx(const int16_t *src, int16_t *dst);
+void dct1d_fixed_fast_ammx(const int16_t *src, int16_t *dst);
+void idct1d_fixed_fast_ammx(const int16_t *src, int16_t *dst);
 
 /* 2D 8x8 Float DCT / IDCT */
 void dct2d_8x8_float_c(const float *src, float *dst);
 void idct2d_8x8_float_c(const float *src, float *dst);
 void dct2d_8x8_float_asm(const float *src, float *dst);
 void idct2d_8x8_float_asm(const float *src, float *dst);
+void dct2d_8x8_float_fast_asm(const float *src, float *dst);
+void idct2d_8x8_float_fast_asm(const float *src, float *dst);
 
 /* 2D 8x8 16-bit Fixed-Point DCT / IDCT */
 void dct2d_8x8_fixed_c(const int16_t *src, int16_t *dst);
@@ -34,6 +42,8 @@ void dct2d_8x8_fixed_scalar_asm(const int16_t *src, int16_t *dst);
 void idct2d_8x8_fixed_scalar_asm(const int16_t *src, int16_t *dst);
 void dct2d_8x8_fixed_ammx(const int16_t *src, int16_t *dst);
 void idct2d_8x8_fixed_ammx(const int16_t *src, int16_t *dst);
+void dct2d_8x8_fixed_fast_ammx(const int16_t *src, int16_t *dst);
+void idct2d_8x8_fixed_fast_ammx(const int16_t *src, int16_t *dst);
 
 /* Hardware cycle counter */
 uint32_t get_ccc(void);

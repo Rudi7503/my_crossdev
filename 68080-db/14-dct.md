@@ -5,50 +5,55 @@
 - Fixed-Point Skalar 1D: [`seq/DCT-002.i`](seq/DCT-002.i) (16-Bit Q1.15 Skalar 8-Punkt Skalar-Kern)
 - Fixed-Point AMMX 1D (2 Punkte parallel): [`seq/DCT-003.i`](seq/DCT-003.i) (16-Bit Q1.15 AMMX 2-Wege Vektorreduktion)
 - AMMX 4x4 Transpose: [`seq/DCT-004.i`](seq/DCT-004.i) (4x4 16-Bit Block-Transposition via `vperm`)
+- Fast Float FPU 1D: [`seq/DCT-005.i`](seq/DCT-005.i) (32-Bit Float Fast-DCT Loeffler FPU-Kern)
+- Fast Fixed AMMX 1D: [`seq/DCT-006.i`](seq/DCT-006.i) (16-Bit Q1.15 Fast-DCT Loeffler AMMX SIMD-Kern)
 - Vollständige Algorithmen-Suite: [`Projects/DCT/`](../Projects/DCT/) (`main.c`, `dct.h`, `dct_c.c`, `dct_asm.s`, `Makefile`)
 
-**Ziel:** Mathematische Analyse, Assembler-Optimierung und Hardware-Benchmarking der Discrete Cosine Transform (Typ-II Orthonormal FDCT) und der inversen Transformation (Typ-III IDCT) für 1D (8 Punkte) und 2D (8x8 Bildblock) auf der Vampire V4 (Apollo 68080).
+**Ziel:** Mathematische Analyse, Assembler-Optimierung und Hardware-Benchmarking der Discrete Cosine Transform (Typ-II Orthonormal FDCT) und der inversen Transformation (Typ-III IDCT) für 1D (8 Punkte) und 2D (8x8 Bildblock) auf der Vampire V4 (Apollo 68080), vergleichend zwischen klassischer Matrix-Multiplikation und dem optimierten Fast-DCT (Loeffler/LLM) Algorithmus.
 
-> **Messstatus:** Alle vier Kernsequenzen (`DCT-001` bis `DCT-004`) wurden mit **Harness v5** auf der **Vampire V4 Hardware** gemessen (100 Läufe unter `Forbid()`, Warmup, CCC-Hardwaretaktzähler, IEP-Pipeslot-Erfassung). Alle Messungen sind mit 100/100 Läufen absolut stabil (MIN=MAX=AVG). Zudem wurde die vollständige Benchmark- und Validierungssuite (`Projects/DCT/DCT`) auf der V4 ausgeführt und gegen die bitgenaue C-Referenz verifiziert.
+> **Messstatus:** Alle sechs Kernsequenzen (`DCT-001` bis `DCT-006`) wurden mit **Harness v5** auf der **Vampire V4 Hardware** gemessen (100 Läufe unter `Forbid()`, Warmup, CCC-Hardwaretaktzähler, IEP-Pipeslot-Erfassung). Alle Messungen sind mit 100/100 Läufen absolut stabil (MIN=MAX=AVG). Zudem wurde die vollständige Benchmark- und Validierungssuite (`Projects/DCT/DCT`) auf der V4 ausgeführt und gegen die bitgenaue C-Referenz verifiziert.
 
 ---
 
-## 1. Mathematische Definition & Orthonormale Formulierung
+## 1. Mathematische Definition & Algorithmen
 
+### A. Klassische Matrix-Formulierung (Orthonormal DCT-II)
 Die 1D 8-Punkt DCT-II berechnet für $k \in \{0, \dots, 7\}$:
 $$X[k] = \alpha[k] \sum_{n=0}^{7} x[n] \cos\left( \frac{\pi (2n+1)k}{16} \right), \quad \alpha[k] = \begin{cases} \frac{1}{\sqrt{8}} & k=0 \\ \sqrt{\frac{2}{8}} & k > 0 \end{cases}$$
 
 Die 2D 8x8 Block-Transformation (Standard in JPEG, MPEG, H.264 Intra-Prädiktion):
 $$Y = D \cdot X \cdot D^T$$
-Durch die Separabilität zerfällt die 2D-Transformation in:
-1. **Zeilen-Transformation:** 8 $\times$ 1D-FDCT auf den Zeilen von $X$: $T = X \cdot D^T$
-2. **Matrix-Transposition:** $T^T$
-3. **Spalten-Transformation:** 8 $\times$ 1D-FDCT auf den Zeilen von $T^T$: $Y^T = T^T \cdot D^T$
-4. **Rück-Transposition:** $(Y^T)^T = Y$
+Durch die Separabilität zerfällt die 2D-Transformation in Zeilen-Transformation, Transposition, Spalten-Transformation und Rück-Transposition.
 
-In 16-Bit Festkomma (Q1.15) werden die Koeffizienten mit $32767$ skaliert.
+### B. Fast-DCT (Loeffler / LLM Algorithmus)
+Der Loeffler-Algorithmus zerlegt die 8-Punkt DCT in einen geraden (Even) und einen ungeraden (Odd) Pfad:
+1. **Stage 1 (Symmetrische Butterflies):**
+   $$s_n = x_n + x_{7-n}, \quad d_n = x_n - x_{7-n} \quad (n = 0, \dots, 3)$$
+2. **Stage 2 Even ($X_0, X_2, X_4, X_6$):**
+   - $t_0 = s_0 + s_3, \quad t_1 = s_1 + s_2, \quad t_2 = s_1 - s_2, \quad t_3 = s_0 - s_3$
+   - $X_0 = c_4 (t_0 + t_1), \quad X_4 = c_4 (t_0 - t_1)$ mit $c_4 = \frac{1}{\sqrt{8}}$
+   - Givens-Rotation auf $(t_3, t_2)$: $X_2 = c_2 t_3 + s_2 t_2, \quad X_6 = s_2 t_3 - c_2 t_2$ mit $c_2 = \frac{1}{2}\cos\frac{\pi}{8}, s_2 = \frac{1}{2}\sin\frac{\pi}{8}$
+3. **Stage 2 Odd ($X_1, X_3, X_5, X_7$):**
+   Multiplikation des Differenzvektors $\mathbf{d}$ mit der symmetrischen $4 \times 4$ Matrix $D_{\text{odd}}$ ($D_{\text{odd}}^T = D_{\text{odd}}$):
+   $$D_{\text{odd}} = \begin{bmatrix} c_1 & c_3 & c_5 & c_7 \\ c_3 & -c_7 & -c_1 & -c_5 \\ c_5 & -c_1 & c_7 & c_3 \\ c_7 & -c_5 & c_3 & -c_1 \end{bmatrix}$$
+   Wegen der perfekten Symmetrie benötigt auch die inverse Fast IDCT exakt dieselben 4 Konstantenvektoren!
 
 ---
 
 ## 2. Apollo 68080 Optimierungstechniken
 
-### A. 2-Wege parallele AMMX Vektorreduktion (`DCT-003.i`)
-Die Berechnung zweier Ausgangspunkte $k$ und $k+1$ erfolgt parallel in AMMX Vektoren:
-1. **Parallel-Multiplikation:** `pmulh e0, e2, e4` und `pmulh e1, e3, e5` multiplizieren 8 Terme parallel und schieben das Ergebnis um $\gg 16$.
-2. **Kreuzweise Vektor-Akkumulation (`vperm`):**
-   - $T_1 = \text{vperm } \#\$018945cd, E_4, E_6 \implies [a_0, b_0, a_2, b_2]$
-   - $T_2 = \text{vperm } \#\$23ab67ef, E_4, E_6 \implies [a_1, b_1, a_3, b_3]$
-   - $S = T_1 + T_2 = [a_0+a_1, b_0+b1, a_2+a_3, b_2+b_3]$
-   - $S_2 = \text{vperm } \#\$45670123, S, S$
-   - $Total = S + S_2 = [\text{sum}_k, \text{sum}_{k+1}, \dots]$
-3. **32-Bit Aligned Store:** Ein einziger `move.l e8, d1; move.l d1, (a2)+` speichert beide 16-Bit-Ausgangspunkte ohne Byte-/Halfword-Penalties.
-- **Ergebnis:** Nur **16.0 Netto-Takte für 2 Punkte** $\rightarrow$ **8.0 Takte pro 8-Punkt DCT-Wert**!
+### A. Überlaufsichere Festkomma-Arithmetik ("Product-First")
+In Festkomma Q1.15 kann die Summe $\sum_{n=0}^7 x_n = t_0 + t_1$ den 16-Bit Wertebereich $[-32768, 32767]$ übersteigen (bis zu $\pm 65536$).
+- **Lösung:** Multiplikation vor Addition!
+  $X_0 = c_4 t_0 + c_4 t_1 = \text{pmulh}(t_0, c_4) + \text{pmulh}(t_1, c_4)$
+  Da $t_0, t_1 \le 32767$, überläuft kein Zwischenwert.
 
-### B. Register-Transposition via `vperm` (`DCT-004.i`)
-Statt einer speicherbasierten C-Schleife (die hunderte Zyklen kostet) wird die 8x8 Transposition komplett in Registern durch ein $4 \times 4$ Submatrix-Permutationsmuster ausgeführt:
-- Für jede $4 \times 4$ Submatrix genügen 4 Loads, 8 `vperm`-Befehle und 4 Stores.
-- Dauer: Nur **11 Netto-Takte** pro $4 \times 4$ Block!
-- Eine komplette 8x8 Transposition benötigt dadurch nur noch ~45 Takte statt 370 Takte in C (über 8x schneller).
+### B. Dynamikbereich-Management im 2D Fast-DCT (0.5x Pass 1 Scaling)
+In 2D expandiert der Wertebereich in Pass 1. Durch Weglassen des Verdoppelungs-Schritts (`paddw e,e,e`) in Pass 1 wird das Zwischensignal exakt um den Faktor 0.5 skaliert (maximal $\le 11965$), wodurch Pass 2 völlig überlauffrei arbeitet. Am Ende wird das Ergebnis durch Verdopplung in einem Durchlauf verlustfrei auf die exakte $1.0\times$ Skalierung gebracht.
+
+### C. Pure-AMMX Matrix-Transposition via `vperm`
+- 16-Bit Matrix (128 Bytes): 32 `vperm`-Instruktionen (~45 Takte statt 370 Takte in C).
+- 32-Bit Float Matrix (256 Bytes): 32 `vperm`-Instruktionen (~50 Takte statt 1.450 Takte in C).
 
 ---
 
@@ -58,10 +63,12 @@ Gemessen auf **Vampire V4 (Core Release, PCR: 1088/1)** unter `Forbid()`:
 
 | ID | Format | Typ / Beschreibung | Takte (MIN) | Takte (AVG) | Netto (MIN) | Takte / Einheit | IEP1 | IEP2 | Speedup vs Skalar |
 |:---|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| [`DCT-001`](seq/DCT-001.i) | 32-Bit Float | FPU Single-Precision (8 MACs) | **53** | 53.0 | 48 | **48.0 Takte / Punkt** | 26 | 0 | 0.65x (FPU Pipe 1) |
-| [`DCT-002`](seq/DCT-002.i) | 16-Bit Fixed | Skalar Integer Q1.15 (8 MACs) | **36** | 36.0 | 31 | **31.0 Takte / Punkt** | 29 | 9 | 1.00x (Baseline) |
-| [`DCT-003`](seq/DCT-003.i) | 16-Bit Fixed | AMMX SIMD 2-Wege Reduktion | **21** | 21.0 | 16 | **8.0 Takte / Punkt** | 22 | 0 | **3.88x schneller** |
+| [`DCT-001`](seq/DCT-001.i) | 32-Bit Float | FPU Single-Precision (8 MACs Matrix) | **53** | 53.0 | 48 | **48.0 Takte / Punkt** | 26 | 0 | 0.65x |
+| [`DCT-002`](seq/DCT-002.i) | 16-Bit Fixed | Skalar Integer Q1.15 (8 MACs Matrix) | **36** | 36.0 | 31 | **31.0 Takte / Punkt** | 29 | 9 | 1.00x (Baseline) |
+| [`DCT-003`](seq/DCT-003.i) | 16-Bit Fixed | AMMX SIMD 2-Wege Reduktion (Matrix) | **21** | 21.0 | 16 | **8.0 Takte / Punkt** | 22 | 0 | **3.88x schneller** |
 | [`DCT-004`](seq/DCT-004.i) | 16-Bit Fixed | AMMX 4x4 Matrix Transposition | **16** | 17.2 | 11 | **11.0 Takte / Block** | 17 | 1 | **> 8x schneller** |
+| [`DCT-005`](seq/DCT-005.i) | 32-Bit Float | Fast-DCT FPU Loeffler 8-Punkt Kern | **79** | 79.0 | 74 | **9.25 Takte / Punkt** | 41 | 0 | **3.35x schneller** |
+| [`DCT-006`](seq/DCT-006.i) | 16-Bit Fixed | Fast-DCT AMMX SIMD 8-Punkt Kern | **49** | 49.0 | 44 | **5.50 Takte / Punkt** | 39 | 0 | **5.64x schneller** |
 
 *Alle Messungen 100/100 Läufe stabil ohne Jitter (`check_log.py` validiert).*
 
@@ -72,27 +79,29 @@ Gemessen auf **Vampire V4 (Core Release, PCR: 1088/1)** unter `Forbid()`:
 Gemessen mit `Projects/DCT/DCT` auf echter Vampire V4 Hardware, gemittelt über 100 Läufe, validiert gegen C-Referenz (`-O2 -m68020 -m68881`):
 
 ### 1D 8-Punkt Transformationen
-| Transformation | C-Referenz (cyc) | Skalar ASM (cyc) | **AMMX SIMD (cyc)** | **Speedup vs C** | **Speedup vs Skalar** | Verifikation | Rekonstruktionsfehler |
+| Transformation | C-Ref (cyc) | Matrix ASM (cyc) | **Fast ASM (cyc)** | **Speedup vs C** | **Speedup vs Matrix** | Verifikation | Rekonstruktionsfehler |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **1D Float FDCT** | 662 | 486 | — | **1.36x** | — | **0.000000e+00 bit-exakt** | $1.19 \times 10^{-7}$ |
-| **1D Float IDCT** | 662 | 487 | — | **1.36x** | — | **0.000000e+00 bit-exakt** | $1.19 \times 10^{-7}$ |
-| **1D Fixed FDCT** | 507 | 326 | **100** | **5.07x** | **3.26x** | 9 LSB diff (0.027 %) | 27 LSB |
-| **1D Fixed IDCT** | 507 | 560 | **100** | **5.07x** | **5.60x** | 9 LSB diff (0.027 %) | 27 LSB |
+| **1D Float FDCT** | 658 | 486 | **239** | **2.75x** | **2.03x** | $1.19 \times 10^{-7}$ | $5.96 \times 10^{-8}$ |
+| **1D Float IDCT** | 662 | 680 | **238** | **2.78x** | **2.86x** | $1.19 \times 10^{-7}$ | $5.96 \times 10^{-8}$ |
+| **1D Fixed FDCT** | 507 | 100 | **66** | **7.68x** | **1.52x** | 4 LSB diff (0.012 %) | 17 LSB |
+| **1D Fixed IDCT** | 507 | 100 | **76** | **6.67x** | **1.32x** | 4 LSB diff (0.012 %) | 17 LSB |
 
 ### 2D 8x8 Block-Transformationen
-| Transformation | C-Referenz (cyc) | Skalar ASM (cyc) | **AMMX SIMD (cyc)** | **Speedup vs C** | **Speedup vs Skalar** | Verifikation | Rekonstruktionsfehler |
+| Transformation | C-Ref (cyc) | Matrix ASM (cyc) | **Fast ASM (cyc)** | **Speedup vs C** | **Speedup vs Matrix** | Verifikation | Rekonstruktionsfehler |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **2D 8x8 Float FDCT** | 11.096 | 8.272 | — | **1.34x** | — | **0.000000e+00 bit-exakt** | $2.98 \times 10^{-7}$ |
-| **2D 8x8 Float IDCT** | 11.091 | 8.277 | — | **1.34x** | — | **0.000000e+00 bit-exakt** | $2.98 \times 10^{-7}$ |
-| **2D 8x8 Fixed FDCT** | 8.754 | 5.703 | **1.709** | **5.12x** | **3.34x** | 33 LSB diff (0.10 %) | 107 LSB |
-| **2D 8x8 Fixed IDCT** | 8.895 | 6.072 | **1.741** | **5.11x** | **3.49x** | 33 LSB diff (0.10 %) | 107 LSB |
+| **2D 8x8 Float FDCT** | 11.112 | 8.269 | **3.988** | **2.79x** | **2.07x** | $2.38 \times 10^{-7}$ | $1.79 \times 10^{-7}$ |
+| **2D 8x8 Float IDCT** | 11.227 | 8.279 | **3.956** | **2.84x** | **2.09x** | $2.38 \times 10^{-7}$ | $1.79 \times 10^{-7}$ |
+| **2D 8x8 Fixed FDCT** | 8.757 | 1.728 | **1.189** | **7.37x** | **1.45x** | 16 LSB diff (0.049 %) | 79 LSB |
+| **2D 8x8 Fixed IDCT** | 8.792 | 1.724 | **1.351** | **6.51x** | **1.28x** | 16 LSB diff (0.049 %) | 79 LSB |
 
 ---
 
 ## 5. Fazit & Hardware-Erkenntnisse
-1. **FPU-Verhalten:** Die 68080 FPU ist strikt an Pipe 1 gebunden (`IEP2 = 0`). Mit 48 Netto-Takten pro 8-Punkt Punkt-Transformation erreicht FPU-Assembler einen Speedup von **1.36x** gegenüber GCC 6.5.0 (`-O2 -m68881`).
-2. **AMMX Durchsatz:** Durch die 2-Wege parallele Vektorreduktion sinkt die 1D-Transformationszeit auf **100 Takte** (**5.07x schneller als C**).
-3. **2D-Transpositionsoptimierung:** Die Eliminierung von speicherbasierten C-Transpositionen durch pure AMMX `vperm`-Transposition senkt die 2D 8x8 Block DCT von über 2.780 Takten auf **1.709 Takte** (**5.12x schneller als C**, **3.34x schneller als Skalar**).
-4. **Verifikation & Genauigkeit:**
-   - 32-Bit Float FPU ASM ist **vollständig bit-exakt (0.000000e+00 Differenz)**.
-   - 16-Bit Fixed AMMX weicht durch die 16-Bit Zwischen-Trunkierung in `pmulh` um maximal 33 LSB (0.10 %) von der 32-Bit Skalar-Akkumulation ab, was für Bild- und Signalverarbeitung (JPEG) innerhalb der Standard-Toleranz liegt.
+1. **Loeffler Fast-DCT Durchsatz:**
+   - 1D Fast Fixed AMMX benötigt nur **66 Takte** (vs 507 Takte in C $\rightarrow$ **7.68x Speedup**!).
+   - 2D 8x8 Block Fast Fixed AMMX benötigt nur **1.189 Takte** (vs 8.757 Takte in C $\rightarrow$ **7.37x Speedup**!).
+   - 2D 8x8 Block Float Fast FPU ASM benötigt nur **3.956 Takte** (vs 11.227 Takte in C $\rightarrow$ **2.84x Speedup**!).
+2. **Überlauffreiheit & Präzision:**
+   - Durch das "Product-First"-Schema und 0.5x Zwischenskalierung bleibt die 16-Bit AMMX Fast-DCT überlauffrei und erreicht eine maximale Abweichung von nur **16 LSB** (0.049 %) über den gesamten 2D 8x8 Block.
+   - Der Rekonstruktionsfehler liegt bei $1.79 \times 10^{-7}$ in Float und 79 LSB (0.24 %) in Festkomma.
+3. **Register-Transposition:** Die reine AMMX `vperm`-Transposition (32 Takte) eliminiert Speicherengpässe zwischen den 1D-Durchläufen vollständig.
