@@ -597,46 +597,38 @@ _h264_idct4x4_fused_mc_asm:
         peor    e20,e20,e20
 
         ; Row 0
-        move.l  (a1),d0
-        move.l  d0,e4
+        move.l  (a1),e4
         vperm   #$84858687,e4,e20,e4
         paddw   e0,e4,e4
         packuswb e4,e4,e5
-        move.l  e5,d0
-        move.l  d0,(a0)
+        move.l  e5,(a0)
 
         ; Row 1
         adda.l  d1,a1
         adda.l  d1,a0
-        move.l  (a1),d0
-        move.l  d0,e4
+        move.l  (a1),e4
         vperm   #$84858687,e4,e20,e4
         paddw   e1,e4,e4
         packuswb e4,e4,e5
-        move.l  e5,d0
-        move.l  d0,(a0)
+        move.l  e5,(a0)
 
         ; Row 2
         adda.l  d1,a1
         adda.l  d1,a0
-        move.l  (a1),d0
-        move.l  d0,e4
+        move.l  (a1),e4
         vperm   #$84858687,e4,e20,e4
         paddw   e2,e4,e4
         packuswb e4,e4,e5
-        move.l  e5,d0
-        move.l  d0,(a0)
+        move.l  e5,(a0)
 
         ; Row 3
         adda.l  d1,a1
         adda.l  d1,a0
-        move.l  (a1),d0
-        move.l  d0,e4
+        move.l  (a1),e4
         vperm   #$84858687,e4,e20,e4
         paddw   e3,e4,e4
         packuswb e4,e4,e5
-        move.l  e5,d0
-        move.l  d0,(a0)
+        move.l  e5,(a0)
 
         adda.w  #64,sp
         movem.l (sp)+,d2-d7/a2-a4
@@ -663,46 +655,38 @@ _h264_idct4x4_sparse_dc_mc_asm:
         peor    e20,e20,e20             ; e20 = 0
 
         ; Row 0
-        move.l  (a1),d0
-        move.l  d0,e0
+        move.l  (a1),e0
         vperm   #$84858687,e0,e20,e1    ; unpack ref row 0 to 4 words
         paddw   e21,e1,e2               ; e2 = ref + res
         packuswb e2,e2,e3               ; clamp to 0..255
-        move.l  e3,d0
-        move.l  d0,(a0)
+        move.l  e3,(a0)
 
         ; Row 1
         adda.l  d1,a1
         adda.l  d1,a0
-        move.l  (a1),d0
-        move.l  d0,e0
+        move.l  (a1),e0
         vperm   #$84858687,e0,e20,e1
         paddw   e21,e1,e2
         packuswb e2,e2,e3
-        move.l  e3,d0
-        move.l  d0,(a0)
+        move.l  e3,(a0)
 
         ; Row 2
         adda.l  d1,a1
         adda.l  d1,a0
-        move.l  (a1),d0
-        move.l  d0,e0
+        move.l  (a1),e0
         vperm   #$84858687,e0,e20,e1
         paddw   e21,e1,e2
         packuswb e2,e2,e3
-        move.l  e3,d0
-        move.l  d0,(a0)
+        move.l  e3,(a0)
 
         ; Row 3
         adda.l  d1,a1
         adda.l  d1,a0
-        move.l  (a1),d0
-        move.l  d0,e0
+        move.l  (a1),e0
         vperm   #$84858687,e0,e20,e1
         paddw   e21,e1,e2
         packuswb e2,e2,e3
-        move.l  e3,d0
-        move.l  d0,(a0)
+        move.l  e3,(a0)
 
         rts
 
@@ -710,28 +694,27 @@ _h264_idct4x4_sparse_dc_mc_asm:
 ; void h264_macroblock_16x16_asm(const int16_t blocks[16][16], const uint8_t *ref,
 ;                               uint8_t *dst, int stride)
 ; Full 16x16 Macroblock (16 4x4 blocks in 4x4 raster grid)
+; Optimizations: Zero mulu.w, Inlined AMMX DC Fast-Path, Pointer Stepping
 ; ======================================================================
 _h264_macroblock_16x16_asm:
         movem.l d2-d7/a2-a6,-(sp)
         move.l  48(sp),a2               ; a2 = blocks
-        move.l  52(sp),a3               ; a3 = ref
-        move.l  56(sp),a4               ; a4 = dst
+        move.l  52(sp),a3               ; a3 = ref (row start)
+        move.l  56(sp),a4               ; a4 = dst (row start)
         move.l  60(sp),d6               ; d6 = stride
 
-        moveq   #0,d4                   ; by = 0..3
-.mb_by_loop:
-        moveq   #0,d5                   ; bx = 0..3
-.mb_bx_loop:
-        ; Calculate block offset: (by * 4) * stride + (bx * 4)
-        move.l  d4,d0
-        lsl.l   #2,d0                   ; by * 4
-        mulu.w  d6,d0                   ; (by * 4) * stride
-        move.l  d5,d1
-        lsl.l   #2,d1                   ; bx * 4
-        add.l   d1,d0                   ; d0 = byte offset
+        move.l  d6,d7
+        lsl.l   #2,d7                   ; d7 = stride * 4
 
-        lea     (a3,d0.l),a0            ; a0 = b_ref
-        lea     (a4,d0.l),a1            ; a1 = b_dst
+        moveq   #4-1,d4                 ; by = 0..3
+.mb_by_loop:
+        movea.l a3,a5                   ; a5 = b_ref
+        movea.l a4,a6                   ; a6 = b_dst
+        moveq   #4-1,d5                 ; bx = 0..3
+
+.mb_bx_loop:
+        movea.l a5,a0                   ; a0 = current block ref
+        movea.l a6,a1                   ; a1 = current block dst
 
         ; Fast check if block is DC-only
         ; Row 0: DC at word 0, AC1-3 at words 1-3
@@ -751,13 +734,48 @@ _h264_macroblock_16x16_asm:
         or.l    d1,d0
         bne.s   .full_block
 
-        ; DC-Only Block Fast-Path
-        move.l  d6,-(sp)
-        move.l  a1,-(sp)
-        move.l  a0,-(sp)
-        move.l  a2,-(sp)
-        bsr     _h264_idct4x4_sparse_dc_mc_asm
-        lea     16(sp),sp
+        ; --- Inlined Ultra-Fast DC-Only Fast-Path ---
+        move.w  (a2),d0                 ; in[0][0]
+        add.w   #32,d0
+        asr.w   #6,d0                   ; res = (in[0][0] + 32) >> 6
+        move.l  d0,e0
+        vperm   #$67676767,e0,e0,e21    ; e21 = [res, res, res, res]
+        peor    e20,e20,e20             ; e20 = 0
+
+        ; Row 0
+        move.l  (a0),e0
+        vperm   #$84858687,e0,e20,e1
+        paddw   e21,e1,e2
+        packuswb e2,e2,e3
+        move.l  e3,(a1)
+
+        ; Row 1
+        adda.l  d6,a0
+        adda.l  d6,a1
+        move.l  (a0),e0
+        vperm   #$84858687,e0,e20,e1
+        paddw   e21,e1,e2
+        packuswb e2,e2,e3
+        move.l  e3,(a1)
+
+        ; Row 2
+        adda.l  d6,a0
+        adda.l  d6,a1
+        move.l  (a0),e0
+        vperm   #$84858687,e0,e20,e1
+        paddw   e21,e1,e2
+        packuswb e2,e2,e3
+        move.l  e3,(a1)
+
+        ; Row 3
+        adda.l  d6,a0
+        adda.l  d6,a1
+        move.l  (a0),e0
+        vperm   #$84858687,e0,e20,e1
+        paddw   e21,e1,e2
+        packuswb e2,e2,e3
+        move.l  e3,(a1)
+
         bra.s   .next_block
 
 .full_block:
@@ -770,13 +788,13 @@ _h264_macroblock_16x16_asm:
 
 .next_block:
         lea     32(a2),a2               ; next 4x4 block (16 words = 32 bytes)
-        addq.w  #1,d5
-        cmpi.w  #4,d5
-        blt.s   .mb_bx_loop
+        addq.l  #4,a5                   ; next block ref
+        addq.l  #4,a6                   ; next block dst
+        dbra    d5,.mb_bx_loop
 
-        addq.w  #1,d4
-        cmpi.w  #4,d4
-        blt     .mb_by_loop
+        adda.l  d7,a3                   ; advance ref to next block row
+        adda.l  d7,a4                   ; advance dst to next block row
+        dbra    d4,.mb_by_loop
 
         movem.l (sp)+,d2-d7/a2-a6
         rts
