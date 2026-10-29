@@ -413,6 +413,77 @@ verlässt sich bei sequentiellen Strömen auf den automatischen Prefetcher
         move.l  (a0),d1
 ```
 
+## ANTI-007: Blindes Loop-Unrolling zerstört Decoder-Learning (ANTON/BRUNO/CESAR)
+
+**Kategorie:** Loop Scheduling / Superscalar-Lernmodell  
+**Status:** ARCHITEKTUR-PRINZIP & VERIFIZIERT (Architektur-Design von Gunnar von Boehn / Apollo Team; gemessen im Harness v5 Warmup vs Cold Run)  
+**Beleg:** Gunnar von Boehn (BigGun), Discord 27.10.2026; Apollo 68080 PRM (Juni 2026) S. 83–84, 92  
+**Betroffene CPUs:** 68080 (V4 / V2); im Gegensatz zu x86 oder alten RISC-CPUs
+
+### Problem
+
+Auf älteren Architekturen (wie klassischem 68000/68020 mit teuren DBRA-Branches
+oder frühen x86/RISC-CPUs) war Loop-Unrolling eine Standardoptimierung, um den
+Branch-Overhead zu eliminieren. Entwickler und KI-Modelle rollen daher Schleifen
+oft blind vollständig oder 32-/64-fach aus („Loop Flattening“).
+
+Auf dem Apollo 68080 ist extremes oder vollständiges Loop-Unrolling jedoch
+**kontraproduktiv und verlangsamt die Ausführung massiv**:
+1. **Zerstörung des Decoder-Learnings:** Der 68080 lernt Instruktionsgrenzen,
+   Pairing und Fusing dynamisch im I-Cache über Schleifen-Iterationen hinweg.
+   Im ersten Durchlauf decodiert nur **ANTON** (Single-Instruction-Modus).
+   Erst ab dem 2. Durchlauf schaltet sich **BRUNO** (2-Way) und ab dem
+   3. Durchlauf **CESAR** (3-Way Superscalar) zu.
+   Wird eine Schleife plattgewalzt, läuft der gesamte Code permanent im
+   Kalt-Zustand (1 Befehl pro Takt auf ANTON)!
+2. **I-Cache Trashing & Speicherbandbreite:** Ein aufgeblähter linearer
+   Befehlsstrom sprengt den L1-Instruction-Cache (16 KB / 32 KB). Der Core
+   muss permanent aus dem langsameren DDR-RAM nachladen, statt mit vollem
+   Durchsatz im Cache zu rotieren.
+3. **Zerstörung der Branch-Prediction:** Die Branch Caches können keine
+   Branch-Historie aufbauen, wenn keine Schleifensprünge existieren.
+
+### Falscher 68k / KI-Ansatz (Unrolled / Flattened)
+
+```asm
+; FALSCH: 64-fach unrolled.
+; Bläht den I-Cache auf, verhindert BRUNO- und CESAR-Superscalar-Zuschaltung!
+; Läuft im Single-Instruction-Modus auf ANTON.
+    move.l  (a0)+,(a1)+
+    move.l  (a0)+,(a1)+
+    move.l  (a0)+,(a1)+
+    ; ... [60 weitere Wiederholungen] ...
+    move.l  (a0)+,(a1)+
+```
+
+### Richtiger 68080-Ansatz (Kompakte Schleife im I-Cache)
+
+```asm
+; RICHTIG: Kompakte Schleife, bleibt vollständig im I-Cache.
+; Durchlauf 1: ANTON decodiert und taggt Instruktionsgrenzen im I-Cache.
+; Durchlauf 2: BRUNO schaltet sich zu (2-Way Superscalar).
+; Durchlauf 3: CESAR schaltet sich zu (3-Way Superscalar).
+; Maximale Bandbreite durch AMMX LOADQ/STOREQ oder VPERM.
+    lsr.l   #5,d7           ; Anzahl 32-Byte-Blöcke
+    subq.l  #1,d7           ; DBF-Korrektur
+.loop:
+    loadq   (a0)+,d0
+    loadq   (a0)+,d1
+    storeq  d0,(a1)+
+    storeq  d1,(a1)+
+    dbf     d7,.loop
+```
+
+> **Wichtiger Hinweis für Entwickler und KI-Assistenten:**  
+> *„Unrolling code would be stupid = if you flatten the code that there is no
+> loops, then you can not run super scalar. You want a loop! In real world
+> time critical code is always running in loops: a memcopy moving 10 MB is a loop,
+> compressing/uncompressing data, decoding a video, draw a game screen — all
+> this what really needs CPU power runs in loops. This is maybe something we
+> should TELL AI — I have seen AI created code several times now and AI was not
+> aware of this.“* — **Gunnar von Boehn (BigGun)**
+
+
 ## Anti-Pattern-Checkliste
 
 | Muster | Warum es auf dem 68080 schadet | Besser |
@@ -423,3 +494,4 @@ verlässt sich bei sequentiellen Strömen auf den automatischen Prefetcher
 | `MOVEM`/`MUL`/`DIV` paaren wollen | Pipe 2 nimmt keine Multicycle | Pipe 1, unabhängige ALU daneben |
 | unausgerichtete Writes | zusätzliche Transaktionen | quad-aligned schreiben |
 | `TOUCH` ohne Vorlauf | Prefetch kommt zu spät | 12–15 Takte Abstand oder Auto-Prefetch |
+| `ANTI-007`: Blindes Loop-Unrolling | Verhindert BRUNO/CESAR-Lernen, bleibt in Single-Issue (ANTON), I-Cache Thrashing | Kurze, kompakte Schleifen im I-Cache halten |

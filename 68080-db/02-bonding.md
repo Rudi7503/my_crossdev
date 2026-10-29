@@ -364,6 +364,75 @@ ist der Vergleich wertlos.
         eor.l   d4,d4
 ```
 
+## Das 3-Stufen-Lernmodell der Apollo-Decoder (ANTON, BRUNO, CESAR)
+
+> **Architektur-Quelle:** Gunnar von Boehn (BigGun, Apollo Core Designer), Discord-Mitteilung 27.10.2026.  
+> **Status:** Verifiziert & Fundamentales Hardware-Designprinzip des Apollo 68080.
+
+### Das Problem variabler CISC-Befehlslängen
+
+Auf einem einfachen RISC-Prozessor mit fixen 32-Bit-Instruktionen ist es trivial
+zu bestimmen, wo der zweite und dritte Befehl im Speicher beginnt („stupid RISC“).
+Auf einem CISC-Prozessor wie dem 68000/68080 variieren Instruktionen jedoch
+zwischen 2 und 10+ Bytes. Ein paralleles Dekodieren aus dem Stand („Cold Fetch“)
+erfordert extrem komplexe statische Hardwarelogik, die auf FPGAs oder ASICs bei
+hohen Taktraten (bis 85–100+ MHz) den kritischen Pfad sprengt.
+
+Der Apollo 68080 löst dieses Problem durch einen **selbstlernenden Instruction-Cache**:
+
+```mermaid
+flowchart TD
+    subgraph Iter1 ["1. Iteration (Kaltstart / Memory Load)"]
+        A1["Fetch aus RAM / L2"] --> B1["Decoder ANTON aktiv"]
+        B1 --> C1["Single-Instruction / Basis-Fusing & Bank"]
+        B1 -.-> D1["I-Cache lernt Befehlspaare & Grenzen"]
+    end
+    subgraph Iter2 ["2. Iteration (Im I-Cache)"]
+        A2["Fetch aus I-Cache"] --> B2["Decoder BRUNO schaltet sich zu"]
+        B2 --> C2["2-Wege Superscalar + BRUNO Fusing"]
+        B2 -.-> D2["Branch Caches lernen Sprungrichtungen"]
+    end
+    subgraph Iter3 ["3. Iteration & Steady-State"]
+        A3["Fetch aus I-Cache"] --> B3["Decoder CESAR schaltet sich zu"]
+        B3 --> C3["3-Wege Superscalar (Triple-Dispatch: ANTON + BRUNO + CESAR)"]
+    end
+    Iter1 --> Iter2 --> Iter3
+```
+
+### Die 3 Phasen der Decoder-Aktivierung
+
+1. **1. Iteration (Cold Fetch aus externem Speicher / Kaltstart):**
+   - Der Core holt den Code aus dem (langsameren) externen Speicher oder L2-Cache.
+   - Der Core läuft zunächst im vorsichtigen Single-Instruction-Modus.
+   - **Decoder ANTON** ist aktiv. Erste einfache Befehlspaare und Basis-Fusing
+     funktionieren bereits im 1. Durchlauf; Bank-Zugriffe laufen.
+   - Gleichzeitig analysiert der I-Cache die Befehlslängen und markiert („taggt“)
+     die Instruktionsgrenzen für nachfolgende Ausführungen.
+2. **2. Iteration (1. Schleifen-Wiederholung im I-Cache):**
+   - Die Instruktionsgrenzen und Kopplungsmöglichkeiten sind nun im I-Cache hinterlegt.
+   - **Decoder BRUNO** schaltet sich aktiv dazu!
+   - 2-Wege-Superscalar-Pairing und BRUNOs Fusing/Bonding sind voll aktiv.
+   - Die Branch Caches lernen die Sprungziele und statistischen Richtungen.
+3. **3. Iteration & Steady-State (Volle Pipeline-Auslastung):**
+   - Ab der 3. Iteration tritt **Decoder CESAR** hinzu.
+   - Voller 3-Wege-Superscalar-Betrieb (Triple-Dispatch: ANTON + BRUNO + CESAR).
+   - Die Schleife erreicht ihre maximale theoretische und praktische Geschwindigkeit.
+
+### Konsequenz für Code-Design und Benchmarks
+
+- **Schleifen beschleunigen sich dynamisch während der Ausführung:**
+  Eine zeitsensitive Schleife (wie Speicher-Kopieren, Audio-Decoding, DCT,
+  Videowiedergabe) erreicht erst nach 2 bis 3 Iterationen ihren vollen Durchsatz.
+- **Warmup im Test-Harness ist zwingend:**
+  Dies erklärt exakt, warum der `Harness v5` vor der Messung 100 Warmup-Läufe
+  durchführt. Ohne Warmup würde man die Kaltstart-Latenz von Decoder ANTON
+  messen, nicht aber den optimierten Steady-State aller drei Decoder.
+- **Flaches Loop-Unrolling ist ein Anti-Pattern (siehe ANTI-007):**
+  Wer Schleifen vollständig plattwalzt („Loop Flattening“), beraubt den Core
+  seiner Lernfähigkeit: Der Prozessor bleibt dauerhaft im langsamen
+  1-Instruktions-Modus von Decoder ANTON gefangen und erzeugt permanente
+  I-Cache-Misses.
+
 ## Was Bonding/Superscalar verhindert
 
 Die folgenden Punkte sind in Wiki und PRM belegt und gelten für Pipe 2

@@ -27,7 +27,8 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`ANTI-003`](08-antipatterns.md) | Word-Updates statt Long-Updates | `08-antipatterns.md` | gemessen |
 | [`ANTI-004`](08-antipatterns.md) | Zwei mehrzyklische Instruktionen auf Pipe 1 erwarten | `08-antipatterns.md` | gemessen |
 | [`ANTI-005`](08-antipatterns.md) | Unausgerichtete Long-Writes | `08-antipatterns.md` | gemessen |
-| [`ANTI-006`](08-antipatterns.md) | TOUCH unmittelbar vor dem Load | `08-antipatterns.md` | gemessen |
+| [`ANTI-006`](08-antipatterns.md), [`ANTI-007`](08-antipatterns.md) | TOUCH unmittelbar vor dem Load | `08-antipatterns.md` | gemessen |
+| [`ANTI-007`](08-antipatterns.md) | Blindes Loop-Unrolling zerstört Decoder-Learning (ANTON/BRUNO/CESAR) | `08-antipatterns.md` | verifiziert |
 | [`BND-001`](02-bonding.md) | Abhängiges MOVEQ + ADD mit zwei Zielen bonden | `02-bonding.md` | gemessen |
 | [`BND-002`](02-bonding.md) | Gleiches Ziel ist Fusing, nicht Bonding | `02-bonding.md` | gemessen |
 | [`BND-003`](02-bonding.md) | Zwei unabhängige ALU-Instruktionen sind normales Superscalar | `02-bonding.md` | gemessen |
@@ -100,7 +101,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **Fast Fourier Transform (FFT)** (5): [`FFT-001`](13-fft.md), [`FFT-002`](13-fft.md), [`FFT-003`](13-fft.md), [`FFT-004`](13-fft.md), [`FFT-005`](13-fft.md), [`FFT-006`](13-fft.md)
 - **Matrix (FPU)** (3): [`MAT-001`](12-matrix.md), [`MAT-002`](12-matrix.md), [`MAT-003`](12-matrix.md)
 - **Matrix (Fixed-Point AMMX)** (3): [`FIX-001`](12-matrix.md), [`FIX-002`](12-matrix.md), [`FIX-003`](12-matrix.md)
-- **Antipatterns** (6): [`ANTI-001`](08-antipatterns.md), [`ANTI-002`](08-antipatterns.md), [`ANTI-003`](08-antipatterns.md), [`ANTI-004`](08-antipatterns.md), [`ANTI-005`](08-antipatterns.md), [`ANTI-006`](08-antipatterns.md)
+- **Antipatterns** (7): [`ANTI-001`](08-antipatterns.md), [`ANTI-002`](08-antipatterns.md), [`ANTI-003`](08-antipatterns.md), [`ANTI-004`](08-antipatterns.md), [`ANTI-005`](08-antipatterns.md), [`ANTI-006`](08-antipatterns.md), [`ANTI-007`](08-antipatterns.md)
 
 ## Sequenzen und Logs
 

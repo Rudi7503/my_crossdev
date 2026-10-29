@@ -38,7 +38,7 @@ Details und Einreichungsanleitung stehen in [`cores/README.md`](cores/README.md)
 | [`05-timing.md`](05-timing.md) | Instruktions-Timing & Fallstricke | 5 (Shift vs. Div, LEA-Latenzen, MOVEM-Effizienz) |
 | [`06-memory.md`](06-memory.md) | 64-Bit-Speicherbus, Prefetch, Cache | 5 (Quad-Alignment, TOUCH-Vorlauf, Bursts) |
 | [`07-patterns.md`](07-patterns.md) | Übergreifende Idiome | 5 (Branchless Blend, 32-Byte-Burst-Kopieren) |
-| [`08-antipatterns.md`](08-antipatterns.md) | Was den 68080 bremst | 6 (NOP-Bremsen, 060-Scheduling, Word-Updates) |
+| [`08-antipatterns.md`](08-antipatterns.md) | Was den 68080 bremst | 7 (NOP-Bremsen, 060-Scheduling, Loop-Unrolling) |
 | [`09-harness.md`](09-harness.md) | Mess-Harness: Aufbau, Build, Fallstricke | – (Harness v5 Aufbau, CCC-Zähler, Jitter-Prävention) |
 | [`12-matrix.md`](12-matrix.md) | Matrix-Multiplikation (FPU Float & AMMX Fixed) | 6 (2x2, 3x3, 4x4 Matrizen in Float & AMMX SIMD) |
 | [`13-fft.md`](13-fft.md) | Fast Fourier Transform (FPU Float & AMMX Fixed) | 6 (Radix-2 Schmetterlinge, Bit-Reversal, SIMD) |
