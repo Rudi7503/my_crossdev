@@ -122,3 +122,14 @@ Vor jedem Upload und Ausführen von Assembler-Code auf der echten V4-Hardware mu
 - **Memory-Shifts:** `lsl.l #1, (ea)` ist im 68k-Befehlssatz ungültig (nur Word `lsl.w (ea)` ist erlaubt). Long-Shifts müssen über Datenregister abgewickelt werden.
 - **68040-Mnemonics:** Niemals `fsmul` oder `fsadd` verwenden; immer standardkonformes `fmul.s` / `fadd.s` bzw. 3-Operanden `fmul fp0,fp2,fp4`.
 
+---
+
+## 7. Datenbank-Integration & Standard-Messframework (`harness-v5`)
+
+Jede erfolgreiche und verifizierte Optimierung (wie z. B. Matrix-Multiplikation, FFT, Audio/Signalverarbeitung) muss **immer** auch in die zentrale Wissensdatenbank `68080-db/` eingepflegt und mit dem Standard-Framework getestet werden:
+1. **Sequenzen erstellen:** Relevante Kernsequenzen (Butterflies, Transformationen) als `seq/<ID>.i` anlegen.
+2. **Mit `harness-v5` bauen:** Via `tools/build_all.sh` nach `bin-v5/` kompilieren (automatisches Inlining in `harness-v5.asm`).
+3. **Auf Vampire V4 messen:** Ausführung auf der Hardware unter `Forbid()` (100 Warmup-Läufe, 100 Messläufe, CCC-Takterfassung, IEP1/IEP2/IEP3 Pipeslot-Auslese).
+4. **Logs sichern:** Messlogs nach `measurements/v5-files/<ID>.run01.log` herunterladen und prüfen (`tools/check_log.py`).
+5. **Dokumentation pflegen:** Ein eigenes Kapitel (z. B. `13-fft.md`) erstellen, Ergebnisse protokollieren und in `68080-db/index.md` sowie `68080-db/README.md` verlinken.
+
