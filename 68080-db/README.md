@@ -47,6 +47,7 @@ Details und Einreichungsanleitung stehen in [`cores/README.md`](cores/README.md)
 | [`16-jpeg.md`](16-jpeg.md) | JPEG End-to-End Decoding Pipeline | 1 (Fused Transpose + Level-Shift + PACKUSWB Direct Store) |
 | [`17-mpeg.md`](17-mpeg.md) | MPEG-1/2 Video Motion Compensation & Fused Residual IDCT | 1 (Fused IDCT+MC, Sparse DC-Only, VCD in 52.7% CPU) |
 | [`18-h264.md`](18-h264.md) | H.264 / AVC 4x4 Core IDCT, Hadamard & Fused MC | 1 (AMMX Hadamard in 27 Netto-Takten, Bit-Exact 4x4 IDCT) |
+| [`19-sprite-blit.md`](19-sprite-blit.md) | 2D Sprite Blitting & 256-Bit Aligned Rectangle Copy | 28/28 Tests (8x8..512x512 @ 8, 16, 24, 32 Bit, move16 256-Bit Burst, 215 MB/s) |
 
 Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-1088-1/`](cores/core-1088-1/).
 Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).
