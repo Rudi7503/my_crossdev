@@ -69,9 +69,11 @@ def main() -> int:
         bpr = (m["BPW"] / bp * 100.0) if bp > 0 else float("nan")
         dc = m["DCH"] + m["DCM"]
         dcr = (m["DCH"] / dc * 100.0) if dc > 0 else float("nan")
-        print(f"| {ident} | {m['CCC']:.1f} | {m['IEP1']:.1f} | {m['IEP2']:.1f} | {m['IEP3']:.1f} | "
-              f"{shares[0]:.1f} | {shares[1]:.1f} | {shares[2]:.1f} | {m['BPC']:.1f} | {m['BPW']:.1f} | "
-              f"{bpr:.1f} | {m['DCH']:.1f} | {m['DCM']:.1f} | {dcr:.1f} |")
+        def f(v):
+            return "n/a" if v != v else f"{v:.1f}"
+        print(f"| {ident} | {f(m['CCC'])} | {f(m['IEP1'])} | {f(m['IEP2'])} | {f(m['IEP3'])} | "
+              f"{f(shares[0])} | {f(shares[1])} | {f(shares[2])} | {f(m['BPC'])} | {f(m['BPW'])} | "
+              f"{f(bpr)} | {f(m['DCH'])} | {f(m['DCM'])} | {f(dcr)} |")
     return 0
 
 

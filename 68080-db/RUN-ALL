@@ -1,4 +1,4 @@
-; RUN-ALL - Harness v5, 10 runs per entry, 74 entries
+; RUN-ALL - Harness v5, 10 runs per entry, 75 entries
 ; Execute: Execute "Ram Disk:RUN-ALL"
 ; Logs: Ram Disk:LOGS/<ID>.runNN.log
 CD "Ram Disk:"
@@ -686,6 +686,46 @@ EndIf
 ANTI-006
 If EXISTS "Ram Disk:LOGS/ANTI-006.log"
     Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run10.log"
+EndIf
+ANTI-007
+If EXISTS "Ram Disk:LOGS/ANTI-007.log"
+    Rename "Ram Disk:LOGS/ANTI-007.log" "Ram Disk:LOGS/ANTI-007.run01.log"
+EndIf
+ANTI-007
+If EXISTS "Ram Disk:LOGS/ANTI-007.log"
+    Rename "Ram Disk:LOGS/ANTI-007.log" "Ram Disk:LOGS/ANTI-007.run02.log"
+EndIf
+ANTI-007
+If EXISTS "Ram Disk:LOGS/ANTI-007.log"
+    Rename "Ram Disk:LOGS/ANTI-007.log" "Ram Disk:LOGS/ANTI-007.run03.log"
+EndIf
+ANTI-007
+If EXISTS "Ram Disk:LOGS/ANTI-007.log"
+    Rename "Ram Disk:LOGS/ANTI-007.log" "Ram Disk:LOGS/ANTI-007.run04.log"
+EndIf
+ANTI-007
+If EXISTS "Ram Disk:LOGS/ANTI-007.log"
+    Rename "Ram Disk:LOGS/ANTI-007.log" "Ram Disk:LOGS/ANTI-007.run05.log"
+EndIf
+ANTI-007
+If EXISTS "Ram Disk:LOGS/ANTI-007.log"
+    Rename "Ram Disk:LOGS/ANTI-007.log" "Ram Disk:LOGS/ANTI-007.run06.log"
+EndIf
+ANTI-007
+If EXISTS "Ram Disk:LOGS/ANTI-007.log"
+    Rename "Ram Disk:LOGS/ANTI-007.log" "Ram Disk:LOGS/ANTI-007.run07.log"
+EndIf
+ANTI-007
+If EXISTS "Ram Disk:LOGS/ANTI-007.log"
+    Rename "Ram Disk:LOGS/ANTI-007.log" "Ram Disk:LOGS/ANTI-007.run08.log"
+EndIf
+ANTI-007
+If EXISTS "Ram Disk:LOGS/ANTI-007.log"
+    Rename "Ram Disk:LOGS/ANTI-007.log" "Ram Disk:LOGS/ANTI-007.run09.log"
+EndIf
+ANTI-007
+If EXISTS "Ram Disk:LOGS/ANTI-007.log"
+    Rename "Ram Disk:LOGS/ANTI-007.log" "Ram Disk:LOGS/ANTI-007.run10.log"
 EndIf
 BLT-001
 If EXISTS "Ram Disk:LOGS/BLT-001.log"

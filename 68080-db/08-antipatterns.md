@@ -495,3 +495,13 @@ Auf dem Apollo 68080 ist extremes oder vollständiges Loop-Unrolling jedoch
 | unausgerichtete Writes | zusätzliche Transaktionen | quad-aligned schreiben |
 | `TOUCH` ohne Vorlauf | Prefetch kommt zu spät | 12–15 Takte Abstand oder Auto-Prefetch |
 | `ANTI-007`: Blindes Loop-Unrolling | Verhindert BRUNO/CESAR-Lernen, bleibt in Single-Issue (ANTON), I-Cache Thrashing | Kurze, kompakte Schleifen im I-Cache halten |
+
+
+### ANTI-007: kanonische Messung
+
+**Sequenz:** [`seq/ANTI-007.i`](seq/ANTI-007.i) – 16 unrolled `addq.l #1,d0` als flacher Code.
+
+- **MIN:** 17 Takte (10/10 Läufe)
+- **Rohlogs:** [01](cores/core-11350/logs/ANTI-007.run01.log) [02](cores/core-11350/logs/ANTI-007.run02.log) [03](cores/core-11350/logs/ANTI-007.run03.log) [04](cores/core-11350/logs/ANTI-007.run04.log) [05](cores/core-11350/logs/ANTI-007.run05.log) [06](cores/core-11350/logs/ANTI-007.run06.log) [07](cores/core-11350/logs/ANTI-007.run07.log) [08](cores/core-11350/logs/ANTI-007.run08.log) [09](cores/core-11350/logs/ANTI-007.run09.log) [10](cores/core-11350/logs/ANTI-007.run10.log)
+
+> Der Eintrag misst den flachen Code als Anti-Pattern; die echte Loop-/Unroll-Entscheidung bleibt eine Architekturregel.
