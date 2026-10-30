@@ -483,7 +483,6 @@ Das Erfolgsrezept aus `Fresh9` (vorberechnete `dc.l`-Tabelle mit vorzeichenbehaf
 ## Korrigierte Original-vs-Signed-Messung (2026-10-30)
 
 Die Skripte verglichen zuvor die signierte Produktion als „orig“. Nach Fix auf
-`experiments/decoder_*_orig.s`: 2-Bit 38–46 %, 3-Bit 38–44 %, 5-Bit 51–59 %,
+`experiments/decoder_*_orig.s`: 2-Bit 38–46 %, 3-Bit 38–44 %, 5-Bit 54–61 %,
 6-Bit 50–57 %, Hybrid 39,7–48,2 % weniger Zyklen. Alle 15 Golden-Modi PASS.
-Details: `tests/ORIGINAL_VS_SIGNED.md`. 5-Bit-Signed-Ausreißer (650 statt 538)
-ist als offene Layout-/Messfrage dokumentiert.
+Details: `tests/ORIGINAL_VS_SIGNED.md`. Die 5-Bit-Kontrolle (10 separate Starts) ist stabil bei 538/700/503; die früheren 650/740/504 stammten aus einem alten Build.

@@ -13,9 +13,9 @@ versehentlich die bereits signierte Produktion als „orig“.
 | 3-Bit Stereo | 1941 | 1092 | **43,7 %** |
 | 3-Bit MS | 2229 | 1380 | **38,1 %** |
 | 3-Bit Mono | 1805 | 1007 | **44,2 %** |
-| 5-Bit Stereo | 1389 | 650 | **53,2 %** |
-| 5-Bit MS | 1511 | 740 | **51,0 %** |
-| 5-Bit Mono | 1236 | 504 | **59,2 %** |
+| 5-Bit Stereo | 1389 | 538 | **61,3 %** |
+| 5-Bit MS | 1511 | 700 | **53,7 %** |
+| 5-Bit Mono | 1236 | 503 | **59,3 %** |
 | 6-Bit Stereo | 1331 | 609 | **54,2 %** |
 | 6-Bit MS | 1457 | 735 | **49,6 %** |
 | 6-Bit Mono | 1373 | 590 | **57,0 %** |
@@ -33,9 +33,13 @@ versehentlich die bereits signierte Produktion als „orig“.
 - `run_hybrid.sh` – alle 15 inkl. Hybrid, echte `_orig.s`
 - `gen_hybrid.py` – jetzt repo-lokal, kein `.gemini`-Pfad mehr
 
-## Auffälligkeit
+## 5-Bit-Kontrolle (2026-10-30)
 
-5-Bit Signed lag in einem früheren Lauf bei 538/699/503; im korrigierten Lauf
-650/740/504. Die Ursache ist noch nicht isoliert (Layout/Testbinary/Takt).
-Die Original-vs-Signed-Aussage bleibt davon unberührt, die exakten 5-Bit-Werte
-sollten aber bei Bedarf erneut gegengeprüft werden.
+Zehn separate Starts desselben `repeat5_signed`-Binaries lieferten stabil:
+
+```text
+STEREO 538/538 ; MS 700/700 ; MONO 503/504  (MIN/Median)
+```
+
+Die früheren 650/740/504 stammten aus einem anderen/alten Build. Die
+Original-vs-Signed-Aussage bleibt: **5-Bit 53,7–61,3 % weniger Zyklen**.

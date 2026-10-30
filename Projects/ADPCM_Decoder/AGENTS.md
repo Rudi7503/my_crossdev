@@ -2,7 +2,7 @@
 
 Produktivstand (Core **11350**, PCR 1088/1, VCoreRev 0):
 - **4-Bit (`decoder_4bit.s`):** **Fresh15** (Signed-32-Bit-Delta-Tabelle, Stereo voll unrolled, 64-Byte-Mono-Alignment, MS/Mono unrolled) → **784 / 920 / 729** (Stereo/MS/Mono, 100× MIN).
-- **2-/3-/5-/6-Bit & Hybrid-M/S (`decoder_2bit.s`, `decoder_3bit.s`, `decoder_5bit.s`, `decoder_6bit.s`, `decoder_3_2ms.s`, `decoder_4_2ms.s`, `decoder_5_3ms.s`):** **Signed-32-Bit-Delta-Tabelle + Inline-Makros (`d1`-Scratch)** → **38–60 % schneller** als Baseline, alle 15 Modi Golden (512 Blöcke) + 100× Repeat **PASS**.
+- **2-/3-/5-/6-Bit & Hybrid-M/S (`decoder_2bit.s`, `decoder_3bit.s`, `decoder_5bit.s`, `decoder_6bit.s`, `decoder_3_2ms.s`, `decoder_4_2ms.s`, `decoder_5_3ms.s`):** **Signed-32-Bit-Delta-Tabelle + Inline-Makros (`d1`-Scratch)** → **38–61 % schneller** als Baseline, alle 15 Modi Golden (512 Blöcke) + 100× Repeat **PASS**.
 
 ## Pflicht vor jeder Änderung
 
