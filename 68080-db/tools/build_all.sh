@@ -20,7 +20,7 @@ cd "$ROOT"
 
 BUILD_DIR=${BUILD_DIR:-build}
 BIN_DIR=${BIN_DIR:-bin}
-HARNESS=${HARNESS:-harness.asm}
+HARNESS=${HARNESS:-harness-v5.asm}
 
 if [[ -n "${VASM:-}" ]]; then
     :
