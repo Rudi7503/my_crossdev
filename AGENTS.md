@@ -90,11 +90,27 @@ Das Python-CLI [`Tools/amiga_tool.py`](file:///home/papa/Vampire_V4/ApolloCrossD
 
 ---
 
-## 5. Verifikation & Git-Workflow
+## 5. Verifikation, Mess-Methodik & Git-Workflow (EISERNE PFLICHT: Immer Harness v5!)
 
-- Jede Assembler-Optimierung muss **100 % bit-exakt** gegen eine C-Referenz verifiziert werden.
-- CCC-Hardware-Zykluszähler (`movec ccc,d0`) zur Zeitmessung heranziehen.
-- Nach erfolgreichem Testen alle Änderungen committen und auf GitHub (`origin/main`) pushen.
+1. **Strikte Verifikation:**
+   - Jede Assembler-Optimierung muss **100 % bit-exakt** gegen eine C-Referenz verifiziert werden (`diff = 0`, `PASS`).
+
+2. **Messungen IMMER mit Harness-v5 Methodik durchführen:**
+   - **Niemals nur reine `CCC`-Zyklen messen!** Eine Messung ohne Pipeline-Auslastung ist unvollständig und unzureichend.
+   - Es müssen **immer alle Hardware-Performance-Zähler** der 68080 erfasst und dokumentiert werden:
+     - `CCC`: Clock Cycle Counter (`movec.l CCC, d0`)
+     - `IEP1`: Instruction Execution Pipeline 1 / Decoder Anton (`movec.l IEP1, d0`)
+     - `IEP2`: Instruction Execution Pipeline 2 / Decoder Bruno (`movec.l IEP2, d0`)
+     - `IEP3`: Instruction Execution Pipeline 3 / Decoder Cesar (`dc.w $4e7a,$000c`)
+     - `DCH`: Data Cache Hit (`movec.l DCH, d0`)
+     - `DCM`: Data Cache Miss (`movec.l DCM, d0`)
+     - `BPC`: Branch Predict Correct (`movec.l BPC, d0`)
+     - `BPW`: Branch Predict Wrong (`movec.l BPW, d0`)
+   - **Kennzahlen:** Stets `IPC` (Befehle / Zyklen) sowie die prozentuale Aufteilung der Befehle auf Anton (`IEP1 %`), Bruno (`IEP2 %`) und Cesar (`IEP3 %`) ausgeben und analysieren, ob die Superskalarität greift oder ob Bus-/Pipeline-Stalls vorliegen.
+   - **Warmup-Pflicht:** Vor der Messung zwingend einen Warmup-Durchlauf durchführen (Code, Caches und Branch-Predictors primen), wie in [`68080-db/09-harness.md`](68080-db/09-harness.md) vorgegeben.
+
+3. **Git-Workflow:**
+   - Nach erfolgreichem Testen und Dokumentieren alle Änderungen committen und auf GitHub (`origin/main`) pushen.
 
 ---
 
