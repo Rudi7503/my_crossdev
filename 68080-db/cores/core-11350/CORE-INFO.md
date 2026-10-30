@@ -12,7 +12,7 @@
 
 ## Messungen
 
-- **71 Einträge**, **710 v5-Dateilogs** (`<ID>.run01..10.log`)
+- **74 Einträge**, **740 v5-Dateilogs** (`<ID>.run01..10.log`)
 - Alle Logs mit `FILESTAT;1;0`, `BASELINE`, 100×`RES`, `SUMMARY`, `PERF`
-- Alle 710 mit `tools/check_log.py` validiert
+- Alle 740 mit `tools/check_log.py` validiert
 - Logs: `cores/core-11350/logs/`, Gesamtdaten: `measurements/v5-files/`

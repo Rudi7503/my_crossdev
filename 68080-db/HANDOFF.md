@@ -5,24 +5,24 @@ Stand: **2026-10-23 13:10 (Europe/Berlin)**
 ## Aktueller Zustand
 
 - Projekt: `/home/papa/Vampire_V4/ApolloCrossDev/68080-db`
-- **71 Einträge**, alle mit `VERIFIZIERT (gemessen – Vampire V4, Log vorhanden)`;
+- **74 Einträge**, alle mit `VERIFIZIERT (gemessen – Vampire V4, Log vorhanden)`;
   die Messwerte sind **Harness v1**.
 - **42 v1-Logs** unter `measurements/<ID>.log`, alle mit `check_log.py` geprüft
 - zusätzlich `measurements/FUS-001.run1.log` als separater Wiederholungslauf
 - **42 Sequenzen** unter `seq/<ID>.i`
 - **42 Binaries** unter `bin/<ID>` plus `bin/SERIAL-PROBE` (v1, vor dem Umbau)
-- Batchdatei `RUN-ALL`: **71 Einträge × 10 Wiederholungen** (710 Läufe),
+- Batchdatei `RUN-ALL`: **74 Einträge × 10 Wiederholungen** (740 Läufe),
   Dateilogs in `Ram Disk:LOGS/<ID>.runNN.log`; `RUN-ALL-ONCE` = Einzellauf
 - Messübersicht: `measurements/SUMMARY.md` (v4); **Median, Stdabw. und p95**
-  sind Mediane der 10 Läufe; **MIN 71/71 identisch**, Warmup erste 10 = MIN.
+  sind Mediane der 10 Läufe; **MIN 74/74 identisch**, Warmup erste 10 = MIN.
 - Harness: `harness-v5.asm` = **v5** (v4-Taktmessung + PERF-Zählerdurchgang,
   Stack-Startwerte, `PERF`-Zeile, kein stdout); `harness.asm` = v4,
   `harness-v1.asm` = v1-Vorlage; Doku: `09-harness.md`
 - `build/` und `bin/` sind **v1** (gemessene Artefakte).
   `build-v2/`/`bin-v2/` = v2 (gemessen; Dateilogs fehlen).
   `build-v3/`/`bin-v3/` = v3 (gemessen; Warmup wirkt, Dateilogs fehlen).
-  `build-v4/`/`bin-v4/` = v4 (gemessen; 420 Serial + 420 Dateilogs).
-  `build-v5/`/`bin-v5/` = **v5 (gemessen; 420 Dateilogs, `PERF`, MIN = v4)**.
+  `build-v4/`/`bin-v4/` = v4 (gemessen; 740 Serial + 740 Dateilogs).
+  `build-v5/`/`bin-v5/` = **v5 (gemessen; 740 Dateilogs, `PERF`, MIN = v4)**.
   Befunde: `measurements/V5-REPORT.md`, `measurements/PERF-v5.md`; v1–v4
   sind Archiv.
 - v2-Warmup (historisch): 100 volle Messläufe in `cycle_buffer+4` (MOVEC, Sequenz, MOVEC,
@@ -33,8 +33,8 @@ Stand: **2026-10-23 13:10 (Europe/Berlin)**
   benennt nach jedem Lauf in `LOGS/<ID>.runNN.log` um. Der PC-Mitschnitt
   schreibt ebenfalls `<ID>.runNN.log`; `tools/repeat_report.py` vergleicht
   beide Kanäle und wertet die 10 Wiederholungen aus.
-- **v2-Testlauf 2026-10-23:** 420/420 Serial-Logs OK, 10/10 je Eintrag,
-  MIN über alle Wiederholungen identisch (71/71). **V4-Dateilogs fehlen**
+- **v2-Testlauf 2026-10-23:** 740/740 Serial-Logs OK, 10/10 je Eintrag,
+  MIN über alle Wiederholungen identisch (74/74). **V4-Dateilogs fehlen**
   (`Ram Disk:LOGS/` leer); der Warmup wirkt nicht auf die erste echte
   Iteration (Makro wird zweimal expandiert → zwei Codeadressen).
   v1–v4 bleiben Archiv; **v5 ist kanonisch**.
@@ -50,7 +50,7 @@ Stand: **2026-10-23 13:10 (Europe/Berlin)**
 - `MEM-003`/`MEM-004`: Die Sequenzinhalte waren gegenüber den Eintragstiteln
   vertauscht. Die Einträge wurden an die tatsächlich gebauten und gemessenen
   Sequenzen angepasst; Logs, IDs und Messwerte blieben unverändert.
-- Alle 71 Einträge enthalten am Ende den **verbatim gemessenen Code** aus
+- Alle 74 Einträge enthalten am Ende den **verbatim gemessenen Code** aus
   `seq/<ID>.i` (gebaut als `bin/<ID>`).
 
 ### Integritätsprüfung (zuletzt ausgeführt)
@@ -58,8 +58,8 @@ Stand: **2026-10-23 13:10 (Europe/Berlin)**
 ```text
 entries 42
 seq 42
-bins 43   (71 Einträge + SERIAL-PROBE)
-logs 43   (71 Einträge + FUS-001.run1)
+bins 43   (74 Einträge + SERIAL-PROBE)
+logs 43   (74 Einträge + FUS-001.run1)
 parts 0
 measured 42
 minfields 42
@@ -127,30 +127,30 @@ PRM-Mechanismen zu verwerfen, sondern ein ehrlicher Messbefund.
 | `index.md` | alphabetischer Index mit Statusspalte |
 | `V4-ACCESS.md` | **V4-Zugriff:** Windows-ACP, IP, Pfad-Syntax, Troubleshooting |
 | `NEXT-TEST.md` | **nächster Testlauf:** Pipeline-/Cache-Zähler (IEP1–3, BPC/BPW, DCH/DCM) |
-| `01-fusing.md` … `08-antipatterns.md` | 71 Einträge |
+| `01-fusing.md` … `08-antipatterns.md` | 74 Einträge |
 | `09-harness.md` | Harness, UART, Batch, Fallstricke |
 | `harness.asm` | **v2**-Template: Warmup = voller 10×10-Block |
 | `harness-v1.asm` | archivierte v1-Vorlage (Quelle der 42 v1-Logs) |
 | `build-v2/`, `bin-v2/` | v2-Buildquellen und 42 v2-Binaries (gemessen, Dateilogs fehlen) |
 | `build-v3/`, `bin-v3/` | v3-Buildquellen und 42 v3-Binaries (gemessen; Warmup wirkt) |
 | `build-v4/`, `bin-v4/` | v4-Buildquellen und 42 v4-Binaries (gemessen; ohne stdout, Dateilog OK) |
-| `harness-v5.asm`, `build-v5/`, `bin-v5/` | v5: v4 + PERF-Zählerdurchgang (gemessen, 420/420 Dateilogs) |
+| `harness-v5.asm`, `build-v5/`, `bin-v5/` | v5: v4 + PERF-Zählerdurchgang (gemessen, 740/740 Dateilogs) |
 | `tools/perf_report.py` | PERF-Auswertung: Pipe-Anteile, BPW-Quote, D-Cache-Hitrate |
 | `harness-v3-diag.asm` | Diagnose-Fassung mit erweitertem FILESTAT/Fallback (archiviert) |
 | `seq/<ID>.i` | 42 Messsequenzen |
 | `measurements/<ID>.log` | 42 echte Rohlogs |
 | `measurements/SUMMARY.md` | v4-Tabelle aller 42 (MIN, Median, MAX, AVG, Stdabw., p95) |
 | `measurements/SUMMARY-v1.md` | v1-Archivtabelle |
-| `measurements/v2/` | 420 v2-Serial-Logs (10× je Eintrag, nicht kanonisch) |
+| `measurements/v2/` | 740 v2-Serial-Logs (10× je Eintrag, nicht kanonisch) |
 | `measurements/v2/REPORT.md` | v2-Auswertung: MIN stabil, Warmup-/Dateilog-Befund |
-| `measurements/v3/` | 420 v3-Serial-Logs (10× je Eintrag, nicht kanonisch) |
+| `measurements/v3/` | 740 v3-Serial-Logs (10× je Eintrag, nicht kanonisch) |
 | `measurements/v3/REPORT.md` | v3-Auswertung: Warmup wirkt, Dateilog fehlt |
-| `measurements/v4/` | 420 v4-Serial-Logs (10× je Eintrag, kein stdout) |
-| `measurements/v4-files/` | 420 v4-V4-Dateilogs (identisch mit Serial) |
+| `measurements/v4/` | 740 v4-Serial-Logs (10× je Eintrag, kein stdout) |
+| `measurements/v4-files/` | 740 v4-V4-Dateilogs (identisch mit Serial) |
 | `measurements/v4/REPORT.md` | v4-Auswertung: Dateilog funktioniert, MIN stabil |
 | `measurements/FUS-001.run1.log` | Wiederholungslauf |
-| `RUN-ALL` | AmigaDOS-Batch: 71 Einträge × 10 Läufe, Dateilogs in `LOGS/` |
-| `RUN-ALL-ONCE` | AmigaDOS-Batch: 71 Einträge einmal (schneller Test) |
+| `RUN-ALL` | AmigaDOS-Batch: 74 Einträge × 10 Läufe, Dateilogs in `LOGS/` |
+| `RUN-ALL-ONCE` | AmigaDOS-Batch: 74 Einträge einmal (schneller Test) |
 | `tools/download_logs.sh` | V4-Dateilogs per ACP herunterladen |
 | `tools/repeat_report.py` | 10 Wiederholungen auswerten, V4-/Serial-Logs vergleichen |
 | `tools/` | Build, Guard, Serial-Capture, Log-Prüfer |
@@ -175,7 +175,7 @@ PRM-Mechanismen zu verwerfen, sondern ein ehrlicher Messbefund.
 
 ## Sinnvolle nächste Aufgaben
 
-1. **v5 ist übernommen:** 71 Einträge und `SUMMARY.md` stehen auf v5
+1. **v5 ist übernommen:** 74 Einträge und `SUMMARY.md` stehen auf v5
    (MIN/Median/MAX/AVG + IEP-Spalten); `SUMMARY-v4.md` ist Archiv.
    Bericht: `measurements/V5-REPORT.md`; Tabelle `measurements/PERF-v5.md`.
 2. Core-Revision/Firmware/Takt: PCR-ID/Revision und `ENV:VCoreRev` sind jetzt
@@ -207,7 +207,7 @@ Lies zuerst vollständig:
 3. 68080-db/measurements/SUMMARY.md
 4. 68080-db/09-harness.md
 
-Status: Die 71 Einträge sind mit **Harness v1** auf einer Vampire V4 gemessen.
+Status: Die 74 Einträge sind mit **Harness v1** auf einer Vampire V4 gemessen.
 Die v1-Logs liegen unter 68080-db/measurements/<ID>.log, FUS-001.run1.log ist
 ein separater Wiederholungslauf. Referenz ist MIN; die v1-Baseline (5–41 Takte)
 ist NICHT subtrahierbar. AVG ist ganzzahlig abgeschnitten. Der Serialpfad ist
@@ -223,7 +223,7 @@ schreibt jedes Programm absolut `Ram Disk:LOGS/<ID>.log` und loggt
 `build/` und `bin/` sind v1. `bin-v2/` (Makro-Warmup) und `bin-v3/`
 (gemeinsame Subroutine) wurden je 10× gemessen; v3 behebt den Warmup,
 aber der Dateilog scheiterte. **v4** behebt beides: kein stdout,
-`OpenLibrary` mit `a1`/`d0`, 420 Serial- **und** 420 Dateilogs, alle
+`OpenLibrary` mit `a1`/`d0`, 740 Serial- **und** 740 Dateilogs, alle
 identisch, `FILESTAT;1;0`, MIN 10/10 stabil. **v5 ist kanonisch**;
 v1–v4 sind Archiv. Befunde: measurements/V5-REPORT.md, measurements/PERF-v5.md.
 `harness-v1.asm` ist die archivierte v1-Vorlage.
@@ -232,7 +232,7 @@ V4-Zugriff: Windows-ACP C:\Program Files\ApolloExplorer\acp.exe (aus WSL
 Das Linux-ACP aus WSL funktioniert nicht (NAT). Details: 68080-db/V4-ACCESS.md.
 
 Prüfe vor der ersten Änderung:
-- 71 Einträge, 42 Sequenzen, 42 Logs, 42 Binaries
+- 74 Einträge, 42 Sequenzen, 42 Logs, 42 Binaries
 - keine measurements/*.part
 - tools/check_log.py für alle 42 Logs
 - tools/check_sequences.py

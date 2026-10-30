@@ -253,6 +253,20 @@ Können Sie unsere Bestmarken für 256-Bit ausgerichtetes Sprite-Blitting und Ti
 
 > **Bedingungen:** Reale V4-Hardware-Messung, 1920×1080 Framebuffer, bit-exakt (`diff=0`), vollständige CCC-Zyklen.
 
-## Rohlogs (Harness v5)
+## Kanonische v5-Sequenz und Rohlogs
 
-Für **BLT-001/002** existieren im kanonischen v5-Datensatz **keine Sequenzlogs**. Die im Dokument genannten Suite-/End-to-End-Zahlen stammen aus separaten Projektläufen und sind derzeit nicht über `measurements/v5-files` verlinkbar.
+**Sequenz:** [`seq/BLT-001.i`](seq/BLT-001.i) – zwei `move16` (32 Byte, 256-Bit-aligned Copy).
+
+```asm
+        move16  (a0)+,(a1)+
+        move16  (a0)+,(a1)+
+```
+
+Gemessen mit Harness v5: **MIN 9 Takte** (100×, 10 Wiederholungen; Ausreißer durch Interrupts).
+Die vollständigen 84/84-Suite-Zahlen oben stammen aus der separaten
+`Projects/Sprite_Blit_256bit`-/`Sprite_Tiled_Blit`-Suite und sind **nicht**
+diese Einzelsequenz.
+
+| ID | run01 … run10 |
+|---|---|
+| `BLT-001` | [01](cores/core-11350/logs/BLT-001.run01.log) [02](cores/core-11350/logs/BLT-001.run02.log) [03](cores/core-11350/logs/BLT-001.run03.log) [04](cores/core-11350/logs/BLT-001.run04.log) [05](cores/core-11350/logs/BLT-001.run05.log) [06](cores/core-11350/logs/BLT-001.run06.log) [07](cores/core-11350/logs/BLT-001.run07.log) [08](cores/core-11350/logs/BLT-001.run08.log) [09](cores/core-11350/logs/BLT-001.run09.log) [10](cores/core-11350/logs/BLT-001.run10.log) |

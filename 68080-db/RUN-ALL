@@ -1,4 +1,4 @@
-; RUN-ALL - Harness v5, 10 runs per entry, 71 entries
+; RUN-ALL - Harness v5, 10 runs per entry, 74 entries
 ; Execute: Execute "Ram Disk:RUN-ALL"
 ; Logs: Ram Disk:LOGS/<ID>.runNN.log
 CD "Ram Disk:"
@@ -686,6 +686,126 @@ EndIf
 ANTI-006
 If EXISTS "Ram Disk:LOGS/ANTI-006.log"
     Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run10.log"
+EndIf
+BLT-001
+If EXISTS "Ram Disk:LOGS/BLT-001.log"
+    Rename "Ram Disk:LOGS/BLT-001.log" "Ram Disk:LOGS/BLT-001.run01.log"
+EndIf
+BLT-001
+If EXISTS "Ram Disk:LOGS/BLT-001.log"
+    Rename "Ram Disk:LOGS/BLT-001.log" "Ram Disk:LOGS/BLT-001.run02.log"
+EndIf
+BLT-001
+If EXISTS "Ram Disk:LOGS/BLT-001.log"
+    Rename "Ram Disk:LOGS/BLT-001.log" "Ram Disk:LOGS/BLT-001.run03.log"
+EndIf
+BLT-001
+If EXISTS "Ram Disk:LOGS/BLT-001.log"
+    Rename "Ram Disk:LOGS/BLT-001.log" "Ram Disk:LOGS/BLT-001.run04.log"
+EndIf
+BLT-001
+If EXISTS "Ram Disk:LOGS/BLT-001.log"
+    Rename "Ram Disk:LOGS/BLT-001.log" "Ram Disk:LOGS/BLT-001.run05.log"
+EndIf
+BLT-001
+If EXISTS "Ram Disk:LOGS/BLT-001.log"
+    Rename "Ram Disk:LOGS/BLT-001.log" "Ram Disk:LOGS/BLT-001.run06.log"
+EndIf
+BLT-001
+If EXISTS "Ram Disk:LOGS/BLT-001.log"
+    Rename "Ram Disk:LOGS/BLT-001.log" "Ram Disk:LOGS/BLT-001.run07.log"
+EndIf
+BLT-001
+If EXISTS "Ram Disk:LOGS/BLT-001.log"
+    Rename "Ram Disk:LOGS/BLT-001.log" "Ram Disk:LOGS/BLT-001.run08.log"
+EndIf
+BLT-001
+If EXISTS "Ram Disk:LOGS/BLT-001.log"
+    Rename "Ram Disk:LOGS/BLT-001.log" "Ram Disk:LOGS/BLT-001.run09.log"
+EndIf
+BLT-001
+If EXISTS "Ram Disk:LOGS/BLT-001.log"
+    Rename "Ram Disk:LOGS/BLT-001.log" "Ram Disk:LOGS/BLT-001.run10.log"
+EndIf
+BLT-002
+If EXISTS "Ram Disk:LOGS/BLT-002.log"
+    Rename "Ram Disk:LOGS/BLT-002.log" "Ram Disk:LOGS/BLT-002.run01.log"
+EndIf
+BLT-002
+If EXISTS "Ram Disk:LOGS/BLT-002.log"
+    Rename "Ram Disk:LOGS/BLT-002.log" "Ram Disk:LOGS/BLT-002.run02.log"
+EndIf
+BLT-002
+If EXISTS "Ram Disk:LOGS/BLT-002.log"
+    Rename "Ram Disk:LOGS/BLT-002.log" "Ram Disk:LOGS/BLT-002.run03.log"
+EndIf
+BLT-002
+If EXISTS "Ram Disk:LOGS/BLT-002.log"
+    Rename "Ram Disk:LOGS/BLT-002.log" "Ram Disk:LOGS/BLT-002.run04.log"
+EndIf
+BLT-002
+If EXISTS "Ram Disk:LOGS/BLT-002.log"
+    Rename "Ram Disk:LOGS/BLT-002.log" "Ram Disk:LOGS/BLT-002.run05.log"
+EndIf
+BLT-002
+If EXISTS "Ram Disk:LOGS/BLT-002.log"
+    Rename "Ram Disk:LOGS/BLT-002.log" "Ram Disk:LOGS/BLT-002.run06.log"
+EndIf
+BLT-002
+If EXISTS "Ram Disk:LOGS/BLT-002.log"
+    Rename "Ram Disk:LOGS/BLT-002.log" "Ram Disk:LOGS/BLT-002.run07.log"
+EndIf
+BLT-002
+If EXISTS "Ram Disk:LOGS/BLT-002.log"
+    Rename "Ram Disk:LOGS/BLT-002.log" "Ram Disk:LOGS/BLT-002.run08.log"
+EndIf
+BLT-002
+If EXISTS "Ram Disk:LOGS/BLT-002.log"
+    Rename "Ram Disk:LOGS/BLT-002.log" "Ram Disk:LOGS/BLT-002.run09.log"
+EndIf
+BLT-002
+If EXISTS "Ram Disk:LOGS/BLT-002.log"
+    Rename "Ram Disk:LOGS/BLT-002.log" "Ram Disk:LOGS/BLT-002.run10.log"
+EndIf
+BLT-003
+If EXISTS "Ram Disk:LOGS/BLT-003.log"
+    Rename "Ram Disk:LOGS/BLT-003.log" "Ram Disk:LOGS/BLT-003.run01.log"
+EndIf
+BLT-003
+If EXISTS "Ram Disk:LOGS/BLT-003.log"
+    Rename "Ram Disk:LOGS/BLT-003.log" "Ram Disk:LOGS/BLT-003.run02.log"
+EndIf
+BLT-003
+If EXISTS "Ram Disk:LOGS/BLT-003.log"
+    Rename "Ram Disk:LOGS/BLT-003.log" "Ram Disk:LOGS/BLT-003.run03.log"
+EndIf
+BLT-003
+If EXISTS "Ram Disk:LOGS/BLT-003.log"
+    Rename "Ram Disk:LOGS/BLT-003.log" "Ram Disk:LOGS/BLT-003.run04.log"
+EndIf
+BLT-003
+If EXISTS "Ram Disk:LOGS/BLT-003.log"
+    Rename "Ram Disk:LOGS/BLT-003.log" "Ram Disk:LOGS/BLT-003.run05.log"
+EndIf
+BLT-003
+If EXISTS "Ram Disk:LOGS/BLT-003.log"
+    Rename "Ram Disk:LOGS/BLT-003.log" "Ram Disk:LOGS/BLT-003.run06.log"
+EndIf
+BLT-003
+If EXISTS "Ram Disk:LOGS/BLT-003.log"
+    Rename "Ram Disk:LOGS/BLT-003.log" "Ram Disk:LOGS/BLT-003.run07.log"
+EndIf
+BLT-003
+If EXISTS "Ram Disk:LOGS/BLT-003.log"
+    Rename "Ram Disk:LOGS/BLT-003.log" "Ram Disk:LOGS/BLT-003.run08.log"
+EndIf
+BLT-003
+If EXISTS "Ram Disk:LOGS/BLT-003.log"
+    Rename "Ram Disk:LOGS/BLT-003.log" "Ram Disk:LOGS/BLT-003.run09.log"
+EndIf
+BLT-003
+If EXISTS "Ram Disk:LOGS/BLT-003.log"
+    Rename "Ram Disk:LOGS/BLT-003.log" "Ram Disk:LOGS/BLT-003.run10.log"
 EndIf
 BND-001
 If EXISTS "Ram Disk:LOGS/BND-001.log"

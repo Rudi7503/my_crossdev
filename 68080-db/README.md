@@ -48,6 +48,8 @@ Details und Einreichungsanleitung stehen in [`cores/README.md`](cores/README.md)
 | [`17-mpeg.md`](17-mpeg.md) | MPEG-1/2 Video Motion Compensation & Fused Residual IDCT | 1 (Fused IDCT+MC, Sparse DC-Only, VCD in 52.7% CPU) |
 | [`18-h264.md`](18-h264.md) | H.264 / AVC 4x4 Core IDCT, Hadamard & Fused MC | 1 (AMMX Hadamard in 27 Netto-Takten, Bit-Exact 4x4 IDCT) |
 | [`19-sprite-blit.md`](19-sprite-blit.md) | 2D Sprite Blitting & 256-Bit Aligned Rectangle Copy / Tiling | 84/84 Tests (Single + Full-Screen Tiled 1920x1080 Aligned & 1-Pixel Offset, move16, Peeling, 219 MB/s) |
+| [`20-sprite-transparency.md`](20-sprite-transparency.md) | AMMX Transparent Sprite Blitting & PRM Store Variants | 1 (BLT-002: Color-Key + storeilm; Rawlogs) |
+| [`21-sprite-alpha-pmula.md`](21-sprite-alpha-pmula.md) | Sprite-Alpha-Blending mit PMULA | 1 (BLT-003: premultiplied Alpha, 5 Takte MIN) |
 
 Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-11350/`](cores/core-11350/).
 Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).
@@ -91,7 +93,7 @@ Jeder Eintrag trennt deshalb sauber:
 
 - **Status** – Messstatus,
 - **Beleg** – Literaturquelle,
-- **Messergebnis** – Rohdaten aus `measurements/<ID>.log` (710/710 vorhanden),
+- **Messergebnis** – Rohdaten aus `measurements/<ID>.log` (740/740 vorhanden),
 - **Literaturwert** – was PRM/Wiki aussagen (kein Messwert).
 
 ## Schnellstart
@@ -184,18 +186,18 @@ Der Guard prüft die Sequenzen statisch. Ein Verstoß ist ein Build-Fehler, kein
 
 | Werkzeug | Zweck |
 |---|---|
-| `tools/build_all.sh` | alle 71 Einträge mit vasm bauen |
+| `tools/build_all.sh` | alle 74 Einträge mit vasm bauen |
 | `tools/check_sequences.py` | Register-/Label-Guard für Sequenzen |
 | `tools/serial_capture.py` | seriellen Strom mitschneiden; schreibt `<ID>.runNN.log` (kein Überschreiben bei Wiederholungen) |
 | `tools/download_logs.sh` | V4-Dateilogs aus `Ram Disk:LOGS` per ACP herunterladen |
 | `tools/repeat_report.py` | 10 Wiederholungen je Eintrag auswerten; optional V4- und Serial-Logs vergleichen |
 | `tools/check_log.py` | Log-Format, `CORE`-Zeile und SUMMARY gegen RES prüfen |
-| `RUN-ALL` | AmigaDOS-Batch: jedes der 71 Programme 10× (710 Läufe), Dateilog in `Ram Disk:LOGS` |
-| `RUN-ALL-ONCE` | Einzellauf aller 71 Programme (für schnelle Tests) |
+| `RUN-ALL` | AmigaDOS-Batch: jedes der 74 Programme 10× (740 Läufe), Dateilog in `Ram Disk:LOGS` |
+| `RUN-ALL-ONCE` | Einzellauf aller 74 Programme (für schnelle Tests) |
 
 ## Reproduzierbarkeit und Grenzen
 
-- **Hardware:** Alle 71 Einträge wurden mit Harness v5 auf einer Vampire V4
+- **Hardware:** Alle 74 Einträge wurden mit Harness v5 auf einer Vampire V4
   gemessen (10 × 100 Läufe, COM9, 115200 8N1). Die Streuung **über die 10
   Läufe** (Median, Stdabw., p95) steht in
   [`cores/core-11350/CYCLE-SUMMARY.md`](cores/core-11350/CYCLE-SUMMARY.md); sie sagt nichts über

@@ -213,6 +213,21 @@ Torture-Test: Jede Zeile startet an einer ungeraden Byteadresse, wodurch 32-Byte
 ### 3. Exzellente Unaligned-Toleranz des Apollo 68080 Speichercontrollers
 - Selbst beim extremen Torture-Test (+1 Pixel Offset in X und Y) beträgt der Performance-Verlust von `storeilm` bei kleinen Kacheln **unter 1,5%** und bei riesigen Kacheln maximal **10-12%**. Der Apollo 68080 Memory Controller handhabt Cacheline-Splits hardwareseitig transparent ohne Software-Traps.
 
-## Rohlogs (Harness v5)
+## Kanonische v5-Sequenz und Rohlogs
 
-Für **BLT-001/002** existieren im kanonischen v5-Datensatz **keine Sequenzlogs**. Die im Dokument genannten Suite-/End-to-End-Zahlen stammen aus separaten Projektläufen und sind derzeit nicht über `measurements/v5-files` verlinkbar.
+**Sequenz:** [`seq/BLT-002.i`](seq/BLT-002.i) – Color-Key-Vergleich + `storeilm` (8 Byte, 4 Pixel RGB565).
+
+```asm
+        load    (a0)+,e0
+        load    (a2)+,e7
+        pcmpeqw e7,e0,e4
+        storeilm e0,e4,(a1)+
+```
+
+Gemessen mit Harness v5: **MIN 5 Takte** (100×, 10 Wiederholungen).
+Die vollständigen 28/28-/56/56-Suite-Zahlen oben stammen aus der separaten
+`Projects/Sprite_Transparent_AMMX`-Suite und sind **nicht** diese Einzelsequenz.
+
+| ID | run01 … run10 |
+|---|---|
+| `BLT-002` | [01](cores/core-11350/logs/BLT-002.run01.log) [02](cores/core-11350/logs/BLT-002.run02.log) [03](cores/core-11350/logs/BLT-002.run03.log) [04](cores/core-11350/logs/BLT-002.run04.log) [05](cores/core-11350/logs/BLT-002.run05.log) [06](cores/core-11350/logs/BLT-002.run06.log) [07](cores/core-11350/logs/BLT-002.run07.log) [08](cores/core-11350/logs/BLT-002.run08.log) [09](cores/core-11350/logs/BLT-002.run09.log) [10](cores/core-11350/logs/BLT-002.run10.log) |

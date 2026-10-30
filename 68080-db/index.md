@@ -1,6 +1,6 @@
 # Index aller Einträge
 
-Alphabetisch nach ID. **Alle 71 Einträge wurden mit Harness v5 auf einer
+Alphabetisch nach ID. **Alle 74 Einträge wurden mit Harness v5 auf einer
 Vampire V4 gemessen** (10 × 100 Läufe). Referenz ist MIN; MAX/AVG sind
 Mediane der 10 Läufe; zusätzlich sind die **IEP-Pipe-Slots** angegeben.
 Die v5-Logs liegen unter `measurements/v5-files/<ID>.runNN.log`; es gibt nur den kanonischen v5-Datensatz. Eine Tabelle aller Werte steht in
@@ -21,13 +21,15 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`AMX-009`](03-ammx.md) | 8-Byte Parallele Mittelwertbildung mit PAVGB (Half-Pel MC) | `03-ammx.md` | gemessen |
 | [`AMX-010`](03-ammx.md) | PACKSSWB-Emulation (Signed Saturation Word zu Byte mit Bias) | `03-ammx.md` | vorbereitet |
 | [`AMX-011`](03-ammx.md) | BFLYW Core-Kompatibilität & Exception-Status vs. PADDW+PSUBW | `03-ammx.md` | gemessen |
+| [`BLT-001`](19-sprite-blit.md) | 2D Sprite Blitting: 256-Bit Copy (move16) | `19-sprite-blit.md` | gemessen |
+| [`BLT-002`](20-sprite-transparency.md) | Transparent Sprite: Color-Key + storeilm | `20-sprite-transparency.md` | gemessen |
+| [`BLT-003`](21-sprite-alpha-pmula.md) | Premultiplied-Alpha-Blending mit PMULA | `21-sprite-alpha-pmula.md` | gemessen |
 | [`ANTI-001`](08-antipatterns.md) | NOP zwischen MOVE und abhängigem ADD | `08-antipatterns.md` | gemessen |
 | [`ANTI-002`](08-antipatterns.md) | 68060-Scheduling durch Einschub einer unabhängigen Instruktion | `08-antipatterns.md` | gemessen |
 | [`ANTI-003`](08-antipatterns.md) | Word-Updates statt Long-Updates | `08-antipatterns.md` | gemessen |
 | [`ANTI-004`](08-antipatterns.md) | Zwei mehrzyklische Instruktionen auf Pipe 1 erwarten | `08-antipatterns.md` | gemessen |
 | [`ANTI-005`](08-antipatterns.md) | Unausgerichtete Long-Writes | `08-antipatterns.md` | gemessen |
 | [`ANTI-006`](08-antipatterns.md), [`ANTI-007`](08-antipatterns.md) | TOUCH unmittelbar vor dem Load | `08-antipatterns.md` | gemessen |
-| [`ANTI-007`](08-antipatterns.md) | Blindes Loop-Unrolling zerstört Decoder-Learning (ANTON/BRUNO/CESAR) | `08-antipatterns.md` | verifiziert |
 | [`BND-001`](02-bonding.md) | Abhängiges MOVEQ + ADD mit zwei Zielen bonden | `02-bonding.md` | gemessen |
 | [`BND-002`](02-bonding.md) | Gleiches Ziel ist Fusing, nicht Bonding | `02-bonding.md` | gemessen |
 | [`BND-003`](02-bonding.md) | Zwei unabhängige ALU-Instruktionen sind normales Superscalar | `02-bonding.md` | gemessen |
@@ -99,6 +101,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **H.264 / AVC Video Pipeline** (1): [`DCT-012`](18-h264.md)
 - **2D Sprite Blitting & 256-Bit Copy** (1): [`BLT-001`](19-sprite-blit.md)
 - **AMMX Transparent Sprite Blitting & PRM Store Variants** (1): [`BLT-002`](20-sprite-transparency.md)
+- **Sprite Alpha Blending mit PMULA** (1): [`BLT-003`](21-sprite-alpha-pmula.md)
 - **Fast Fourier Transform (FFT)** (5): [`FFT-001`](13-fft.md), [`FFT-002`](13-fft.md), [`FFT-003`](13-fft.md), [`FFT-004`](13-fft.md), [`FFT-005`](13-fft.md), [`FFT-006`](13-fft.md)
 - **Matrix (FPU)** (3): [`MAT-001`](12-matrix.md), [`MAT-002`](12-matrix.md), [`MAT-003`](12-matrix.md)
 - **Matrix (Fixed-Point AMMX)** (3): [`FIX-001`](12-matrix.md), [`FIX-002`](12-matrix.md), [`FIX-003`](12-matrix.md)
@@ -107,7 +110,6 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 ## Sequenzen und Logs
 
 - Sequenzen: `seq/<ID>.i`
-- v5-Dateilogs: `measurements/v5-files/<ID>.runNN.log` (710, mit `PERF`)
+- v5-Dateilogs: `measurements/v5-files/<ID>.runNN.log` (740, mit `PERF`)
 - Build-Artefakte: `build-v5/<ID>.asm`, `bin-v5/<ID>`
 
-> **Hinweis:** `BLT-001`, `BLT-002` und `ANTI-007` sind derzeit nicht Teil des kanonischen 71er-v5-Korpus; für sie existieren keine `seq/`- bzw. v5-Logs. Die übrigen 71 Einträge sind vollständig verlinkt.
