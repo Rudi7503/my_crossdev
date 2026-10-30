@@ -84,6 +84,16 @@ Gemessen mit `Projects/Audio_MDCT/MDCT` auf echter Vampire V4 Hardware, gemittel
 | **Part 3: 50% Overlap-Add (18 Samples)** | 86 Takte | **41 Takte** (AMMX) | **2.10x** | 26 LSB | **PASS** |
 | **Part 4: Fused Complete MP3 Engine** | 5.593 Takte | **795 Takte** (Fused AMMX) | **7.04x** | max 50 LSB | **PASS** |
 
+### Pipeline-Auslastung & Superskalarität (Harness v5: IEP1, IEP2, IEP3)
+Gemessen auf **Vampire V4 Hardware (Core 1088/1 @ 85 MHz)** mit den Zählern `IEP1` (Anton), `IEP2` (Bruno), `IEP3` (Cesar) und DCH/DCM:
+
+| MDCT Teilkomponente | Takte (CCC) | Befehle gesamt | IPC | Anton (`IEP1`) | Bruno (`IEP2`) | Cesar (`IEP3`) | D-Cache Hit |
+|---|---|---|---|---|---|---|---|
+| **36-pt IMDCT Float (FPU ASM)** | 5.827 | 2.899 | **0,50** | 75,0 % | **25,0 %** | 0,0 % | 100,0 % |
+| **36-pt IMDCT Fixed (AMMX PMULLW)** | 741 | 727 | **0,98** | 97,1 % | 2,9 % | 0,0 % | 100,0 % |
+| **Overlap-Add (AMMX PADDW)** | 42 | 34 | **0,81** | 100,0 % | 0,0 % | 0,0 % | 100,0 % |
+| **Fused Windowed IMDCT+OLA (AMMX)** | 796 | 804 | **1,01** | 93,9 % | **6,1 %** | 0,0 % | 100,0 % |
+
 ### Real-Time CPU-Last Budget für 44.1 kHz Stereo MP3:
 - **Audio-Budget:** 1 Sekunde MP3 Stereo benötigt $44.100 / 1152 \times 128 = \mathbf{4.900\text{ IMDCTs/Sekunde}}$.
 - Bei ~85 MHz effektiver 68080-Taktung:

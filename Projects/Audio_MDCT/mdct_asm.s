@@ -7,6 +7,13 @@
         machine 68080
 
         xdef    _get_ccc
+        xdef    _read_iep1
+        xdef    _read_iep2
+        xdef    _read_iep3
+        xdef    _read_dch
+        xdef    _read_dcm
+        xdef    _read_bpc
+        xdef    _read_bpw
         xdef    _imdct36_float_asm
         xdef    _imdct36_fixed_ammx
         xdef    _overlap_add_fixed_ammx
@@ -19,11 +26,38 @@
         section .text,code
 
 ; ======================================================================
-; uint32_t get_ccc(void)
-; Read Apollo Core Cycle Counter
+; Performance Counters
 ; ======================================================================
 _get_ccc:
         movec.l CCC,d0
+        rts
+
+_read_iep1:
+        movec.l IEP1,d0
+        rts
+
+_read_iep2:
+        movec.l IEP2,d0
+        rts
+
+_read_iep3:
+        dc.w    $4e7a,$000c
+        rts
+
+_read_dch:
+        movec.l DCH,d0
+        rts
+
+_read_dcm:
+        movec.l DCM,d0
+        rts
+
+_read_bpc:
+        movec.l BPC,d0
+        rts
+
+_read_bpw:
+        movec.l BPW,d0
         rts
 
 ; ======================================================================

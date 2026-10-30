@@ -126,6 +126,17 @@ Gemessen mit `Projects/JPEG_Pipeline/JPEG` auf echter Vampire V4 Hardware, gemit
 | **Part 4: Real-World Durchschnitt (60% DC-Only)** | 34.540 Takte | **7.132 Takte** | **4,84x** | typische Fotos | **PASS** |
 | **Part 4b: Real-World mit SAGA Native Direct YUV** | 34.540 Takte | **3.697 Takte** | **9,34x** | Spart Farbraumkonvertierung | **PASS** |
 
+### Pipeline-Auslastung & Superskalarität (Harness v5: IEP1, IEP2, IEP3)
+Gemessen auf **Vampire V4 Hardware (Core 1088/1 @ 85 MHz)** mit den Zählern `IEP1` (Anton), `IEP2` (Bruno), `IEP3` (Cesar) und DCH/DCM:
+
+| JPEG Teilkomponente (AMMX) | Takte (CCC) | Befehle gesamt | IPC | Anton (`IEP1`) | Bruno (`IEP2`) | Cesar (`IEP3`) | D-Cache Hit |
+|---|---|---|---|---|---|---|---|
+| **Dequant + Zigzag (AMMX)** | 627 | 545 | **0,87** | 96,5 % | 3,5 % | 0,0 % | 100,0 % |
+| **8×8 IDCT + Pack (Full AC)** | 1.035 | 1.016 | **0,98** | 94,4 % | 5,6 % | 0,0 % | 100,0 % |
+| **8×8 IDCT + Pack (DC Fast-Path)** | 187 | 98 | **0,52** | 93,9 % | 6,1 % | 0,0 % | 100,0 % |
+| **YCbCr $\to$ RGB565 (AMMX)** | 3.306 | 3.090 | **0,93** | 87,5 % | **12,5 %** | 0,0 % | 100,0 % |
+| **Complete MCU Pipeline (AMMX)** | 9.156 | 8.118 | **0,89** | 90,6 % | **9,4 %** | 0,0 % | 100,0 % |
+
 ---
 
 ## 5. Durchsatz & Relevanz für Bild- und Videowiedergabe auf Vampire V4

@@ -9,19 +9,19 @@ Eine Zahl ist **nur dann ein Messwert**, wenn ein 100×-Mikrobenchmark auf echte
 
 ## 1. Verifizierte & Gemessene Instruktionen
 
-| Instruktion | Einsatzbereich | Messwert (Hardware V4 Core 1088/1) | Status & Bewertung |
-|---|---|---|---|
-| **`MOVEX.L`** | 4-Byte-Bitstream laden + Byte-Swap | Verifiziert in `Fresh15` (3× pro Block) | **Exzellent.** Spart separate Endian-Swap-Schleifen vollständig ein. |
-| **`PADDB`** | 8× 8-Bit Lane-Addition | **5 Takte MIN** (Harness v5, `AMX-002`) | Ideal für Byte-Vektoren, für 16-Bit-Audio zu schmal. |
-| **`PADDW`** | 4× 16-Bit Lane-Addition | **5 Takte MIN** (Harness v5, `AMX-007`) | Gleicher Taktpreis wie `PADDB`, perfekt für 16-Bit PCM-Lanes. |
-| **`PAVGB`** | 8× 8-Bit Parallele Mittelwertbildung | **11 Takte** für 64 Pixel (0,17 c/pix, 14,5x vs C) | **Verifiziert (PASS).** Exzellent für Stereo-Mittelung & Dithering. |
-| **`PACKUSWB`** | 8× 16-Bit Word $\rightarrow$ 8-Bit Byte Saturation | **106 Takte** für 64 Werte (1,66 c/sample) | **Verifiziert (PASS).** Für 8-Bit-Quantisierung via Bias-Trick (`AMX-010`). |
-| **`PACK3216`** | 2× 32-Bit $\rightarrow$ 16-Bit Packen | **5 Takte MIN** (`AMX-006`) | **Für Audio ungeeignet!** Packt fest in 16-Bit RGB565 (5-6-5 Bitmasken). |
-| **`PCMPGTW` + `BSEL`** | 4× 16-Bit Lane Max/Min Selection | **7 Takte** AMMX vs. 33 Takte Skalar (**4,7x Speedup**) | **Verifiziert.** Funktioniert für 16-Bit-Worte; kein 32-Bit-`PCMPGTL` vorhanden. |
-| **`MIN.L` / `MAX.L`** | Skalarer 32-Bit Clamp | **V4-Hardware-Reset (Absturz!)** | **Verworfen.** Assembliert mit vasm, löst auf V4 CPU-Trap/Reset aus. |
-| **`PADDSW` / `PSUBSW`** | Signed Saturation Add/Sub | *Unknown Mnemonic* (vasm 2.0d) | **Nicht verfügbar.** Assembler kennt diese Opcodes nicht. |
-| **`BFLYW`** | Hardware-Schmetterling | **Privilege Violation (`0x80000008`)** | **Verworfen.** Auf Core 1088/1 nicht in Hardware freigegeben. |
-| **`subq.l #1, An` + `bne`** | Adressregister als Schleifenzähler | **Endlosschleife / Crash** | **Verworfen.** Adressregister-Arithmetik setzt keine CPU-Flags! |
+| Instruktion | Einsatzbereich | Messwert (Hardware V4 Core 1088/1) | Pipe-Slots (v5: IEP1 / IEP2) | Status & Bewertung |
+|---|---|---|---|---|
+| **`MOVEX.L`** | 4-Byte-Bitstream laden + Byte-Swap | Verifiziert in `Fresh15` (3× pro Block) | Im Block-Mix: IPC = **1,83** (24,1 % Bruno) | **Exzellent.** Spart separate Endian-Swap-Schleifen vollständig ein. |
+| **`PADDB`** | 8× 8-Bit Lane-Addition | **5 Takte MIN** (`AMX-002`) | `IEP1 = 6`, `IEP2 = 0`, `IEP3 = 0` | Ideal für Byte-Vektoren, für 16-Bit-Audio zu schmal. |
+| **`PADDW`** | 4× 16-Bit Lane-Addition | **5 Takte MIN** (`AMX-007`) | `IEP1 = 6`, `IEP2 = 0`, `IEP3 = 0` | Gleicher Taktpreis wie `PADDB`, perfekt für 16-Bit PCM-Lanes. |
+| **`PAVGB`** | 8× 8-Bit Parallele Mittelwertbildung | **11 Takte** für 64 Pixel (0,17 c/pix) | `IEP1 = 12`, `IEP2 = 0`, `IEP3 = 0` | **Verifiziert (PASS).** Exzellent für Stereo-Mittelung & Dithering. |
+| **`PACKUSWB`** | 8× 16-Bit Word $\rightarrow$ 8-Bit Byte Saturation | **106 Takte** für 64 Werte (1,66 c/sample) | `IEP1 = 7`, `IEP2 = 0` (`AMX-010`) | **Verifiziert (PASS).** Für 8-Bit-Quantisierung via Bias-Trick. |
+| **`PACK3216`** | 2× 32-Bit $\rightarrow$ 16-Bit Packen | **5 Takte MIN** (`AMX-006`) | `IEP1 = 6`, `IEP2 = 0`, `IEP3 = 0` | **Für Audio ungeeignet!** Packt fest in 16-Bit RGB565 (5-6-5 Bitmasken). |
+| **`PCMPGTW` + `BSEL`** | 4× 16-Bit Lane Max/Min Selection | **7 Takte** AMMX vs. 33 Takte Skalar | `IEP1 = 7`, `IEP2 = 0` (**4,7x Speedup**) | **Verifiziert.** Funktioniert für 16-Bit-Worte; kein 32-Bit-`PCMPGTL` vorhanden. |
+| **`MIN.L` / `MAX.L`** | Skalarer 32-Bit Clamp | **V4-Hardware-Reset (Absturz!)** | *Nicht ausführbar* | **Verworfen.** Assembliert mit vasm, löst auf V4 CPU-Trap/Reset aus. |
+| **`PADDSW` / `PSUBSW`** | Signed Saturation Add/Sub | *Unknown Mnemonic* (vasm 2.0d) | *Nicht verfügbar* | **Nicht verfügbar.** Assembler kennt diese Opcodes nicht. |
+| **`BFLYW`** | Hardware-Schmetterling | **Privilege Violation (`0x80000008`)** | *Nicht ausführbar* | **Verworfen.** Auf Core 1088/1 nicht in Hardware freigegeben. |
+| **`subq.l #1, An` + `bne`** | Adressregister als Schleifenzähler | **Endlosschleife / Crash** | *Nicht ausführbar* | **Verworfen.** Adressregister-Arithmetik setzt keine CPU-Flags! |
 
 ---
 

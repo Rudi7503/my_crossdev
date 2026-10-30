@@ -120,6 +120,16 @@ Gemessen mit `Projects/MPEG_Pipeline/MPEG` auf echter Vampire V4 Hardware (200 D
 | **Part 4: Typischer P-Frame MB (4x DC, 2x AC)** | 56.593 Takte | **2.916 Takte** (7,59 c/px) | **19,41x** | spart 4.024 Takte | **PASS** |
 | **Part 4: All-DC Flat Macroblock (6x DC)** | 56.593 Takte | **987 Takte** (2,57 c/px) | **57,34x** | spart 5.953 Takte | **PASS** |
 
+### Pipeline-Auslastung & Superskalarität (Harness v5: IEP1, IEP2, IEP3)
+Gemessen auf **Vampire V4 Hardware (Core 1088/1 @ 85 MHz)** mit den Zählern `IEP1` (Anton), `IEP2` (Bruno), `IEP3` (Cesar) und DCH/DCM:
+
+| MPEG Teilkomponente (AMMX) | Takte (CCC) | Befehle gesamt | IPC | Anton (`IEP1`) | Bruno (`IEP2`) | Cesar (`IEP3`) | D-Cache Hit |
+|---|---|---|---|---|---|---|---|
+| **MC Residual Add (AMMX)** | 123 | 115 | **0,93** | 85,2 % | **14,8 %** | 0,0 % | 100,0 % |
+| **Fused IDCT+MC (Full 8×8 AMMX)** | 1.077 | 1.060 | **0,98** | 94,1 % | 5,9 % | 0,0 % | 100,0 % |
+| **Fused IDCT+MC (DC Fast-Path)** | 114 | 107 | **0,94** | 83,2 % | **16,8 %** | 0,0 % | 100,0 % |
+| **Complete 16×16 MB (6 Blocks)** | 7.594 | 6.792 | **0,89** | 94,0 % | 6,0 % | 0,0 % | 100,0 % |
+
 ---
 
 ## 5. Durchsatz & Relevanz für Videowiedergabe auf Vampire V4
