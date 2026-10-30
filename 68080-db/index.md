@@ -24,6 +24,8 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`BLT-001`](19-sprite-blit.md) | 2D Sprite Blitting: 256-Bit Copy (move16) | `19-sprite-blit.md` | gemessen |
 | [`BLT-002`](20-sprite-transparency.md) | Transparent Sprite: Color-Key + storeilm | `20-sprite-transparency.md` | gemessen |
 | [`BLT-003`](21-sprite-alpha-pmula.md) | Premultiplied-Alpha-Blending mit PMULA | `21-sprite-alpha-pmula.md` | gemessen |
+| [`BLT-004`](24-pmula-unroll-256.md) | PMULA 4× (Register-Loads) | `24-pmula-unroll-256.md` | gemessen |
+| [`BLT-005`](24-pmula-unroll-256.md) | PMULA 4× Memory-VEA (Load gespart) | `24-pmula-unroll-256.md` | gemessen |
 | [`ANTI-001`](08-antipatterns.md) | NOP zwischen MOVE und abhängigem ADD | `08-antipatterns.md` | gemessen |
 | [`ANTI-002`](08-antipatterns.md) | 68060-Scheduling durch Einschub einer unabhängigen Instruktion | `08-antipatterns.md` | gemessen |
 | [`ANTI-003`](08-antipatterns.md) | Word-Updates statt Long-Updates | `08-antipatterns.md` | gemessen |
@@ -103,6 +105,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **2D Sprite Blitting & 256-Bit Copy** (1): [`BLT-001`](19-sprite-blit.md)
 - **AMMX Transparent Sprite Blitting & PRM Store Variants** (1): [`BLT-002`](20-sprite-transparency.md)
 - **Sprite Alpha Blending mit PMULA** (1): [`BLT-003`](21-sprite-alpha-pmula.md) – Golden: [`22`](22-sprite-alpha-pmula-golden.md)
+- **PMULA 4×/Memory-VEA** (2): [`BLT-004`](24-pmula-unroll-256.md), [`BLT-005`](24-pmula-unroll-256.md)
 - **Fast Fourier Transform (FFT)** (5): [`FFT-001`](13-fft.md), [`FFT-002`](13-fft.md), [`FFT-003`](13-fft.md), [`FFT-004`](13-fft.md), [`FFT-005`](13-fft.md), [`FFT-006`](13-fft.md)
 - **Matrix (FPU)** (3): [`MAT-001`](12-matrix.md), [`MAT-002`](12-matrix.md), [`MAT-003`](12-matrix.md)
 - **Matrix (Fixed-Point AMMX)** (3): [`FIX-001`](12-matrix.md), [`FIX-002`](12-matrix.md), [`FIX-003`](12-matrix.md)

@@ -76,3 +76,5 @@ make clean all
 ```
 
 Der Rohlog ist unter `cores/core-11350/golden/pmula_golden.log` versioniert.
+
+**Unrolling/VEA-Messung:** [`24-pmula-unroll-256.md`](24-pmula-unroll-256.md).

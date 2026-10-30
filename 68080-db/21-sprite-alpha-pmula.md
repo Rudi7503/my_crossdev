@@ -51,3 +51,5 @@ zusätzlicher Multiplikationsschritt nötig; `PMULA` allein reicht dann nicht.
 > für beliebige Alpha-Werte steht noch aus.
 
 **Bit-exakter Golden-Test:** [`22-sprite-alpha-pmula-golden.md`](22-sprite-alpha-pmula-golden.md) – 256 Alpha-Werte, 10.000 Zufallsvektoren, 16/32/64-Sprites, `diff=0`.
+
+**Unrolling/VEA-Messung:** [`24-pmula-unroll-256.md`](24-pmula-unroll-256.md).

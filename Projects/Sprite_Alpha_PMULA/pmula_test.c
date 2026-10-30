@@ -5,6 +5,8 @@
 
 extern void pmula8(const uint8_t *a, const uint8_t *b, uint8_t *d);
 extern void pmula_blit(const uint8_t *a, const uint8_t *b, uint8_t *out, int pixels);
+extern void pmula_blit4(const uint8_t *a, const uint8_t *b, uint8_t *out, int pixels);
+extern void pmula_blit4_mem(const uint8_t *a, const uint8_t *b, uint8_t *out, int pixels);
 extern uint32_t get_ccc(void);
 
 static void ref8(const uint8_t *a, const uint8_t *b, uint8_t *d)
@@ -162,6 +164,39 @@ int main(void)
         printf("BENCH;REF;64x64;runs=100;min=%lu;avg=%lu;cycles_per_pixel_x1000=%lu\n",
                (unsigned long)best,(unsigned long)(total/100),(unsigned long)(best*1000/pixels));
         free(sa); free(sb); free(out);
+    }
+
+    /* 256x256 real alpha sprite: 1x, 4x register, 4x memory-VEA */
+    {
+        int w=256,h=256,pixels=w*h,p;
+        uint8_t *sa=malloc((size_t)pixels*4), *sb=malloc((size_t)pixels*4);
+        uint8_t *o1=malloc((size_t)pixels*4), *o4=malloc((size_t)pixels*4), *om=malloc((size_t)pixels*4);
+        uint8_t *ex=malloc((size_t)pixels*4);
+        uint32_t best1=0xffffffffu,best4=0xffffffffu,bestm=0xffffffffu,t0,t1;
+        int run;
+        for (p=0;p<pixels;p++) {
+            int s=(p*37+11)&255;
+            sa[p*4+0]=(uint8_t)s; sa[p*4+1]=(uint8_t)((p*3+5)*(255-s)/255);
+            sa[p*4+2]=(uint8_t)((p*5+9)*(255-s)/255); sa[p*4+3]=(uint8_t)((p*11+13)*(255-s)/255);
+            sb[p*4+0]=0; sb[p*4+1]=(uint8_t)(p*13+20); sb[p*4+2]=(uint8_t)(p*29+40); sb[p*4+3]=(uint8_t)(p*7+80);
+        }
+        pmula_blit(sa,sb,o1,pixels);
+        pmula_blit4(sa,sb,o4,pixels);
+        pmula_blit4_mem(sa,sb,om,pixels);
+        for (p=0;p<pixels;p++) ref8(&sa[p*4],&sb[p*4],&ex[p*4]);
+        printf("SPRITE;256x256;diff1=%d;diff4=%d;diffmem=%d\n",
+               memcmp(o1,ex,(size_t)pixels*4)!=0,
+               memcmp(o4,ex,(size_t)pixels*4)!=0,
+               memcmp(om,ex,(size_t)pixels*4)!=0);
+        for (run=0;run<20;run++) {
+            t0=get_ccc(); pmula_blit(sa,sb,o1,pixels); t1=get_ccc(); if ((uint32_t)(t1-t0)<best1) best1=(uint32_t)(t1-t0);
+            t0=get_ccc(); pmula_blit4(sa,sb,o4,pixels); t1=get_ccc(); if ((uint32_t)(t1-t0)<best4) best4=(uint32_t)(t1-t0);
+            t0=get_ccc(); pmula_blit4_mem(sa,sb,om,pixels); t1=get_ccc(); if ((uint32_t)(t1-t0)<bestm) bestm=(uint32_t)(t1-t0);
+        }
+        printf("BENCH256;1x;min=%lu;cyc_px_x1000=%lu\n",(unsigned long)best1,(unsigned long)(best1*1000/pixels));
+        printf("BENCH256;4x;min=%lu;cyc_px_x1000=%lu\n",(unsigned long)best4,(unsigned long)(best4*1000/pixels));
+        printf("BENCH256;4xmem;min=%lu;cyc_px_x1000=%lu\n",(unsigned long)bestm,(unsigned long)(bestm*1000/pixels));
+        free(sa); free(sb); free(o1); free(o4); free(om); free(ex);
     }
 
     printf("RESULT;%s;fails=%d\n", fails ? "FAIL" : "PASS", fails);

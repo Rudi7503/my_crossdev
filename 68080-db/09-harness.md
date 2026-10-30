@@ -34,7 +34,7 @@ vergleichbar.
 >
 > **Harness v5 (Quelle, nicht gemessen):** v4 plus separater Zählerdurchgang
 > (`IEP1/2/3`, `BPC/BPW`, `DCH/DCM`) **nach** der Taktmessung; siehe
-> `harness-v5.asm` und §12.1. **v5 ist kanonisch**; 750/750 Dateilogs, `PERF`, MIN = v4. Bericht:
+> `harness-v5.asm` und §12.1. **v5 ist kanonisch**; 770/770 Dateilogs, `PERF`, MIN = v4. Bericht:
 > `measurements/V5-REPORT.md`.
 > `harness-v1.asm` ist die archivierte v1-Vorlage.
 
@@ -259,7 +259,7 @@ implementieren.
 
 **Streuung innerhalb eines Laufs:** `measurements/SUMMARY.md` ergänzt aus den
 100 `RES`-Werten der **v1-Logs** den **Median** (50. Wert), die **Stdabw.**
-(Stichprobe, n−1) und **p95** (Nearest-Rank). Im kanonischen v5-Lauf ist MIN bei **75/75**
+(Stichprobe, n−1) und **p95** (Nearest-Rank). Im kanonischen v5-Lauf ist MIN bei **77/77**
 Einträgen über alle 10 Läufe identisch; die erste-10-Kaltstartphase ist
 weg. Die Streuung enthält noch Interrupt-Ausreißer, ist also kein CPU-Jitter
 und sagt nichts über die Streuung zwischen Boots aus.
@@ -422,7 +422,7 @@ Ram Disk:RUN-ALL
 ```
 
 Es wechselt nach `Ram Disk:`, legt `LOGS/` an, löscht alte `LOGS/*.log` und
-ruft **jedes der 71 Programme 10×** auf (750 Läufe). Nach jedem Lauf wird
+ruft **jedes der 71 Programme 10×** auf (770 Läufe). Nach jedem Lauf wird
 `LOGS/<ID>.log` in `LOGS/<ID>.runNN.log` umbenannt. Vorher wird – falls
 vorhanden – `C:VControl SETENV` ausgeführt, damit die `CORE`-Zeile die exakte
 Flash-Core-Revision enthält; `VControl CORE` schreibt zusätzlich die
@@ -443,7 +443,7 @@ python3 tools/repeat_report.py measurements/v2-v4 --compare measurements/v2
 ```
 
 Nach `RUN-ALL DONE` (Bildschirm) alle Logs mit `tools/check_log.py` prüfen.
-Der Lauf dauert etwa ein bis zwei Minuten; 750 Logs belegen rund 0,5 MB auf
+Der Lauf dauert etwa ein bis zwei Minuten; 770 Logs belegen rund 0,5 MB auf
 der Ram Disk. **Vor einem erneuten Lauf die Logs herunterladen**, weil
 `RUN-ALL` alte `LOGS/*.log` löscht. Für einen schnellen Einzellauf gibt es
 `RUN-ALL-ONCE` (42 Läufe, ohne Wiederholungen).
