@@ -109,3 +109,5 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - Sequenzen: `seq/<ID>.i`
 - v5-Dateilogs: `measurements/v5-files/<ID>.runNN.log` (710, mit `PERF`)
 - Build-Artefakte: `build-v5/<ID>.asm`, `bin-v5/<ID>`
+
+> **Hinweis:** `BLT-001`, `BLT-002` und `ANTI-007` sind derzeit nicht Teil des kanonischen 71er-v5-Korpus; für sie existieren keine `seq/`- bzw. v5-Logs. Die übrigen 71 Einträge sind vollständig verlinkt.

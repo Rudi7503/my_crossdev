@@ -142,3 +142,14 @@ Mit einer durchschnittlichen Makroblock-Ausführungszeit von nur **2.916 Takten*
 - **DVD / PAL (720x576 @ 25 FPS, 1.620 Makroblöcke):**
   - Reduktion der IDCT+MC-Kosten von ehemals über 91 Mio. Takten auf **47 Mio. Takte**.
 - **Speicherzugriffe:** Es werden pro Makroblock **768 Bytes weniger RAM-Transfers** durchgeführt, wodurch der Speicherbus der V4 für DMA-Videoausgabe und Systemaktivität entlastet wird.
+
+## Rohlogs (Harness v5)
+
+Alle zehn kanonischen v5-Läufe je Sequenz:
+
+| ID | run01 … run10 |
+|---|---|
+| `DCT-011` | [01](cores/core-11350/logs/DCT-011.run01.log) [02](cores/core-11350/logs/DCT-011.run02.log) [03](cores/core-11350/logs/DCT-011.run03.log) [04](cores/core-11350/logs/DCT-011.run04.log) [05](cores/core-11350/logs/DCT-011.run05.log) [06](cores/core-11350/logs/DCT-011.run06.log) [07](cores/core-11350/logs/DCT-011.run07.log) [08](cores/core-11350/logs/DCT-011.run08.log) [09](cores/core-11350/logs/DCT-011.run09.log) [10](cores/core-11350/logs/DCT-011.run10.log) |
+
+> Die verlinkten Logs sind die **kanonischen v5-Sequenzlogs**. Die zusätzlichen Suite-/End-to-End-Zahlen im Dokument stammen aus separaten Projektläufen und sind nicht Teil dieser 71-Sequenz-Suite.
+

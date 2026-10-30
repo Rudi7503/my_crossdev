@@ -212,3 +212,7 @@ Torture-Test: Jede Zeile startet an einer ungeraden Byteadresse, wodurch 32-Byte
 
 ### 3. Exzellente Unaligned-Toleranz des Apollo 68080 Speichercontrollers
 - Selbst beim extremen Torture-Test (+1 Pixel Offset in X und Y) beträgt der Performance-Verlust von `storeilm` bei kleinen Kacheln **unter 1,5%** und bei riesigen Kacheln maximal **10-12%**. Der Apollo 68080 Memory Controller handhabt Cacheline-Splits hardwareseitig transparent ohne Software-Traps.
+
+## Rohlogs (Harness v5)
+
+Für **BLT-001/002** existieren im kanonischen v5-Datensatz **keine Sequenzlogs**. Die im Dokument genannten Suite-/End-to-End-Zahlen stammen aus separaten Projektläufen und sind derzeit nicht über `measurements/v5-files` verlinkbar.

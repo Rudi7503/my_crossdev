@@ -163,3 +163,13 @@ Können Sie unsere Zyklenzahlen auf einer Vampire V4 Standalone (PCR 1088/1 / Ap
 > 2. Bit-exakte Übereinstimmung mit mathematischer C-Referenz (max. Rundungsabweichung nach JPEG-Spezifikation).
 > 3. Vollständiger Log-Nachweis inklusive Pipe-Slots (`IEP1`, `IEP2`, `IEP3`).
 
+## Rohlogs (Harness v5)
+
+Alle zehn kanonischen v5-Läufe je Sequenz:
+
+| ID | run01 … run10 |
+|---|---|
+| `DCT-010` | [01](cores/core-11350/logs/DCT-010.run01.log) [02](cores/core-11350/logs/DCT-010.run02.log) [03](cores/core-11350/logs/DCT-010.run03.log) [04](cores/core-11350/logs/DCT-010.run04.log) [05](cores/core-11350/logs/DCT-010.run05.log) [06](cores/core-11350/logs/DCT-010.run06.log) [07](cores/core-11350/logs/DCT-010.run07.log) [08](cores/core-11350/logs/DCT-010.run08.log) [09](cores/core-11350/logs/DCT-010.run09.log) [10](cores/core-11350/logs/DCT-010.run10.log) |
+
+> Die verlinkten Logs sind die **kanonischen v5-Sequenzlogs**. Die zusätzlichen Suite-/End-to-End-Zahlen im Dokument stammen aus separaten Projektläufen und sind nicht Teil dieser 71-Sequenz-Suite.
+

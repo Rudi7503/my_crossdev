@@ -252,3 +252,7 @@ Können Sie unsere Bestmarken für 256-Bit ausgerichtetes Sprite-Blitting und Ti
 * **Full-Screen 1920×1080 Unaligned Tiling (512×512 @ 32-Bit Offset 1,1):** `3.772.455 Takte` (**186,9 MB/s**)
 
 > **Bedingungen:** Reale V4-Hardware-Messung, 1920×1080 Framebuffer, bit-exakt (`diff=0`), vollständige CCC-Zyklen.
+
+## Rohlogs (Harness v5)
+
+Für **BLT-001/002** existieren im kanonischen v5-Datensatz **keine Sequenzlogs**. Die im Dokument genannten Suite-/End-to-End-Zahlen stammen aus separaten Projektläufen und sind derzeit nicht über `measurements/v5-files` verlinkbar.

@@ -100,3 +100,12 @@ Gemessen auf **Vampire V4 Hardware (PCR 1088/1 / Apollo Core 11350 @ 92 MHz)** m
   - **C-Referenz:** $4.900 \times 5.593 \text{ Takte} \approx 27.4\text{ MIPS} \implies \mathbf{32.24\% \text{ CPU-Last}}$
   - **Fused AMMX:** $4.900 \times 795 \text{ Takte} \approx 3.9\text{ MIPS} \implies \mathbf{4.58\% \text{ CPU-Last}}$
 - **Ergebnis:** Die CPU-Last für die rechenintensivste Stufe des MP3-Decoders sinkt von einem Drittel des gesamten Rechners auf praktisch unmerkliche **4.58%**!
+
+## Rohlogs (Harness v5)
+
+Alle zehn kanonischen v5-Läufe je Sequenz:
+
+| ID | run01 … run10 |
+|---|---|
+| `DCT-009` | [01](cores/core-11350/logs/DCT-009.run01.log) [02](cores/core-11350/logs/DCT-009.run02.log) [03](cores/core-11350/logs/DCT-009.run03.log) [04](cores/core-11350/logs/DCT-009.run04.log) [05](cores/core-11350/logs/DCT-009.run05.log) [06](cores/core-11350/logs/DCT-009.run06.log) [07](cores/core-11350/logs/DCT-009.run07.log) [08](cores/core-11350/logs/DCT-009.run08.log) [09](cores/core-11350/logs/DCT-009.run09.log) [10](cores/core-11350/logs/DCT-009.run10.log) |
+

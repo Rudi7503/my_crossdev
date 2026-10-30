@@ -54,3 +54,17 @@ Da die 68080 FPU an das 1-Befehl/Takt-Limit gebunden ist, bietet AMMX SIMD (64-B
 | **4x4** | 599 Takte | 476 Takte | **184 Takte** | **54 Takte** | **11.09x schneller** |
 
 *(Alle Messungen 100/100 Läufe stabil auf Vampire V4 gemessen).*
+
+## Rohlogs (Harness v5)
+
+Alle zehn kanonischen v5-Läufe je Sequenz:
+
+| ID | run01 … run10 |
+|---|---|
+| `MAT-001` | [01](cores/core-11350/logs/MAT-001.run01.log) [02](cores/core-11350/logs/MAT-001.run02.log) [03](cores/core-11350/logs/MAT-001.run03.log) [04](cores/core-11350/logs/MAT-001.run04.log) [05](cores/core-11350/logs/MAT-001.run05.log) [06](cores/core-11350/logs/MAT-001.run06.log) [07](cores/core-11350/logs/MAT-001.run07.log) [08](cores/core-11350/logs/MAT-001.run08.log) [09](cores/core-11350/logs/MAT-001.run09.log) [10](cores/core-11350/logs/MAT-001.run10.log) |
+| `MAT-002` | [01](cores/core-11350/logs/MAT-002.run01.log) [02](cores/core-11350/logs/MAT-002.run02.log) [03](cores/core-11350/logs/MAT-002.run03.log) [04](cores/core-11350/logs/MAT-002.run04.log) [05](cores/core-11350/logs/MAT-002.run05.log) [06](cores/core-11350/logs/MAT-002.run06.log) [07](cores/core-11350/logs/MAT-002.run07.log) [08](cores/core-11350/logs/MAT-002.run08.log) [09](cores/core-11350/logs/MAT-002.run09.log) [10](cores/core-11350/logs/MAT-002.run10.log) |
+| `MAT-003` | [01](cores/core-11350/logs/MAT-003.run01.log) [02](cores/core-11350/logs/MAT-003.run02.log) [03](cores/core-11350/logs/MAT-003.run03.log) [04](cores/core-11350/logs/MAT-003.run04.log) [05](cores/core-11350/logs/MAT-003.run05.log) [06](cores/core-11350/logs/MAT-003.run06.log) [07](cores/core-11350/logs/MAT-003.run07.log) [08](cores/core-11350/logs/MAT-003.run08.log) [09](cores/core-11350/logs/MAT-003.run09.log) [10](cores/core-11350/logs/MAT-003.run10.log) |
+| `FIX-001` | [01](cores/core-11350/logs/FIX-001.run01.log) [02](cores/core-11350/logs/FIX-001.run02.log) [03](cores/core-11350/logs/FIX-001.run03.log) [04](cores/core-11350/logs/FIX-001.run04.log) [05](cores/core-11350/logs/FIX-001.run05.log) [06](cores/core-11350/logs/FIX-001.run06.log) [07](cores/core-11350/logs/FIX-001.run07.log) [08](cores/core-11350/logs/FIX-001.run08.log) [09](cores/core-11350/logs/FIX-001.run09.log) [10](cores/core-11350/logs/FIX-001.run10.log) |
+| `FIX-002` | [01](cores/core-11350/logs/FIX-002.run01.log) [02](cores/core-11350/logs/FIX-002.run02.log) [03](cores/core-11350/logs/FIX-002.run03.log) [04](cores/core-11350/logs/FIX-002.run04.log) [05](cores/core-11350/logs/FIX-002.run05.log) [06](cores/core-11350/logs/FIX-002.run06.log) [07](cores/core-11350/logs/FIX-002.run07.log) [08](cores/core-11350/logs/FIX-002.run08.log) [09](cores/core-11350/logs/FIX-002.run09.log) [10](cores/core-11350/logs/FIX-002.run10.log) |
+| `FIX-003` | [01](cores/core-11350/logs/FIX-003.run01.log) [02](cores/core-11350/logs/FIX-003.run02.log) [03](cores/core-11350/logs/FIX-003.run03.log) [04](cores/core-11350/logs/FIX-003.run04.log) [05](cores/core-11350/logs/FIX-003.run05.log) [06](cores/core-11350/logs/FIX-003.run06.log) [07](cores/core-11350/logs/FIX-003.run07.log) [08](cores/core-11350/logs/FIX-003.run08.log) [09](cores/core-11350/logs/FIX-003.run09.log) [10](cores/core-11350/logs/FIX-003.run10.log) |
+

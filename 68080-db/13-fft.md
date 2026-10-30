@@ -113,3 +113,17 @@ Die Detailzeitmessung für die 4096-Punkte AMMX SIMD Transformation auf der V4 z
 | **Stufen 2–11 (Mittelstufen)** | 155.434 | 73.6 % | Stufe 2 vektorisiert (`vperm`), 64-Byte Burst-Alignment |
 | **Stufe 12 (Streaming-Endstufe)** | 23.973 | 11.4 % | Kontinuierliches Streaming mit `(a4)+` und `(a5)+` (5.85 Takte / Butterfly!) |
 | **Gesamtzeit (Core)** | **211.151** | **100 %** | Entspricht **5.16x Beschleunigung** gegenüber C-Referenz |
+
+## Rohlogs (Harness v5)
+
+Alle zehn kanonischen v5-Läufe je Sequenz:
+
+| ID | run01 … run10 |
+|---|---|
+| `FFT-001` | [01](cores/core-11350/logs/FFT-001.run01.log) [02](cores/core-11350/logs/FFT-001.run02.log) [03](cores/core-11350/logs/FFT-001.run03.log) [04](cores/core-11350/logs/FFT-001.run04.log) [05](cores/core-11350/logs/FFT-001.run05.log) [06](cores/core-11350/logs/FFT-001.run06.log) [07](cores/core-11350/logs/FFT-001.run07.log) [08](cores/core-11350/logs/FFT-001.run08.log) [09](cores/core-11350/logs/FFT-001.run09.log) [10](cores/core-11350/logs/FFT-001.run10.log) |
+| `FFT-002` | [01](cores/core-11350/logs/FFT-002.run01.log) [02](cores/core-11350/logs/FFT-002.run02.log) [03](cores/core-11350/logs/FFT-002.run03.log) [04](cores/core-11350/logs/FFT-002.run04.log) [05](cores/core-11350/logs/FFT-002.run05.log) [06](cores/core-11350/logs/FFT-002.run06.log) [07](cores/core-11350/logs/FFT-002.run07.log) [08](cores/core-11350/logs/FFT-002.run08.log) [09](cores/core-11350/logs/FFT-002.run09.log) [10](cores/core-11350/logs/FFT-002.run10.log) |
+| `FFT-003` | [01](cores/core-11350/logs/FFT-003.run01.log) [02](cores/core-11350/logs/FFT-003.run02.log) [03](cores/core-11350/logs/FFT-003.run03.log) [04](cores/core-11350/logs/FFT-003.run04.log) [05](cores/core-11350/logs/FFT-003.run05.log) [06](cores/core-11350/logs/FFT-003.run06.log) [07](cores/core-11350/logs/FFT-003.run07.log) [08](cores/core-11350/logs/FFT-003.run08.log) [09](cores/core-11350/logs/FFT-003.run09.log) [10](cores/core-11350/logs/FFT-003.run10.log) |
+| `FFT-004` | [01](cores/core-11350/logs/FFT-004.run01.log) [02](cores/core-11350/logs/FFT-004.run02.log) [03](cores/core-11350/logs/FFT-004.run03.log) [04](cores/core-11350/logs/FFT-004.run04.log) [05](cores/core-11350/logs/FFT-004.run05.log) [06](cores/core-11350/logs/FFT-004.run06.log) [07](cores/core-11350/logs/FFT-004.run07.log) [08](cores/core-11350/logs/FFT-004.run08.log) [09](cores/core-11350/logs/FFT-004.run09.log) [10](cores/core-11350/logs/FFT-004.run10.log) |
+| `FFT-005` | [01](cores/core-11350/logs/FFT-005.run01.log) [02](cores/core-11350/logs/FFT-005.run02.log) [03](cores/core-11350/logs/FFT-005.run03.log) [04](cores/core-11350/logs/FFT-005.run04.log) [05](cores/core-11350/logs/FFT-005.run05.log) [06](cores/core-11350/logs/FFT-005.run06.log) [07](cores/core-11350/logs/FFT-005.run07.log) [08](cores/core-11350/logs/FFT-005.run08.log) [09](cores/core-11350/logs/FFT-005.run09.log) [10](cores/core-11350/logs/FFT-005.run10.log) |
+| `FFT-006` | [01](cores/core-11350/logs/FFT-006.run01.log) [02](cores/core-11350/logs/FFT-006.run02.log) [03](cores/core-11350/logs/FFT-006.run03.log) [04](cores/core-11350/logs/FFT-006.run04.log) [05](cores/core-11350/logs/FFT-006.run05.log) [06](cores/core-11350/logs/FFT-006.run06.log) [07](cores/core-11350/logs/FFT-006.run07.log) [08](cores/core-11350/logs/FFT-006.run08.log) [09](cores/core-11350/logs/FFT-006.run09.log) [10](cores/core-11350/logs/FFT-006.run10.log) |
+
