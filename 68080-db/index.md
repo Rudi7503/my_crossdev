@@ -99,6 +99,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **MPEG-1/2 Video Motion Compensation** (1): [`DCT-011`](17-mpeg.md)
 - **H.264 / AVC Video Pipeline** (1): [`DCT-012`](18-h264.md)
 - **2D Sprite Blitting & 256-Bit Copy** (1): [`BLT-001`](19-sprite-blit.md)
+- **AMMX Transparent Sprite Blitting & PRM Store Variants** (1): [`BLT-002`](20-sprite-transparency.md)
 - **Fast Fourier Transform (FFT)** (5): [`FFT-001`](13-fft.md), [`FFT-002`](13-fft.md), [`FFT-003`](13-fft.md), [`FFT-004`](13-fft.md), [`FFT-005`](13-fft.md), [`FFT-006`](13-fft.md)
 - **Matrix (FPU)** (3): [`MAT-001`](12-matrix.md), [`MAT-002`](12-matrix.md), [`MAT-003`](12-matrix.md)
 - **Matrix (Fixed-Point AMMX)** (3): [`FIX-001`](12-matrix.md), [`FIX-002`](12-matrix.md), [`FIX-003`](12-matrix.md)
