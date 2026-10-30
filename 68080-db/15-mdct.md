@@ -85,7 +85,7 @@ Gemessen mit `Projects/Audio_MDCT/MDCT` auf echter Vampire V4 Hardware, gemittel
 | **Part 4: Fused Complete MP3 Engine** | 5.593 Takte | **795 Takte** (Fused AMMX) | **7.04x** | max 50 LSB | **PASS** |
 
 ### Pipeline-Auslastung & Superskalarität (Harness v5: IEP1, IEP2, IEP3)
-Gemessen auf **Vampire V4 Hardware (Core 1088/1 @ 85 MHz)** mit den Zählern `IEP1` (Anton), `IEP2` (Bruno), `IEP3` (Cesar) und DCH/DCM:
+Gemessen auf **Vampire V4 Hardware (PCR 1088/1 / Apollo Core 11350 @ 92 MHz)** mit den Zählern `IEP1` (Anton), `IEP2` (Bruno), `IEP3` (Cesar) und DCH/DCM:
 
 | MDCT Teilkomponente | Takte (CCC) | Befehle gesamt | IPC | Anton (`IEP1`) | Bruno (`IEP2`) | Cesar (`IEP3`) | D-Cache Hit |
 |---|---|---|---|---|---|---|---|
@@ -96,7 +96,7 @@ Gemessen auf **Vampire V4 Hardware (Core 1088/1 @ 85 MHz)** mit den Zählern `IE
 
 ### Real-Time CPU-Last Budget für 44.1 kHz Stereo MP3:
 - **Audio-Budget:** 1 Sekunde MP3 Stereo benötigt $44.100 / 1152 \times 128 = \mathbf{4.900\text{ IMDCTs/Sekunde}}$.
-- Bei ~85 MHz effektiver 68080-Taktung:
+- Bei ~92 MHz effektiver 68080-Taktung:
   - **C-Referenz:** $4.900 \times 5.593 \text{ Takte} \approx 27.4\text{ MIPS} \implies \mathbf{32.24\% \text{ CPU-Last}}$
   - **Fused AMMX:** $4.900 \times 795 \text{ Takte} \approx 3.9\text{ MIPS} \implies \mathbf{4.58\% \text{ CPU-Last}}$
 - **Ergebnis:** Die CPU-Last für die rechenintensivste Stufe des MP3-Decoders sinkt von einem Drittel des gesamten Rechners auf praktisch unmerkliche **4.58%**!

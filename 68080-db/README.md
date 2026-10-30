@@ -3,10 +3,10 @@
 Kuratierte, quellenbelegte und auf echter Hardware gemessene Optimierungsmuster für den Apollo-Core **68080** (Vampire V4) – mit dem kanonischen **Harness v5**, das jeden Eintrag mit vasm baut, unter `Forbid()` 100-mal misst (nach 100 Warmup-Läufen) und die Rohdaten über stdout, SAGA und die direkte UART (`SERDAT`/`SERPER`, 115200 8N1) ausgibt.
 
 > **Kanonischer Mess- und Hardware-Stand:**
-> - **Core-Version:** **Apollo 68080 Core 1088 / Release 1** (Vampire V4 Standalone @ 85 MHz, PCR: 1088/1).
+> - **Core-Version:** **Apollo 68080 Core 11350** (Vampire V4 Standalone @ **92 MHz**; PCR 1088/1, VCoreRev 0).
 > - **Kanonisches Harness:** **Harness v5** (`harness-v5.asm`). Alle alten Vorab-Versionen (v1–v4) wurden bereinigt.
 > - **Zähler-Vollständigkeit:** Jedes Log erfasst den **Clock Cycle Counter (CCC)** sowie die **Instruction Execution Pipeline Slots (IEP0, IEP1, IEP2)** zur genauen Analyse der internen Doppel-Pipeline-Auslastung.
-> - **Multi-Core-Architektur:** Messungen sind modular nach Cores strukturiert in [`cores/`](cores/). Aktuell validiert: [`cores/core-1088-1/`](cores/core-1088-1/).
+> - **Multi-Core-Architektur:** Messungen sind modular nach Cores strukturiert in [`cores/`](cores/). Aktuell validiert: [`cores/core-11350/`](cores/core-11350/).
 > - **Validierung:** 100% aller Einträge wurden auf echter Hardware verifiziert und durch `tools/check_log.py` validiert (`FILESTAT;1;0`).
 
 ---
@@ -49,7 +49,7 @@ Details und Einreichungsanleitung stehen in [`cores/README.md`](cores/README.md)
 | [`18-h264.md`](18-h264.md) | H.264 / AVC 4x4 Core IDCT, Hadamard & Fused MC | 1 (AMMX Hadamard in 27 Netto-Takten, Bit-Exact 4x4 IDCT) |
 | [`19-sprite-blit.md`](19-sprite-blit.md) | 2D Sprite Blitting & 256-Bit Aligned Rectangle Copy / Tiling | 84/84 Tests (Single + Full-Screen Tiled 1920x1080 Aligned & 1-Pixel Offset, move16, Peeling, 219 MB/s) |
 
-Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-1088-1/`](cores/core-1088-1/).
+Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-11350/`](cores/core-11350/).
 Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).
 
 ## Quellenhierarchie
@@ -91,7 +91,7 @@ Jeder Eintrag trennt deshalb sauber:
 
 - **Status** – Messstatus,
 - **Beleg** – Literaturquelle,
-- **Messergebnis** – Rohdaten aus `measurements/<ID>.log` (42/42 vorhanden),
+- **Messergebnis** – Rohdaten aus `measurements/<ID>.log` (710/710 vorhanden),
 - **Literaturwert** – was PRM/Wiki aussagen (kein Messwert).
 
 ## Schnellstart
@@ -103,16 +103,15 @@ wegen des WSL-NAT nicht.
 ```bash
 cd 68080-db
 
-# 1. v5 bauen, ohne v1–v4 zu überschreiben
+# 1. v5 bauen
 HARNESS=harness-v5.asm BUILD_DIR=build-v5 BIN_DIR=bin-v5 ./tools/build_all.sh
 
 # 2. Auf der Vampire starten, z. B. bin-v5/FUS-001, und auf dem PC mitschneiden
-#    (v3-Logs getrennt von v1/v2 ablegen)
 #    Linux:
 python3 -m pip install -r tools/requirements.txt
 python3 tools/serial_capture.py --port /dev/ttyUSB0 --baud 115200 --out measurements/v5
 #    Windows (getesteter Fall, CH340 an COM9):
-#    python tools/serial_capture.py --port COM9 --baud 115200 --out measurements/v4
+#    python tools/serial_capture.py --port COM9 --baud 115200 --out measurements/v5-serial
 
 # 3. Log validieren (100 RES-Zeilen, SUMMARY konsistent)
 python3 tools/check_log.py measurements/v5-files/FUS-001.run01.log
@@ -126,17 +125,17 @@ for f in bin-v5/*; do ../Projects/ApolloExplorer/acp/acp "$f" "$AMIGAHOST:Ram Di
 ../Projects/ApolloExplorer/acp/acp RUN-ALL "$AMIGAHOST:Ram Disk/"
 
 # Auf der V4:  Execute "Ram Disk:RUN-ALL"
-#   -> 42 Eintraege x 10 Laeufe, Dateilogs in Ram Disk:LOGS/<ID>.runNN.log
+#   -> 71 Eintraege x 10 Laeufe, Dateilogs in Ram Disk:LOGS/<ID>.runNN.log
 
 # Seriell mitschneiden (zweiter, unabhaengiger Kanal)
-python3 tools/serial_capture.py --port /dev/ttyUSB0 --baud 115200 --out measurements/v4
+python3 tools/serial_capture.py --port /dev/ttyUSB0 --baud 115200 --out measurements/v5-serial
 
 # V4-Dateilogs herunterladen und mit dem Serial-Mitschnitt vergleichen
 AMIGAHOST=apollo ./tools/download_logs.sh measurements/v5-files
 python3 tools/repeat_report.py measurements/v5-files
 ```
 
-Der Build braucht **keine NDK-Includes**: `harness.asm` ist self-contained und
+Der Build braucht **keine NDK-Includes**: `harness-v5.asm` ist self-contained und
 enthält die wenigen benötigten exec/dos/serial-Offsets mit Quellenangabe im
 Kommentar. Dadurch ist der Vergleich aller Einträge methodisch identisch.
 Das Harness setzt zu Beginn das Apollo-Bit (`ori #$800,sr`), damit die
@@ -162,7 +161,7 @@ E-Register als Task-Zustand behandelt werden (PRM S. 8).
 **Referenzwert ist MIN**, nicht AVG: `Forbid()` verhindert Task-Wechsel, aber
 keine Interrupts. AVG ist nur informativ. Die Baseline wird nach dem Warmup
 gemessen, ist aber weiterhin einmalig; sie geht nicht in die Statistik ein.
-In den **v1-Logs** war sie kalt (5–41 Takte); bei v2 ist sie warm.
+Die Baseline wird nach dem Warmup gemessen; sie geht nicht in die Statistik ein.
 
 ## Register-Konvention
 
@@ -185,21 +184,21 @@ Der Guard prüft die Sequenzen statisch. Ein Verstoß ist ein Build-Fehler, kein
 
 | Werkzeug | Zweck |
 |---|---|
-| `tools/build_all.sh` | alle 42 Einträge mit vasm bauen |
+| `tools/build_all.sh` | alle 71 Einträge mit vasm bauen |
 | `tools/check_sequences.py` | Register-/Label-Guard für Sequenzen |
 | `tools/serial_capture.py` | seriellen Strom mitschneiden; schreibt `<ID>.runNN.log` (kein Überschreiben bei Wiederholungen) |
 | `tools/download_logs.sh` | V4-Dateilogs aus `Ram Disk:LOGS` per ACP herunterladen |
 | `tools/repeat_report.py` | 10 Wiederholungen je Eintrag auswerten; optional V4- und Serial-Logs vergleichen |
 | `tools/check_log.py` | Log-Format, `CORE`-Zeile und SUMMARY gegen RES prüfen |
-| `RUN-ALL` | AmigaDOS-Batch: jedes der 42 Programme 10× (420 Läufe), Dateilog in `Ram Disk:LOGS` |
-| `RUN-ALL-ONCE` | Einzellauf aller 42 Programme (für schnelle Tests) |
+| `RUN-ALL` | AmigaDOS-Batch: jedes der 71 Programme 10× (710 Läufe), Dateilog in `Ram Disk:LOGS` |
+| `RUN-ALL-ONCE` | Einzellauf aller 71 Programme (für schnelle Tests) |
 
 ## Reproduzierbarkeit und Grenzen
 
-- **Hardware:** Alle 42 Einträge wurden mit Harness v4 auf einer Vampire V4
+- **Hardware:** Alle 71 Einträge wurden mit Harness v5 auf einer Vampire V4
   gemessen (10 × 100 Läufe, COM9, 115200 8N1). Die Streuung **über die 10
   Läufe** (Median, Stdabw., p95) steht in
-  [`measurements/SUMMARY.md`](measurements/SUMMARY.md); sie sagt nichts über
+  [`cores/core-11350/CYCLE-SUMMARY.md`](cores/core-11350/CYCLE-SUMMARY.md); sie sagt nichts über
   die Streuung zwischen Boots/Core-Revisionen.
 - **Direkte UART statt `serial.device`:** Der getestete USB-Serial-Adapter
   hängt am SERDAT/SERPER-Pfad. `serial.device` lieferte keine Ausgabe; die
@@ -221,7 +220,7 @@ Der Guard prüft die Sequenzen statisch. Ein Verstoß ist ein Build-Fehler, kein
 
 1. Wiederholungsläufe über mehrere Boots/Core-Revisionen durchführen und
    die Streuung **zwischen** Läufen dokumentieren (die Streuung **innerhalb**
-   eines Laufs steht bereits in `measurements/SUMMARY.md`).
+   eines Laufs steht bereits in `cores/core-11350/CYCLE-SUMMARY.md`).
 2. Core-Revision, Firmware und Taktrate pro Log dokumentieren.
 3. CCC-Breite und Überlaufverhalten experimentell prüfen.
 4. 68060-Vergleichsmessungen mit identischen Sequenzen (separater Harness)

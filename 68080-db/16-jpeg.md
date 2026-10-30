@@ -127,7 +127,7 @@ Gemessen mit `Projects/JPEG_Pipeline/JPEG` auf echter Vampire V4 Hardware, gemit
 | **Part 4b: Real-World mit SAGA Native Direct YUV** | 34.540 Takte | **3.697 Takte** | **9,34x** | Spart Farbraumkonvertierung | **PASS** |
 
 ### Pipeline-Auslastung & Superskalarität (Harness v5: IEP1, IEP2, IEP3)
-Gemessen auf **Vampire V4 Hardware (Core 1088/1 @ 85 MHz)** mit den Zählern `IEP1` (Anton), `IEP2` (Bruno), `IEP3` (Cesar) und DCH/DCM:
+Gemessen auf **Vampire V4 Hardware (PCR 1088/1 / Apollo Core 11350 @ 92 MHz)** mit den Zählern `IEP1` (Anton), `IEP2` (Bruno), `IEP3` (Cesar) und DCH/DCM:
 
 | JPEG Teilkomponente (AMMX) | Takte (CCC) | Befehle gesamt | IPC | Anton (`IEP1`) | Bruno (`IEP2`) | Cesar (`IEP3`) | D-Cache Hit |
 |---|---|---|---|---|---|---|---|
@@ -152,7 +152,7 @@ Mit einer durchschnittlichen Ausführungszeit von nur **7.132 Takten pro MCU** i
 
 ## 6. Challenge: Beat Our JPEG Cycles!
 
-Können Sie unsere Zyklenzahlen auf einer Vampire V4 Standalone (Core 1088/1, 85 MHz) unterbieten?
+Können Sie unsere Zyklenzahlen auf einer Vampire V4 Standalone (PCR 1088/1 / Apollo Core 11350, 92 MHz) unterbieten?
 
 * **Die Bestmarke für Full AC 8x8 Block:** `1.043 Takte` (Fused IDCT + Level-Shift + PACKUSWB Direct Store).
 * **Die Bestmarke für Sparse DC Block:** `79 Takte` (Bit-exakt).

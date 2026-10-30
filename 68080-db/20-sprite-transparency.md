@@ -2,7 +2,7 @@
 
 **Projektpfad:** [`Projects/Sprite_Transparent_AMMX/`](../Projects/Sprite_Transparent_AMMX/) (`main.c`, `blit_trans.h`, `blit_trans_c.c`, `blit_trans_asm.s`, `Makefile`, `SpriteTransAMMX`, `trans_results.txt`)
 
-**Hardware-Target:** Vampire V4 Standalone (Apollo 68080 Core 1088/1 @ 85 MHz, ApolloOS 9.5)  
+**Hardware-Target:** Vampire V4 Standalone (Apollo 68080 PCR 1088/1 / Apollo Core 11350 @ 92 MHz, ApolloOS 9.5)  
 **Messmethodik:** **Harness v5** (CCC, IEP1 Anton, IEP2 Bruno, IEP3 Cesar, DCH, DCM, BPC, BPW, IPC, Pipeline-Verteilung, D-Cache Hit Rate, Bit-exakte Verifikation gegen C-Referenz).
 
 ---
@@ -41,7 +41,7 @@ Vor dem Benchmark wurden alle Store-Instruktionen auf der Vampire V4 Hardware ge
 | **`pcmpeq`** | `pcmpeqw e1,e0,e2` | `0xfe00 0x0020` | Vektorweiser Gleichheitsvergleich (Erzeugt `$FFFF` Masken) | **100% Funktional** |
 
 > [!NOTE]
-> Auf Apollo Core 1088/1 wirft `pcmpeqw #imm` eine Line-F Exception. Der Vektorvergleich muss zwingend mit zwei AMMX-Registern (`pcmpeqw e1, e0, e2`) ausgeführt werden, wobei die Schlüsselfarbe im Vorfeld mit einem Quad-Word-Broadcast in das Schlüsselregister geladen wird.
+> Auf Apollo PCR 1088/1 / Apollo Core 11350 wirft `pcmpeqw #imm` eine Line-F Exception. Der Vektorvergleich muss zwingend mit zwei AMMX-Registern (`pcmpeqw e1, e0, e2`) ausgeführt werden, wobei die Schlüsselfarbe im Vorfeld mit einem Quad-Word-Broadcast in das Schlüsselregister geladen wird.
 
 ---
 

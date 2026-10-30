@@ -1,11 +1,10 @@
 # Index aller Einträge
 
-Alphabetisch nach ID. **Alle 42 Einträge wurden mit Harness v5 auf einer
+Alphabetisch nach ID. **Alle 71 Einträge wurden mit Harness v5 auf einer
 Vampire V4 gemessen** (10 × 100 Läufe). Referenz ist MIN; MAX/AVG sind
 Mediane der 10 Läufe; zusätzlich sind die **IEP-Pipe-Slots** angegeben.
-Die v5-Logs liegen unter `measurements/v5-files/<ID>.runNN.log`; die
-v4- und v1-Logs bleiben Archiv. Eine Tabelle aller Werte steht in
-[`measurements/SUMMARY.md`](measurements/SUMMARY.md). Jeder Eintrag enthält
+Die v5-Logs liegen unter `measurements/v5-files/<ID>.runNN.log`; es gibt nur den kanonischen v5-Datensatz. Eine Tabelle aller Werte steht in
+[`cores/core-11350/CYCLE-SUMMARY.md`](cores/core-11350/CYCLE-SUMMARY.md). Jeder Eintrag enthält
 am Ende den **verbatim gemessenen Code** aus `seq/<ID>.i`. Der Übergabestand
 steht in [`HANDOFF.md`](HANDOFF.md).
 
@@ -108,7 +107,5 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 ## Sequenzen und Logs
 
 - Sequenzen: `seq/<ID>.i`
-- v5-Dateilogs: `measurements/v5-files/<ID>.runNN.log` (420, mit `PERF`)
-- v4-Archiv: `measurements/v4/`, `v4-files/`
-- v1-Archiv: `measurements/<ID>.log` (42, plus `FUS-001.run1.log`)
-- Build-Artefakte: `build-v5/<ID>.asm`, `bin-v5/<ID>`; v1: `build/`, `bin/`
+- v5-Dateilogs: `measurements/v5-files/<ID>.runNN.log` (710, mit `PERF`)
+- Build-Artefakte: `build-v5/<ID>.asm`, `bin-v5/<ID>`

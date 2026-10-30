@@ -8,7 +8,7 @@ Dieses Verzeichnis enthält die Benchmark-Messungen, Performance-Zähler (IEP-Pi
 
 | Verzeichnis | Core-Kennung | Plattform | Status |
 |---|---|---|---|
-| [`core-1088-1/`](core-1088-1/) | `CORE;1088;1;0` | Vampire V4 Standalone (85 MHz) | **100% vollständig gemessen & validiert (Harness v5)** |
+| [`core-11350/`](core-11350/) | Apollo Core 11350; PCR `CORE;1088;1;0` | Vampire V4 Standalone (92 MHz) | **100% vollständig gemessen & validiert (Harness v5)** |
 
 Jedes Core-Verzeichnis enthält:
 - `logs/`: Sämtliche Rohdaten-Logs (100 Durchläufe pro Test) mit `FILESTAT`, `BASELINE`, `RES` und `PERF`-Zählern.
@@ -53,7 +53,7 @@ Hast du eine andere Vampire (z. B. Vampire V2 für A500/A600/A1200, Vampire V4+,
 2. **Alle Sequenzen mit Harness v5 bauen:**
    ```bash
    cd 68080-db
-   bash tools/build_all_v5.sh
+   ./tools/build_all.sh
    ```
 3. **Auf der Vampire ausführen:**
    Übertrage die Binaries aus `bin-v5/` auf deine Vampire und führe die Messungen aus.

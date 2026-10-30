@@ -14,7 +14,7 @@ Getestet wurden zwei Szenarien:
    - **Teil B (1-Pixel Offset Unaligned Tiling):** Start bei `(1, 1)` (Zieladressen nicht an 32-Byte Cachelines ausgerichtet).
 
 > **Standard-Instruktion:** `move16` im 256-Bit Burst (2× `move16` pro 32-Byte Cacheline).
-> **Hardware-Messstatus (Vampire V4 Standalone, Core 1088/1, 85 MHz, ApolloOS 9.5):**
+> **Hardware-Messstatus (Vampire V4 Standalone, PCR 1088/1 / Apollo Core 11350, 92 MHz, ApolloOS 9.5):**
 > - **Single Blit:** **28 von 28 Tests (100%) bit-exakt verifiziert (`diff=0, PASS`)!**
 > - **Full-Screen Tiled Blit:** **56 von 56 Tests (100%) bit-exakt verifiziert (`diff=0, PASS`)!**
 > - **Spitzen-Bandbreite:** **219,3 MB/s** (`move16` Tiled 128×128 @ 32-Bit).
@@ -27,7 +27,7 @@ Getestet wurden zwei Szenarien:
 
 ## 1. Szenario 1: Single Blit (Rechteck-Kopie an Koordinate 128, 128)
 
-Gemessen auf Vampire V4 Hardware (85 MHz, Core 1088/1). Alle Werte stellen CCC-Zyklen für einen einzelnen Blit dar.
+Gemessen auf Vampire V4 Hardware (92 MHz, PCR 1088/1 / Apollo Core 11350). Alle Werte stellen CCC-Zyklen für einen einzelnen Blit dar.
 
 ### 8-Bit Chunky (1 Bpp, Stride = 1920 Bytes)
 | Sprite-Größe | Zeile (Bytes) | C-Ref (cyc) | m68k ASM (cyc) | move16 (cyc) | AMMX SIMD (cyc) | Speedup vs C | Durchsatz (move16) | Parität |
@@ -243,7 +243,7 @@ Gemessen auf **Vampire V4 Hardware** mit den hardwarenahen Performance-Zählern 
 
 ## 5. Challenge: Beat Our 2D Blit & Tiling Cycles!
 
-Können Sie unsere Bestmarken für 256-Bit ausgerichtetes Sprite-Blitting und Tiling auf einer Vampire V4 Standalone (Core 1088/1, 85 MHz) unterbieten?
+Können Sie unsere Bestmarken für 256-Bit ausgerichtetes Sprite-Blitting und Tiling auf einer Vampire V4 Standalone (PCR 1088/1 / Apollo Core 11350, 92 MHz) unterbieten?
 
 * **Single 8×8 Sprite @ 8-Bit:** `173 Takte` (AMMX) / `181 Takte` (`move16`)
 * **Single 16×16 Sprite @ 16-Bit:** `542 Takte` (AMMX) / `562 Takte` (`move16`)

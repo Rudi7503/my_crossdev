@@ -121,7 +121,7 @@ Gemessen mit `Projects/MPEG_Pipeline/MPEG` auf echter Vampire V4 Hardware (200 D
 | **Part 4: All-DC Flat Macroblock (6x DC)** | 56.593 Takte | **987 Takte** (2,57 c/px) | **57,34x** | spart 5.953 Takte | **PASS** |
 
 ### Pipeline-Auslastung & Superskalarität (Harness v5: IEP1, IEP2, IEP3)
-Gemessen auf **Vampire V4 Hardware (Core 1088/1 @ 85 MHz)** mit den Zählern `IEP1` (Anton), `IEP2` (Bruno), `IEP3` (Cesar) und DCH/DCM:
+Gemessen auf **Vampire V4 Hardware (PCR 1088/1 / Apollo Core 11350 @ 92 MHz)** mit den Zählern `IEP1` (Anton), `IEP2` (Bruno), `IEP3` (Cesar) und DCH/DCM:
 
 | MPEG Teilkomponente (AMMX) | Takte (CCC) | Befehle gesamt | IPC | Anton (`IEP1`) | Bruno (`IEP2`) | Cesar (`IEP3`) | D-Cache Hit |
 |---|---|---|---|---|---|---|---|
@@ -138,7 +138,7 @@ Mit einer durchschnittlichen Makroblock-Ausführungszeit von nur **2.916 Takten*
 
 - **Video-CD / CIF (352x288 @ 25 FPS, 396 Makroblöcke):**
   - Benötigt nur **28,8 Mio. Takte pro Sekunde**.
-  - Auf einer 85 MHz Vampire V4 entspricht dies einer CPU-Auslastung von nur **52,7%**! Damit ist flüssige VCD-Wiedergabe mit reichlich Reserven für Audio-Dekodierung (MP3/Layer-2 benötigt nur 4,58% CPU) realisierbar!
+  - Auf einer 92 MHz Vampire V4 entspricht dies einer CPU-Auslastung von nur **52,7%**! Damit ist flüssige VCD-Wiedergabe mit reichlich Reserven für Audio-Dekodierung (MP3/Layer-2 benötigt nur 4,58% CPU) realisierbar!
 - **DVD / PAL (720x576 @ 25 FPS, 1.620 Makroblöcke):**
   - Reduktion der IDCT+MC-Kosten von ehemals über 91 Mio. Takten auf **47 Mio. Takte**.
 - **Speicherzugriffe:** Es werden pro Makroblock **768 Bytes weniger RAM-Transfers** durchgeführt, wodurch der Speicherbus der V4 für DMA-Videoausgabe und Systemaktivität entlastet wird.

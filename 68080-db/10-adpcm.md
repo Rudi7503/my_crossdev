@@ -1,7 +1,7 @@
 # 10 – ADPCM Case Study: 2/3/4/5/6-Bit & Hybrid M/S Audio-Dekodierung
 
 **Projekt:** [`Projects/ADPCM_Decoder/`](../Projects/ADPCM_Decoder/) (`decoder_4bit.s`, `decoder_2bit.s`, `decoder_3bit.s`, `decoder_5bit.s`, `decoder_6bit.s`, `decoder_3_2ms.s`, `decoder_4_2ms.s`, `decoder_5_3ms.s`)  
-**Core-Referenz:** Apollo 68080 Core 1088 / Release 1 (`CORE;1088;1;0`, ApolloControl ID 11350) @ 85.0 MHz  
+**Core-Referenz:** Apollo 68080 Apollo Core 11350 (PCR 1088/1) (`CORE;1088;1;0`, ApolloControl ID 11350) @ 92 MHz  
 **Messmethode:** Hardware Clock Cycle Counter (CCC), 100 Warmup-Läufe + 100 Messläufe unter `Forbid()`, 1 Block = 15 Bytes (30 Samples). Verifikation: Bit-exakter Golden-Master-Vergleich über 512 Blöcke (15.360 Samples).
 
 ---
@@ -32,7 +32,7 @@ Ein Block = 15 Bytes = 30 Samples (15 Stereo-Paare L/R bzw. 30 Mono-Samples):
 | **Hybrid** 3/2, 4/2, 5/3 M/S | 2.411 / 2.254 / 1.755 | **1.248 / 1.358 / 958** | 41,60 / 45,27 / 31,93 | **−48,2 % / −39,8 % / −45,4 %** |
 
 ### C. Pipeline-Auslastung & Superskalarität (Harness v5: IEP1, IEP2, IEP3)
-Gemessen auf **Vampire V4 Hardware (Core 1088/1 @ 85 MHz)** über 512 Blöcke (15.360 Samples, 128 Warmup-Blöcke):
+Gemessen auf **Vampire V4 Hardware (PCR 1088/1 / Apollo Core 11350 @ 92 MHz)** über 512 Blöcke (15.360 Samples, 128 Warmup-Blöcke):
 
 | ADPCM Modus (4-Bit Fresh15) | Takte / Block (CCC) | Befehle / Block | IPC | Anton (`IEP1`) | Bruno (`IEP2`) | Cesar (`IEP3`) |
 |---|---|---|---|---|---|---|

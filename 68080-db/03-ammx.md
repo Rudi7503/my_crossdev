@@ -527,7 +527,7 @@ E-Setup-Aufwand pro Einzelwert zu hoch.
 ## AMX-010: Emulation von PACKSSWB (Signed Saturation Word-zu-Byte mit PACKUSWB + Bias-Trick)
 
 **Kategorie:** AMMX / Audio & Sättigung  
-**Status:** VERIFIZIERT (gemessen – Vampire V4 Core 1088/1, 10 × 100 Läufe, Harness v5)  
+**Status:** VERIFIZIERT (gemessen – Vampire V4 PCR 1088/1 / Apollo Core 11350, 10 × 100 Läufe, Harness v5)  
 **Beleg:** PRM S. 52 (`PACKUSWB`), S. 46 (`LOAD`), S. 67 (`PSUBB`); Sequenz `seq/AMX-010.i`
 
 ### Problem
@@ -619,7 +619,7 @@ Rechenoperationen parallel auf den dualen 68080-Pipes:
 ## AMX-009: 8-Byte Parallele Mittelwertbildung mit PAVGB (Half-Pel Motion Comp)
 
 **Kategorie:** AMMX / Video & Signal  
-**Status:** VERIFIZIERT (gemessen – Vampire V4 Core 1088/1, Log vorhanden)  
+**Status:** VERIFIZIERT (gemessen – Vampire V4 PCR 1088/1 / Apollo Core 11350, Log vorhanden)  
 **Beleg:** Apollo PRM (Juni 2026), S. 58 (`PAVGB`); Video-Optimierungs-Suite [`Projects/Video_Optimizations/`](../Projects/Video_Optimizations/)  
 **Betroffene CPUs:** 68080 mit AMMX; nicht 68060/040
 
@@ -638,7 +638,7 @@ Die 68080 besitzt dafür die spezialisierte Vektor-Instruktion `PAVGB`:
         store   e2,(a1)         ; Schreibt 8 fertige Pixel ins Ziel
 ```
 
-### Messergebnis auf Vampire V4 (Core 1088/1)
+### Messergebnis auf Vampire V4 (PCR 1088/1 / Apollo Core 11350)
 - **Horizontales Half-Pel (64 Pixel):** 11 Netto-Takte (0,17 Takte/Pixel) vs. 158 Takte C-Referenz (**14,36x Speedup**, bit-exakt diff=0, **PASS**).
 - **Vertikales Half-Pel (64 Pixel):** 11 Netto-Takte (0,17 Takte/Pixel) vs. 162 Takte C-Referenz (**14,72x Speedup**, diff=0, **PASS**).
 - **Diagonales Half-Pel (64 Pixel):** 19 Netto-Takte (0,29 Takte/Pixel) vs. 284 Takte C-Referenz (**14,94x Speedup**, diff $\le$ 1, **PASS**).
@@ -648,13 +648,13 @@ Die 68080 besitzt dafür die spezialisierte Vektor-Instruktion `PAVGB`:
 ## AMX-011: Hardware-Status von BFLYW (Privilege-Trap vs. PADDW+PSUBW)
 
 **Kategorie:** AMMX / Architektur-Fallstrick & Core-Kompatibilität  
-**Status:** VERIFIZIERT (Hardware-Befund auf Vampire V4 Core 1088/1)  
+**Status:** VERIFIZIERT (Hardware-Befund auf Vampire V4 PCR 1088/1 / Apollo Core 11350)  
 **Beleg:** Apollo Wiki / PRM `BFLYW.md`; empirischer Testlauf `Projects/DebugTest/test_bfly.c`  
-**Betroffene CPUs:** Apollo 68080 Core 1088/1
+**Betroffene CPUs:** Apollo 68080 PCR 1088/1 / Apollo Core 11350
 
 ### Problem & Hardware-Befund
 In älteren PRM-Entwürfen und Wiki-Seiten wird eine 1-Takt-Schmetterlings-Instruktion `BFLYW (VEA),b,d:d+1` beschrieben, die Summe und Differenz zweier Vektoren gleichzeitig in ein Registerpaar schreiben soll.
-- **Empirischer Test auf V4:** Die Ausführung von `bflyw e1,e0,e2:e3` assembliert mit vasm fehlerfrei, löst jedoch auf der echten Hardware (Core 1088, Release 1) eine **`0x80000008` Privilege Violation Exception** aus.
+- **Empirischer Test auf V4:** Die Ausführung von `bflyw e1,e0,e2:e3` assembliert mit vasm fehlerfrei, löst jedoch auf der echten Hardware (Apollo Core 11350, PCR 1088/1) eine **`0x80000008` Privilege Violation Exception** aus.
 
 ### Korrekter & robuster 68080-Ansatz
 Signaltransformationen (FFT, DCT, Hadamard) dürfen sich nicht auf `BFLYW` verlassen, sondern müssen die superskalare Ausführung von `PADDW` und `PSUBW` nutzen:

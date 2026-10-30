@@ -1,0 +1,2849 @@
+; RUN-ALL - Harness v5, 10 runs per entry, 71 entries
+; Execute: Execute "Ram Disk:RUN-ALL"
+; Logs: Ram Disk:LOGS/<ID>.runNN.log
+CD "Ram Disk:"
+If EXISTS "Ram Disk:LOGS"
+    Delete "Ram Disk:LOGS" ALL QUIET
+EndIf
+MakeDir "Ram Disk:LOGS"
+
+AMX-001
+If EXISTS "Ram Disk:LOGS/AMX-001.log"
+    Rename "Ram Disk:LOGS/AMX-001.log" "Ram Disk:LOGS/AMX-001.run01.log"
+EndIf
+AMX-001
+If EXISTS "Ram Disk:LOGS/AMX-001.log"
+    Rename "Ram Disk:LOGS/AMX-001.log" "Ram Disk:LOGS/AMX-001.run02.log"
+EndIf
+AMX-001
+If EXISTS "Ram Disk:LOGS/AMX-001.log"
+    Rename "Ram Disk:LOGS/AMX-001.log" "Ram Disk:LOGS/AMX-001.run03.log"
+EndIf
+AMX-001
+If EXISTS "Ram Disk:LOGS/AMX-001.log"
+    Rename "Ram Disk:LOGS/AMX-001.log" "Ram Disk:LOGS/AMX-001.run04.log"
+EndIf
+AMX-001
+If EXISTS "Ram Disk:LOGS/AMX-001.log"
+    Rename "Ram Disk:LOGS/AMX-001.log" "Ram Disk:LOGS/AMX-001.run05.log"
+EndIf
+AMX-001
+If EXISTS "Ram Disk:LOGS/AMX-001.log"
+    Rename "Ram Disk:LOGS/AMX-001.log" "Ram Disk:LOGS/AMX-001.run06.log"
+EndIf
+AMX-001
+If EXISTS "Ram Disk:LOGS/AMX-001.log"
+    Rename "Ram Disk:LOGS/AMX-001.log" "Ram Disk:LOGS/AMX-001.run07.log"
+EndIf
+AMX-001
+If EXISTS "Ram Disk:LOGS/AMX-001.log"
+    Rename "Ram Disk:LOGS/AMX-001.log" "Ram Disk:LOGS/AMX-001.run08.log"
+EndIf
+AMX-001
+If EXISTS "Ram Disk:LOGS/AMX-001.log"
+    Rename "Ram Disk:LOGS/AMX-001.log" "Ram Disk:LOGS/AMX-001.run09.log"
+EndIf
+AMX-001
+If EXISTS "Ram Disk:LOGS/AMX-001.log"
+    Rename "Ram Disk:LOGS/AMX-001.log" "Ram Disk:LOGS/AMX-001.run10.log"
+EndIf
+AMX-002
+If EXISTS "Ram Disk:LOGS/AMX-002.log"
+    Rename "Ram Disk:LOGS/AMX-002.log" "Ram Disk:LOGS/AMX-002.run01.log"
+EndIf
+AMX-002
+If EXISTS "Ram Disk:LOGS/AMX-002.log"
+    Rename "Ram Disk:LOGS/AMX-002.log" "Ram Disk:LOGS/AMX-002.run02.log"
+EndIf
+AMX-002
+If EXISTS "Ram Disk:LOGS/AMX-002.log"
+    Rename "Ram Disk:LOGS/AMX-002.log" "Ram Disk:LOGS/AMX-002.run03.log"
+EndIf
+AMX-002
+If EXISTS "Ram Disk:LOGS/AMX-002.log"
+    Rename "Ram Disk:LOGS/AMX-002.log" "Ram Disk:LOGS/AMX-002.run04.log"
+EndIf
+AMX-002
+If EXISTS "Ram Disk:LOGS/AMX-002.log"
+    Rename "Ram Disk:LOGS/AMX-002.log" "Ram Disk:LOGS/AMX-002.run05.log"
+EndIf
+AMX-002
+If EXISTS "Ram Disk:LOGS/AMX-002.log"
+    Rename "Ram Disk:LOGS/AMX-002.log" "Ram Disk:LOGS/AMX-002.run06.log"
+EndIf
+AMX-002
+If EXISTS "Ram Disk:LOGS/AMX-002.log"
+    Rename "Ram Disk:LOGS/AMX-002.log" "Ram Disk:LOGS/AMX-002.run07.log"
+EndIf
+AMX-002
+If EXISTS "Ram Disk:LOGS/AMX-002.log"
+    Rename "Ram Disk:LOGS/AMX-002.log" "Ram Disk:LOGS/AMX-002.run08.log"
+EndIf
+AMX-002
+If EXISTS "Ram Disk:LOGS/AMX-002.log"
+    Rename "Ram Disk:LOGS/AMX-002.log" "Ram Disk:LOGS/AMX-002.run09.log"
+EndIf
+AMX-002
+If EXISTS "Ram Disk:LOGS/AMX-002.log"
+    Rename "Ram Disk:LOGS/AMX-002.log" "Ram Disk:LOGS/AMX-002.run10.log"
+EndIf
+AMX-003
+If EXISTS "Ram Disk:LOGS/AMX-003.log"
+    Rename "Ram Disk:LOGS/AMX-003.log" "Ram Disk:LOGS/AMX-003.run01.log"
+EndIf
+AMX-003
+If EXISTS "Ram Disk:LOGS/AMX-003.log"
+    Rename "Ram Disk:LOGS/AMX-003.log" "Ram Disk:LOGS/AMX-003.run02.log"
+EndIf
+AMX-003
+If EXISTS "Ram Disk:LOGS/AMX-003.log"
+    Rename "Ram Disk:LOGS/AMX-003.log" "Ram Disk:LOGS/AMX-003.run03.log"
+EndIf
+AMX-003
+If EXISTS "Ram Disk:LOGS/AMX-003.log"
+    Rename "Ram Disk:LOGS/AMX-003.log" "Ram Disk:LOGS/AMX-003.run04.log"
+EndIf
+AMX-003
+If EXISTS "Ram Disk:LOGS/AMX-003.log"
+    Rename "Ram Disk:LOGS/AMX-003.log" "Ram Disk:LOGS/AMX-003.run05.log"
+EndIf
+AMX-003
+If EXISTS "Ram Disk:LOGS/AMX-003.log"
+    Rename "Ram Disk:LOGS/AMX-003.log" "Ram Disk:LOGS/AMX-003.run06.log"
+EndIf
+AMX-003
+If EXISTS "Ram Disk:LOGS/AMX-003.log"
+    Rename "Ram Disk:LOGS/AMX-003.log" "Ram Disk:LOGS/AMX-003.run07.log"
+EndIf
+AMX-003
+If EXISTS "Ram Disk:LOGS/AMX-003.log"
+    Rename "Ram Disk:LOGS/AMX-003.log" "Ram Disk:LOGS/AMX-003.run08.log"
+EndIf
+AMX-003
+If EXISTS "Ram Disk:LOGS/AMX-003.log"
+    Rename "Ram Disk:LOGS/AMX-003.log" "Ram Disk:LOGS/AMX-003.run09.log"
+EndIf
+AMX-003
+If EXISTS "Ram Disk:LOGS/AMX-003.log"
+    Rename "Ram Disk:LOGS/AMX-003.log" "Ram Disk:LOGS/AMX-003.run10.log"
+EndIf
+AMX-004
+If EXISTS "Ram Disk:LOGS/AMX-004.log"
+    Rename "Ram Disk:LOGS/AMX-004.log" "Ram Disk:LOGS/AMX-004.run01.log"
+EndIf
+AMX-004
+If EXISTS "Ram Disk:LOGS/AMX-004.log"
+    Rename "Ram Disk:LOGS/AMX-004.log" "Ram Disk:LOGS/AMX-004.run02.log"
+EndIf
+AMX-004
+If EXISTS "Ram Disk:LOGS/AMX-004.log"
+    Rename "Ram Disk:LOGS/AMX-004.log" "Ram Disk:LOGS/AMX-004.run03.log"
+EndIf
+AMX-004
+If EXISTS "Ram Disk:LOGS/AMX-004.log"
+    Rename "Ram Disk:LOGS/AMX-004.log" "Ram Disk:LOGS/AMX-004.run04.log"
+EndIf
+AMX-004
+If EXISTS "Ram Disk:LOGS/AMX-004.log"
+    Rename "Ram Disk:LOGS/AMX-004.log" "Ram Disk:LOGS/AMX-004.run05.log"
+EndIf
+AMX-004
+If EXISTS "Ram Disk:LOGS/AMX-004.log"
+    Rename "Ram Disk:LOGS/AMX-004.log" "Ram Disk:LOGS/AMX-004.run06.log"
+EndIf
+AMX-004
+If EXISTS "Ram Disk:LOGS/AMX-004.log"
+    Rename "Ram Disk:LOGS/AMX-004.log" "Ram Disk:LOGS/AMX-004.run07.log"
+EndIf
+AMX-004
+If EXISTS "Ram Disk:LOGS/AMX-004.log"
+    Rename "Ram Disk:LOGS/AMX-004.log" "Ram Disk:LOGS/AMX-004.run08.log"
+EndIf
+AMX-004
+If EXISTS "Ram Disk:LOGS/AMX-004.log"
+    Rename "Ram Disk:LOGS/AMX-004.log" "Ram Disk:LOGS/AMX-004.run09.log"
+EndIf
+AMX-004
+If EXISTS "Ram Disk:LOGS/AMX-004.log"
+    Rename "Ram Disk:LOGS/AMX-004.log" "Ram Disk:LOGS/AMX-004.run10.log"
+EndIf
+AMX-005
+If EXISTS "Ram Disk:LOGS/AMX-005.log"
+    Rename "Ram Disk:LOGS/AMX-005.log" "Ram Disk:LOGS/AMX-005.run01.log"
+EndIf
+AMX-005
+If EXISTS "Ram Disk:LOGS/AMX-005.log"
+    Rename "Ram Disk:LOGS/AMX-005.log" "Ram Disk:LOGS/AMX-005.run02.log"
+EndIf
+AMX-005
+If EXISTS "Ram Disk:LOGS/AMX-005.log"
+    Rename "Ram Disk:LOGS/AMX-005.log" "Ram Disk:LOGS/AMX-005.run03.log"
+EndIf
+AMX-005
+If EXISTS "Ram Disk:LOGS/AMX-005.log"
+    Rename "Ram Disk:LOGS/AMX-005.log" "Ram Disk:LOGS/AMX-005.run04.log"
+EndIf
+AMX-005
+If EXISTS "Ram Disk:LOGS/AMX-005.log"
+    Rename "Ram Disk:LOGS/AMX-005.log" "Ram Disk:LOGS/AMX-005.run05.log"
+EndIf
+AMX-005
+If EXISTS "Ram Disk:LOGS/AMX-005.log"
+    Rename "Ram Disk:LOGS/AMX-005.log" "Ram Disk:LOGS/AMX-005.run06.log"
+EndIf
+AMX-005
+If EXISTS "Ram Disk:LOGS/AMX-005.log"
+    Rename "Ram Disk:LOGS/AMX-005.log" "Ram Disk:LOGS/AMX-005.run07.log"
+EndIf
+AMX-005
+If EXISTS "Ram Disk:LOGS/AMX-005.log"
+    Rename "Ram Disk:LOGS/AMX-005.log" "Ram Disk:LOGS/AMX-005.run08.log"
+EndIf
+AMX-005
+If EXISTS "Ram Disk:LOGS/AMX-005.log"
+    Rename "Ram Disk:LOGS/AMX-005.log" "Ram Disk:LOGS/AMX-005.run09.log"
+EndIf
+AMX-005
+If EXISTS "Ram Disk:LOGS/AMX-005.log"
+    Rename "Ram Disk:LOGS/AMX-005.log" "Ram Disk:LOGS/AMX-005.run10.log"
+EndIf
+AMX-006
+If EXISTS "Ram Disk:LOGS/AMX-006.log"
+    Rename "Ram Disk:LOGS/AMX-006.log" "Ram Disk:LOGS/AMX-006.run01.log"
+EndIf
+AMX-006
+If EXISTS "Ram Disk:LOGS/AMX-006.log"
+    Rename "Ram Disk:LOGS/AMX-006.log" "Ram Disk:LOGS/AMX-006.run02.log"
+EndIf
+AMX-006
+If EXISTS "Ram Disk:LOGS/AMX-006.log"
+    Rename "Ram Disk:LOGS/AMX-006.log" "Ram Disk:LOGS/AMX-006.run03.log"
+EndIf
+AMX-006
+If EXISTS "Ram Disk:LOGS/AMX-006.log"
+    Rename "Ram Disk:LOGS/AMX-006.log" "Ram Disk:LOGS/AMX-006.run04.log"
+EndIf
+AMX-006
+If EXISTS "Ram Disk:LOGS/AMX-006.log"
+    Rename "Ram Disk:LOGS/AMX-006.log" "Ram Disk:LOGS/AMX-006.run05.log"
+EndIf
+AMX-006
+If EXISTS "Ram Disk:LOGS/AMX-006.log"
+    Rename "Ram Disk:LOGS/AMX-006.log" "Ram Disk:LOGS/AMX-006.run06.log"
+EndIf
+AMX-006
+If EXISTS "Ram Disk:LOGS/AMX-006.log"
+    Rename "Ram Disk:LOGS/AMX-006.log" "Ram Disk:LOGS/AMX-006.run07.log"
+EndIf
+AMX-006
+If EXISTS "Ram Disk:LOGS/AMX-006.log"
+    Rename "Ram Disk:LOGS/AMX-006.log" "Ram Disk:LOGS/AMX-006.run08.log"
+EndIf
+AMX-006
+If EXISTS "Ram Disk:LOGS/AMX-006.log"
+    Rename "Ram Disk:LOGS/AMX-006.log" "Ram Disk:LOGS/AMX-006.run09.log"
+EndIf
+AMX-006
+If EXISTS "Ram Disk:LOGS/AMX-006.log"
+    Rename "Ram Disk:LOGS/AMX-006.log" "Ram Disk:LOGS/AMX-006.run10.log"
+EndIf
+AMX-007
+If EXISTS "Ram Disk:LOGS/AMX-007.log"
+    Rename "Ram Disk:LOGS/AMX-007.log" "Ram Disk:LOGS/AMX-007.run01.log"
+EndIf
+AMX-007
+If EXISTS "Ram Disk:LOGS/AMX-007.log"
+    Rename "Ram Disk:LOGS/AMX-007.log" "Ram Disk:LOGS/AMX-007.run02.log"
+EndIf
+AMX-007
+If EXISTS "Ram Disk:LOGS/AMX-007.log"
+    Rename "Ram Disk:LOGS/AMX-007.log" "Ram Disk:LOGS/AMX-007.run03.log"
+EndIf
+AMX-007
+If EXISTS "Ram Disk:LOGS/AMX-007.log"
+    Rename "Ram Disk:LOGS/AMX-007.log" "Ram Disk:LOGS/AMX-007.run04.log"
+EndIf
+AMX-007
+If EXISTS "Ram Disk:LOGS/AMX-007.log"
+    Rename "Ram Disk:LOGS/AMX-007.log" "Ram Disk:LOGS/AMX-007.run05.log"
+EndIf
+AMX-007
+If EXISTS "Ram Disk:LOGS/AMX-007.log"
+    Rename "Ram Disk:LOGS/AMX-007.log" "Ram Disk:LOGS/AMX-007.run06.log"
+EndIf
+AMX-007
+If EXISTS "Ram Disk:LOGS/AMX-007.log"
+    Rename "Ram Disk:LOGS/AMX-007.log" "Ram Disk:LOGS/AMX-007.run07.log"
+EndIf
+AMX-007
+If EXISTS "Ram Disk:LOGS/AMX-007.log"
+    Rename "Ram Disk:LOGS/AMX-007.log" "Ram Disk:LOGS/AMX-007.run08.log"
+EndIf
+AMX-007
+If EXISTS "Ram Disk:LOGS/AMX-007.log"
+    Rename "Ram Disk:LOGS/AMX-007.log" "Ram Disk:LOGS/AMX-007.run09.log"
+EndIf
+AMX-007
+If EXISTS "Ram Disk:LOGS/AMX-007.log"
+    Rename "Ram Disk:LOGS/AMX-007.log" "Ram Disk:LOGS/AMX-007.run10.log"
+EndIf
+AMX-008
+If EXISTS "Ram Disk:LOGS/AMX-008.log"
+    Rename "Ram Disk:LOGS/AMX-008.log" "Ram Disk:LOGS/AMX-008.run01.log"
+EndIf
+AMX-008
+If EXISTS "Ram Disk:LOGS/AMX-008.log"
+    Rename "Ram Disk:LOGS/AMX-008.log" "Ram Disk:LOGS/AMX-008.run02.log"
+EndIf
+AMX-008
+If EXISTS "Ram Disk:LOGS/AMX-008.log"
+    Rename "Ram Disk:LOGS/AMX-008.log" "Ram Disk:LOGS/AMX-008.run03.log"
+EndIf
+AMX-008
+If EXISTS "Ram Disk:LOGS/AMX-008.log"
+    Rename "Ram Disk:LOGS/AMX-008.log" "Ram Disk:LOGS/AMX-008.run04.log"
+EndIf
+AMX-008
+If EXISTS "Ram Disk:LOGS/AMX-008.log"
+    Rename "Ram Disk:LOGS/AMX-008.log" "Ram Disk:LOGS/AMX-008.run05.log"
+EndIf
+AMX-008
+If EXISTS "Ram Disk:LOGS/AMX-008.log"
+    Rename "Ram Disk:LOGS/AMX-008.log" "Ram Disk:LOGS/AMX-008.run06.log"
+EndIf
+AMX-008
+If EXISTS "Ram Disk:LOGS/AMX-008.log"
+    Rename "Ram Disk:LOGS/AMX-008.log" "Ram Disk:LOGS/AMX-008.run07.log"
+EndIf
+AMX-008
+If EXISTS "Ram Disk:LOGS/AMX-008.log"
+    Rename "Ram Disk:LOGS/AMX-008.log" "Ram Disk:LOGS/AMX-008.run08.log"
+EndIf
+AMX-008
+If EXISTS "Ram Disk:LOGS/AMX-008.log"
+    Rename "Ram Disk:LOGS/AMX-008.log" "Ram Disk:LOGS/AMX-008.run09.log"
+EndIf
+AMX-008
+If EXISTS "Ram Disk:LOGS/AMX-008.log"
+    Rename "Ram Disk:LOGS/AMX-008.log" "Ram Disk:LOGS/AMX-008.run10.log"
+EndIf
+AMX-009
+If EXISTS "Ram Disk:LOGS/AMX-009.log"
+    Rename "Ram Disk:LOGS/AMX-009.log" "Ram Disk:LOGS/AMX-009.run01.log"
+EndIf
+AMX-009
+If EXISTS "Ram Disk:LOGS/AMX-009.log"
+    Rename "Ram Disk:LOGS/AMX-009.log" "Ram Disk:LOGS/AMX-009.run02.log"
+EndIf
+AMX-009
+If EXISTS "Ram Disk:LOGS/AMX-009.log"
+    Rename "Ram Disk:LOGS/AMX-009.log" "Ram Disk:LOGS/AMX-009.run03.log"
+EndIf
+AMX-009
+If EXISTS "Ram Disk:LOGS/AMX-009.log"
+    Rename "Ram Disk:LOGS/AMX-009.log" "Ram Disk:LOGS/AMX-009.run04.log"
+EndIf
+AMX-009
+If EXISTS "Ram Disk:LOGS/AMX-009.log"
+    Rename "Ram Disk:LOGS/AMX-009.log" "Ram Disk:LOGS/AMX-009.run05.log"
+EndIf
+AMX-009
+If EXISTS "Ram Disk:LOGS/AMX-009.log"
+    Rename "Ram Disk:LOGS/AMX-009.log" "Ram Disk:LOGS/AMX-009.run06.log"
+EndIf
+AMX-009
+If EXISTS "Ram Disk:LOGS/AMX-009.log"
+    Rename "Ram Disk:LOGS/AMX-009.log" "Ram Disk:LOGS/AMX-009.run07.log"
+EndIf
+AMX-009
+If EXISTS "Ram Disk:LOGS/AMX-009.log"
+    Rename "Ram Disk:LOGS/AMX-009.log" "Ram Disk:LOGS/AMX-009.run08.log"
+EndIf
+AMX-009
+If EXISTS "Ram Disk:LOGS/AMX-009.log"
+    Rename "Ram Disk:LOGS/AMX-009.log" "Ram Disk:LOGS/AMX-009.run09.log"
+EndIf
+AMX-009
+If EXISTS "Ram Disk:LOGS/AMX-009.log"
+    Rename "Ram Disk:LOGS/AMX-009.log" "Ram Disk:LOGS/AMX-009.run10.log"
+EndIf
+AMX-010
+If EXISTS "Ram Disk:LOGS/AMX-010.log"
+    Rename "Ram Disk:LOGS/AMX-010.log" "Ram Disk:LOGS/AMX-010.run01.log"
+EndIf
+AMX-010
+If EXISTS "Ram Disk:LOGS/AMX-010.log"
+    Rename "Ram Disk:LOGS/AMX-010.log" "Ram Disk:LOGS/AMX-010.run02.log"
+EndIf
+AMX-010
+If EXISTS "Ram Disk:LOGS/AMX-010.log"
+    Rename "Ram Disk:LOGS/AMX-010.log" "Ram Disk:LOGS/AMX-010.run03.log"
+EndIf
+AMX-010
+If EXISTS "Ram Disk:LOGS/AMX-010.log"
+    Rename "Ram Disk:LOGS/AMX-010.log" "Ram Disk:LOGS/AMX-010.run04.log"
+EndIf
+AMX-010
+If EXISTS "Ram Disk:LOGS/AMX-010.log"
+    Rename "Ram Disk:LOGS/AMX-010.log" "Ram Disk:LOGS/AMX-010.run05.log"
+EndIf
+AMX-010
+If EXISTS "Ram Disk:LOGS/AMX-010.log"
+    Rename "Ram Disk:LOGS/AMX-010.log" "Ram Disk:LOGS/AMX-010.run06.log"
+EndIf
+AMX-010
+If EXISTS "Ram Disk:LOGS/AMX-010.log"
+    Rename "Ram Disk:LOGS/AMX-010.log" "Ram Disk:LOGS/AMX-010.run07.log"
+EndIf
+AMX-010
+If EXISTS "Ram Disk:LOGS/AMX-010.log"
+    Rename "Ram Disk:LOGS/AMX-010.log" "Ram Disk:LOGS/AMX-010.run08.log"
+EndIf
+AMX-010
+If EXISTS "Ram Disk:LOGS/AMX-010.log"
+    Rename "Ram Disk:LOGS/AMX-010.log" "Ram Disk:LOGS/AMX-010.run09.log"
+EndIf
+AMX-010
+If EXISTS "Ram Disk:LOGS/AMX-010.log"
+    Rename "Ram Disk:LOGS/AMX-010.log" "Ram Disk:LOGS/AMX-010.run10.log"
+EndIf
+AMX-011
+If EXISTS "Ram Disk:LOGS/AMX-011.log"
+    Rename "Ram Disk:LOGS/AMX-011.log" "Ram Disk:LOGS/AMX-011.run01.log"
+EndIf
+AMX-011
+If EXISTS "Ram Disk:LOGS/AMX-011.log"
+    Rename "Ram Disk:LOGS/AMX-011.log" "Ram Disk:LOGS/AMX-011.run02.log"
+EndIf
+AMX-011
+If EXISTS "Ram Disk:LOGS/AMX-011.log"
+    Rename "Ram Disk:LOGS/AMX-011.log" "Ram Disk:LOGS/AMX-011.run03.log"
+EndIf
+AMX-011
+If EXISTS "Ram Disk:LOGS/AMX-011.log"
+    Rename "Ram Disk:LOGS/AMX-011.log" "Ram Disk:LOGS/AMX-011.run04.log"
+EndIf
+AMX-011
+If EXISTS "Ram Disk:LOGS/AMX-011.log"
+    Rename "Ram Disk:LOGS/AMX-011.log" "Ram Disk:LOGS/AMX-011.run05.log"
+EndIf
+AMX-011
+If EXISTS "Ram Disk:LOGS/AMX-011.log"
+    Rename "Ram Disk:LOGS/AMX-011.log" "Ram Disk:LOGS/AMX-011.run06.log"
+EndIf
+AMX-011
+If EXISTS "Ram Disk:LOGS/AMX-011.log"
+    Rename "Ram Disk:LOGS/AMX-011.log" "Ram Disk:LOGS/AMX-011.run07.log"
+EndIf
+AMX-011
+If EXISTS "Ram Disk:LOGS/AMX-011.log"
+    Rename "Ram Disk:LOGS/AMX-011.log" "Ram Disk:LOGS/AMX-011.run08.log"
+EndIf
+AMX-011
+If EXISTS "Ram Disk:LOGS/AMX-011.log"
+    Rename "Ram Disk:LOGS/AMX-011.log" "Ram Disk:LOGS/AMX-011.run09.log"
+EndIf
+AMX-011
+If EXISTS "Ram Disk:LOGS/AMX-011.log"
+    Rename "Ram Disk:LOGS/AMX-011.log" "Ram Disk:LOGS/AMX-011.run10.log"
+EndIf
+ANTI-001
+If EXISTS "Ram Disk:LOGS/ANTI-001.log"
+    Rename "Ram Disk:LOGS/ANTI-001.log" "Ram Disk:LOGS/ANTI-001.run01.log"
+EndIf
+ANTI-001
+If EXISTS "Ram Disk:LOGS/ANTI-001.log"
+    Rename "Ram Disk:LOGS/ANTI-001.log" "Ram Disk:LOGS/ANTI-001.run02.log"
+EndIf
+ANTI-001
+If EXISTS "Ram Disk:LOGS/ANTI-001.log"
+    Rename "Ram Disk:LOGS/ANTI-001.log" "Ram Disk:LOGS/ANTI-001.run03.log"
+EndIf
+ANTI-001
+If EXISTS "Ram Disk:LOGS/ANTI-001.log"
+    Rename "Ram Disk:LOGS/ANTI-001.log" "Ram Disk:LOGS/ANTI-001.run04.log"
+EndIf
+ANTI-001
+If EXISTS "Ram Disk:LOGS/ANTI-001.log"
+    Rename "Ram Disk:LOGS/ANTI-001.log" "Ram Disk:LOGS/ANTI-001.run05.log"
+EndIf
+ANTI-001
+If EXISTS "Ram Disk:LOGS/ANTI-001.log"
+    Rename "Ram Disk:LOGS/ANTI-001.log" "Ram Disk:LOGS/ANTI-001.run06.log"
+EndIf
+ANTI-001
+If EXISTS "Ram Disk:LOGS/ANTI-001.log"
+    Rename "Ram Disk:LOGS/ANTI-001.log" "Ram Disk:LOGS/ANTI-001.run07.log"
+EndIf
+ANTI-001
+If EXISTS "Ram Disk:LOGS/ANTI-001.log"
+    Rename "Ram Disk:LOGS/ANTI-001.log" "Ram Disk:LOGS/ANTI-001.run08.log"
+EndIf
+ANTI-001
+If EXISTS "Ram Disk:LOGS/ANTI-001.log"
+    Rename "Ram Disk:LOGS/ANTI-001.log" "Ram Disk:LOGS/ANTI-001.run09.log"
+EndIf
+ANTI-001
+If EXISTS "Ram Disk:LOGS/ANTI-001.log"
+    Rename "Ram Disk:LOGS/ANTI-001.log" "Ram Disk:LOGS/ANTI-001.run10.log"
+EndIf
+ANTI-002
+If EXISTS "Ram Disk:LOGS/ANTI-002.log"
+    Rename "Ram Disk:LOGS/ANTI-002.log" "Ram Disk:LOGS/ANTI-002.run01.log"
+EndIf
+ANTI-002
+If EXISTS "Ram Disk:LOGS/ANTI-002.log"
+    Rename "Ram Disk:LOGS/ANTI-002.log" "Ram Disk:LOGS/ANTI-002.run02.log"
+EndIf
+ANTI-002
+If EXISTS "Ram Disk:LOGS/ANTI-002.log"
+    Rename "Ram Disk:LOGS/ANTI-002.log" "Ram Disk:LOGS/ANTI-002.run03.log"
+EndIf
+ANTI-002
+If EXISTS "Ram Disk:LOGS/ANTI-002.log"
+    Rename "Ram Disk:LOGS/ANTI-002.log" "Ram Disk:LOGS/ANTI-002.run04.log"
+EndIf
+ANTI-002
+If EXISTS "Ram Disk:LOGS/ANTI-002.log"
+    Rename "Ram Disk:LOGS/ANTI-002.log" "Ram Disk:LOGS/ANTI-002.run05.log"
+EndIf
+ANTI-002
+If EXISTS "Ram Disk:LOGS/ANTI-002.log"
+    Rename "Ram Disk:LOGS/ANTI-002.log" "Ram Disk:LOGS/ANTI-002.run06.log"
+EndIf
+ANTI-002
+If EXISTS "Ram Disk:LOGS/ANTI-002.log"
+    Rename "Ram Disk:LOGS/ANTI-002.log" "Ram Disk:LOGS/ANTI-002.run07.log"
+EndIf
+ANTI-002
+If EXISTS "Ram Disk:LOGS/ANTI-002.log"
+    Rename "Ram Disk:LOGS/ANTI-002.log" "Ram Disk:LOGS/ANTI-002.run08.log"
+EndIf
+ANTI-002
+If EXISTS "Ram Disk:LOGS/ANTI-002.log"
+    Rename "Ram Disk:LOGS/ANTI-002.log" "Ram Disk:LOGS/ANTI-002.run09.log"
+EndIf
+ANTI-002
+If EXISTS "Ram Disk:LOGS/ANTI-002.log"
+    Rename "Ram Disk:LOGS/ANTI-002.log" "Ram Disk:LOGS/ANTI-002.run10.log"
+EndIf
+ANTI-003
+If EXISTS "Ram Disk:LOGS/ANTI-003.log"
+    Rename "Ram Disk:LOGS/ANTI-003.log" "Ram Disk:LOGS/ANTI-003.run01.log"
+EndIf
+ANTI-003
+If EXISTS "Ram Disk:LOGS/ANTI-003.log"
+    Rename "Ram Disk:LOGS/ANTI-003.log" "Ram Disk:LOGS/ANTI-003.run02.log"
+EndIf
+ANTI-003
+If EXISTS "Ram Disk:LOGS/ANTI-003.log"
+    Rename "Ram Disk:LOGS/ANTI-003.log" "Ram Disk:LOGS/ANTI-003.run03.log"
+EndIf
+ANTI-003
+If EXISTS "Ram Disk:LOGS/ANTI-003.log"
+    Rename "Ram Disk:LOGS/ANTI-003.log" "Ram Disk:LOGS/ANTI-003.run04.log"
+EndIf
+ANTI-003
+If EXISTS "Ram Disk:LOGS/ANTI-003.log"
+    Rename "Ram Disk:LOGS/ANTI-003.log" "Ram Disk:LOGS/ANTI-003.run05.log"
+EndIf
+ANTI-003
+If EXISTS "Ram Disk:LOGS/ANTI-003.log"
+    Rename "Ram Disk:LOGS/ANTI-003.log" "Ram Disk:LOGS/ANTI-003.run06.log"
+EndIf
+ANTI-003
+If EXISTS "Ram Disk:LOGS/ANTI-003.log"
+    Rename "Ram Disk:LOGS/ANTI-003.log" "Ram Disk:LOGS/ANTI-003.run07.log"
+EndIf
+ANTI-003
+If EXISTS "Ram Disk:LOGS/ANTI-003.log"
+    Rename "Ram Disk:LOGS/ANTI-003.log" "Ram Disk:LOGS/ANTI-003.run08.log"
+EndIf
+ANTI-003
+If EXISTS "Ram Disk:LOGS/ANTI-003.log"
+    Rename "Ram Disk:LOGS/ANTI-003.log" "Ram Disk:LOGS/ANTI-003.run09.log"
+EndIf
+ANTI-003
+If EXISTS "Ram Disk:LOGS/ANTI-003.log"
+    Rename "Ram Disk:LOGS/ANTI-003.log" "Ram Disk:LOGS/ANTI-003.run10.log"
+EndIf
+ANTI-004
+If EXISTS "Ram Disk:LOGS/ANTI-004.log"
+    Rename "Ram Disk:LOGS/ANTI-004.log" "Ram Disk:LOGS/ANTI-004.run01.log"
+EndIf
+ANTI-004
+If EXISTS "Ram Disk:LOGS/ANTI-004.log"
+    Rename "Ram Disk:LOGS/ANTI-004.log" "Ram Disk:LOGS/ANTI-004.run02.log"
+EndIf
+ANTI-004
+If EXISTS "Ram Disk:LOGS/ANTI-004.log"
+    Rename "Ram Disk:LOGS/ANTI-004.log" "Ram Disk:LOGS/ANTI-004.run03.log"
+EndIf
+ANTI-004
+If EXISTS "Ram Disk:LOGS/ANTI-004.log"
+    Rename "Ram Disk:LOGS/ANTI-004.log" "Ram Disk:LOGS/ANTI-004.run04.log"
+EndIf
+ANTI-004
+If EXISTS "Ram Disk:LOGS/ANTI-004.log"
+    Rename "Ram Disk:LOGS/ANTI-004.log" "Ram Disk:LOGS/ANTI-004.run05.log"
+EndIf
+ANTI-004
+If EXISTS "Ram Disk:LOGS/ANTI-004.log"
+    Rename "Ram Disk:LOGS/ANTI-004.log" "Ram Disk:LOGS/ANTI-004.run06.log"
+EndIf
+ANTI-004
+If EXISTS "Ram Disk:LOGS/ANTI-004.log"
+    Rename "Ram Disk:LOGS/ANTI-004.log" "Ram Disk:LOGS/ANTI-004.run07.log"
+EndIf
+ANTI-004
+If EXISTS "Ram Disk:LOGS/ANTI-004.log"
+    Rename "Ram Disk:LOGS/ANTI-004.log" "Ram Disk:LOGS/ANTI-004.run08.log"
+EndIf
+ANTI-004
+If EXISTS "Ram Disk:LOGS/ANTI-004.log"
+    Rename "Ram Disk:LOGS/ANTI-004.log" "Ram Disk:LOGS/ANTI-004.run09.log"
+EndIf
+ANTI-004
+If EXISTS "Ram Disk:LOGS/ANTI-004.log"
+    Rename "Ram Disk:LOGS/ANTI-004.log" "Ram Disk:LOGS/ANTI-004.run10.log"
+EndIf
+ANTI-005
+If EXISTS "Ram Disk:LOGS/ANTI-005.log"
+    Rename "Ram Disk:LOGS/ANTI-005.log" "Ram Disk:LOGS/ANTI-005.run01.log"
+EndIf
+ANTI-005
+If EXISTS "Ram Disk:LOGS/ANTI-005.log"
+    Rename "Ram Disk:LOGS/ANTI-005.log" "Ram Disk:LOGS/ANTI-005.run02.log"
+EndIf
+ANTI-005
+If EXISTS "Ram Disk:LOGS/ANTI-005.log"
+    Rename "Ram Disk:LOGS/ANTI-005.log" "Ram Disk:LOGS/ANTI-005.run03.log"
+EndIf
+ANTI-005
+If EXISTS "Ram Disk:LOGS/ANTI-005.log"
+    Rename "Ram Disk:LOGS/ANTI-005.log" "Ram Disk:LOGS/ANTI-005.run04.log"
+EndIf
+ANTI-005
+If EXISTS "Ram Disk:LOGS/ANTI-005.log"
+    Rename "Ram Disk:LOGS/ANTI-005.log" "Ram Disk:LOGS/ANTI-005.run05.log"
+EndIf
+ANTI-005
+If EXISTS "Ram Disk:LOGS/ANTI-005.log"
+    Rename "Ram Disk:LOGS/ANTI-005.log" "Ram Disk:LOGS/ANTI-005.run06.log"
+EndIf
+ANTI-005
+If EXISTS "Ram Disk:LOGS/ANTI-005.log"
+    Rename "Ram Disk:LOGS/ANTI-005.log" "Ram Disk:LOGS/ANTI-005.run07.log"
+EndIf
+ANTI-005
+If EXISTS "Ram Disk:LOGS/ANTI-005.log"
+    Rename "Ram Disk:LOGS/ANTI-005.log" "Ram Disk:LOGS/ANTI-005.run08.log"
+EndIf
+ANTI-005
+If EXISTS "Ram Disk:LOGS/ANTI-005.log"
+    Rename "Ram Disk:LOGS/ANTI-005.log" "Ram Disk:LOGS/ANTI-005.run09.log"
+EndIf
+ANTI-005
+If EXISTS "Ram Disk:LOGS/ANTI-005.log"
+    Rename "Ram Disk:LOGS/ANTI-005.log" "Ram Disk:LOGS/ANTI-005.run10.log"
+EndIf
+ANTI-006
+If EXISTS "Ram Disk:LOGS/ANTI-006.log"
+    Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run01.log"
+EndIf
+ANTI-006
+If EXISTS "Ram Disk:LOGS/ANTI-006.log"
+    Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run02.log"
+EndIf
+ANTI-006
+If EXISTS "Ram Disk:LOGS/ANTI-006.log"
+    Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run03.log"
+EndIf
+ANTI-006
+If EXISTS "Ram Disk:LOGS/ANTI-006.log"
+    Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run04.log"
+EndIf
+ANTI-006
+If EXISTS "Ram Disk:LOGS/ANTI-006.log"
+    Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run05.log"
+EndIf
+ANTI-006
+If EXISTS "Ram Disk:LOGS/ANTI-006.log"
+    Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run06.log"
+EndIf
+ANTI-006
+If EXISTS "Ram Disk:LOGS/ANTI-006.log"
+    Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run07.log"
+EndIf
+ANTI-006
+If EXISTS "Ram Disk:LOGS/ANTI-006.log"
+    Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run08.log"
+EndIf
+ANTI-006
+If EXISTS "Ram Disk:LOGS/ANTI-006.log"
+    Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run09.log"
+EndIf
+ANTI-006
+If EXISTS "Ram Disk:LOGS/ANTI-006.log"
+    Rename "Ram Disk:LOGS/ANTI-006.log" "Ram Disk:LOGS/ANTI-006.run10.log"
+EndIf
+BND-001
+If EXISTS "Ram Disk:LOGS/BND-001.log"
+    Rename "Ram Disk:LOGS/BND-001.log" "Ram Disk:LOGS/BND-001.run01.log"
+EndIf
+BND-001
+If EXISTS "Ram Disk:LOGS/BND-001.log"
+    Rename "Ram Disk:LOGS/BND-001.log" "Ram Disk:LOGS/BND-001.run02.log"
+EndIf
+BND-001
+If EXISTS "Ram Disk:LOGS/BND-001.log"
+    Rename "Ram Disk:LOGS/BND-001.log" "Ram Disk:LOGS/BND-001.run03.log"
+EndIf
+BND-001
+If EXISTS "Ram Disk:LOGS/BND-001.log"
+    Rename "Ram Disk:LOGS/BND-001.log" "Ram Disk:LOGS/BND-001.run04.log"
+EndIf
+BND-001
+If EXISTS "Ram Disk:LOGS/BND-001.log"
+    Rename "Ram Disk:LOGS/BND-001.log" "Ram Disk:LOGS/BND-001.run05.log"
+EndIf
+BND-001
+If EXISTS "Ram Disk:LOGS/BND-001.log"
+    Rename "Ram Disk:LOGS/BND-001.log" "Ram Disk:LOGS/BND-001.run06.log"
+EndIf
+BND-001
+If EXISTS "Ram Disk:LOGS/BND-001.log"
+    Rename "Ram Disk:LOGS/BND-001.log" "Ram Disk:LOGS/BND-001.run07.log"
+EndIf
+BND-001
+If EXISTS "Ram Disk:LOGS/BND-001.log"
+    Rename "Ram Disk:LOGS/BND-001.log" "Ram Disk:LOGS/BND-001.run08.log"
+EndIf
+BND-001
+If EXISTS "Ram Disk:LOGS/BND-001.log"
+    Rename "Ram Disk:LOGS/BND-001.log" "Ram Disk:LOGS/BND-001.run09.log"
+EndIf
+BND-001
+If EXISTS "Ram Disk:LOGS/BND-001.log"
+    Rename "Ram Disk:LOGS/BND-001.log" "Ram Disk:LOGS/BND-001.run10.log"
+EndIf
+BND-002
+If EXISTS "Ram Disk:LOGS/BND-002.log"
+    Rename "Ram Disk:LOGS/BND-002.log" "Ram Disk:LOGS/BND-002.run01.log"
+EndIf
+BND-002
+If EXISTS "Ram Disk:LOGS/BND-002.log"
+    Rename "Ram Disk:LOGS/BND-002.log" "Ram Disk:LOGS/BND-002.run02.log"
+EndIf
+BND-002
+If EXISTS "Ram Disk:LOGS/BND-002.log"
+    Rename "Ram Disk:LOGS/BND-002.log" "Ram Disk:LOGS/BND-002.run03.log"
+EndIf
+BND-002
+If EXISTS "Ram Disk:LOGS/BND-002.log"
+    Rename "Ram Disk:LOGS/BND-002.log" "Ram Disk:LOGS/BND-002.run04.log"
+EndIf
+BND-002
+If EXISTS "Ram Disk:LOGS/BND-002.log"
+    Rename "Ram Disk:LOGS/BND-002.log" "Ram Disk:LOGS/BND-002.run05.log"
+EndIf
+BND-002
+If EXISTS "Ram Disk:LOGS/BND-002.log"
+    Rename "Ram Disk:LOGS/BND-002.log" "Ram Disk:LOGS/BND-002.run06.log"
+EndIf
+BND-002
+If EXISTS "Ram Disk:LOGS/BND-002.log"
+    Rename "Ram Disk:LOGS/BND-002.log" "Ram Disk:LOGS/BND-002.run07.log"
+EndIf
+BND-002
+If EXISTS "Ram Disk:LOGS/BND-002.log"
+    Rename "Ram Disk:LOGS/BND-002.log" "Ram Disk:LOGS/BND-002.run08.log"
+EndIf
+BND-002
+If EXISTS "Ram Disk:LOGS/BND-002.log"
+    Rename "Ram Disk:LOGS/BND-002.log" "Ram Disk:LOGS/BND-002.run09.log"
+EndIf
+BND-002
+If EXISTS "Ram Disk:LOGS/BND-002.log"
+    Rename "Ram Disk:LOGS/BND-002.log" "Ram Disk:LOGS/BND-002.run10.log"
+EndIf
+BND-003
+If EXISTS "Ram Disk:LOGS/BND-003.log"
+    Rename "Ram Disk:LOGS/BND-003.log" "Ram Disk:LOGS/BND-003.run01.log"
+EndIf
+BND-003
+If EXISTS "Ram Disk:LOGS/BND-003.log"
+    Rename "Ram Disk:LOGS/BND-003.log" "Ram Disk:LOGS/BND-003.run02.log"
+EndIf
+BND-003
+If EXISTS "Ram Disk:LOGS/BND-003.log"
+    Rename "Ram Disk:LOGS/BND-003.log" "Ram Disk:LOGS/BND-003.run03.log"
+EndIf
+BND-003
+If EXISTS "Ram Disk:LOGS/BND-003.log"
+    Rename "Ram Disk:LOGS/BND-003.log" "Ram Disk:LOGS/BND-003.run04.log"
+EndIf
+BND-003
+If EXISTS "Ram Disk:LOGS/BND-003.log"
+    Rename "Ram Disk:LOGS/BND-003.log" "Ram Disk:LOGS/BND-003.run05.log"
+EndIf
+BND-003
+If EXISTS "Ram Disk:LOGS/BND-003.log"
+    Rename "Ram Disk:LOGS/BND-003.log" "Ram Disk:LOGS/BND-003.run06.log"
+EndIf
+BND-003
+If EXISTS "Ram Disk:LOGS/BND-003.log"
+    Rename "Ram Disk:LOGS/BND-003.log" "Ram Disk:LOGS/BND-003.run07.log"
+EndIf
+BND-003
+If EXISTS "Ram Disk:LOGS/BND-003.log"
+    Rename "Ram Disk:LOGS/BND-003.log" "Ram Disk:LOGS/BND-003.run08.log"
+EndIf
+BND-003
+If EXISTS "Ram Disk:LOGS/BND-003.log"
+    Rename "Ram Disk:LOGS/BND-003.log" "Ram Disk:LOGS/BND-003.run09.log"
+EndIf
+BND-003
+If EXISTS "Ram Disk:LOGS/BND-003.log"
+    Rename "Ram Disk:LOGS/BND-003.log" "Ram Disk:LOGS/BND-003.run10.log"
+EndIf
+BND-004
+If EXISTS "Ram Disk:LOGS/BND-004.log"
+    Rename "Ram Disk:LOGS/BND-004.log" "Ram Disk:LOGS/BND-004.run01.log"
+EndIf
+BND-004
+If EXISTS "Ram Disk:LOGS/BND-004.log"
+    Rename "Ram Disk:LOGS/BND-004.log" "Ram Disk:LOGS/BND-004.run02.log"
+EndIf
+BND-004
+If EXISTS "Ram Disk:LOGS/BND-004.log"
+    Rename "Ram Disk:LOGS/BND-004.log" "Ram Disk:LOGS/BND-004.run03.log"
+EndIf
+BND-004
+If EXISTS "Ram Disk:LOGS/BND-004.log"
+    Rename "Ram Disk:LOGS/BND-004.log" "Ram Disk:LOGS/BND-004.run04.log"
+EndIf
+BND-004
+If EXISTS "Ram Disk:LOGS/BND-004.log"
+    Rename "Ram Disk:LOGS/BND-004.log" "Ram Disk:LOGS/BND-004.run05.log"
+EndIf
+BND-004
+If EXISTS "Ram Disk:LOGS/BND-004.log"
+    Rename "Ram Disk:LOGS/BND-004.log" "Ram Disk:LOGS/BND-004.run06.log"
+EndIf
+BND-004
+If EXISTS "Ram Disk:LOGS/BND-004.log"
+    Rename "Ram Disk:LOGS/BND-004.log" "Ram Disk:LOGS/BND-004.run07.log"
+EndIf
+BND-004
+If EXISTS "Ram Disk:LOGS/BND-004.log"
+    Rename "Ram Disk:LOGS/BND-004.log" "Ram Disk:LOGS/BND-004.run08.log"
+EndIf
+BND-004
+If EXISTS "Ram Disk:LOGS/BND-004.log"
+    Rename "Ram Disk:LOGS/BND-004.log" "Ram Disk:LOGS/BND-004.run09.log"
+EndIf
+BND-004
+If EXISTS "Ram Disk:LOGS/BND-004.log"
+    Rename "Ram Disk:LOGS/BND-004.log" "Ram Disk:LOGS/BND-004.run10.log"
+EndIf
+BND-005
+If EXISTS "Ram Disk:LOGS/BND-005.log"
+    Rename "Ram Disk:LOGS/BND-005.log" "Ram Disk:LOGS/BND-005.run01.log"
+EndIf
+BND-005
+If EXISTS "Ram Disk:LOGS/BND-005.log"
+    Rename "Ram Disk:LOGS/BND-005.log" "Ram Disk:LOGS/BND-005.run02.log"
+EndIf
+BND-005
+If EXISTS "Ram Disk:LOGS/BND-005.log"
+    Rename "Ram Disk:LOGS/BND-005.log" "Ram Disk:LOGS/BND-005.run03.log"
+EndIf
+BND-005
+If EXISTS "Ram Disk:LOGS/BND-005.log"
+    Rename "Ram Disk:LOGS/BND-005.log" "Ram Disk:LOGS/BND-005.run04.log"
+EndIf
+BND-005
+If EXISTS "Ram Disk:LOGS/BND-005.log"
+    Rename "Ram Disk:LOGS/BND-005.log" "Ram Disk:LOGS/BND-005.run05.log"
+EndIf
+BND-005
+If EXISTS "Ram Disk:LOGS/BND-005.log"
+    Rename "Ram Disk:LOGS/BND-005.log" "Ram Disk:LOGS/BND-005.run06.log"
+EndIf
+BND-005
+If EXISTS "Ram Disk:LOGS/BND-005.log"
+    Rename "Ram Disk:LOGS/BND-005.log" "Ram Disk:LOGS/BND-005.run07.log"
+EndIf
+BND-005
+If EXISTS "Ram Disk:LOGS/BND-005.log"
+    Rename "Ram Disk:LOGS/BND-005.log" "Ram Disk:LOGS/BND-005.run08.log"
+EndIf
+BND-005
+If EXISTS "Ram Disk:LOGS/BND-005.log"
+    Rename "Ram Disk:LOGS/BND-005.log" "Ram Disk:LOGS/BND-005.run09.log"
+EndIf
+BND-005
+If EXISTS "Ram Disk:LOGS/BND-005.log"
+    Rename "Ram Disk:LOGS/BND-005.log" "Ram Disk:LOGS/BND-005.run10.log"
+EndIf
+DCT-001
+If EXISTS "Ram Disk:LOGS/DCT-001.log"
+    Rename "Ram Disk:LOGS/DCT-001.log" "Ram Disk:LOGS/DCT-001.run01.log"
+EndIf
+DCT-001
+If EXISTS "Ram Disk:LOGS/DCT-001.log"
+    Rename "Ram Disk:LOGS/DCT-001.log" "Ram Disk:LOGS/DCT-001.run02.log"
+EndIf
+DCT-001
+If EXISTS "Ram Disk:LOGS/DCT-001.log"
+    Rename "Ram Disk:LOGS/DCT-001.log" "Ram Disk:LOGS/DCT-001.run03.log"
+EndIf
+DCT-001
+If EXISTS "Ram Disk:LOGS/DCT-001.log"
+    Rename "Ram Disk:LOGS/DCT-001.log" "Ram Disk:LOGS/DCT-001.run04.log"
+EndIf
+DCT-001
+If EXISTS "Ram Disk:LOGS/DCT-001.log"
+    Rename "Ram Disk:LOGS/DCT-001.log" "Ram Disk:LOGS/DCT-001.run05.log"
+EndIf
+DCT-001
+If EXISTS "Ram Disk:LOGS/DCT-001.log"
+    Rename "Ram Disk:LOGS/DCT-001.log" "Ram Disk:LOGS/DCT-001.run06.log"
+EndIf
+DCT-001
+If EXISTS "Ram Disk:LOGS/DCT-001.log"
+    Rename "Ram Disk:LOGS/DCT-001.log" "Ram Disk:LOGS/DCT-001.run07.log"
+EndIf
+DCT-001
+If EXISTS "Ram Disk:LOGS/DCT-001.log"
+    Rename "Ram Disk:LOGS/DCT-001.log" "Ram Disk:LOGS/DCT-001.run08.log"
+EndIf
+DCT-001
+If EXISTS "Ram Disk:LOGS/DCT-001.log"
+    Rename "Ram Disk:LOGS/DCT-001.log" "Ram Disk:LOGS/DCT-001.run09.log"
+EndIf
+DCT-001
+If EXISTS "Ram Disk:LOGS/DCT-001.log"
+    Rename "Ram Disk:LOGS/DCT-001.log" "Ram Disk:LOGS/DCT-001.run10.log"
+EndIf
+DCT-002
+If EXISTS "Ram Disk:LOGS/DCT-002.log"
+    Rename "Ram Disk:LOGS/DCT-002.log" "Ram Disk:LOGS/DCT-002.run01.log"
+EndIf
+DCT-002
+If EXISTS "Ram Disk:LOGS/DCT-002.log"
+    Rename "Ram Disk:LOGS/DCT-002.log" "Ram Disk:LOGS/DCT-002.run02.log"
+EndIf
+DCT-002
+If EXISTS "Ram Disk:LOGS/DCT-002.log"
+    Rename "Ram Disk:LOGS/DCT-002.log" "Ram Disk:LOGS/DCT-002.run03.log"
+EndIf
+DCT-002
+If EXISTS "Ram Disk:LOGS/DCT-002.log"
+    Rename "Ram Disk:LOGS/DCT-002.log" "Ram Disk:LOGS/DCT-002.run04.log"
+EndIf
+DCT-002
+If EXISTS "Ram Disk:LOGS/DCT-002.log"
+    Rename "Ram Disk:LOGS/DCT-002.log" "Ram Disk:LOGS/DCT-002.run05.log"
+EndIf
+DCT-002
+If EXISTS "Ram Disk:LOGS/DCT-002.log"
+    Rename "Ram Disk:LOGS/DCT-002.log" "Ram Disk:LOGS/DCT-002.run06.log"
+EndIf
+DCT-002
+If EXISTS "Ram Disk:LOGS/DCT-002.log"
+    Rename "Ram Disk:LOGS/DCT-002.log" "Ram Disk:LOGS/DCT-002.run07.log"
+EndIf
+DCT-002
+If EXISTS "Ram Disk:LOGS/DCT-002.log"
+    Rename "Ram Disk:LOGS/DCT-002.log" "Ram Disk:LOGS/DCT-002.run08.log"
+EndIf
+DCT-002
+If EXISTS "Ram Disk:LOGS/DCT-002.log"
+    Rename "Ram Disk:LOGS/DCT-002.log" "Ram Disk:LOGS/DCT-002.run09.log"
+EndIf
+DCT-002
+If EXISTS "Ram Disk:LOGS/DCT-002.log"
+    Rename "Ram Disk:LOGS/DCT-002.log" "Ram Disk:LOGS/DCT-002.run10.log"
+EndIf
+DCT-003
+If EXISTS "Ram Disk:LOGS/DCT-003.log"
+    Rename "Ram Disk:LOGS/DCT-003.log" "Ram Disk:LOGS/DCT-003.run01.log"
+EndIf
+DCT-003
+If EXISTS "Ram Disk:LOGS/DCT-003.log"
+    Rename "Ram Disk:LOGS/DCT-003.log" "Ram Disk:LOGS/DCT-003.run02.log"
+EndIf
+DCT-003
+If EXISTS "Ram Disk:LOGS/DCT-003.log"
+    Rename "Ram Disk:LOGS/DCT-003.log" "Ram Disk:LOGS/DCT-003.run03.log"
+EndIf
+DCT-003
+If EXISTS "Ram Disk:LOGS/DCT-003.log"
+    Rename "Ram Disk:LOGS/DCT-003.log" "Ram Disk:LOGS/DCT-003.run04.log"
+EndIf
+DCT-003
+If EXISTS "Ram Disk:LOGS/DCT-003.log"
+    Rename "Ram Disk:LOGS/DCT-003.log" "Ram Disk:LOGS/DCT-003.run05.log"
+EndIf
+DCT-003
+If EXISTS "Ram Disk:LOGS/DCT-003.log"
+    Rename "Ram Disk:LOGS/DCT-003.log" "Ram Disk:LOGS/DCT-003.run06.log"
+EndIf
+DCT-003
+If EXISTS "Ram Disk:LOGS/DCT-003.log"
+    Rename "Ram Disk:LOGS/DCT-003.log" "Ram Disk:LOGS/DCT-003.run07.log"
+EndIf
+DCT-003
+If EXISTS "Ram Disk:LOGS/DCT-003.log"
+    Rename "Ram Disk:LOGS/DCT-003.log" "Ram Disk:LOGS/DCT-003.run08.log"
+EndIf
+DCT-003
+If EXISTS "Ram Disk:LOGS/DCT-003.log"
+    Rename "Ram Disk:LOGS/DCT-003.log" "Ram Disk:LOGS/DCT-003.run09.log"
+EndIf
+DCT-003
+If EXISTS "Ram Disk:LOGS/DCT-003.log"
+    Rename "Ram Disk:LOGS/DCT-003.log" "Ram Disk:LOGS/DCT-003.run10.log"
+EndIf
+DCT-004
+If EXISTS "Ram Disk:LOGS/DCT-004.log"
+    Rename "Ram Disk:LOGS/DCT-004.log" "Ram Disk:LOGS/DCT-004.run01.log"
+EndIf
+DCT-004
+If EXISTS "Ram Disk:LOGS/DCT-004.log"
+    Rename "Ram Disk:LOGS/DCT-004.log" "Ram Disk:LOGS/DCT-004.run02.log"
+EndIf
+DCT-004
+If EXISTS "Ram Disk:LOGS/DCT-004.log"
+    Rename "Ram Disk:LOGS/DCT-004.log" "Ram Disk:LOGS/DCT-004.run03.log"
+EndIf
+DCT-004
+If EXISTS "Ram Disk:LOGS/DCT-004.log"
+    Rename "Ram Disk:LOGS/DCT-004.log" "Ram Disk:LOGS/DCT-004.run04.log"
+EndIf
+DCT-004
+If EXISTS "Ram Disk:LOGS/DCT-004.log"
+    Rename "Ram Disk:LOGS/DCT-004.log" "Ram Disk:LOGS/DCT-004.run05.log"
+EndIf
+DCT-004
+If EXISTS "Ram Disk:LOGS/DCT-004.log"
+    Rename "Ram Disk:LOGS/DCT-004.log" "Ram Disk:LOGS/DCT-004.run06.log"
+EndIf
+DCT-004
+If EXISTS "Ram Disk:LOGS/DCT-004.log"
+    Rename "Ram Disk:LOGS/DCT-004.log" "Ram Disk:LOGS/DCT-004.run07.log"
+EndIf
+DCT-004
+If EXISTS "Ram Disk:LOGS/DCT-004.log"
+    Rename "Ram Disk:LOGS/DCT-004.log" "Ram Disk:LOGS/DCT-004.run08.log"
+EndIf
+DCT-004
+If EXISTS "Ram Disk:LOGS/DCT-004.log"
+    Rename "Ram Disk:LOGS/DCT-004.log" "Ram Disk:LOGS/DCT-004.run09.log"
+EndIf
+DCT-004
+If EXISTS "Ram Disk:LOGS/DCT-004.log"
+    Rename "Ram Disk:LOGS/DCT-004.log" "Ram Disk:LOGS/DCT-004.run10.log"
+EndIf
+DCT-005
+If EXISTS "Ram Disk:LOGS/DCT-005.log"
+    Rename "Ram Disk:LOGS/DCT-005.log" "Ram Disk:LOGS/DCT-005.run01.log"
+EndIf
+DCT-005
+If EXISTS "Ram Disk:LOGS/DCT-005.log"
+    Rename "Ram Disk:LOGS/DCT-005.log" "Ram Disk:LOGS/DCT-005.run02.log"
+EndIf
+DCT-005
+If EXISTS "Ram Disk:LOGS/DCT-005.log"
+    Rename "Ram Disk:LOGS/DCT-005.log" "Ram Disk:LOGS/DCT-005.run03.log"
+EndIf
+DCT-005
+If EXISTS "Ram Disk:LOGS/DCT-005.log"
+    Rename "Ram Disk:LOGS/DCT-005.log" "Ram Disk:LOGS/DCT-005.run04.log"
+EndIf
+DCT-005
+If EXISTS "Ram Disk:LOGS/DCT-005.log"
+    Rename "Ram Disk:LOGS/DCT-005.log" "Ram Disk:LOGS/DCT-005.run05.log"
+EndIf
+DCT-005
+If EXISTS "Ram Disk:LOGS/DCT-005.log"
+    Rename "Ram Disk:LOGS/DCT-005.log" "Ram Disk:LOGS/DCT-005.run06.log"
+EndIf
+DCT-005
+If EXISTS "Ram Disk:LOGS/DCT-005.log"
+    Rename "Ram Disk:LOGS/DCT-005.log" "Ram Disk:LOGS/DCT-005.run07.log"
+EndIf
+DCT-005
+If EXISTS "Ram Disk:LOGS/DCT-005.log"
+    Rename "Ram Disk:LOGS/DCT-005.log" "Ram Disk:LOGS/DCT-005.run08.log"
+EndIf
+DCT-005
+If EXISTS "Ram Disk:LOGS/DCT-005.log"
+    Rename "Ram Disk:LOGS/DCT-005.log" "Ram Disk:LOGS/DCT-005.run09.log"
+EndIf
+DCT-005
+If EXISTS "Ram Disk:LOGS/DCT-005.log"
+    Rename "Ram Disk:LOGS/DCT-005.log" "Ram Disk:LOGS/DCT-005.run10.log"
+EndIf
+DCT-006
+If EXISTS "Ram Disk:LOGS/DCT-006.log"
+    Rename "Ram Disk:LOGS/DCT-006.log" "Ram Disk:LOGS/DCT-006.run01.log"
+EndIf
+DCT-006
+If EXISTS "Ram Disk:LOGS/DCT-006.log"
+    Rename "Ram Disk:LOGS/DCT-006.log" "Ram Disk:LOGS/DCT-006.run02.log"
+EndIf
+DCT-006
+If EXISTS "Ram Disk:LOGS/DCT-006.log"
+    Rename "Ram Disk:LOGS/DCT-006.log" "Ram Disk:LOGS/DCT-006.run03.log"
+EndIf
+DCT-006
+If EXISTS "Ram Disk:LOGS/DCT-006.log"
+    Rename "Ram Disk:LOGS/DCT-006.log" "Ram Disk:LOGS/DCT-006.run04.log"
+EndIf
+DCT-006
+If EXISTS "Ram Disk:LOGS/DCT-006.log"
+    Rename "Ram Disk:LOGS/DCT-006.log" "Ram Disk:LOGS/DCT-006.run05.log"
+EndIf
+DCT-006
+If EXISTS "Ram Disk:LOGS/DCT-006.log"
+    Rename "Ram Disk:LOGS/DCT-006.log" "Ram Disk:LOGS/DCT-006.run06.log"
+EndIf
+DCT-006
+If EXISTS "Ram Disk:LOGS/DCT-006.log"
+    Rename "Ram Disk:LOGS/DCT-006.log" "Ram Disk:LOGS/DCT-006.run07.log"
+EndIf
+DCT-006
+If EXISTS "Ram Disk:LOGS/DCT-006.log"
+    Rename "Ram Disk:LOGS/DCT-006.log" "Ram Disk:LOGS/DCT-006.run08.log"
+EndIf
+DCT-006
+If EXISTS "Ram Disk:LOGS/DCT-006.log"
+    Rename "Ram Disk:LOGS/DCT-006.log" "Ram Disk:LOGS/DCT-006.run09.log"
+EndIf
+DCT-006
+If EXISTS "Ram Disk:LOGS/DCT-006.log"
+    Rename "Ram Disk:LOGS/DCT-006.log" "Ram Disk:LOGS/DCT-006.run10.log"
+EndIf
+DCT-007
+If EXISTS "Ram Disk:LOGS/DCT-007.log"
+    Rename "Ram Disk:LOGS/DCT-007.log" "Ram Disk:LOGS/DCT-007.run01.log"
+EndIf
+DCT-007
+If EXISTS "Ram Disk:LOGS/DCT-007.log"
+    Rename "Ram Disk:LOGS/DCT-007.log" "Ram Disk:LOGS/DCT-007.run02.log"
+EndIf
+DCT-007
+If EXISTS "Ram Disk:LOGS/DCT-007.log"
+    Rename "Ram Disk:LOGS/DCT-007.log" "Ram Disk:LOGS/DCT-007.run03.log"
+EndIf
+DCT-007
+If EXISTS "Ram Disk:LOGS/DCT-007.log"
+    Rename "Ram Disk:LOGS/DCT-007.log" "Ram Disk:LOGS/DCT-007.run04.log"
+EndIf
+DCT-007
+If EXISTS "Ram Disk:LOGS/DCT-007.log"
+    Rename "Ram Disk:LOGS/DCT-007.log" "Ram Disk:LOGS/DCT-007.run05.log"
+EndIf
+DCT-007
+If EXISTS "Ram Disk:LOGS/DCT-007.log"
+    Rename "Ram Disk:LOGS/DCT-007.log" "Ram Disk:LOGS/DCT-007.run06.log"
+EndIf
+DCT-007
+If EXISTS "Ram Disk:LOGS/DCT-007.log"
+    Rename "Ram Disk:LOGS/DCT-007.log" "Ram Disk:LOGS/DCT-007.run07.log"
+EndIf
+DCT-007
+If EXISTS "Ram Disk:LOGS/DCT-007.log"
+    Rename "Ram Disk:LOGS/DCT-007.log" "Ram Disk:LOGS/DCT-007.run08.log"
+EndIf
+DCT-007
+If EXISTS "Ram Disk:LOGS/DCT-007.log"
+    Rename "Ram Disk:LOGS/DCT-007.log" "Ram Disk:LOGS/DCT-007.run09.log"
+EndIf
+DCT-007
+If EXISTS "Ram Disk:LOGS/DCT-007.log"
+    Rename "Ram Disk:LOGS/DCT-007.log" "Ram Disk:LOGS/DCT-007.run10.log"
+EndIf
+DCT-008
+If EXISTS "Ram Disk:LOGS/DCT-008.log"
+    Rename "Ram Disk:LOGS/DCT-008.log" "Ram Disk:LOGS/DCT-008.run01.log"
+EndIf
+DCT-008
+If EXISTS "Ram Disk:LOGS/DCT-008.log"
+    Rename "Ram Disk:LOGS/DCT-008.log" "Ram Disk:LOGS/DCT-008.run02.log"
+EndIf
+DCT-008
+If EXISTS "Ram Disk:LOGS/DCT-008.log"
+    Rename "Ram Disk:LOGS/DCT-008.log" "Ram Disk:LOGS/DCT-008.run03.log"
+EndIf
+DCT-008
+If EXISTS "Ram Disk:LOGS/DCT-008.log"
+    Rename "Ram Disk:LOGS/DCT-008.log" "Ram Disk:LOGS/DCT-008.run04.log"
+EndIf
+DCT-008
+If EXISTS "Ram Disk:LOGS/DCT-008.log"
+    Rename "Ram Disk:LOGS/DCT-008.log" "Ram Disk:LOGS/DCT-008.run05.log"
+EndIf
+DCT-008
+If EXISTS "Ram Disk:LOGS/DCT-008.log"
+    Rename "Ram Disk:LOGS/DCT-008.log" "Ram Disk:LOGS/DCT-008.run06.log"
+EndIf
+DCT-008
+If EXISTS "Ram Disk:LOGS/DCT-008.log"
+    Rename "Ram Disk:LOGS/DCT-008.log" "Ram Disk:LOGS/DCT-008.run07.log"
+EndIf
+DCT-008
+If EXISTS "Ram Disk:LOGS/DCT-008.log"
+    Rename "Ram Disk:LOGS/DCT-008.log" "Ram Disk:LOGS/DCT-008.run08.log"
+EndIf
+DCT-008
+If EXISTS "Ram Disk:LOGS/DCT-008.log"
+    Rename "Ram Disk:LOGS/DCT-008.log" "Ram Disk:LOGS/DCT-008.run09.log"
+EndIf
+DCT-008
+If EXISTS "Ram Disk:LOGS/DCT-008.log"
+    Rename "Ram Disk:LOGS/DCT-008.log" "Ram Disk:LOGS/DCT-008.run10.log"
+EndIf
+DCT-009
+If EXISTS "Ram Disk:LOGS/DCT-009.log"
+    Rename "Ram Disk:LOGS/DCT-009.log" "Ram Disk:LOGS/DCT-009.run01.log"
+EndIf
+DCT-009
+If EXISTS "Ram Disk:LOGS/DCT-009.log"
+    Rename "Ram Disk:LOGS/DCT-009.log" "Ram Disk:LOGS/DCT-009.run02.log"
+EndIf
+DCT-009
+If EXISTS "Ram Disk:LOGS/DCT-009.log"
+    Rename "Ram Disk:LOGS/DCT-009.log" "Ram Disk:LOGS/DCT-009.run03.log"
+EndIf
+DCT-009
+If EXISTS "Ram Disk:LOGS/DCT-009.log"
+    Rename "Ram Disk:LOGS/DCT-009.log" "Ram Disk:LOGS/DCT-009.run04.log"
+EndIf
+DCT-009
+If EXISTS "Ram Disk:LOGS/DCT-009.log"
+    Rename "Ram Disk:LOGS/DCT-009.log" "Ram Disk:LOGS/DCT-009.run05.log"
+EndIf
+DCT-009
+If EXISTS "Ram Disk:LOGS/DCT-009.log"
+    Rename "Ram Disk:LOGS/DCT-009.log" "Ram Disk:LOGS/DCT-009.run06.log"
+EndIf
+DCT-009
+If EXISTS "Ram Disk:LOGS/DCT-009.log"
+    Rename "Ram Disk:LOGS/DCT-009.log" "Ram Disk:LOGS/DCT-009.run07.log"
+EndIf
+DCT-009
+If EXISTS "Ram Disk:LOGS/DCT-009.log"
+    Rename "Ram Disk:LOGS/DCT-009.log" "Ram Disk:LOGS/DCT-009.run08.log"
+EndIf
+DCT-009
+If EXISTS "Ram Disk:LOGS/DCT-009.log"
+    Rename "Ram Disk:LOGS/DCT-009.log" "Ram Disk:LOGS/DCT-009.run09.log"
+EndIf
+DCT-009
+If EXISTS "Ram Disk:LOGS/DCT-009.log"
+    Rename "Ram Disk:LOGS/DCT-009.log" "Ram Disk:LOGS/DCT-009.run10.log"
+EndIf
+DCT-010
+If EXISTS "Ram Disk:LOGS/DCT-010.log"
+    Rename "Ram Disk:LOGS/DCT-010.log" "Ram Disk:LOGS/DCT-010.run01.log"
+EndIf
+DCT-010
+If EXISTS "Ram Disk:LOGS/DCT-010.log"
+    Rename "Ram Disk:LOGS/DCT-010.log" "Ram Disk:LOGS/DCT-010.run02.log"
+EndIf
+DCT-010
+If EXISTS "Ram Disk:LOGS/DCT-010.log"
+    Rename "Ram Disk:LOGS/DCT-010.log" "Ram Disk:LOGS/DCT-010.run03.log"
+EndIf
+DCT-010
+If EXISTS "Ram Disk:LOGS/DCT-010.log"
+    Rename "Ram Disk:LOGS/DCT-010.log" "Ram Disk:LOGS/DCT-010.run04.log"
+EndIf
+DCT-010
+If EXISTS "Ram Disk:LOGS/DCT-010.log"
+    Rename "Ram Disk:LOGS/DCT-010.log" "Ram Disk:LOGS/DCT-010.run05.log"
+EndIf
+DCT-010
+If EXISTS "Ram Disk:LOGS/DCT-010.log"
+    Rename "Ram Disk:LOGS/DCT-010.log" "Ram Disk:LOGS/DCT-010.run06.log"
+EndIf
+DCT-010
+If EXISTS "Ram Disk:LOGS/DCT-010.log"
+    Rename "Ram Disk:LOGS/DCT-010.log" "Ram Disk:LOGS/DCT-010.run07.log"
+EndIf
+DCT-010
+If EXISTS "Ram Disk:LOGS/DCT-010.log"
+    Rename "Ram Disk:LOGS/DCT-010.log" "Ram Disk:LOGS/DCT-010.run08.log"
+EndIf
+DCT-010
+If EXISTS "Ram Disk:LOGS/DCT-010.log"
+    Rename "Ram Disk:LOGS/DCT-010.log" "Ram Disk:LOGS/DCT-010.run09.log"
+EndIf
+DCT-010
+If EXISTS "Ram Disk:LOGS/DCT-010.log"
+    Rename "Ram Disk:LOGS/DCT-010.log" "Ram Disk:LOGS/DCT-010.run10.log"
+EndIf
+DCT-011
+If EXISTS "Ram Disk:LOGS/DCT-011.log"
+    Rename "Ram Disk:LOGS/DCT-011.log" "Ram Disk:LOGS/DCT-011.run01.log"
+EndIf
+DCT-011
+If EXISTS "Ram Disk:LOGS/DCT-011.log"
+    Rename "Ram Disk:LOGS/DCT-011.log" "Ram Disk:LOGS/DCT-011.run02.log"
+EndIf
+DCT-011
+If EXISTS "Ram Disk:LOGS/DCT-011.log"
+    Rename "Ram Disk:LOGS/DCT-011.log" "Ram Disk:LOGS/DCT-011.run03.log"
+EndIf
+DCT-011
+If EXISTS "Ram Disk:LOGS/DCT-011.log"
+    Rename "Ram Disk:LOGS/DCT-011.log" "Ram Disk:LOGS/DCT-011.run04.log"
+EndIf
+DCT-011
+If EXISTS "Ram Disk:LOGS/DCT-011.log"
+    Rename "Ram Disk:LOGS/DCT-011.log" "Ram Disk:LOGS/DCT-011.run05.log"
+EndIf
+DCT-011
+If EXISTS "Ram Disk:LOGS/DCT-011.log"
+    Rename "Ram Disk:LOGS/DCT-011.log" "Ram Disk:LOGS/DCT-011.run06.log"
+EndIf
+DCT-011
+If EXISTS "Ram Disk:LOGS/DCT-011.log"
+    Rename "Ram Disk:LOGS/DCT-011.log" "Ram Disk:LOGS/DCT-011.run07.log"
+EndIf
+DCT-011
+If EXISTS "Ram Disk:LOGS/DCT-011.log"
+    Rename "Ram Disk:LOGS/DCT-011.log" "Ram Disk:LOGS/DCT-011.run08.log"
+EndIf
+DCT-011
+If EXISTS "Ram Disk:LOGS/DCT-011.log"
+    Rename "Ram Disk:LOGS/DCT-011.log" "Ram Disk:LOGS/DCT-011.run09.log"
+EndIf
+DCT-011
+If EXISTS "Ram Disk:LOGS/DCT-011.log"
+    Rename "Ram Disk:LOGS/DCT-011.log" "Ram Disk:LOGS/DCT-011.run10.log"
+EndIf
+DCT-012
+If EXISTS "Ram Disk:LOGS/DCT-012.log"
+    Rename "Ram Disk:LOGS/DCT-012.log" "Ram Disk:LOGS/DCT-012.run01.log"
+EndIf
+DCT-012
+If EXISTS "Ram Disk:LOGS/DCT-012.log"
+    Rename "Ram Disk:LOGS/DCT-012.log" "Ram Disk:LOGS/DCT-012.run02.log"
+EndIf
+DCT-012
+If EXISTS "Ram Disk:LOGS/DCT-012.log"
+    Rename "Ram Disk:LOGS/DCT-012.log" "Ram Disk:LOGS/DCT-012.run03.log"
+EndIf
+DCT-012
+If EXISTS "Ram Disk:LOGS/DCT-012.log"
+    Rename "Ram Disk:LOGS/DCT-012.log" "Ram Disk:LOGS/DCT-012.run04.log"
+EndIf
+DCT-012
+If EXISTS "Ram Disk:LOGS/DCT-012.log"
+    Rename "Ram Disk:LOGS/DCT-012.log" "Ram Disk:LOGS/DCT-012.run05.log"
+EndIf
+DCT-012
+If EXISTS "Ram Disk:LOGS/DCT-012.log"
+    Rename "Ram Disk:LOGS/DCT-012.log" "Ram Disk:LOGS/DCT-012.run06.log"
+EndIf
+DCT-012
+If EXISTS "Ram Disk:LOGS/DCT-012.log"
+    Rename "Ram Disk:LOGS/DCT-012.log" "Ram Disk:LOGS/DCT-012.run07.log"
+EndIf
+DCT-012
+If EXISTS "Ram Disk:LOGS/DCT-012.log"
+    Rename "Ram Disk:LOGS/DCT-012.log" "Ram Disk:LOGS/DCT-012.run08.log"
+EndIf
+DCT-012
+If EXISTS "Ram Disk:LOGS/DCT-012.log"
+    Rename "Ram Disk:LOGS/DCT-012.log" "Ram Disk:LOGS/DCT-012.run09.log"
+EndIf
+DCT-012
+If EXISTS "Ram Disk:LOGS/DCT-012.log"
+    Rename "Ram Disk:LOGS/DCT-012.log" "Ram Disk:LOGS/DCT-012.run10.log"
+EndIf
+FFT-001
+If EXISTS "Ram Disk:LOGS/FFT-001.log"
+    Rename "Ram Disk:LOGS/FFT-001.log" "Ram Disk:LOGS/FFT-001.run01.log"
+EndIf
+FFT-001
+If EXISTS "Ram Disk:LOGS/FFT-001.log"
+    Rename "Ram Disk:LOGS/FFT-001.log" "Ram Disk:LOGS/FFT-001.run02.log"
+EndIf
+FFT-001
+If EXISTS "Ram Disk:LOGS/FFT-001.log"
+    Rename "Ram Disk:LOGS/FFT-001.log" "Ram Disk:LOGS/FFT-001.run03.log"
+EndIf
+FFT-001
+If EXISTS "Ram Disk:LOGS/FFT-001.log"
+    Rename "Ram Disk:LOGS/FFT-001.log" "Ram Disk:LOGS/FFT-001.run04.log"
+EndIf
+FFT-001
+If EXISTS "Ram Disk:LOGS/FFT-001.log"
+    Rename "Ram Disk:LOGS/FFT-001.log" "Ram Disk:LOGS/FFT-001.run05.log"
+EndIf
+FFT-001
+If EXISTS "Ram Disk:LOGS/FFT-001.log"
+    Rename "Ram Disk:LOGS/FFT-001.log" "Ram Disk:LOGS/FFT-001.run06.log"
+EndIf
+FFT-001
+If EXISTS "Ram Disk:LOGS/FFT-001.log"
+    Rename "Ram Disk:LOGS/FFT-001.log" "Ram Disk:LOGS/FFT-001.run07.log"
+EndIf
+FFT-001
+If EXISTS "Ram Disk:LOGS/FFT-001.log"
+    Rename "Ram Disk:LOGS/FFT-001.log" "Ram Disk:LOGS/FFT-001.run08.log"
+EndIf
+FFT-001
+If EXISTS "Ram Disk:LOGS/FFT-001.log"
+    Rename "Ram Disk:LOGS/FFT-001.log" "Ram Disk:LOGS/FFT-001.run09.log"
+EndIf
+FFT-001
+If EXISTS "Ram Disk:LOGS/FFT-001.log"
+    Rename "Ram Disk:LOGS/FFT-001.log" "Ram Disk:LOGS/FFT-001.run10.log"
+EndIf
+FFT-002
+If EXISTS "Ram Disk:LOGS/FFT-002.log"
+    Rename "Ram Disk:LOGS/FFT-002.log" "Ram Disk:LOGS/FFT-002.run01.log"
+EndIf
+FFT-002
+If EXISTS "Ram Disk:LOGS/FFT-002.log"
+    Rename "Ram Disk:LOGS/FFT-002.log" "Ram Disk:LOGS/FFT-002.run02.log"
+EndIf
+FFT-002
+If EXISTS "Ram Disk:LOGS/FFT-002.log"
+    Rename "Ram Disk:LOGS/FFT-002.log" "Ram Disk:LOGS/FFT-002.run03.log"
+EndIf
+FFT-002
+If EXISTS "Ram Disk:LOGS/FFT-002.log"
+    Rename "Ram Disk:LOGS/FFT-002.log" "Ram Disk:LOGS/FFT-002.run04.log"
+EndIf
+FFT-002
+If EXISTS "Ram Disk:LOGS/FFT-002.log"
+    Rename "Ram Disk:LOGS/FFT-002.log" "Ram Disk:LOGS/FFT-002.run05.log"
+EndIf
+FFT-002
+If EXISTS "Ram Disk:LOGS/FFT-002.log"
+    Rename "Ram Disk:LOGS/FFT-002.log" "Ram Disk:LOGS/FFT-002.run06.log"
+EndIf
+FFT-002
+If EXISTS "Ram Disk:LOGS/FFT-002.log"
+    Rename "Ram Disk:LOGS/FFT-002.log" "Ram Disk:LOGS/FFT-002.run07.log"
+EndIf
+FFT-002
+If EXISTS "Ram Disk:LOGS/FFT-002.log"
+    Rename "Ram Disk:LOGS/FFT-002.log" "Ram Disk:LOGS/FFT-002.run08.log"
+EndIf
+FFT-002
+If EXISTS "Ram Disk:LOGS/FFT-002.log"
+    Rename "Ram Disk:LOGS/FFT-002.log" "Ram Disk:LOGS/FFT-002.run09.log"
+EndIf
+FFT-002
+If EXISTS "Ram Disk:LOGS/FFT-002.log"
+    Rename "Ram Disk:LOGS/FFT-002.log" "Ram Disk:LOGS/FFT-002.run10.log"
+EndIf
+FFT-003
+If EXISTS "Ram Disk:LOGS/FFT-003.log"
+    Rename "Ram Disk:LOGS/FFT-003.log" "Ram Disk:LOGS/FFT-003.run01.log"
+EndIf
+FFT-003
+If EXISTS "Ram Disk:LOGS/FFT-003.log"
+    Rename "Ram Disk:LOGS/FFT-003.log" "Ram Disk:LOGS/FFT-003.run02.log"
+EndIf
+FFT-003
+If EXISTS "Ram Disk:LOGS/FFT-003.log"
+    Rename "Ram Disk:LOGS/FFT-003.log" "Ram Disk:LOGS/FFT-003.run03.log"
+EndIf
+FFT-003
+If EXISTS "Ram Disk:LOGS/FFT-003.log"
+    Rename "Ram Disk:LOGS/FFT-003.log" "Ram Disk:LOGS/FFT-003.run04.log"
+EndIf
+FFT-003
+If EXISTS "Ram Disk:LOGS/FFT-003.log"
+    Rename "Ram Disk:LOGS/FFT-003.log" "Ram Disk:LOGS/FFT-003.run05.log"
+EndIf
+FFT-003
+If EXISTS "Ram Disk:LOGS/FFT-003.log"
+    Rename "Ram Disk:LOGS/FFT-003.log" "Ram Disk:LOGS/FFT-003.run06.log"
+EndIf
+FFT-003
+If EXISTS "Ram Disk:LOGS/FFT-003.log"
+    Rename "Ram Disk:LOGS/FFT-003.log" "Ram Disk:LOGS/FFT-003.run07.log"
+EndIf
+FFT-003
+If EXISTS "Ram Disk:LOGS/FFT-003.log"
+    Rename "Ram Disk:LOGS/FFT-003.log" "Ram Disk:LOGS/FFT-003.run08.log"
+EndIf
+FFT-003
+If EXISTS "Ram Disk:LOGS/FFT-003.log"
+    Rename "Ram Disk:LOGS/FFT-003.log" "Ram Disk:LOGS/FFT-003.run09.log"
+EndIf
+FFT-003
+If EXISTS "Ram Disk:LOGS/FFT-003.log"
+    Rename "Ram Disk:LOGS/FFT-003.log" "Ram Disk:LOGS/FFT-003.run10.log"
+EndIf
+FFT-004
+If EXISTS "Ram Disk:LOGS/FFT-004.log"
+    Rename "Ram Disk:LOGS/FFT-004.log" "Ram Disk:LOGS/FFT-004.run01.log"
+EndIf
+FFT-004
+If EXISTS "Ram Disk:LOGS/FFT-004.log"
+    Rename "Ram Disk:LOGS/FFT-004.log" "Ram Disk:LOGS/FFT-004.run02.log"
+EndIf
+FFT-004
+If EXISTS "Ram Disk:LOGS/FFT-004.log"
+    Rename "Ram Disk:LOGS/FFT-004.log" "Ram Disk:LOGS/FFT-004.run03.log"
+EndIf
+FFT-004
+If EXISTS "Ram Disk:LOGS/FFT-004.log"
+    Rename "Ram Disk:LOGS/FFT-004.log" "Ram Disk:LOGS/FFT-004.run04.log"
+EndIf
+FFT-004
+If EXISTS "Ram Disk:LOGS/FFT-004.log"
+    Rename "Ram Disk:LOGS/FFT-004.log" "Ram Disk:LOGS/FFT-004.run05.log"
+EndIf
+FFT-004
+If EXISTS "Ram Disk:LOGS/FFT-004.log"
+    Rename "Ram Disk:LOGS/FFT-004.log" "Ram Disk:LOGS/FFT-004.run06.log"
+EndIf
+FFT-004
+If EXISTS "Ram Disk:LOGS/FFT-004.log"
+    Rename "Ram Disk:LOGS/FFT-004.log" "Ram Disk:LOGS/FFT-004.run07.log"
+EndIf
+FFT-004
+If EXISTS "Ram Disk:LOGS/FFT-004.log"
+    Rename "Ram Disk:LOGS/FFT-004.log" "Ram Disk:LOGS/FFT-004.run08.log"
+EndIf
+FFT-004
+If EXISTS "Ram Disk:LOGS/FFT-004.log"
+    Rename "Ram Disk:LOGS/FFT-004.log" "Ram Disk:LOGS/FFT-004.run09.log"
+EndIf
+FFT-004
+If EXISTS "Ram Disk:LOGS/FFT-004.log"
+    Rename "Ram Disk:LOGS/FFT-004.log" "Ram Disk:LOGS/FFT-004.run10.log"
+EndIf
+FFT-005
+If EXISTS "Ram Disk:LOGS/FFT-005.log"
+    Rename "Ram Disk:LOGS/FFT-005.log" "Ram Disk:LOGS/FFT-005.run01.log"
+EndIf
+FFT-005
+If EXISTS "Ram Disk:LOGS/FFT-005.log"
+    Rename "Ram Disk:LOGS/FFT-005.log" "Ram Disk:LOGS/FFT-005.run02.log"
+EndIf
+FFT-005
+If EXISTS "Ram Disk:LOGS/FFT-005.log"
+    Rename "Ram Disk:LOGS/FFT-005.log" "Ram Disk:LOGS/FFT-005.run03.log"
+EndIf
+FFT-005
+If EXISTS "Ram Disk:LOGS/FFT-005.log"
+    Rename "Ram Disk:LOGS/FFT-005.log" "Ram Disk:LOGS/FFT-005.run04.log"
+EndIf
+FFT-005
+If EXISTS "Ram Disk:LOGS/FFT-005.log"
+    Rename "Ram Disk:LOGS/FFT-005.log" "Ram Disk:LOGS/FFT-005.run05.log"
+EndIf
+FFT-005
+If EXISTS "Ram Disk:LOGS/FFT-005.log"
+    Rename "Ram Disk:LOGS/FFT-005.log" "Ram Disk:LOGS/FFT-005.run06.log"
+EndIf
+FFT-005
+If EXISTS "Ram Disk:LOGS/FFT-005.log"
+    Rename "Ram Disk:LOGS/FFT-005.log" "Ram Disk:LOGS/FFT-005.run07.log"
+EndIf
+FFT-005
+If EXISTS "Ram Disk:LOGS/FFT-005.log"
+    Rename "Ram Disk:LOGS/FFT-005.log" "Ram Disk:LOGS/FFT-005.run08.log"
+EndIf
+FFT-005
+If EXISTS "Ram Disk:LOGS/FFT-005.log"
+    Rename "Ram Disk:LOGS/FFT-005.log" "Ram Disk:LOGS/FFT-005.run09.log"
+EndIf
+FFT-005
+If EXISTS "Ram Disk:LOGS/FFT-005.log"
+    Rename "Ram Disk:LOGS/FFT-005.log" "Ram Disk:LOGS/FFT-005.run10.log"
+EndIf
+FFT-006
+If EXISTS "Ram Disk:LOGS/FFT-006.log"
+    Rename "Ram Disk:LOGS/FFT-006.log" "Ram Disk:LOGS/FFT-006.run01.log"
+EndIf
+FFT-006
+If EXISTS "Ram Disk:LOGS/FFT-006.log"
+    Rename "Ram Disk:LOGS/FFT-006.log" "Ram Disk:LOGS/FFT-006.run02.log"
+EndIf
+FFT-006
+If EXISTS "Ram Disk:LOGS/FFT-006.log"
+    Rename "Ram Disk:LOGS/FFT-006.log" "Ram Disk:LOGS/FFT-006.run03.log"
+EndIf
+FFT-006
+If EXISTS "Ram Disk:LOGS/FFT-006.log"
+    Rename "Ram Disk:LOGS/FFT-006.log" "Ram Disk:LOGS/FFT-006.run04.log"
+EndIf
+FFT-006
+If EXISTS "Ram Disk:LOGS/FFT-006.log"
+    Rename "Ram Disk:LOGS/FFT-006.log" "Ram Disk:LOGS/FFT-006.run05.log"
+EndIf
+FFT-006
+If EXISTS "Ram Disk:LOGS/FFT-006.log"
+    Rename "Ram Disk:LOGS/FFT-006.log" "Ram Disk:LOGS/FFT-006.run06.log"
+EndIf
+FFT-006
+If EXISTS "Ram Disk:LOGS/FFT-006.log"
+    Rename "Ram Disk:LOGS/FFT-006.log" "Ram Disk:LOGS/FFT-006.run07.log"
+EndIf
+FFT-006
+If EXISTS "Ram Disk:LOGS/FFT-006.log"
+    Rename "Ram Disk:LOGS/FFT-006.log" "Ram Disk:LOGS/FFT-006.run08.log"
+EndIf
+FFT-006
+If EXISTS "Ram Disk:LOGS/FFT-006.log"
+    Rename "Ram Disk:LOGS/FFT-006.log" "Ram Disk:LOGS/FFT-006.run09.log"
+EndIf
+FFT-006
+If EXISTS "Ram Disk:LOGS/FFT-006.log"
+    Rename "Ram Disk:LOGS/FFT-006.log" "Ram Disk:LOGS/FFT-006.run10.log"
+EndIf
+FIX-001
+If EXISTS "Ram Disk:LOGS/FIX-001.log"
+    Rename "Ram Disk:LOGS/FIX-001.log" "Ram Disk:LOGS/FIX-001.run01.log"
+EndIf
+FIX-001
+If EXISTS "Ram Disk:LOGS/FIX-001.log"
+    Rename "Ram Disk:LOGS/FIX-001.log" "Ram Disk:LOGS/FIX-001.run02.log"
+EndIf
+FIX-001
+If EXISTS "Ram Disk:LOGS/FIX-001.log"
+    Rename "Ram Disk:LOGS/FIX-001.log" "Ram Disk:LOGS/FIX-001.run03.log"
+EndIf
+FIX-001
+If EXISTS "Ram Disk:LOGS/FIX-001.log"
+    Rename "Ram Disk:LOGS/FIX-001.log" "Ram Disk:LOGS/FIX-001.run04.log"
+EndIf
+FIX-001
+If EXISTS "Ram Disk:LOGS/FIX-001.log"
+    Rename "Ram Disk:LOGS/FIX-001.log" "Ram Disk:LOGS/FIX-001.run05.log"
+EndIf
+FIX-001
+If EXISTS "Ram Disk:LOGS/FIX-001.log"
+    Rename "Ram Disk:LOGS/FIX-001.log" "Ram Disk:LOGS/FIX-001.run06.log"
+EndIf
+FIX-001
+If EXISTS "Ram Disk:LOGS/FIX-001.log"
+    Rename "Ram Disk:LOGS/FIX-001.log" "Ram Disk:LOGS/FIX-001.run07.log"
+EndIf
+FIX-001
+If EXISTS "Ram Disk:LOGS/FIX-001.log"
+    Rename "Ram Disk:LOGS/FIX-001.log" "Ram Disk:LOGS/FIX-001.run08.log"
+EndIf
+FIX-001
+If EXISTS "Ram Disk:LOGS/FIX-001.log"
+    Rename "Ram Disk:LOGS/FIX-001.log" "Ram Disk:LOGS/FIX-001.run09.log"
+EndIf
+FIX-001
+If EXISTS "Ram Disk:LOGS/FIX-001.log"
+    Rename "Ram Disk:LOGS/FIX-001.log" "Ram Disk:LOGS/FIX-001.run10.log"
+EndIf
+FIX-002
+If EXISTS "Ram Disk:LOGS/FIX-002.log"
+    Rename "Ram Disk:LOGS/FIX-002.log" "Ram Disk:LOGS/FIX-002.run01.log"
+EndIf
+FIX-002
+If EXISTS "Ram Disk:LOGS/FIX-002.log"
+    Rename "Ram Disk:LOGS/FIX-002.log" "Ram Disk:LOGS/FIX-002.run02.log"
+EndIf
+FIX-002
+If EXISTS "Ram Disk:LOGS/FIX-002.log"
+    Rename "Ram Disk:LOGS/FIX-002.log" "Ram Disk:LOGS/FIX-002.run03.log"
+EndIf
+FIX-002
+If EXISTS "Ram Disk:LOGS/FIX-002.log"
+    Rename "Ram Disk:LOGS/FIX-002.log" "Ram Disk:LOGS/FIX-002.run04.log"
+EndIf
+FIX-002
+If EXISTS "Ram Disk:LOGS/FIX-002.log"
+    Rename "Ram Disk:LOGS/FIX-002.log" "Ram Disk:LOGS/FIX-002.run05.log"
+EndIf
+FIX-002
+If EXISTS "Ram Disk:LOGS/FIX-002.log"
+    Rename "Ram Disk:LOGS/FIX-002.log" "Ram Disk:LOGS/FIX-002.run06.log"
+EndIf
+FIX-002
+If EXISTS "Ram Disk:LOGS/FIX-002.log"
+    Rename "Ram Disk:LOGS/FIX-002.log" "Ram Disk:LOGS/FIX-002.run07.log"
+EndIf
+FIX-002
+If EXISTS "Ram Disk:LOGS/FIX-002.log"
+    Rename "Ram Disk:LOGS/FIX-002.log" "Ram Disk:LOGS/FIX-002.run08.log"
+EndIf
+FIX-002
+If EXISTS "Ram Disk:LOGS/FIX-002.log"
+    Rename "Ram Disk:LOGS/FIX-002.log" "Ram Disk:LOGS/FIX-002.run09.log"
+EndIf
+FIX-002
+If EXISTS "Ram Disk:LOGS/FIX-002.log"
+    Rename "Ram Disk:LOGS/FIX-002.log" "Ram Disk:LOGS/FIX-002.run10.log"
+EndIf
+FIX-003
+If EXISTS "Ram Disk:LOGS/FIX-003.log"
+    Rename "Ram Disk:LOGS/FIX-003.log" "Ram Disk:LOGS/FIX-003.run01.log"
+EndIf
+FIX-003
+If EXISTS "Ram Disk:LOGS/FIX-003.log"
+    Rename "Ram Disk:LOGS/FIX-003.log" "Ram Disk:LOGS/FIX-003.run02.log"
+EndIf
+FIX-003
+If EXISTS "Ram Disk:LOGS/FIX-003.log"
+    Rename "Ram Disk:LOGS/FIX-003.log" "Ram Disk:LOGS/FIX-003.run03.log"
+EndIf
+FIX-003
+If EXISTS "Ram Disk:LOGS/FIX-003.log"
+    Rename "Ram Disk:LOGS/FIX-003.log" "Ram Disk:LOGS/FIX-003.run04.log"
+EndIf
+FIX-003
+If EXISTS "Ram Disk:LOGS/FIX-003.log"
+    Rename "Ram Disk:LOGS/FIX-003.log" "Ram Disk:LOGS/FIX-003.run05.log"
+EndIf
+FIX-003
+If EXISTS "Ram Disk:LOGS/FIX-003.log"
+    Rename "Ram Disk:LOGS/FIX-003.log" "Ram Disk:LOGS/FIX-003.run06.log"
+EndIf
+FIX-003
+If EXISTS "Ram Disk:LOGS/FIX-003.log"
+    Rename "Ram Disk:LOGS/FIX-003.log" "Ram Disk:LOGS/FIX-003.run07.log"
+EndIf
+FIX-003
+If EXISTS "Ram Disk:LOGS/FIX-003.log"
+    Rename "Ram Disk:LOGS/FIX-003.log" "Ram Disk:LOGS/FIX-003.run08.log"
+EndIf
+FIX-003
+If EXISTS "Ram Disk:LOGS/FIX-003.log"
+    Rename "Ram Disk:LOGS/FIX-003.log" "Ram Disk:LOGS/FIX-003.run09.log"
+EndIf
+FIX-003
+If EXISTS "Ram Disk:LOGS/FIX-003.log"
+    Rename "Ram Disk:LOGS/FIX-003.log" "Ram Disk:LOGS/FIX-003.run10.log"
+EndIf
+FUS-001
+If EXISTS "Ram Disk:LOGS/FUS-001.log"
+    Rename "Ram Disk:LOGS/FUS-001.log" "Ram Disk:LOGS/FUS-001.run01.log"
+EndIf
+FUS-001
+If EXISTS "Ram Disk:LOGS/FUS-001.log"
+    Rename "Ram Disk:LOGS/FUS-001.log" "Ram Disk:LOGS/FUS-001.run02.log"
+EndIf
+FUS-001
+If EXISTS "Ram Disk:LOGS/FUS-001.log"
+    Rename "Ram Disk:LOGS/FUS-001.log" "Ram Disk:LOGS/FUS-001.run03.log"
+EndIf
+FUS-001
+If EXISTS "Ram Disk:LOGS/FUS-001.log"
+    Rename "Ram Disk:LOGS/FUS-001.log" "Ram Disk:LOGS/FUS-001.run04.log"
+EndIf
+FUS-001
+If EXISTS "Ram Disk:LOGS/FUS-001.log"
+    Rename "Ram Disk:LOGS/FUS-001.log" "Ram Disk:LOGS/FUS-001.run05.log"
+EndIf
+FUS-001
+If EXISTS "Ram Disk:LOGS/FUS-001.log"
+    Rename "Ram Disk:LOGS/FUS-001.log" "Ram Disk:LOGS/FUS-001.run06.log"
+EndIf
+FUS-001
+If EXISTS "Ram Disk:LOGS/FUS-001.log"
+    Rename "Ram Disk:LOGS/FUS-001.log" "Ram Disk:LOGS/FUS-001.run07.log"
+EndIf
+FUS-001
+If EXISTS "Ram Disk:LOGS/FUS-001.log"
+    Rename "Ram Disk:LOGS/FUS-001.log" "Ram Disk:LOGS/FUS-001.run08.log"
+EndIf
+FUS-001
+If EXISTS "Ram Disk:LOGS/FUS-001.log"
+    Rename "Ram Disk:LOGS/FUS-001.log" "Ram Disk:LOGS/FUS-001.run09.log"
+EndIf
+FUS-001
+If EXISTS "Ram Disk:LOGS/FUS-001.log"
+    Rename "Ram Disk:LOGS/FUS-001.log" "Ram Disk:LOGS/FUS-001.run10.log"
+EndIf
+FUS-002
+If EXISTS "Ram Disk:LOGS/FUS-002.log"
+    Rename "Ram Disk:LOGS/FUS-002.log" "Ram Disk:LOGS/FUS-002.run01.log"
+EndIf
+FUS-002
+If EXISTS "Ram Disk:LOGS/FUS-002.log"
+    Rename "Ram Disk:LOGS/FUS-002.log" "Ram Disk:LOGS/FUS-002.run02.log"
+EndIf
+FUS-002
+If EXISTS "Ram Disk:LOGS/FUS-002.log"
+    Rename "Ram Disk:LOGS/FUS-002.log" "Ram Disk:LOGS/FUS-002.run03.log"
+EndIf
+FUS-002
+If EXISTS "Ram Disk:LOGS/FUS-002.log"
+    Rename "Ram Disk:LOGS/FUS-002.log" "Ram Disk:LOGS/FUS-002.run04.log"
+EndIf
+FUS-002
+If EXISTS "Ram Disk:LOGS/FUS-002.log"
+    Rename "Ram Disk:LOGS/FUS-002.log" "Ram Disk:LOGS/FUS-002.run05.log"
+EndIf
+FUS-002
+If EXISTS "Ram Disk:LOGS/FUS-002.log"
+    Rename "Ram Disk:LOGS/FUS-002.log" "Ram Disk:LOGS/FUS-002.run06.log"
+EndIf
+FUS-002
+If EXISTS "Ram Disk:LOGS/FUS-002.log"
+    Rename "Ram Disk:LOGS/FUS-002.log" "Ram Disk:LOGS/FUS-002.run07.log"
+EndIf
+FUS-002
+If EXISTS "Ram Disk:LOGS/FUS-002.log"
+    Rename "Ram Disk:LOGS/FUS-002.log" "Ram Disk:LOGS/FUS-002.run08.log"
+EndIf
+FUS-002
+If EXISTS "Ram Disk:LOGS/FUS-002.log"
+    Rename "Ram Disk:LOGS/FUS-002.log" "Ram Disk:LOGS/FUS-002.run09.log"
+EndIf
+FUS-002
+If EXISTS "Ram Disk:LOGS/FUS-002.log"
+    Rename "Ram Disk:LOGS/FUS-002.log" "Ram Disk:LOGS/FUS-002.run10.log"
+EndIf
+FUS-003
+If EXISTS "Ram Disk:LOGS/FUS-003.log"
+    Rename "Ram Disk:LOGS/FUS-003.log" "Ram Disk:LOGS/FUS-003.run01.log"
+EndIf
+FUS-003
+If EXISTS "Ram Disk:LOGS/FUS-003.log"
+    Rename "Ram Disk:LOGS/FUS-003.log" "Ram Disk:LOGS/FUS-003.run02.log"
+EndIf
+FUS-003
+If EXISTS "Ram Disk:LOGS/FUS-003.log"
+    Rename "Ram Disk:LOGS/FUS-003.log" "Ram Disk:LOGS/FUS-003.run03.log"
+EndIf
+FUS-003
+If EXISTS "Ram Disk:LOGS/FUS-003.log"
+    Rename "Ram Disk:LOGS/FUS-003.log" "Ram Disk:LOGS/FUS-003.run04.log"
+EndIf
+FUS-003
+If EXISTS "Ram Disk:LOGS/FUS-003.log"
+    Rename "Ram Disk:LOGS/FUS-003.log" "Ram Disk:LOGS/FUS-003.run05.log"
+EndIf
+FUS-003
+If EXISTS "Ram Disk:LOGS/FUS-003.log"
+    Rename "Ram Disk:LOGS/FUS-003.log" "Ram Disk:LOGS/FUS-003.run06.log"
+EndIf
+FUS-003
+If EXISTS "Ram Disk:LOGS/FUS-003.log"
+    Rename "Ram Disk:LOGS/FUS-003.log" "Ram Disk:LOGS/FUS-003.run07.log"
+EndIf
+FUS-003
+If EXISTS "Ram Disk:LOGS/FUS-003.log"
+    Rename "Ram Disk:LOGS/FUS-003.log" "Ram Disk:LOGS/FUS-003.run08.log"
+EndIf
+FUS-003
+If EXISTS "Ram Disk:LOGS/FUS-003.log"
+    Rename "Ram Disk:LOGS/FUS-003.log" "Ram Disk:LOGS/FUS-003.run09.log"
+EndIf
+FUS-003
+If EXISTS "Ram Disk:LOGS/FUS-003.log"
+    Rename "Ram Disk:LOGS/FUS-003.log" "Ram Disk:LOGS/FUS-003.run10.log"
+EndIf
+FUS-004
+If EXISTS "Ram Disk:LOGS/FUS-004.log"
+    Rename "Ram Disk:LOGS/FUS-004.log" "Ram Disk:LOGS/FUS-004.run01.log"
+EndIf
+FUS-004
+If EXISTS "Ram Disk:LOGS/FUS-004.log"
+    Rename "Ram Disk:LOGS/FUS-004.log" "Ram Disk:LOGS/FUS-004.run02.log"
+EndIf
+FUS-004
+If EXISTS "Ram Disk:LOGS/FUS-004.log"
+    Rename "Ram Disk:LOGS/FUS-004.log" "Ram Disk:LOGS/FUS-004.run03.log"
+EndIf
+FUS-004
+If EXISTS "Ram Disk:LOGS/FUS-004.log"
+    Rename "Ram Disk:LOGS/FUS-004.log" "Ram Disk:LOGS/FUS-004.run04.log"
+EndIf
+FUS-004
+If EXISTS "Ram Disk:LOGS/FUS-004.log"
+    Rename "Ram Disk:LOGS/FUS-004.log" "Ram Disk:LOGS/FUS-004.run05.log"
+EndIf
+FUS-004
+If EXISTS "Ram Disk:LOGS/FUS-004.log"
+    Rename "Ram Disk:LOGS/FUS-004.log" "Ram Disk:LOGS/FUS-004.run06.log"
+EndIf
+FUS-004
+If EXISTS "Ram Disk:LOGS/FUS-004.log"
+    Rename "Ram Disk:LOGS/FUS-004.log" "Ram Disk:LOGS/FUS-004.run07.log"
+EndIf
+FUS-004
+If EXISTS "Ram Disk:LOGS/FUS-004.log"
+    Rename "Ram Disk:LOGS/FUS-004.log" "Ram Disk:LOGS/FUS-004.run08.log"
+EndIf
+FUS-004
+If EXISTS "Ram Disk:LOGS/FUS-004.log"
+    Rename "Ram Disk:LOGS/FUS-004.log" "Ram Disk:LOGS/FUS-004.run09.log"
+EndIf
+FUS-004
+If EXISTS "Ram Disk:LOGS/FUS-004.log"
+    Rename "Ram Disk:LOGS/FUS-004.log" "Ram Disk:LOGS/FUS-004.run10.log"
+EndIf
+FUS-005
+If EXISTS "Ram Disk:LOGS/FUS-005.log"
+    Rename "Ram Disk:LOGS/FUS-005.log" "Ram Disk:LOGS/FUS-005.run01.log"
+EndIf
+FUS-005
+If EXISTS "Ram Disk:LOGS/FUS-005.log"
+    Rename "Ram Disk:LOGS/FUS-005.log" "Ram Disk:LOGS/FUS-005.run02.log"
+EndIf
+FUS-005
+If EXISTS "Ram Disk:LOGS/FUS-005.log"
+    Rename "Ram Disk:LOGS/FUS-005.log" "Ram Disk:LOGS/FUS-005.run03.log"
+EndIf
+FUS-005
+If EXISTS "Ram Disk:LOGS/FUS-005.log"
+    Rename "Ram Disk:LOGS/FUS-005.log" "Ram Disk:LOGS/FUS-005.run04.log"
+EndIf
+FUS-005
+If EXISTS "Ram Disk:LOGS/FUS-005.log"
+    Rename "Ram Disk:LOGS/FUS-005.log" "Ram Disk:LOGS/FUS-005.run05.log"
+EndIf
+FUS-005
+If EXISTS "Ram Disk:LOGS/FUS-005.log"
+    Rename "Ram Disk:LOGS/FUS-005.log" "Ram Disk:LOGS/FUS-005.run06.log"
+EndIf
+FUS-005
+If EXISTS "Ram Disk:LOGS/FUS-005.log"
+    Rename "Ram Disk:LOGS/FUS-005.log" "Ram Disk:LOGS/FUS-005.run07.log"
+EndIf
+FUS-005
+If EXISTS "Ram Disk:LOGS/FUS-005.log"
+    Rename "Ram Disk:LOGS/FUS-005.log" "Ram Disk:LOGS/FUS-005.run08.log"
+EndIf
+FUS-005
+If EXISTS "Ram Disk:LOGS/FUS-005.log"
+    Rename "Ram Disk:LOGS/FUS-005.log" "Ram Disk:LOGS/FUS-005.run09.log"
+EndIf
+FUS-005
+If EXISTS "Ram Disk:LOGS/FUS-005.log"
+    Rename "Ram Disk:LOGS/FUS-005.log" "Ram Disk:LOGS/FUS-005.run10.log"
+EndIf
+MAT-001
+If EXISTS "Ram Disk:LOGS/MAT-001.log"
+    Rename "Ram Disk:LOGS/MAT-001.log" "Ram Disk:LOGS/MAT-001.run01.log"
+EndIf
+MAT-001
+If EXISTS "Ram Disk:LOGS/MAT-001.log"
+    Rename "Ram Disk:LOGS/MAT-001.log" "Ram Disk:LOGS/MAT-001.run02.log"
+EndIf
+MAT-001
+If EXISTS "Ram Disk:LOGS/MAT-001.log"
+    Rename "Ram Disk:LOGS/MAT-001.log" "Ram Disk:LOGS/MAT-001.run03.log"
+EndIf
+MAT-001
+If EXISTS "Ram Disk:LOGS/MAT-001.log"
+    Rename "Ram Disk:LOGS/MAT-001.log" "Ram Disk:LOGS/MAT-001.run04.log"
+EndIf
+MAT-001
+If EXISTS "Ram Disk:LOGS/MAT-001.log"
+    Rename "Ram Disk:LOGS/MAT-001.log" "Ram Disk:LOGS/MAT-001.run05.log"
+EndIf
+MAT-001
+If EXISTS "Ram Disk:LOGS/MAT-001.log"
+    Rename "Ram Disk:LOGS/MAT-001.log" "Ram Disk:LOGS/MAT-001.run06.log"
+EndIf
+MAT-001
+If EXISTS "Ram Disk:LOGS/MAT-001.log"
+    Rename "Ram Disk:LOGS/MAT-001.log" "Ram Disk:LOGS/MAT-001.run07.log"
+EndIf
+MAT-001
+If EXISTS "Ram Disk:LOGS/MAT-001.log"
+    Rename "Ram Disk:LOGS/MAT-001.log" "Ram Disk:LOGS/MAT-001.run08.log"
+EndIf
+MAT-001
+If EXISTS "Ram Disk:LOGS/MAT-001.log"
+    Rename "Ram Disk:LOGS/MAT-001.log" "Ram Disk:LOGS/MAT-001.run09.log"
+EndIf
+MAT-001
+If EXISTS "Ram Disk:LOGS/MAT-001.log"
+    Rename "Ram Disk:LOGS/MAT-001.log" "Ram Disk:LOGS/MAT-001.run10.log"
+EndIf
+MAT-002
+If EXISTS "Ram Disk:LOGS/MAT-002.log"
+    Rename "Ram Disk:LOGS/MAT-002.log" "Ram Disk:LOGS/MAT-002.run01.log"
+EndIf
+MAT-002
+If EXISTS "Ram Disk:LOGS/MAT-002.log"
+    Rename "Ram Disk:LOGS/MAT-002.log" "Ram Disk:LOGS/MAT-002.run02.log"
+EndIf
+MAT-002
+If EXISTS "Ram Disk:LOGS/MAT-002.log"
+    Rename "Ram Disk:LOGS/MAT-002.log" "Ram Disk:LOGS/MAT-002.run03.log"
+EndIf
+MAT-002
+If EXISTS "Ram Disk:LOGS/MAT-002.log"
+    Rename "Ram Disk:LOGS/MAT-002.log" "Ram Disk:LOGS/MAT-002.run04.log"
+EndIf
+MAT-002
+If EXISTS "Ram Disk:LOGS/MAT-002.log"
+    Rename "Ram Disk:LOGS/MAT-002.log" "Ram Disk:LOGS/MAT-002.run05.log"
+EndIf
+MAT-002
+If EXISTS "Ram Disk:LOGS/MAT-002.log"
+    Rename "Ram Disk:LOGS/MAT-002.log" "Ram Disk:LOGS/MAT-002.run06.log"
+EndIf
+MAT-002
+If EXISTS "Ram Disk:LOGS/MAT-002.log"
+    Rename "Ram Disk:LOGS/MAT-002.log" "Ram Disk:LOGS/MAT-002.run07.log"
+EndIf
+MAT-002
+If EXISTS "Ram Disk:LOGS/MAT-002.log"
+    Rename "Ram Disk:LOGS/MAT-002.log" "Ram Disk:LOGS/MAT-002.run08.log"
+EndIf
+MAT-002
+If EXISTS "Ram Disk:LOGS/MAT-002.log"
+    Rename "Ram Disk:LOGS/MAT-002.log" "Ram Disk:LOGS/MAT-002.run09.log"
+EndIf
+MAT-002
+If EXISTS "Ram Disk:LOGS/MAT-002.log"
+    Rename "Ram Disk:LOGS/MAT-002.log" "Ram Disk:LOGS/MAT-002.run10.log"
+EndIf
+MAT-003
+If EXISTS "Ram Disk:LOGS/MAT-003.log"
+    Rename "Ram Disk:LOGS/MAT-003.log" "Ram Disk:LOGS/MAT-003.run01.log"
+EndIf
+MAT-003
+If EXISTS "Ram Disk:LOGS/MAT-003.log"
+    Rename "Ram Disk:LOGS/MAT-003.log" "Ram Disk:LOGS/MAT-003.run02.log"
+EndIf
+MAT-003
+If EXISTS "Ram Disk:LOGS/MAT-003.log"
+    Rename "Ram Disk:LOGS/MAT-003.log" "Ram Disk:LOGS/MAT-003.run03.log"
+EndIf
+MAT-003
+If EXISTS "Ram Disk:LOGS/MAT-003.log"
+    Rename "Ram Disk:LOGS/MAT-003.log" "Ram Disk:LOGS/MAT-003.run04.log"
+EndIf
+MAT-003
+If EXISTS "Ram Disk:LOGS/MAT-003.log"
+    Rename "Ram Disk:LOGS/MAT-003.log" "Ram Disk:LOGS/MAT-003.run05.log"
+EndIf
+MAT-003
+If EXISTS "Ram Disk:LOGS/MAT-003.log"
+    Rename "Ram Disk:LOGS/MAT-003.log" "Ram Disk:LOGS/MAT-003.run06.log"
+EndIf
+MAT-003
+If EXISTS "Ram Disk:LOGS/MAT-003.log"
+    Rename "Ram Disk:LOGS/MAT-003.log" "Ram Disk:LOGS/MAT-003.run07.log"
+EndIf
+MAT-003
+If EXISTS "Ram Disk:LOGS/MAT-003.log"
+    Rename "Ram Disk:LOGS/MAT-003.log" "Ram Disk:LOGS/MAT-003.run08.log"
+EndIf
+MAT-003
+If EXISTS "Ram Disk:LOGS/MAT-003.log"
+    Rename "Ram Disk:LOGS/MAT-003.log" "Ram Disk:LOGS/MAT-003.run09.log"
+EndIf
+MAT-003
+If EXISTS "Ram Disk:LOGS/MAT-003.log"
+    Rename "Ram Disk:LOGS/MAT-003.log" "Ram Disk:LOGS/MAT-003.run10.log"
+EndIf
+MEM-001
+If EXISTS "Ram Disk:LOGS/MEM-001.log"
+    Rename "Ram Disk:LOGS/MEM-001.log" "Ram Disk:LOGS/MEM-001.run01.log"
+EndIf
+MEM-001
+If EXISTS "Ram Disk:LOGS/MEM-001.log"
+    Rename "Ram Disk:LOGS/MEM-001.log" "Ram Disk:LOGS/MEM-001.run02.log"
+EndIf
+MEM-001
+If EXISTS "Ram Disk:LOGS/MEM-001.log"
+    Rename "Ram Disk:LOGS/MEM-001.log" "Ram Disk:LOGS/MEM-001.run03.log"
+EndIf
+MEM-001
+If EXISTS "Ram Disk:LOGS/MEM-001.log"
+    Rename "Ram Disk:LOGS/MEM-001.log" "Ram Disk:LOGS/MEM-001.run04.log"
+EndIf
+MEM-001
+If EXISTS "Ram Disk:LOGS/MEM-001.log"
+    Rename "Ram Disk:LOGS/MEM-001.log" "Ram Disk:LOGS/MEM-001.run05.log"
+EndIf
+MEM-001
+If EXISTS "Ram Disk:LOGS/MEM-001.log"
+    Rename "Ram Disk:LOGS/MEM-001.log" "Ram Disk:LOGS/MEM-001.run06.log"
+EndIf
+MEM-001
+If EXISTS "Ram Disk:LOGS/MEM-001.log"
+    Rename "Ram Disk:LOGS/MEM-001.log" "Ram Disk:LOGS/MEM-001.run07.log"
+EndIf
+MEM-001
+If EXISTS "Ram Disk:LOGS/MEM-001.log"
+    Rename "Ram Disk:LOGS/MEM-001.log" "Ram Disk:LOGS/MEM-001.run08.log"
+EndIf
+MEM-001
+If EXISTS "Ram Disk:LOGS/MEM-001.log"
+    Rename "Ram Disk:LOGS/MEM-001.log" "Ram Disk:LOGS/MEM-001.run09.log"
+EndIf
+MEM-001
+If EXISTS "Ram Disk:LOGS/MEM-001.log"
+    Rename "Ram Disk:LOGS/MEM-001.log" "Ram Disk:LOGS/MEM-001.run10.log"
+EndIf
+MEM-002
+If EXISTS "Ram Disk:LOGS/MEM-002.log"
+    Rename "Ram Disk:LOGS/MEM-002.log" "Ram Disk:LOGS/MEM-002.run01.log"
+EndIf
+MEM-002
+If EXISTS "Ram Disk:LOGS/MEM-002.log"
+    Rename "Ram Disk:LOGS/MEM-002.log" "Ram Disk:LOGS/MEM-002.run02.log"
+EndIf
+MEM-002
+If EXISTS "Ram Disk:LOGS/MEM-002.log"
+    Rename "Ram Disk:LOGS/MEM-002.log" "Ram Disk:LOGS/MEM-002.run03.log"
+EndIf
+MEM-002
+If EXISTS "Ram Disk:LOGS/MEM-002.log"
+    Rename "Ram Disk:LOGS/MEM-002.log" "Ram Disk:LOGS/MEM-002.run04.log"
+EndIf
+MEM-002
+If EXISTS "Ram Disk:LOGS/MEM-002.log"
+    Rename "Ram Disk:LOGS/MEM-002.log" "Ram Disk:LOGS/MEM-002.run05.log"
+EndIf
+MEM-002
+If EXISTS "Ram Disk:LOGS/MEM-002.log"
+    Rename "Ram Disk:LOGS/MEM-002.log" "Ram Disk:LOGS/MEM-002.run06.log"
+EndIf
+MEM-002
+If EXISTS "Ram Disk:LOGS/MEM-002.log"
+    Rename "Ram Disk:LOGS/MEM-002.log" "Ram Disk:LOGS/MEM-002.run07.log"
+EndIf
+MEM-002
+If EXISTS "Ram Disk:LOGS/MEM-002.log"
+    Rename "Ram Disk:LOGS/MEM-002.log" "Ram Disk:LOGS/MEM-002.run08.log"
+EndIf
+MEM-002
+If EXISTS "Ram Disk:LOGS/MEM-002.log"
+    Rename "Ram Disk:LOGS/MEM-002.log" "Ram Disk:LOGS/MEM-002.run09.log"
+EndIf
+MEM-002
+If EXISTS "Ram Disk:LOGS/MEM-002.log"
+    Rename "Ram Disk:LOGS/MEM-002.log" "Ram Disk:LOGS/MEM-002.run10.log"
+EndIf
+MEM-003
+If EXISTS "Ram Disk:LOGS/MEM-003.log"
+    Rename "Ram Disk:LOGS/MEM-003.log" "Ram Disk:LOGS/MEM-003.run01.log"
+EndIf
+MEM-003
+If EXISTS "Ram Disk:LOGS/MEM-003.log"
+    Rename "Ram Disk:LOGS/MEM-003.log" "Ram Disk:LOGS/MEM-003.run02.log"
+EndIf
+MEM-003
+If EXISTS "Ram Disk:LOGS/MEM-003.log"
+    Rename "Ram Disk:LOGS/MEM-003.log" "Ram Disk:LOGS/MEM-003.run03.log"
+EndIf
+MEM-003
+If EXISTS "Ram Disk:LOGS/MEM-003.log"
+    Rename "Ram Disk:LOGS/MEM-003.log" "Ram Disk:LOGS/MEM-003.run04.log"
+EndIf
+MEM-003
+If EXISTS "Ram Disk:LOGS/MEM-003.log"
+    Rename "Ram Disk:LOGS/MEM-003.log" "Ram Disk:LOGS/MEM-003.run05.log"
+EndIf
+MEM-003
+If EXISTS "Ram Disk:LOGS/MEM-003.log"
+    Rename "Ram Disk:LOGS/MEM-003.log" "Ram Disk:LOGS/MEM-003.run06.log"
+EndIf
+MEM-003
+If EXISTS "Ram Disk:LOGS/MEM-003.log"
+    Rename "Ram Disk:LOGS/MEM-003.log" "Ram Disk:LOGS/MEM-003.run07.log"
+EndIf
+MEM-003
+If EXISTS "Ram Disk:LOGS/MEM-003.log"
+    Rename "Ram Disk:LOGS/MEM-003.log" "Ram Disk:LOGS/MEM-003.run08.log"
+EndIf
+MEM-003
+If EXISTS "Ram Disk:LOGS/MEM-003.log"
+    Rename "Ram Disk:LOGS/MEM-003.log" "Ram Disk:LOGS/MEM-003.run09.log"
+EndIf
+MEM-003
+If EXISTS "Ram Disk:LOGS/MEM-003.log"
+    Rename "Ram Disk:LOGS/MEM-003.log" "Ram Disk:LOGS/MEM-003.run10.log"
+EndIf
+MEM-004
+If EXISTS "Ram Disk:LOGS/MEM-004.log"
+    Rename "Ram Disk:LOGS/MEM-004.log" "Ram Disk:LOGS/MEM-004.run01.log"
+EndIf
+MEM-004
+If EXISTS "Ram Disk:LOGS/MEM-004.log"
+    Rename "Ram Disk:LOGS/MEM-004.log" "Ram Disk:LOGS/MEM-004.run02.log"
+EndIf
+MEM-004
+If EXISTS "Ram Disk:LOGS/MEM-004.log"
+    Rename "Ram Disk:LOGS/MEM-004.log" "Ram Disk:LOGS/MEM-004.run03.log"
+EndIf
+MEM-004
+If EXISTS "Ram Disk:LOGS/MEM-004.log"
+    Rename "Ram Disk:LOGS/MEM-004.log" "Ram Disk:LOGS/MEM-004.run04.log"
+EndIf
+MEM-004
+If EXISTS "Ram Disk:LOGS/MEM-004.log"
+    Rename "Ram Disk:LOGS/MEM-004.log" "Ram Disk:LOGS/MEM-004.run05.log"
+EndIf
+MEM-004
+If EXISTS "Ram Disk:LOGS/MEM-004.log"
+    Rename "Ram Disk:LOGS/MEM-004.log" "Ram Disk:LOGS/MEM-004.run06.log"
+EndIf
+MEM-004
+If EXISTS "Ram Disk:LOGS/MEM-004.log"
+    Rename "Ram Disk:LOGS/MEM-004.log" "Ram Disk:LOGS/MEM-004.run07.log"
+EndIf
+MEM-004
+If EXISTS "Ram Disk:LOGS/MEM-004.log"
+    Rename "Ram Disk:LOGS/MEM-004.log" "Ram Disk:LOGS/MEM-004.run08.log"
+EndIf
+MEM-004
+If EXISTS "Ram Disk:LOGS/MEM-004.log"
+    Rename "Ram Disk:LOGS/MEM-004.log" "Ram Disk:LOGS/MEM-004.run09.log"
+EndIf
+MEM-004
+If EXISTS "Ram Disk:LOGS/MEM-004.log"
+    Rename "Ram Disk:LOGS/MEM-004.log" "Ram Disk:LOGS/MEM-004.run10.log"
+EndIf
+MEM-005
+If EXISTS "Ram Disk:LOGS/MEM-005.log"
+    Rename "Ram Disk:LOGS/MEM-005.log" "Ram Disk:LOGS/MEM-005.run01.log"
+EndIf
+MEM-005
+If EXISTS "Ram Disk:LOGS/MEM-005.log"
+    Rename "Ram Disk:LOGS/MEM-005.log" "Ram Disk:LOGS/MEM-005.run02.log"
+EndIf
+MEM-005
+If EXISTS "Ram Disk:LOGS/MEM-005.log"
+    Rename "Ram Disk:LOGS/MEM-005.log" "Ram Disk:LOGS/MEM-005.run03.log"
+EndIf
+MEM-005
+If EXISTS "Ram Disk:LOGS/MEM-005.log"
+    Rename "Ram Disk:LOGS/MEM-005.log" "Ram Disk:LOGS/MEM-005.run04.log"
+EndIf
+MEM-005
+If EXISTS "Ram Disk:LOGS/MEM-005.log"
+    Rename "Ram Disk:LOGS/MEM-005.log" "Ram Disk:LOGS/MEM-005.run05.log"
+EndIf
+MEM-005
+If EXISTS "Ram Disk:LOGS/MEM-005.log"
+    Rename "Ram Disk:LOGS/MEM-005.log" "Ram Disk:LOGS/MEM-005.run06.log"
+EndIf
+MEM-005
+If EXISTS "Ram Disk:LOGS/MEM-005.log"
+    Rename "Ram Disk:LOGS/MEM-005.log" "Ram Disk:LOGS/MEM-005.run07.log"
+EndIf
+MEM-005
+If EXISTS "Ram Disk:LOGS/MEM-005.log"
+    Rename "Ram Disk:LOGS/MEM-005.log" "Ram Disk:LOGS/MEM-005.run08.log"
+EndIf
+MEM-005
+If EXISTS "Ram Disk:LOGS/MEM-005.log"
+    Rename "Ram Disk:LOGS/MEM-005.log" "Ram Disk:LOGS/MEM-005.run09.log"
+EndIf
+MEM-005
+If EXISTS "Ram Disk:LOGS/MEM-005.log"
+    Rename "Ram Disk:LOGS/MEM-005.log" "Ram Disk:LOGS/MEM-005.run10.log"
+EndIf
+PAT-001
+If EXISTS "Ram Disk:LOGS/PAT-001.log"
+    Rename "Ram Disk:LOGS/PAT-001.log" "Ram Disk:LOGS/PAT-001.run01.log"
+EndIf
+PAT-001
+If EXISTS "Ram Disk:LOGS/PAT-001.log"
+    Rename "Ram Disk:LOGS/PAT-001.log" "Ram Disk:LOGS/PAT-001.run02.log"
+EndIf
+PAT-001
+If EXISTS "Ram Disk:LOGS/PAT-001.log"
+    Rename "Ram Disk:LOGS/PAT-001.log" "Ram Disk:LOGS/PAT-001.run03.log"
+EndIf
+PAT-001
+If EXISTS "Ram Disk:LOGS/PAT-001.log"
+    Rename "Ram Disk:LOGS/PAT-001.log" "Ram Disk:LOGS/PAT-001.run04.log"
+EndIf
+PAT-001
+If EXISTS "Ram Disk:LOGS/PAT-001.log"
+    Rename "Ram Disk:LOGS/PAT-001.log" "Ram Disk:LOGS/PAT-001.run05.log"
+EndIf
+PAT-001
+If EXISTS "Ram Disk:LOGS/PAT-001.log"
+    Rename "Ram Disk:LOGS/PAT-001.log" "Ram Disk:LOGS/PAT-001.run06.log"
+EndIf
+PAT-001
+If EXISTS "Ram Disk:LOGS/PAT-001.log"
+    Rename "Ram Disk:LOGS/PAT-001.log" "Ram Disk:LOGS/PAT-001.run07.log"
+EndIf
+PAT-001
+If EXISTS "Ram Disk:LOGS/PAT-001.log"
+    Rename "Ram Disk:LOGS/PAT-001.log" "Ram Disk:LOGS/PAT-001.run08.log"
+EndIf
+PAT-001
+If EXISTS "Ram Disk:LOGS/PAT-001.log"
+    Rename "Ram Disk:LOGS/PAT-001.log" "Ram Disk:LOGS/PAT-001.run09.log"
+EndIf
+PAT-001
+If EXISTS "Ram Disk:LOGS/PAT-001.log"
+    Rename "Ram Disk:LOGS/PAT-001.log" "Ram Disk:LOGS/PAT-001.run10.log"
+EndIf
+PAT-002
+If EXISTS "Ram Disk:LOGS/PAT-002.log"
+    Rename "Ram Disk:LOGS/PAT-002.log" "Ram Disk:LOGS/PAT-002.run01.log"
+EndIf
+PAT-002
+If EXISTS "Ram Disk:LOGS/PAT-002.log"
+    Rename "Ram Disk:LOGS/PAT-002.log" "Ram Disk:LOGS/PAT-002.run02.log"
+EndIf
+PAT-002
+If EXISTS "Ram Disk:LOGS/PAT-002.log"
+    Rename "Ram Disk:LOGS/PAT-002.log" "Ram Disk:LOGS/PAT-002.run03.log"
+EndIf
+PAT-002
+If EXISTS "Ram Disk:LOGS/PAT-002.log"
+    Rename "Ram Disk:LOGS/PAT-002.log" "Ram Disk:LOGS/PAT-002.run04.log"
+EndIf
+PAT-002
+If EXISTS "Ram Disk:LOGS/PAT-002.log"
+    Rename "Ram Disk:LOGS/PAT-002.log" "Ram Disk:LOGS/PAT-002.run05.log"
+EndIf
+PAT-002
+If EXISTS "Ram Disk:LOGS/PAT-002.log"
+    Rename "Ram Disk:LOGS/PAT-002.log" "Ram Disk:LOGS/PAT-002.run06.log"
+EndIf
+PAT-002
+If EXISTS "Ram Disk:LOGS/PAT-002.log"
+    Rename "Ram Disk:LOGS/PAT-002.log" "Ram Disk:LOGS/PAT-002.run07.log"
+EndIf
+PAT-002
+If EXISTS "Ram Disk:LOGS/PAT-002.log"
+    Rename "Ram Disk:LOGS/PAT-002.log" "Ram Disk:LOGS/PAT-002.run08.log"
+EndIf
+PAT-002
+If EXISTS "Ram Disk:LOGS/PAT-002.log"
+    Rename "Ram Disk:LOGS/PAT-002.log" "Ram Disk:LOGS/PAT-002.run09.log"
+EndIf
+PAT-002
+If EXISTS "Ram Disk:LOGS/PAT-002.log"
+    Rename "Ram Disk:LOGS/PAT-002.log" "Ram Disk:LOGS/PAT-002.run10.log"
+EndIf
+PAT-003
+If EXISTS "Ram Disk:LOGS/PAT-003.log"
+    Rename "Ram Disk:LOGS/PAT-003.log" "Ram Disk:LOGS/PAT-003.run01.log"
+EndIf
+PAT-003
+If EXISTS "Ram Disk:LOGS/PAT-003.log"
+    Rename "Ram Disk:LOGS/PAT-003.log" "Ram Disk:LOGS/PAT-003.run02.log"
+EndIf
+PAT-003
+If EXISTS "Ram Disk:LOGS/PAT-003.log"
+    Rename "Ram Disk:LOGS/PAT-003.log" "Ram Disk:LOGS/PAT-003.run03.log"
+EndIf
+PAT-003
+If EXISTS "Ram Disk:LOGS/PAT-003.log"
+    Rename "Ram Disk:LOGS/PAT-003.log" "Ram Disk:LOGS/PAT-003.run04.log"
+EndIf
+PAT-003
+If EXISTS "Ram Disk:LOGS/PAT-003.log"
+    Rename "Ram Disk:LOGS/PAT-003.log" "Ram Disk:LOGS/PAT-003.run05.log"
+EndIf
+PAT-003
+If EXISTS "Ram Disk:LOGS/PAT-003.log"
+    Rename "Ram Disk:LOGS/PAT-003.log" "Ram Disk:LOGS/PAT-003.run06.log"
+EndIf
+PAT-003
+If EXISTS "Ram Disk:LOGS/PAT-003.log"
+    Rename "Ram Disk:LOGS/PAT-003.log" "Ram Disk:LOGS/PAT-003.run07.log"
+EndIf
+PAT-003
+If EXISTS "Ram Disk:LOGS/PAT-003.log"
+    Rename "Ram Disk:LOGS/PAT-003.log" "Ram Disk:LOGS/PAT-003.run08.log"
+EndIf
+PAT-003
+If EXISTS "Ram Disk:LOGS/PAT-003.log"
+    Rename "Ram Disk:LOGS/PAT-003.log" "Ram Disk:LOGS/PAT-003.run09.log"
+EndIf
+PAT-003
+If EXISTS "Ram Disk:LOGS/PAT-003.log"
+    Rename "Ram Disk:LOGS/PAT-003.log" "Ram Disk:LOGS/PAT-003.run10.log"
+EndIf
+PAT-004
+If EXISTS "Ram Disk:LOGS/PAT-004.log"
+    Rename "Ram Disk:LOGS/PAT-004.log" "Ram Disk:LOGS/PAT-004.run01.log"
+EndIf
+PAT-004
+If EXISTS "Ram Disk:LOGS/PAT-004.log"
+    Rename "Ram Disk:LOGS/PAT-004.log" "Ram Disk:LOGS/PAT-004.run02.log"
+EndIf
+PAT-004
+If EXISTS "Ram Disk:LOGS/PAT-004.log"
+    Rename "Ram Disk:LOGS/PAT-004.log" "Ram Disk:LOGS/PAT-004.run03.log"
+EndIf
+PAT-004
+If EXISTS "Ram Disk:LOGS/PAT-004.log"
+    Rename "Ram Disk:LOGS/PAT-004.log" "Ram Disk:LOGS/PAT-004.run04.log"
+EndIf
+PAT-004
+If EXISTS "Ram Disk:LOGS/PAT-004.log"
+    Rename "Ram Disk:LOGS/PAT-004.log" "Ram Disk:LOGS/PAT-004.run05.log"
+EndIf
+PAT-004
+If EXISTS "Ram Disk:LOGS/PAT-004.log"
+    Rename "Ram Disk:LOGS/PAT-004.log" "Ram Disk:LOGS/PAT-004.run06.log"
+EndIf
+PAT-004
+If EXISTS "Ram Disk:LOGS/PAT-004.log"
+    Rename "Ram Disk:LOGS/PAT-004.log" "Ram Disk:LOGS/PAT-004.run07.log"
+EndIf
+PAT-004
+If EXISTS "Ram Disk:LOGS/PAT-004.log"
+    Rename "Ram Disk:LOGS/PAT-004.log" "Ram Disk:LOGS/PAT-004.run08.log"
+EndIf
+PAT-004
+If EXISTS "Ram Disk:LOGS/PAT-004.log"
+    Rename "Ram Disk:LOGS/PAT-004.log" "Ram Disk:LOGS/PAT-004.run09.log"
+EndIf
+PAT-004
+If EXISTS "Ram Disk:LOGS/PAT-004.log"
+    Rename "Ram Disk:LOGS/PAT-004.log" "Ram Disk:LOGS/PAT-004.run10.log"
+EndIf
+PAT-005
+If EXISTS "Ram Disk:LOGS/PAT-005.log"
+    Rename "Ram Disk:LOGS/PAT-005.log" "Ram Disk:LOGS/PAT-005.run01.log"
+EndIf
+PAT-005
+If EXISTS "Ram Disk:LOGS/PAT-005.log"
+    Rename "Ram Disk:LOGS/PAT-005.log" "Ram Disk:LOGS/PAT-005.run02.log"
+EndIf
+PAT-005
+If EXISTS "Ram Disk:LOGS/PAT-005.log"
+    Rename "Ram Disk:LOGS/PAT-005.log" "Ram Disk:LOGS/PAT-005.run03.log"
+EndIf
+PAT-005
+If EXISTS "Ram Disk:LOGS/PAT-005.log"
+    Rename "Ram Disk:LOGS/PAT-005.log" "Ram Disk:LOGS/PAT-005.run04.log"
+EndIf
+PAT-005
+If EXISTS "Ram Disk:LOGS/PAT-005.log"
+    Rename "Ram Disk:LOGS/PAT-005.log" "Ram Disk:LOGS/PAT-005.run05.log"
+EndIf
+PAT-005
+If EXISTS "Ram Disk:LOGS/PAT-005.log"
+    Rename "Ram Disk:LOGS/PAT-005.log" "Ram Disk:LOGS/PAT-005.run06.log"
+EndIf
+PAT-005
+If EXISTS "Ram Disk:LOGS/PAT-005.log"
+    Rename "Ram Disk:LOGS/PAT-005.log" "Ram Disk:LOGS/PAT-005.run07.log"
+EndIf
+PAT-005
+If EXISTS "Ram Disk:LOGS/PAT-005.log"
+    Rename "Ram Disk:LOGS/PAT-005.log" "Ram Disk:LOGS/PAT-005.run08.log"
+EndIf
+PAT-005
+If EXISTS "Ram Disk:LOGS/PAT-005.log"
+    Rename "Ram Disk:LOGS/PAT-005.log" "Ram Disk:LOGS/PAT-005.run09.log"
+EndIf
+PAT-005
+If EXISTS "Ram Disk:LOGS/PAT-005.log"
+    Rename "Ram Disk:LOGS/PAT-005.log" "Ram Disk:LOGS/PAT-005.run10.log"
+EndIf
+REG-001
+If EXISTS "Ram Disk:LOGS/REG-001.log"
+    Rename "Ram Disk:LOGS/REG-001.log" "Ram Disk:LOGS/REG-001.run01.log"
+EndIf
+REG-001
+If EXISTS "Ram Disk:LOGS/REG-001.log"
+    Rename "Ram Disk:LOGS/REG-001.log" "Ram Disk:LOGS/REG-001.run02.log"
+EndIf
+REG-001
+If EXISTS "Ram Disk:LOGS/REG-001.log"
+    Rename "Ram Disk:LOGS/REG-001.log" "Ram Disk:LOGS/REG-001.run03.log"
+EndIf
+REG-001
+If EXISTS "Ram Disk:LOGS/REG-001.log"
+    Rename "Ram Disk:LOGS/REG-001.log" "Ram Disk:LOGS/REG-001.run04.log"
+EndIf
+REG-001
+If EXISTS "Ram Disk:LOGS/REG-001.log"
+    Rename "Ram Disk:LOGS/REG-001.log" "Ram Disk:LOGS/REG-001.run05.log"
+EndIf
+REG-001
+If EXISTS "Ram Disk:LOGS/REG-001.log"
+    Rename "Ram Disk:LOGS/REG-001.log" "Ram Disk:LOGS/REG-001.run06.log"
+EndIf
+REG-001
+If EXISTS "Ram Disk:LOGS/REG-001.log"
+    Rename "Ram Disk:LOGS/REG-001.log" "Ram Disk:LOGS/REG-001.run07.log"
+EndIf
+REG-001
+If EXISTS "Ram Disk:LOGS/REG-001.log"
+    Rename "Ram Disk:LOGS/REG-001.log" "Ram Disk:LOGS/REG-001.run08.log"
+EndIf
+REG-001
+If EXISTS "Ram Disk:LOGS/REG-001.log"
+    Rename "Ram Disk:LOGS/REG-001.log" "Ram Disk:LOGS/REG-001.run09.log"
+EndIf
+REG-001
+If EXISTS "Ram Disk:LOGS/REG-001.log"
+    Rename "Ram Disk:LOGS/REG-001.log" "Ram Disk:LOGS/REG-001.run10.log"
+EndIf
+REG-002
+If EXISTS "Ram Disk:LOGS/REG-002.log"
+    Rename "Ram Disk:LOGS/REG-002.log" "Ram Disk:LOGS/REG-002.run01.log"
+EndIf
+REG-002
+If EXISTS "Ram Disk:LOGS/REG-002.log"
+    Rename "Ram Disk:LOGS/REG-002.log" "Ram Disk:LOGS/REG-002.run02.log"
+EndIf
+REG-002
+If EXISTS "Ram Disk:LOGS/REG-002.log"
+    Rename "Ram Disk:LOGS/REG-002.log" "Ram Disk:LOGS/REG-002.run03.log"
+EndIf
+REG-002
+If EXISTS "Ram Disk:LOGS/REG-002.log"
+    Rename "Ram Disk:LOGS/REG-002.log" "Ram Disk:LOGS/REG-002.run04.log"
+EndIf
+REG-002
+If EXISTS "Ram Disk:LOGS/REG-002.log"
+    Rename "Ram Disk:LOGS/REG-002.log" "Ram Disk:LOGS/REG-002.run05.log"
+EndIf
+REG-002
+If EXISTS "Ram Disk:LOGS/REG-002.log"
+    Rename "Ram Disk:LOGS/REG-002.log" "Ram Disk:LOGS/REG-002.run06.log"
+EndIf
+REG-002
+If EXISTS "Ram Disk:LOGS/REG-002.log"
+    Rename "Ram Disk:LOGS/REG-002.log" "Ram Disk:LOGS/REG-002.run07.log"
+EndIf
+REG-002
+If EXISTS "Ram Disk:LOGS/REG-002.log"
+    Rename "Ram Disk:LOGS/REG-002.log" "Ram Disk:LOGS/REG-002.run08.log"
+EndIf
+REG-002
+If EXISTS "Ram Disk:LOGS/REG-002.log"
+    Rename "Ram Disk:LOGS/REG-002.log" "Ram Disk:LOGS/REG-002.run09.log"
+EndIf
+REG-002
+If EXISTS "Ram Disk:LOGS/REG-002.log"
+    Rename "Ram Disk:LOGS/REG-002.log" "Ram Disk:LOGS/REG-002.run10.log"
+EndIf
+REG-003
+If EXISTS "Ram Disk:LOGS/REG-003.log"
+    Rename "Ram Disk:LOGS/REG-003.log" "Ram Disk:LOGS/REG-003.run01.log"
+EndIf
+REG-003
+If EXISTS "Ram Disk:LOGS/REG-003.log"
+    Rename "Ram Disk:LOGS/REG-003.log" "Ram Disk:LOGS/REG-003.run02.log"
+EndIf
+REG-003
+If EXISTS "Ram Disk:LOGS/REG-003.log"
+    Rename "Ram Disk:LOGS/REG-003.log" "Ram Disk:LOGS/REG-003.run03.log"
+EndIf
+REG-003
+If EXISTS "Ram Disk:LOGS/REG-003.log"
+    Rename "Ram Disk:LOGS/REG-003.log" "Ram Disk:LOGS/REG-003.run04.log"
+EndIf
+REG-003
+If EXISTS "Ram Disk:LOGS/REG-003.log"
+    Rename "Ram Disk:LOGS/REG-003.log" "Ram Disk:LOGS/REG-003.run05.log"
+EndIf
+REG-003
+If EXISTS "Ram Disk:LOGS/REG-003.log"
+    Rename "Ram Disk:LOGS/REG-003.log" "Ram Disk:LOGS/REG-003.run06.log"
+EndIf
+REG-003
+If EXISTS "Ram Disk:LOGS/REG-003.log"
+    Rename "Ram Disk:LOGS/REG-003.log" "Ram Disk:LOGS/REG-003.run07.log"
+EndIf
+REG-003
+If EXISTS "Ram Disk:LOGS/REG-003.log"
+    Rename "Ram Disk:LOGS/REG-003.log" "Ram Disk:LOGS/REG-003.run08.log"
+EndIf
+REG-003
+If EXISTS "Ram Disk:LOGS/REG-003.log"
+    Rename "Ram Disk:LOGS/REG-003.log" "Ram Disk:LOGS/REG-003.run09.log"
+EndIf
+REG-003
+If EXISTS "Ram Disk:LOGS/REG-003.log"
+    Rename "Ram Disk:LOGS/REG-003.log" "Ram Disk:LOGS/REG-003.run10.log"
+EndIf
+REG-004
+If EXISTS "Ram Disk:LOGS/REG-004.log"
+    Rename "Ram Disk:LOGS/REG-004.log" "Ram Disk:LOGS/REG-004.run01.log"
+EndIf
+REG-004
+If EXISTS "Ram Disk:LOGS/REG-004.log"
+    Rename "Ram Disk:LOGS/REG-004.log" "Ram Disk:LOGS/REG-004.run02.log"
+EndIf
+REG-004
+If EXISTS "Ram Disk:LOGS/REG-004.log"
+    Rename "Ram Disk:LOGS/REG-004.log" "Ram Disk:LOGS/REG-004.run03.log"
+EndIf
+REG-004
+If EXISTS "Ram Disk:LOGS/REG-004.log"
+    Rename "Ram Disk:LOGS/REG-004.log" "Ram Disk:LOGS/REG-004.run04.log"
+EndIf
+REG-004
+If EXISTS "Ram Disk:LOGS/REG-004.log"
+    Rename "Ram Disk:LOGS/REG-004.log" "Ram Disk:LOGS/REG-004.run05.log"
+EndIf
+REG-004
+If EXISTS "Ram Disk:LOGS/REG-004.log"
+    Rename "Ram Disk:LOGS/REG-004.log" "Ram Disk:LOGS/REG-004.run06.log"
+EndIf
+REG-004
+If EXISTS "Ram Disk:LOGS/REG-004.log"
+    Rename "Ram Disk:LOGS/REG-004.log" "Ram Disk:LOGS/REG-004.run07.log"
+EndIf
+REG-004
+If EXISTS "Ram Disk:LOGS/REG-004.log"
+    Rename "Ram Disk:LOGS/REG-004.log" "Ram Disk:LOGS/REG-004.run08.log"
+EndIf
+REG-004
+If EXISTS "Ram Disk:LOGS/REG-004.log"
+    Rename "Ram Disk:LOGS/REG-004.log" "Ram Disk:LOGS/REG-004.run09.log"
+EndIf
+REG-004
+If EXISTS "Ram Disk:LOGS/REG-004.log"
+    Rename "Ram Disk:LOGS/REG-004.log" "Ram Disk:LOGS/REG-004.run10.log"
+EndIf
+REG-005
+If EXISTS "Ram Disk:LOGS/REG-005.log"
+    Rename "Ram Disk:LOGS/REG-005.log" "Ram Disk:LOGS/REG-005.run01.log"
+EndIf
+REG-005
+If EXISTS "Ram Disk:LOGS/REG-005.log"
+    Rename "Ram Disk:LOGS/REG-005.log" "Ram Disk:LOGS/REG-005.run02.log"
+EndIf
+REG-005
+If EXISTS "Ram Disk:LOGS/REG-005.log"
+    Rename "Ram Disk:LOGS/REG-005.log" "Ram Disk:LOGS/REG-005.run03.log"
+EndIf
+REG-005
+If EXISTS "Ram Disk:LOGS/REG-005.log"
+    Rename "Ram Disk:LOGS/REG-005.log" "Ram Disk:LOGS/REG-005.run04.log"
+EndIf
+REG-005
+If EXISTS "Ram Disk:LOGS/REG-005.log"
+    Rename "Ram Disk:LOGS/REG-005.log" "Ram Disk:LOGS/REG-005.run05.log"
+EndIf
+REG-005
+If EXISTS "Ram Disk:LOGS/REG-005.log"
+    Rename "Ram Disk:LOGS/REG-005.log" "Ram Disk:LOGS/REG-005.run06.log"
+EndIf
+REG-005
+If EXISTS "Ram Disk:LOGS/REG-005.log"
+    Rename "Ram Disk:LOGS/REG-005.log" "Ram Disk:LOGS/REG-005.run07.log"
+EndIf
+REG-005
+If EXISTS "Ram Disk:LOGS/REG-005.log"
+    Rename "Ram Disk:LOGS/REG-005.log" "Ram Disk:LOGS/REG-005.run08.log"
+EndIf
+REG-005
+If EXISTS "Ram Disk:LOGS/REG-005.log"
+    Rename "Ram Disk:LOGS/REG-005.log" "Ram Disk:LOGS/REG-005.run09.log"
+EndIf
+REG-005
+If EXISTS "Ram Disk:LOGS/REG-005.log"
+    Rename "Ram Disk:LOGS/REG-005.log" "Ram Disk:LOGS/REG-005.run10.log"
+EndIf
+TIM-001
+If EXISTS "Ram Disk:LOGS/TIM-001.log"
+    Rename "Ram Disk:LOGS/TIM-001.log" "Ram Disk:LOGS/TIM-001.run01.log"
+EndIf
+TIM-001
+If EXISTS "Ram Disk:LOGS/TIM-001.log"
+    Rename "Ram Disk:LOGS/TIM-001.log" "Ram Disk:LOGS/TIM-001.run02.log"
+EndIf
+TIM-001
+If EXISTS "Ram Disk:LOGS/TIM-001.log"
+    Rename "Ram Disk:LOGS/TIM-001.log" "Ram Disk:LOGS/TIM-001.run03.log"
+EndIf
+TIM-001
+If EXISTS "Ram Disk:LOGS/TIM-001.log"
+    Rename "Ram Disk:LOGS/TIM-001.log" "Ram Disk:LOGS/TIM-001.run04.log"
+EndIf
+TIM-001
+If EXISTS "Ram Disk:LOGS/TIM-001.log"
+    Rename "Ram Disk:LOGS/TIM-001.log" "Ram Disk:LOGS/TIM-001.run05.log"
+EndIf
+TIM-001
+If EXISTS "Ram Disk:LOGS/TIM-001.log"
+    Rename "Ram Disk:LOGS/TIM-001.log" "Ram Disk:LOGS/TIM-001.run06.log"
+EndIf
+TIM-001
+If EXISTS "Ram Disk:LOGS/TIM-001.log"
+    Rename "Ram Disk:LOGS/TIM-001.log" "Ram Disk:LOGS/TIM-001.run07.log"
+EndIf
+TIM-001
+If EXISTS "Ram Disk:LOGS/TIM-001.log"
+    Rename "Ram Disk:LOGS/TIM-001.log" "Ram Disk:LOGS/TIM-001.run08.log"
+EndIf
+TIM-001
+If EXISTS "Ram Disk:LOGS/TIM-001.log"
+    Rename "Ram Disk:LOGS/TIM-001.log" "Ram Disk:LOGS/TIM-001.run09.log"
+EndIf
+TIM-001
+If EXISTS "Ram Disk:LOGS/TIM-001.log"
+    Rename "Ram Disk:LOGS/TIM-001.log" "Ram Disk:LOGS/TIM-001.run10.log"
+EndIf
+TIM-002
+If EXISTS "Ram Disk:LOGS/TIM-002.log"
+    Rename "Ram Disk:LOGS/TIM-002.log" "Ram Disk:LOGS/TIM-002.run01.log"
+EndIf
+TIM-002
+If EXISTS "Ram Disk:LOGS/TIM-002.log"
+    Rename "Ram Disk:LOGS/TIM-002.log" "Ram Disk:LOGS/TIM-002.run02.log"
+EndIf
+TIM-002
+If EXISTS "Ram Disk:LOGS/TIM-002.log"
+    Rename "Ram Disk:LOGS/TIM-002.log" "Ram Disk:LOGS/TIM-002.run03.log"
+EndIf
+TIM-002
+If EXISTS "Ram Disk:LOGS/TIM-002.log"
+    Rename "Ram Disk:LOGS/TIM-002.log" "Ram Disk:LOGS/TIM-002.run04.log"
+EndIf
+TIM-002
+If EXISTS "Ram Disk:LOGS/TIM-002.log"
+    Rename "Ram Disk:LOGS/TIM-002.log" "Ram Disk:LOGS/TIM-002.run05.log"
+EndIf
+TIM-002
+If EXISTS "Ram Disk:LOGS/TIM-002.log"
+    Rename "Ram Disk:LOGS/TIM-002.log" "Ram Disk:LOGS/TIM-002.run06.log"
+EndIf
+TIM-002
+If EXISTS "Ram Disk:LOGS/TIM-002.log"
+    Rename "Ram Disk:LOGS/TIM-002.log" "Ram Disk:LOGS/TIM-002.run07.log"
+EndIf
+TIM-002
+If EXISTS "Ram Disk:LOGS/TIM-002.log"
+    Rename "Ram Disk:LOGS/TIM-002.log" "Ram Disk:LOGS/TIM-002.run08.log"
+EndIf
+TIM-002
+If EXISTS "Ram Disk:LOGS/TIM-002.log"
+    Rename "Ram Disk:LOGS/TIM-002.log" "Ram Disk:LOGS/TIM-002.run09.log"
+EndIf
+TIM-002
+If EXISTS "Ram Disk:LOGS/TIM-002.log"
+    Rename "Ram Disk:LOGS/TIM-002.log" "Ram Disk:LOGS/TIM-002.run10.log"
+EndIf
+TIM-003
+If EXISTS "Ram Disk:LOGS/TIM-003.log"
+    Rename "Ram Disk:LOGS/TIM-003.log" "Ram Disk:LOGS/TIM-003.run01.log"
+EndIf
+TIM-003
+If EXISTS "Ram Disk:LOGS/TIM-003.log"
+    Rename "Ram Disk:LOGS/TIM-003.log" "Ram Disk:LOGS/TIM-003.run02.log"
+EndIf
+TIM-003
+If EXISTS "Ram Disk:LOGS/TIM-003.log"
+    Rename "Ram Disk:LOGS/TIM-003.log" "Ram Disk:LOGS/TIM-003.run03.log"
+EndIf
+TIM-003
+If EXISTS "Ram Disk:LOGS/TIM-003.log"
+    Rename "Ram Disk:LOGS/TIM-003.log" "Ram Disk:LOGS/TIM-003.run04.log"
+EndIf
+TIM-003
+If EXISTS "Ram Disk:LOGS/TIM-003.log"
+    Rename "Ram Disk:LOGS/TIM-003.log" "Ram Disk:LOGS/TIM-003.run05.log"
+EndIf
+TIM-003
+If EXISTS "Ram Disk:LOGS/TIM-003.log"
+    Rename "Ram Disk:LOGS/TIM-003.log" "Ram Disk:LOGS/TIM-003.run06.log"
+EndIf
+TIM-003
+If EXISTS "Ram Disk:LOGS/TIM-003.log"
+    Rename "Ram Disk:LOGS/TIM-003.log" "Ram Disk:LOGS/TIM-003.run07.log"
+EndIf
+TIM-003
+If EXISTS "Ram Disk:LOGS/TIM-003.log"
+    Rename "Ram Disk:LOGS/TIM-003.log" "Ram Disk:LOGS/TIM-003.run08.log"
+EndIf
+TIM-003
+If EXISTS "Ram Disk:LOGS/TIM-003.log"
+    Rename "Ram Disk:LOGS/TIM-003.log" "Ram Disk:LOGS/TIM-003.run09.log"
+EndIf
+TIM-003
+If EXISTS "Ram Disk:LOGS/TIM-003.log"
+    Rename "Ram Disk:LOGS/TIM-003.log" "Ram Disk:LOGS/TIM-003.run10.log"
+EndIf
+TIM-004
+If EXISTS "Ram Disk:LOGS/TIM-004.log"
+    Rename "Ram Disk:LOGS/TIM-004.log" "Ram Disk:LOGS/TIM-004.run01.log"
+EndIf
+TIM-004
+If EXISTS "Ram Disk:LOGS/TIM-004.log"
+    Rename "Ram Disk:LOGS/TIM-004.log" "Ram Disk:LOGS/TIM-004.run02.log"
+EndIf
+TIM-004
+If EXISTS "Ram Disk:LOGS/TIM-004.log"
+    Rename "Ram Disk:LOGS/TIM-004.log" "Ram Disk:LOGS/TIM-004.run03.log"
+EndIf
+TIM-004
+If EXISTS "Ram Disk:LOGS/TIM-004.log"
+    Rename "Ram Disk:LOGS/TIM-004.log" "Ram Disk:LOGS/TIM-004.run04.log"
+EndIf
+TIM-004
+If EXISTS "Ram Disk:LOGS/TIM-004.log"
+    Rename "Ram Disk:LOGS/TIM-004.log" "Ram Disk:LOGS/TIM-004.run05.log"
+EndIf
+TIM-004
+If EXISTS "Ram Disk:LOGS/TIM-004.log"
+    Rename "Ram Disk:LOGS/TIM-004.log" "Ram Disk:LOGS/TIM-004.run06.log"
+EndIf
+TIM-004
+If EXISTS "Ram Disk:LOGS/TIM-004.log"
+    Rename "Ram Disk:LOGS/TIM-004.log" "Ram Disk:LOGS/TIM-004.run07.log"
+EndIf
+TIM-004
+If EXISTS "Ram Disk:LOGS/TIM-004.log"
+    Rename "Ram Disk:LOGS/TIM-004.log" "Ram Disk:LOGS/TIM-004.run08.log"
+EndIf
+TIM-004
+If EXISTS "Ram Disk:LOGS/TIM-004.log"
+    Rename "Ram Disk:LOGS/TIM-004.log" "Ram Disk:LOGS/TIM-004.run09.log"
+EndIf
+TIM-004
+If EXISTS "Ram Disk:LOGS/TIM-004.log"
+    Rename "Ram Disk:LOGS/TIM-004.log" "Ram Disk:LOGS/TIM-004.run10.log"
+EndIf
+TIM-005
+If EXISTS "Ram Disk:LOGS/TIM-005.log"
+    Rename "Ram Disk:LOGS/TIM-005.log" "Ram Disk:LOGS/TIM-005.run01.log"
+EndIf
+TIM-005
+If EXISTS "Ram Disk:LOGS/TIM-005.log"
+    Rename "Ram Disk:LOGS/TIM-005.log" "Ram Disk:LOGS/TIM-005.run02.log"
+EndIf
+TIM-005
+If EXISTS "Ram Disk:LOGS/TIM-005.log"
+    Rename "Ram Disk:LOGS/TIM-005.log" "Ram Disk:LOGS/TIM-005.run03.log"
+EndIf
+TIM-005
+If EXISTS "Ram Disk:LOGS/TIM-005.log"
+    Rename "Ram Disk:LOGS/TIM-005.log" "Ram Disk:LOGS/TIM-005.run04.log"
+EndIf
+TIM-005
+If EXISTS "Ram Disk:LOGS/TIM-005.log"
+    Rename "Ram Disk:LOGS/TIM-005.log" "Ram Disk:LOGS/TIM-005.run05.log"
+EndIf
+TIM-005
+If EXISTS "Ram Disk:LOGS/TIM-005.log"
+    Rename "Ram Disk:LOGS/TIM-005.log" "Ram Disk:LOGS/TIM-005.run06.log"
+EndIf
+TIM-005
+If EXISTS "Ram Disk:LOGS/TIM-005.log"
+    Rename "Ram Disk:LOGS/TIM-005.log" "Ram Disk:LOGS/TIM-005.run07.log"
+EndIf
+TIM-005
+If EXISTS "Ram Disk:LOGS/TIM-005.log"
+    Rename "Ram Disk:LOGS/TIM-005.log" "Ram Disk:LOGS/TIM-005.run08.log"
+EndIf
+TIM-005
+If EXISTS "Ram Disk:LOGS/TIM-005.log"
+    Rename "Ram Disk:LOGS/TIM-005.log" "Ram Disk:LOGS/TIM-005.run09.log"
+EndIf
+TIM-005
+If EXISTS "Ram Disk:LOGS/TIM-005.log"
+    Rename "Ram Disk:LOGS/TIM-005.log" "Ram Disk:LOGS/TIM-005.run10.log"
+EndIf

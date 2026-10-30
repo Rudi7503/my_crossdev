@@ -5,16 +5,16 @@ Stand: **2026-10-23 13:10 (Europe/Berlin)**
 ## Aktueller Zustand
 
 - Projekt: `/home/papa/Vampire_V4/ApolloCrossDev/68080-db`
-- **42 Einträge**, alle mit `VERIFIZIERT (gemessen – Vampire V4, Log vorhanden)`;
+- **71 Einträge**, alle mit `VERIFIZIERT (gemessen – Vampire V4, Log vorhanden)`;
   die Messwerte sind **Harness v1**.
 - **42 v1-Logs** unter `measurements/<ID>.log`, alle mit `check_log.py` geprüft
 - zusätzlich `measurements/FUS-001.run1.log` als separater Wiederholungslauf
 - **42 Sequenzen** unter `seq/<ID>.i`
 - **42 Binaries** unter `bin/<ID>` plus `bin/SERIAL-PROBE` (v1, vor dem Umbau)
-- Batchdatei `RUN-ALL`: **42 Einträge × 10 Wiederholungen** (420 Läufe),
+- Batchdatei `RUN-ALL`: **71 Einträge × 10 Wiederholungen** (710 Läufe),
   Dateilogs in `Ram Disk:LOGS/<ID>.runNN.log`; `RUN-ALL-ONCE` = Einzellauf
 - Messübersicht: `measurements/SUMMARY.md` (v4); **Median, Stdabw. und p95**
-  sind Mediane der 10 Läufe; **MIN 42/42 identisch**, Warmup erste 10 = MIN.
+  sind Mediane der 10 Läufe; **MIN 71/71 identisch**, Warmup erste 10 = MIN.
 - Harness: `harness-v5.asm` = **v5** (v4-Taktmessung + PERF-Zählerdurchgang,
   Stack-Startwerte, `PERF`-Zeile, kein stdout); `harness.asm` = v4,
   `harness-v1.asm` = v1-Vorlage; Doku: `09-harness.md`
@@ -34,7 +34,7 @@ Stand: **2026-10-23 13:10 (Europe/Berlin)**
   schreibt ebenfalls `<ID>.runNN.log`; `tools/repeat_report.py` vergleicht
   beide Kanäle und wertet die 10 Wiederholungen aus.
 - **v2-Testlauf 2026-10-23:** 420/420 Serial-Logs OK, 10/10 je Eintrag,
-  MIN über alle Wiederholungen identisch (42/42). **V4-Dateilogs fehlen**
+  MIN über alle Wiederholungen identisch (71/71). **V4-Dateilogs fehlen**
   (`Ram Disk:LOGS/` leer); der Warmup wirkt nicht auf die erste echte
   Iteration (Makro wird zweimal expandiert → zwei Codeadressen).
   v1–v4 bleiben Archiv; **v5 ist kanonisch**.
@@ -50,7 +50,7 @@ Stand: **2026-10-23 13:10 (Europe/Berlin)**
 - `MEM-003`/`MEM-004`: Die Sequenzinhalte waren gegenüber den Eintragstiteln
   vertauscht. Die Einträge wurden an die tatsächlich gebauten und gemessenen
   Sequenzen angepasst; Logs, IDs und Messwerte blieben unverändert.
-- Alle 42 Einträge enthalten am Ende den **verbatim gemessenen Code** aus
+- Alle 71 Einträge enthalten am Ende den **verbatim gemessenen Code** aus
   `seq/<ID>.i` (gebaut als `bin/<ID>`).
 
 ### Integritätsprüfung (zuletzt ausgeführt)
@@ -58,8 +58,8 @@ Stand: **2026-10-23 13:10 (Europe/Berlin)**
 ```text
 entries 42
 seq 42
-bins 43   (42 Einträge + SERIAL-PROBE)
-logs 43   (42 Einträge + FUS-001.run1)
+bins 43   (71 Einträge + SERIAL-PROBE)
+logs 43   (71 Einträge + FUS-001.run1)
 parts 0
 measured 42
 minfields 42
@@ -127,7 +127,7 @@ PRM-Mechanismen zu verwerfen, sondern ein ehrlicher Messbefund.
 | `index.md` | alphabetischer Index mit Statusspalte |
 | `V4-ACCESS.md` | **V4-Zugriff:** Windows-ACP, IP, Pfad-Syntax, Troubleshooting |
 | `NEXT-TEST.md` | **nächster Testlauf:** Pipeline-/Cache-Zähler (IEP1–3, BPC/BPW, DCH/DCM) |
-| `01-fusing.md` … `08-antipatterns.md` | 42 Einträge |
+| `01-fusing.md` … `08-antipatterns.md` | 71 Einträge |
 | `09-harness.md` | Harness, UART, Batch, Fallstricke |
 | `harness.asm` | **v2**-Template: Warmup = voller 10×10-Block |
 | `harness-v1.asm` | archivierte v1-Vorlage (Quelle der 42 v1-Logs) |
@@ -149,8 +149,8 @@ PRM-Mechanismen zu verwerfen, sondern ein ehrlicher Messbefund.
 | `measurements/v4-files/` | 420 v4-V4-Dateilogs (identisch mit Serial) |
 | `measurements/v4/REPORT.md` | v4-Auswertung: Dateilog funktioniert, MIN stabil |
 | `measurements/FUS-001.run1.log` | Wiederholungslauf |
-| `RUN-ALL` | AmigaDOS-Batch: 42 Einträge × 10 Läufe, Dateilogs in `LOGS/` |
-| `RUN-ALL-ONCE` | AmigaDOS-Batch: 42 Einträge einmal (schneller Test) |
+| `RUN-ALL` | AmigaDOS-Batch: 71 Einträge × 10 Läufe, Dateilogs in `LOGS/` |
+| `RUN-ALL-ONCE` | AmigaDOS-Batch: 71 Einträge einmal (schneller Test) |
 | `tools/download_logs.sh` | V4-Dateilogs per ACP herunterladen |
 | `tools/repeat_report.py` | 10 Wiederholungen auswerten, V4-/Serial-Logs vergleichen |
 | `tools/` | Build, Guard, Serial-Capture, Log-Prüfer |
@@ -175,7 +175,7 @@ PRM-Mechanismen zu verwerfen, sondern ein ehrlicher Messbefund.
 
 ## Sinnvolle nächste Aufgaben
 
-1. **v5 ist übernommen:** 42 Einträge und `SUMMARY.md` stehen auf v5
+1. **v5 ist übernommen:** 71 Einträge und `SUMMARY.md` stehen auf v5
    (MIN/Median/MAX/AVG + IEP-Spalten); `SUMMARY-v4.md` ist Archiv.
    Bericht: `measurements/V5-REPORT.md`; Tabelle `measurements/PERF-v5.md`.
 2. Core-Revision/Firmware/Takt: PCR-ID/Revision und `ENV:VCoreRev` sind jetzt
@@ -207,7 +207,7 @@ Lies zuerst vollständig:
 3. 68080-db/measurements/SUMMARY.md
 4. 68080-db/09-harness.md
 
-Status: Die 42 Einträge sind mit **Harness v1** auf einer Vampire V4 gemessen.
+Status: Die 71 Einträge sind mit **Harness v1** auf einer Vampire V4 gemessen.
 Die v1-Logs liegen unter 68080-db/measurements/<ID>.log, FUS-001.run1.log ist
 ein separater Wiederholungslauf. Referenz ist MIN; die v1-Baseline (5–41 Takte)
 ist NICHT subtrahierbar. AVG ist ganzzahlig abgeschnitten. Der Serialpfad ist
@@ -232,7 +232,7 @@ V4-Zugriff: Windows-ACP C:\Program Files\ApolloExplorer\acp.exe (aus WSL
 Das Linux-ACP aus WSL funktioniert nicht (NAT). Details: 68080-db/V4-ACCESS.md.
 
 Prüfe vor der ersten Änderung:
-- 42 Einträge, 42 Sequenzen, 42 Logs, 42 Binaries
+- 71 Einträge, 42 Sequenzen, 42 Logs, 42 Binaries
 - keine measurements/*.part
 - tools/check_log.py für alle 42 Logs
 - tools/check_sequences.py

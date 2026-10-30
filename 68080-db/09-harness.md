@@ -1,3 +1,5 @@
+> **Ab 2026-10-30:** Kanonisch ist ausschließlich **Harness v5**. Die alten v1–v4-Daten und Nicht-v5-Artefakte wurden aus dem Arbeitsbestand entfernt. Die historischen Abschnitte unten dokumentieren nur noch die Entwicklung, nicht den aktuellen Messbestand.
+
 # 09 – Mess-Harness: Aufbau, Build und Fallstricke
 
 **Dateien:** [`harness.asm`](harness.asm) (v2-Template),
@@ -257,7 +259,7 @@ implementieren.
 
 **Streuung innerhalb eines Laufs:** `measurements/SUMMARY.md` ergänzt aus den
 100 `RES`-Werten der **v1-Logs** den **Median** (50. Wert), die **Stdabw.**
-(Stichprobe, n−1) und **p95** (Nearest-Rank). In v4 ist MIN bei **42/42**
+(Stichprobe, n−1) und **p95** (Nearest-Rank). Im kanonischen v5-Lauf ist MIN bei **71/71**
 Einträgen über alle 10 Läufe identisch; die erste-10-Kaltstartphase ist
 weg. Die Streuung enthält noch Interrupt-Ausreißer, ist also kein CPU-Jitter
 und sagt nichts über die Streuung zwischen Boots aus.
@@ -420,7 +422,7 @@ Ram Disk:RUN-ALL
 ```
 
 Es wechselt nach `Ram Disk:`, legt `LOGS/` an, löscht alte `LOGS/*.log` und
-ruft **jedes der 42 Programme 10×** auf (420 Läufe). Nach jedem Lauf wird
+ruft **jedes der 71 Programme 10×** auf (710 Läufe). Nach jedem Lauf wird
 `LOGS/<ID>.log` in `LOGS/<ID>.runNN.log` umbenannt. Vorher wird – falls
 vorhanden – `C:VControl SETENV` ausgeführt, damit die `CORE`-Zeile die exakte
 Flash-Core-Revision enthält; `VControl CORE` schreibt zusätzlich die
