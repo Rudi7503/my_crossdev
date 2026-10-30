@@ -467,10 +467,8 @@ Auf dem Apollo 68080 ist extremes oder vollständiges Loop-Unrolling jedoch
     lsr.l   #5,d7           ; Anzahl 32-Byte-Blöcke
     subq.l  #1,d7           ; DBF-Korrektur
 .loop:
-    loadq   (a0)+,d0
-    loadq   (a0)+,d1
-    storeq  d0,(a1)+
-    storeq  d1,(a1)+
+    move16  (a0)+,(a1)+
+    move16  (a0)+,(a1)+
     dbf     d7,.loop
 ```
 

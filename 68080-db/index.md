@@ -119,3 +119,5 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 
 
 - **RGB565-Alpha (separater Golden-Test):** [`23`](23-rgb565-alpha.md)
+
+- **PMULA Full-HD / Load-Einsparung:** [`25`](25-pmula-fullhd.md)

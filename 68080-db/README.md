@@ -53,6 +53,7 @@ Details und Einreichungsanleitung stehen in [`cores/README.md`](cores/README.md)
 | [`22-sprite-alpha-pmula-golden.md`](22-sprite-alpha-pmula-golden.md) | PMULA-Alpha-Golden-Test | 256 Alphas + 10k Zufall + 16/32/64 Sprites, diff=0 |
 | [`23-rgb565-alpha.md`](23-rgb565-alpha.md) | RGB565-Alpha (exakter Skalar-Test) | 256 Alphas + 20k Zufall + 16/32/64, diff=0 |
 | [`24-pmula-unroll-256.md`](24-pmula-unroll-256.md) | PMULA 4×/Memory-VEA + 256×256-Alpha | 1× 8,04 / 4× 8,53 / 4×VEA 2,43 Takte/Pixel |
+| [`25-pmula-fullhd.md`](25-pmula-fullhd.md) | PMULA Full-HD-Alpha + Load-Einsparung | 1× 8,65 / 4×VEA 3,10 Takte/Pixel; 43→119 MB/s |
 
 Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-11350/`](cores/core-11350/).
 Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).

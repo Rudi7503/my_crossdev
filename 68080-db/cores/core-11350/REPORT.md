@@ -10,3 +10,5 @@
 - PMULA 2,008 Takte/Pixel vs. C 198,362 (ca. 98,8x)
 
 - RGB565-Alpha: 256 Alphas, 20.000 Zufallspixel, 16/32/64 Sprites: **diff=0**
+
+- PMULA Full-HD 1920x1080: 1x 8,645 / 4x Memory-VEA 3,103 Takte/Pixel; 43→119 MB/s; diff=0
