@@ -11,9 +11,9 @@ IP="192.168.178.50"
 
 cd "$(dirname "$0")"
 
-"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec2_orig.o ../decoder_2bit.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec2_orig.o ../experiments/decoder_2bit_orig.s
 "$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec2_signed.o ../experiments/decoder_2bit_signed.s
-"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec3_orig.o ../decoder_3bit.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec3_orig.o ../experiments/decoder_3bit_orig.s
 "$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec3_signed.o ../experiments/decoder_3bit_signed.s
 
 # IMPORTANT: Never pass -m68080 with -O2 to m68k-amigaos-gcc (broken moviw.l/cmpiw.l/dbf offsets)

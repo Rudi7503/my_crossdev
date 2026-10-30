@@ -8,9 +8,9 @@ Produktivstand (Core **11350**, PCR 1088/1, VCoreRev 0):
 
 ```bash
 python3 tests/auto_opt.py            # 4-Bit End-to-End (Golden + 100x Repeat)
-bash tests/build_golden_all.sh       # 2/3-Bit Golden + 100x Repeat
-bash tests/run_5_6.sh                # 5/6-Bit Golden + 100x Repeat
-bash tests/run_hybrid.sh             # Alle 15 Modi Golden + Hybrid 100x Repeat
+bash tests/build_golden_all.sh       # 2/3-Bit Golden + 100x Repeat (echte _orig.s)
+bash tests/run_5_6.sh                # 5/6-Bit Golden + 100x Repeat (echte _orig.s)
+bash tests/run_hybrid.sh             # Alle 15 Modi Golden + Hybrid 100x Repeat (echte _orig.s, lokaler Generator)
 ```
 
 Das baut, lädt per ACP hoch, führt per ASH auf der V4 aus und prüft Golden + 100×-Repeat.
@@ -82,3 +82,5 @@ PCR 1088/1, VCoreRev 0**.
 ## Amiga-Fernsteuerung
 
 `Tools/amiga_tool.py` (amiagent 0.13.2, Port 7846) ist der lokale CLI-Bridge; **Autostart aktiv** aus `S:Startup-Sequence`. Token nur lokal, nicht im Git. Kein Cline/API-Key nötig. Details: `Tools/AMIGA-TOOL.md`.
+
+Vergleichsbasis: `tests/ORIGINAL_VS_SIGNED.md` (echte `experiments/*_orig.s`, nicht die signierte Produktion).

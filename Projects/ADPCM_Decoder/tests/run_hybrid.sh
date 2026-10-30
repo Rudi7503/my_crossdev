@@ -9,16 +9,25 @@ ACP="/mnt/c/Program Files/ApolloExplorer/acp.exe"
 ASH="/mnt/c/Program Files/ApolloExplorer/ash.exe"
 IP="192.168.178.50"
 
-python3 "/mnt/c/Users/Papa/.gemini/antigravity/brain/139dd935-3e45-4296-bfe7-1fa3abbeba19/scratch/gen_hybrid.py"
+python3 "$(dirname "$0")/gen_hybrid.py"
 cd "$(dirname "$0")"
 
-"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec32_orig.o ../decoder_3_2ms.s
-"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec42_orig.o ../decoder_4_2ms.s
-"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec53_orig.o ../decoder_5_3ms.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec32_orig.o ../experiments/decoder_3_2ms_orig.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec42_orig.o ../experiments/decoder_4_2ms_orig.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec53_orig.o ../experiments/decoder_5_3ms_orig.s
 
 "$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec32_signed.o ../experiments/decoder_3_2ms_signed.s
 "$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec42_signed.o ../experiments/decoder_4_2ms_signed.s
 "$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec53_signed.o ../experiments/decoder_5_3ms_signed.s
+
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec2_orig.o ../experiments/decoder_2bit_orig.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec2_signed.o ../experiments/decoder_2bit_signed.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec3_orig.o ../experiments/decoder_3bit_orig.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec3_signed.o ../experiments/decoder_3bit_signed.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec5_orig.o ../experiments/decoder_5bit_orig.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec5_signed.o ../experiments/decoder_5bit_signed.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec6_orig.o ../experiments/decoder_6bit_orig.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec6_signed.o ../experiments/decoder_6bit_signed.s
 
 "$CC" -noixemul -O2 -m68020 -m68881 -fno-inline $INC -c golden_all.c -o golden_all.o
 "$CC" -noixemul -O2 -m68020 -m68881 dec2_orig.o dec3_orig.o dec5_orig.o dec6_orig.o dec32_orig.o dec42_orig.o dec53_orig.o golden_all.o -o golden_all_orig -lm

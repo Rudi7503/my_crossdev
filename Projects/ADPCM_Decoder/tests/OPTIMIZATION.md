@@ -478,3 +478,12 @@ Das Erfolgsrezept aus `Fresh9` (vorberechnete `dc.l`-Tabelle mit vorzeichenbehaf
 - **Wichtiger ABI-Bugfix in `decoder_5_3ms.s`:** `ADPCM_Decoder.c` (Zeile 696) übergibt `block_cnt = 1` für einen 15-Byte-Block (15 M/S-Paare). Das ursprüngliche `decoder_5_3ms.s` interpretierte `block_cnt` jedoch als Einzelbyte-Paarzähler (sodass `1` nur 1 Paar statt 15 Paaren dekodierte). In `decoder_5_3ms.s` (und `experiments/decoder_5_3ms_signed.s`) verarbeitet jede `block_cnt`-Iteration nun wie bei allen anderen Decodern einen kompletten 15-Byte-Block (3× `movex.l` + 3× `move.b` = 15 Paare).
 - **Makefile-Fix:** `C_OPTIONS` im Haupt-`Makefile` wurde von `-m68080` auf `-m68020` umgestellt (während `vasm` weiterhin `-m68080` nutzt), um den GCC-6.5.0-Codegen-Bug im Hauptprogramm auszuschließen.
 - **Ergebnis:** Alle 18 Modi in `golden_all` (je 512 Blöcke) **PASS**, alle 100×-Repeat-Tests (`repeat2`, `repeat3`, `repeat5`, `repeat6`, `repeat_hybrid`) **PASS** mit **38,1 % bis 60,3 % weniger Taktzyklen** (siehe Gesamttabelle oben). Alle 17 Real-Audio-Hörtests (je 10,00 s auf der V4) **Sound OK** (siehe `tests/AUDIO_COMPARE.md`).
+
+
+## Korrigierte Original-vs-Signed-Messung (2026-10-30)
+
+Die Skripte verglichen zuvor die signierte Produktion als „orig“. Nach Fix auf
+`experiments/decoder_*_orig.s`: 2-Bit 38–46 %, 3-Bit 38–44 %, 5-Bit 51–59 %,
+6-Bit 50–57 %, Hybrid 39,7–48,2 % weniger Zyklen. Alle 15 Golden-Modi PASS.
+Details: `tests/ORIGINAL_VS_SIGNED.md`. 5-Bit-Signed-Ausreißer (650 statt 538)
+ist als offene Layout-/Messfrage dokumentiert.

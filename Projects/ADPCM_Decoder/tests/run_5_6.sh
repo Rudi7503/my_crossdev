@@ -11,9 +11,9 @@ IP="192.168.178.50"
 
 cd "$(dirname "$0")"
 
-"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec5_orig.o ../decoder_5bit.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec5_orig.o ../experiments/decoder_5bit_orig.s
 "$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec5_signed.o ../experiments/decoder_5bit_signed.s
-"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec6_orig.o ../decoder_6bit.s
+"$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec6_orig.o ../experiments/decoder_6bit_orig.s
 "$VASM" -quiet -Fhunk -kick1hunks -m68080 -opt-speed -o dec6_signed.o ../experiments/decoder_6bit_signed.s
 
 # Always compile C test harnesses with -m68020 -O2 (never -m68080 -O2!)
