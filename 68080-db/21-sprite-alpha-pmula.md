@@ -49,3 +49,5 @@ zusätzlicher Multiplikationsschritt nötig; `PMULA` allein reicht dann nicht.
 > Die Sequenz misst die **PMULA-Instruktion** auf Scratch-Daten. Sie ist kein
 > vollständiger Alpha-Blend-Suite-Test; ein pixelgenauer C-/ASM-Golden-Test
 > für beliebige Alpha-Werte steht noch aus.
+
+**Bit-exakter Golden-Test:** [`22-sprite-alpha-pmula-golden.md`](22-sprite-alpha-pmula-golden.md) – 256 Alpha-Werte, 10.000 Zufallsvektoren, 16/32/64-Sprites, `diff=0`.

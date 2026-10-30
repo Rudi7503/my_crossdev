@@ -50,6 +50,7 @@ Details und Einreichungsanleitung stehen in [`cores/README.md`](cores/README.md)
 | [`19-sprite-blit.md`](19-sprite-blit.md) | 2D Sprite Blitting & 256-Bit Aligned Rectangle Copy / Tiling | 84/84 Tests (Single + Full-Screen Tiled 1920x1080 Aligned & 1-Pixel Offset, move16, Peeling, 219 MB/s) |
 | [`20-sprite-transparency.md`](20-sprite-transparency.md) | AMMX Transparent Sprite Blitting & PRM Store Variants | 1 (BLT-002: Color-Key + storeilm; Rawlogs) |
 | [`21-sprite-alpha-pmula.md`](21-sprite-alpha-pmula.md) | Sprite-Alpha-Blending mit PMULA | 1 (BLT-003: premultiplied Alpha, 5 Takte MIN) |
+| [`22-sprite-alpha-pmula-golden.md`](22-sprite-alpha-pmula-golden.md) | PMULA-Alpha-Golden-Test | 256 Alphas + 10k Zufall + 16/32/64 Sprites, diff=0 |
 
 Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-11350/`](cores/core-11350/).
 Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).
