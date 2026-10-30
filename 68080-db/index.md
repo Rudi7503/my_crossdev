@@ -29,7 +29,8 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`ANTI-003`](08-antipatterns.md) | Word-Updates statt Long-Updates | `08-antipatterns.md` | gemessen |
 | [`ANTI-004`](08-antipatterns.md) | Zwei mehrzyklische Instruktionen auf Pipe 1 erwarten | `08-antipatterns.md` | gemessen |
 | [`ANTI-005`](08-antipatterns.md) | Unausgerichtete Long-Writes | `08-antipatterns.md` | gemessen |
-| [`ANTI-006`](08-antipatterns.md), [`ANTI-007`](08-antipatterns.md) | TOUCH unmittelbar vor dem Load | `08-antipatterns.md` | gemessen |
+| [`ANTI-006`](08-antipatterns.md) | TOUCH unmittelbar vor dem Load | `08-antipatterns.md` | gemessen |
+| [`ANTI-007`](08-antipatterns.md) | Blindes Loop-Unrolling / flacher Code | `08-antipatterns.md` | gemessen |
 | [`BND-001`](02-bonding.md) | Abhängiges MOVEQ + ADD mit zwei Zielen bonden | `02-bonding.md` | gemessen |
 | [`BND-002`](02-bonding.md) | Gleiches Ziel ist Fusing, nicht Bonding | `02-bonding.md` | gemessen |
 | [`BND-003`](02-bonding.md) | Zwei unabhängige ALU-Instruktionen sind normales Superscalar | `02-bonding.md` | gemessen |
@@ -113,3 +114,5 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - v5-Dateilogs: `measurements/v5-files/<ID>.runNN.log` (740, mit `PERF`)
 - Build-Artefakte: `build-v5/<ID>.asm`, `bin-v5/<ID>`
 
+
+- **RGB565-Alpha (separater Golden-Test):** [`23`](23-rgb565-alpha.md)

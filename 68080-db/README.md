@@ -51,6 +51,7 @@ Details und Einreichungsanleitung stehen in [`cores/README.md`](cores/README.md)
 | [`20-sprite-transparency.md`](20-sprite-transparency.md) | AMMX Transparent Sprite Blitting & PRM Store Variants | 1 (BLT-002: Color-Key + storeilm; Rawlogs) |
 | [`21-sprite-alpha-pmula.md`](21-sprite-alpha-pmula.md) | Sprite-Alpha-Blending mit PMULA | 1 (BLT-003: premultiplied Alpha, 5 Takte MIN) |
 | [`22-sprite-alpha-pmula-golden.md`](22-sprite-alpha-pmula-golden.md) | PMULA-Alpha-Golden-Test | 256 Alphas + 10k Zufall + 16/32/64 Sprites, diff=0 |
+| [`23-rgb565-alpha.md`](23-rgb565-alpha.md) | RGB565-Alpha (exakter Skalar-Test) | 256 Alphas + 20k Zufall + 16/32/64, diff=0 |
 
 Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-11350/`](cores/core-11350/).
 Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).
@@ -94,7 +95,7 @@ Jeder Eintrag trennt deshalb sauber:
 
 - **Status** – Messstatus,
 - **Beleg** – Literaturquelle,
-- **Messergebnis** – Rohdaten aus `measurements/<ID>.log` (740/740 vorhanden),
+- **Messergebnis** – Rohdaten aus `measurements/<ID>.log` (750/750 vorhanden),
 - **Literaturwert** – was PRM/Wiki aussagen (kein Messwert).
 
 ## Schnellstart
@@ -187,18 +188,18 @@ Der Guard prüft die Sequenzen statisch. Ein Verstoß ist ein Build-Fehler, kein
 
 | Werkzeug | Zweck |
 |---|---|
-| `tools/build_all.sh` | alle 74 Einträge mit vasm bauen |
+| `tools/build_all.sh` | alle 75 Einträge mit vasm bauen |
 | `tools/check_sequences.py` | Register-/Label-Guard für Sequenzen |
 | `tools/serial_capture.py` | seriellen Strom mitschneiden; schreibt `<ID>.runNN.log` (kein Überschreiben bei Wiederholungen) |
 | `tools/download_logs.sh` | V4-Dateilogs aus `Ram Disk:LOGS` per ACP herunterladen |
 | `tools/repeat_report.py` | 10 Wiederholungen je Eintrag auswerten; optional V4- und Serial-Logs vergleichen |
 | `tools/check_log.py` | Log-Format, `CORE`-Zeile und SUMMARY gegen RES prüfen |
-| `RUN-ALL` | AmigaDOS-Batch: jedes der 74 Programme 10× (740 Läufe), Dateilog in `Ram Disk:LOGS` |
+| `RUN-ALL` | AmigaDOS-Batch: jedes der 74 Programme 10× (750 Läufe), Dateilog in `Ram Disk:LOGS` |
 | `RUN-ALL-ONCE` | Einzellauf aller 74 Programme (für schnelle Tests) |
 
 ## Reproduzierbarkeit und Grenzen
 
-- **Hardware:** Alle 74 Einträge wurden mit Harness v5 auf einer Vampire V4
+- **Hardware:** Alle 75 Einträge wurden mit Harness v5 auf einer Vampire V4
   gemessen (10 × 100 Läufe, COM9, 115200 8N1). Die Streuung **über die 10
   Läufe** (Median, Stdabw., p95) steht in
   [`cores/core-11350/CYCLE-SUMMARY.md`](cores/core-11350/CYCLE-SUMMARY.md); sie sagt nichts über

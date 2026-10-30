@@ -1,0 +1,13 @@
+Connecting to 192.168.178.50 (192.168.178.50)...
+Connected.
+RGB565 ALPHA GOLDEN TEST
+CORE;AC68080;11350;PCR1088/1;VCoreRev0;92MHz
+ALPHA_SWEEP;256;fails=0
+RANDOM;20000;fails=0
+SPRITE;16x16;diff=0
+SPRITE;32x32;diff=0
+SPRITE;64x64;diff=0
+EDGE;alpha=0;src=1234;dst=abcd;out=abcd
+EDGE;alpha=128;src=1234;dst=abcd;out=5af1
+EDGE;alpha=255;src=1234;dst=abcd;out=1234
+RESULT;PASS;fails=0
