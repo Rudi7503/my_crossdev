@@ -231,3 +231,8 @@ Die vollständigen 28/28-/56/56-Suite-Zahlen oben stammen aus der separaten
 | ID | run01 … run10 |
 |---|---|
 | `BLT-002` | [01](cores/core-11350/logs/BLT-002.run01.log) [02](cores/core-11350/logs/BLT-002.run02.log) [03](cores/core-11350/logs/BLT-002.run03.log) [04](cores/core-11350/logs/BLT-002.run04.log) [05](cores/core-11350/logs/BLT-002.run05.log) [06](cores/core-11350/logs/BLT-002.run06.log) [07](cores/core-11350/logs/BLT-002.run07.log) [08](cores/core-11350/logs/BLT-002.run08.log) [09](cores/core-11350/logs/BLT-002.run09.log) [10](cores/core-11350/logs/BLT-002.run10.log) |
+
+
+## Vollständiges Suite-Rohlog
+
+- [`SpriteTransAMMX.log`](cores/core-11350/suites/SpriteTransAMMX.log) – Profiling & Hardware-Verifikation erfolgreich

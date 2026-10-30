@@ -5,3 +5,6 @@
 - Harness v5, Core Apollo **11350**, PCR 1088/1, VCoreRev 0
 - Takt: **92 MHz**
 - Alte v1–v4-/adpcm-Daten wurden archiviert und aus dem Arbeitsbestand entfernt.
+
+- PMULA-Alpha-Golden: 256 Alpha-Werte, 10.000 Zufallsvektoren, 16/32/64-Sprites: **diff=0**
+- PMULA 2,008 Takte/Pixel vs. C 198,362 (ca. 98,8x)

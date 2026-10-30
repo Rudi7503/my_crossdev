@@ -270,3 +270,9 @@ diese Einzelsequenz.
 | ID | run01 … run10 |
 |---|---|
 | `BLT-001` | [01](cores/core-11350/logs/BLT-001.run01.log) [02](cores/core-11350/logs/BLT-001.run02.log) [03](cores/core-11350/logs/BLT-001.run03.log) [04](cores/core-11350/logs/BLT-001.run04.log) [05](cores/core-11350/logs/BLT-001.run05.log) [06](cores/core-11350/logs/BLT-001.run06.log) [07](cores/core-11350/logs/BLT-001.run07.log) [08](cores/core-11350/logs/BLT-001.run08.log) [09](cores/core-11350/logs/BLT-001.run09.log) [10](cores/core-11350/logs/BLT-001.run10.log) |
+
+
+## Vollständige Suite-Rohlogs
+
+- [`SpriteBlit.log`](cores/core-11350/suites/SpriteBlit.log) – **28/28 PASS**
+- [`TiledBlit.log`](cores/core-11350/suites/TiledBlit.log) – **56/56 PASS**
