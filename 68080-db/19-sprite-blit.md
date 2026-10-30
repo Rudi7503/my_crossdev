@@ -211,7 +211,37 @@ Verglichen werden vier Implementierungsstrategien:
 
 ---
 
-## 4. Challenge: Beat Our 2D Blit & Tiling Cycles!
+## 4. Pipeline-Auslastung & Superskalarität (Harness-v5 Methodik: IEP1, IEP2, IEP3)
+
+Gemessen auf **Vampire V4 Hardware** mit den hardwarenahen Performance-Zählern der 68080 (`IEP1` = Decoder Anton, `IEP2` = Decoder Bruno, `IEP3` = Decoder Cesar, `DCH`/`DCM` = Daten-Cache):
+
+### Farbtiefe: 32-Bit ARGB (Stride 7680 Bytes)
+| Größe | Routine | Zyklen (CCC) | Befehle gesamt | IPC | Anton (IEP1) | Bruno (IEP2) | Cesar (IEP3) | Cache-Verhalten |
+|---|---|---|---|---|---|---|---|---|
+| **8×8** | `move16` | 303 | 218 | 0,72 | 90,8 % | 9,2 % | 0,0 % | L1-Cache |
+| | **AMMX** | **296** | 275 | **0,93** | 86,5 % | **13,5 %** | 0,0 % | L1-Cache |
+| | `m68k` | 301 | 275 | 0,91 | 92,4 % | 7,6 % | 0,0 % | L1-Cache |
+| **32×32** | `move16` | 2.103 | 1.179 | 0,56 | 94,1 % | 5,9 % | 0,0 % | L1-Cache |
+| | **AMMX** | **2.014** | 2.011 | **1,00** | 83,8 % | **16,2 %** | 0,0 % | L1-Cache |
+| | `m68k` | 2.318 | 2.079 | 0,90 | 96,5 % | 3,5 % | 0,0 % | L1-Cache |
+| **128×128** | `move16` | 24.052 | 10.811 | 0,45 | 97,6 % | 2,4 % | 0,0 % | L2-Cache |
+| | **AMMX** | **22.727** | 23.325 | **1,03** | 81,3 % | **18,7 %** | 0,0 % | L2-Cache |
+| | `m68k` | 25.760 | 23.636 | 0,92 | 98,8 % | 1,2 % | 0,0 % | L2-Cache |
+| **512×512** | `move16` | 504.123 | 144.288 | 0,29 | 99,1 % | 0,9 % | 0,0 % | DDR-Buslimit |
+| | `AMMX` | 504.365 | 341.294 | 0,68 | 80,4 % | **19,6 %** | 0,0 % | DDR-Buslimit |
+| | **m68k** | **491.640** | 341.302 | 0,69 | 99,6 % | 0,4 % | 0,0 % | DDR-Buslimit |
+
+### Erkenntnisse zur Pipeline-Optimierung:
+1. **Warum `move16` fast nur Anton (IEP1) nutzt:**
+   `move16` bewegt mit einem einzelnen Befehl 16 Bytes. Es spart dadurch über 50 % der Befehlsanzahl ein (z. B. 10.811 Befehle vs. 23.325 bei AMMX). Da `move16` jedoch ein mehrzyklischer Speicherburst-Befehl ist, belegt er das Speicherinterface exklusiv und läuft zu > 90–99 % ausschließlich auf Decoder Anton (IEP1).
+2. **Warum AMMX bei 8×8 bis 128×128 noch schneller ist als `move16`:**
+   AMMX (`load`/`store` mit `e0–e3`) nutzt die zweite Pipeline **Bruno (IEP2) zu bis zu 19,6 %** aus! Durch die echte 2-Wege-Superskalarität erreicht AMMX einen **IPC von 1,00 bis 1,03** (mehr als 1 Befehl pro Takt) und schlägt `move16` bei 128×128 (22.727 Takte vs. 24.052 Takte).
+3. **Warum bei 512×512 der DDR-Bus limitiert:**
+   Bei 512×512 @ 32-Bit (1 MB Daten) bricht die IPC bei `move16` auf **0,29** ein. Der Speicherbus ist zu 100 % ausgelastet (~177 MB/s physikalisches DDR3-Limit der V4); die CPU-Pipelines verbringen die meiste Zeit wartend auf den DDR-Controller.
+
+---
+
+## 5. Challenge: Beat Our 2D Blit & Tiling Cycles!
 
 Können Sie unsere Bestmarken für 256-Bit ausgerichtetes Sprite-Blitting und Tiling auf einer Vampire V4 Standalone (Core 1088/1, 85 MHz) unterbieten?
 
