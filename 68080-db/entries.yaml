@@ -1,0 +1,472 @@
+version: 1
+database: 68080-db
+harness: harness-v5.asm
+canonical_core:
+  apollo_core: 11350
+  pcr: 1088/1
+  vcore_rev: 0
+  clock_mhz: 92
+entries:
+- id: AMX-001
+  title: 64-Bit-LOAD/STORE statt zwei 32-Bit-Moves
+  doc: 03-ammx.md
+  seq: seq/AMX-001.i
+  logs: 10
+  status: gemessen
+- id: AMX-002
+  title: Acht Byte-Additionen mit PADDB
+  doc: 03-ammx.md
+  seq: seq/AMX-002.i
+  logs: 10
+  status: gemessen
+- id: AMX-003
+  title: Sättigende unsigned Byte-Adds mit PADDUSB
+  doc: 03-ammx.md
+  seq: seq/AMX-003.i
+  logs: 10
+  status: gemessen
+- id: AMX-004
+  title: Branchless Byte-Auswahl mit PCMPGTB + BSEL
+  doc: 03-ammx.md
+  seq: seq/AMX-004.i
+  logs: 10
+  status: gemessen
+- id: AMX-005
+  title: Chunky-to-Planar mit C2P
+  doc: 03-ammx.md
+  seq: seq/AMX-005.i
+  logs: 10
+  status: gemessen
+- id: AMX-006
+  title: 32-Bit-ARGB zu RGB565 mit PACK3216
+  doc: 03-ammx.md
+  seq: seq/AMX-006.i
+  logs: 10
+  status: gemessen
+- id: AMX-007
+  title: Vier 16-Bit-Lane-Additionen mit PADDW
+  doc: 03-ammx.md
+  seq: seq/AMX-007.i
+  logs: 10
+  status: gemessen
+- id: AMX-008
+  title: 16-Bit-Lane-Max mit PCMPGTW + BSEL
+  doc: 03-ammx.md
+  seq: seq/AMX-008.i
+  logs: 10
+  status: gemessen
+- id: AMX-009
+  title: 8-Byte Parallele Mittelwertbildung mit PAVGB (Half-Pel MC)
+  doc: 03-ammx.md
+  seq: seq/AMX-009.i
+  logs: 10
+  status: gemessen
+- id: AMX-010
+  title: PACKSSWB-Emulation (Signed Saturation Word zu Byte mit Bias)
+  doc: 03-ammx.md
+  seq: seq/AMX-010.i
+  logs: 10
+  status: gemessen
+- id: AMX-011
+  title: BFLYW Core-Kompatibilität & Exception-Status vs. PADDW+PSUBW
+  doc: 03-ammx.md
+  seq: seq/AMX-011.i
+  logs: 10
+  status: gemessen
+- id: BLT-001
+  title: '2D Sprite Blitting: 256-Bit Copy (move16)'
+  doc: 19-sprite-blit.md
+  seq: seq/BLT-001.i
+  logs: 10
+  status: gemessen
+- id: BLT-002
+  title: 'Transparent Sprite: Color-Key + storeilm'
+  doc: 20-sprite-transparency.md
+  seq: seq/BLT-002.i
+  logs: 10
+  status: gemessen
+- id: BLT-003
+  title: Premultiplied-Alpha-Blending mit PMULA
+  doc: 21-sprite-alpha-pmula.md
+  seq: seq/BLT-003.i
+  logs: 10
+  status: gemessen
+- id: BLT-004
+  title: PMULA 4× (Register-Loads)
+  doc: 24-pmula-unroll-256.md
+  seq: seq/BLT-004.i
+  logs: 10
+  status: gemessen
+- id: BLT-005
+  title: PMULA 4× Memory-VEA (Load gespart)
+  doc: 24-pmula-unroll-256.md
+  seq: seq/BLT-005.i
+  logs: 10
+  status: gemessen
+- id: ANTI-001
+  title: NOP zwischen MOVE und abhängigem ADD
+  doc: 08-antipatterns.md
+  seq: seq/ANTI-001.i
+  logs: 10
+  status: gemessen
+- id: ANTI-002
+  title: 68060-Scheduling durch Einschub einer unabhängigen Instruktion
+  doc: 08-antipatterns.md
+  seq: seq/ANTI-002.i
+  logs: 10
+  status: gemessen
+- id: ANTI-003
+  title: Word-Updates statt Long-Updates
+  doc: 08-antipatterns.md
+  seq: seq/ANTI-003.i
+  logs: 10
+  status: gemessen
+- id: ANTI-004
+  title: Zwei mehrzyklische Instruktionen auf Pipe 1 erwarten
+  doc: 08-antipatterns.md
+  seq: seq/ANTI-004.i
+  logs: 10
+  status: gemessen
+- id: ANTI-005
+  title: Unausgerichtete Long-Writes
+  doc: 08-antipatterns.md
+  seq: seq/ANTI-005.i
+  logs: 10
+  status: gemessen
+- id: ANTI-006
+  title: TOUCH unmittelbar vor dem Load
+  doc: 08-antipatterns.md
+  seq: seq/ANTI-006.i
+  logs: 10
+  status: gemessen
+- id: ANTI-007
+  title: Blindes Loop-Unrolling / flacher Code
+  doc: 08-antipatterns.md
+  seq: seq/ANTI-007.i
+  logs: 10
+  status: gemessen
+- id: BND-001
+  title: Abhängiges MOVEQ + ADD mit zwei Zielen bonden
+  doc: 02-bonding.md
+  seq: seq/BND-001.i
+  logs: 10
+  status: gemessen
+- id: BND-002
+  title: Gleiches Ziel ist Fusing, nicht Bonding
+  doc: 02-bonding.md
+  seq: seq/BND-002.i
+  logs: 10
+  status: gemessen
+- id: BND-003
+  title: Zwei unabhängige ALU-Instruktionen sind normales Superscalar
+  doc: 02-bonding.md
+  seq: seq/BND-003.i
+  logs: 10
+  status: gemessen
+- id: BND-004
+  title: MOVEM belegt Pipe 1 – unabhängige ALU daneben legen
+  doc: 02-bonding.md
+  seq: seq/BND-004.i
+  logs: 10
+  status: gemessen
+- id: BND-005
+  title: Drei unabhängige ALU-Instruktionen auf Drei-Pipe-Cores
+  doc: 02-bonding.md
+  seq: seq/BND-005.i
+  logs: 10
+  status: gemessen
+- id: DCT-001
+  title: 1D 8-Punkt Float DCT (FPU Single-Precision MACs)
+  doc: 14-dct.md
+  seq: seq/DCT-001.i
+  logs: 10
+  status: gemessen
+- id: DCT-002
+  title: 1D 8-Punkt Fixed-Point DCT (Q1.15 Skalar MACs)
+  doc: 14-dct.md
+  seq: seq/DCT-002.i
+  logs: 10
+  status: gemessen
+- id: DCT-003
+  title: 1D 8-Punkt Fixed-Point DCT 2-Punkt Kern (AMMX 2-Wege Reduktion)
+  doc: 14-dct.md
+  seq: seq/DCT-003.i
+  logs: 10
+  status: gemessen
+- id: DCT-004
+  title: 4x4 Matrix-Transposition (16-Bit AMMX SIMD vperm)
+  doc: 14-dct.md
+  seq: seq/DCT-004.i
+  logs: 10
+  status: gemessen
+- id: DCT-005
+  title: 1D 8-Punkt Fast Float DCT (Loeffler FPU-Kern)
+  doc: 14-dct.md
+  seq: seq/DCT-005.i
+  logs: 10
+  status: gemessen
+- id: DCT-006
+  title: 1D 8-Punkt Fast Fixed-Point DCT (Loeffler AMMX SIMD-Kern)
+  doc: 14-dct.md
+  seq: seq/DCT-006.i
+  logs: 10
+  status: gemessen
+- id: DCT-007
+  title: 8x8 16-Bit Matrix-Transposition (AMMX SIMD vperm)
+  doc: 14-dct.md
+  seq: seq/DCT-007.i
+  logs: 10
+  status: gemessen
+- id: DCT-008
+  title: 8x8 Block-Quantisierung (16 Quadwords AMMX Q1.15 pmulh)
+  doc: 14-dct.md
+  seq: seq/DCT-008.i
+  logs: 10
+  status: gemessen
+- id: DCT-009
+  title: MP3 18-Sample 50% Overlap-Add Kernel (AMMX SIMD paddw)
+  doc: 15-mdct.md
+  seq: seq/DCT-009.i
+  logs: 10
+  status: gemessen
+- id: DCT-010
+  title: JPEG Fused Transpose + Level-Shift (+128) + PACKUSWB 8-Bit Store Kernel
+  doc: 16-jpeg.md
+  seq: seq/DCT-010.i
+  logs: 10
+  status: gemessen
+- id: DCT-011
+  title: MPEG Video Fused MC Transpose + Ref Unpack + Residual Add + PACKUSWB Store
+  doc: 17-mpeg.md
+  seq: seq/DCT-011.i
+  logs: 10
+  status: gemessen
+- id: DCT-012
+  title: H.264 4x4 2D Hadamard Transform (AMMX SIMD Butterfly + VPERM Transposition)
+  doc: 18-h264.md
+  seq: seq/DCT-012.i
+  logs: 10
+  status: gemessen
+- id: FUS-001
+  title: MOVE.L + ADD.L zur 3-Operanden-Fusion
+  doc: 01-fusing.md
+  seq: seq/FUS-001.i
+  logs: 10
+  status: gemessen
+- id: FUS-002
+  title: MOVE.L + NEG.L
+  doc: 01-fusing.md
+  seq: seq/FUS-002.i
+  logs: 10
+  status: gemessen
+- id: FUS-003
+  title: MOVEQ + OR.L
+  doc: 01-fusing.md
+  seq: seq/FUS-003.i
+  logs: 10
+  status: gemessen
+- id: FUS-004
+  title: Zwei MOVE.L (An)+,(Am)+ werden zu einem 64-Bit-Move
+  doc: 01-fusing.md
+  seq: seq/FUS-004.i
+  logs: 10
+  status: gemessen
+- id: FUS-005
+  title: Zwei CLR.L (An)+ werden zu einem Quad-Clear
+  doc: 01-fusing.md
+  seq: seq/FUS-005.i
+  logs: 10
+  status: gemessen
+- id: FFT-001
+  title: 32-Bit Float FFT Schmetterling (FPU Single Precision)
+  doc: 13-fft.md
+  seq: seq/FFT-001.i
+  logs: 10
+  status: gemessen
+- id: FFT-002
+  title: 16-Bit Fixed-Point FFT Schmetterling (Q1.15 Skalar)
+  doc: 13-fft.md
+  seq: seq/FFT-002.i
+  logs: 10
+  status: gemessen
+- id: FFT-003
+  title: 16-Bit Fixed-Point FFT Doppel-Schmetterling (AMMX SIMD)
+  doc: 13-fft.md
+  seq: seq/FFT-003.i
+  logs: 10
+  status: gemessen
+- id: FFT-004
+  title: 16-Bit Fixed-Point FFT Stufe 1 Schmetterling (AMMX SIMD Vektorisiert)
+  doc: 13-fft.md
+  seq: seq/FFT-004.i
+  logs: 10
+  status: gemessen
+- id: FFT-006
+  title: 16-Bit Fixed-Point FFT Stufe 2 Schmetterling (AMMX SIMD Vektorisiert, W0=1,
+    W1=-i)
+  doc: 13-fft.md
+  seq: seq/FFT-006.i
+  logs: 10
+  status: gemessen
+- id: FFT-005
+  title: 16-Bit Fixed-Point Tabellen-Bitreversal Swap-Paar
+  doc: 13-fft.md
+  seq: seq/FFT-005.i
+  logs: 10
+  status: gemessen
+- id: FIX-001
+  title: 2x2 Matrix-Multiplikation (16-Bit Fixed-Point AMMX SIMD)
+  doc: 12-matrix.md
+  seq: seq/FIX-001.i
+  logs: 10
+  status: gemessen
+- id: FIX-002
+  title: 3x3 Matrix-Multiplikation (16-Bit Fixed-Point AMMX SIMD)
+  doc: 12-matrix.md
+  seq: seq/FIX-002.i
+  logs: 10
+  status: gemessen
+- id: FIX-003
+  title: 4x4 Matrix-Multiplikation (16-Bit Fixed-Point AMMX SIMD)
+  doc: 12-matrix.md
+  seq: seq/FIX-003.i
+  logs: 10
+  status: gemessen
+- id: MEM-001
+  title: Zwei Long-Writes an einer Quad-Grenze ausrichten
+  doc: 06-memory.md
+  seq: seq/MEM-001.i
+  logs: 10
+  status: gemessen
+- id: MEM-002
+  title: TOUCH mit 12–15 Takten Vorlauf
+  doc: 06-memory.md
+  seq: seq/MEM-002.i
+  logs: 10
+  status: gemessen
+- id: MEM-003
+  title: Sequentielle Loads lösen den Auto-Prefetch aus
+  doc: 06-memory.md
+  seq: seq/MEM-003.i
+  logs: 10
+  status: gemessen
+- id: MEM-004
+  title: 32-Byte-Burst mit acht Long-Loads füllen
+  doc: 06-memory.md
+  seq: seq/MEM-004.i
+  logs: 10
+  status: gemessen
+- id: MEM-005
+  title: 64-Bit-Load/Store statt zweier 32-Bit-Zugriffe
+  doc: 06-memory.md
+  seq: seq/MEM-005.i
+  logs: 10
+  status: gemessen
+- id: MAT-001
+  title: 2x2 Matrix-Multiplikation (FPU Single Precision)
+  doc: 12-matrix.md
+  seq: seq/MAT-001.i
+  logs: 10
+  status: gemessen
+- id: MAT-002
+  title: 3x3 Matrix-Multiplikation (FPU Single Precision)
+  doc: 12-matrix.md
+  seq: seq/MAT-002.i
+  logs: 10
+  status: gemessen
+- id: MAT-003
+  title: 4x4 Matrix-Multiplikation (FPU Single Precision)
+  doc: 12-matrix.md
+  seq: seq/MAT-003.i
+  logs: 10
+  status: gemessen
+- id: PAT-001
+  title: Kopierschleife mit 16 Byte pro Iteration
+  doc: 07-patterns.md
+  seq: seq/PAT-001.i
+  logs: 10
+  status: gemessen
+- id: PAT-002
+  title: Clear-Schleife mit 8 Byte pro Iteration
+  doc: 07-patterns.md
+  seq: seq/PAT-002.i
+  logs: 10
+  status: gemessen
+- id: PAT-003
+  title: Zeiger in der EA-Einheit fortschreiben
+  doc: 07-patterns.md
+  seq: seq/PAT-003.i
+  logs: 10
+  status: gemessen
+- id: PAT-004
+  title: Branchless Byte-Blend mit AMMX
+  doc: 07-patterns.md
+  seq: seq/PAT-004.i
+  logs: 10
+  status: gemessen
+- id: PAT-005
+  title: 32-Byte-Kopierburst pro Iteration
+  doc: 07-patterns.md
+  seq: seq/PAT-005.i
+  logs: 10
+  status: gemessen
+- id: REG-001
+  title: E-Register als 64-Bit-Speicher – aber nicht als Allzweck-ALU
+  doc: 04-register.md
+  seq: seq/REG-001.i
+  logs: 10
+  status: gemessen
+- id: REG-002
+  title: B-Register nur mit den erlaubten Legacy-Formen
+  doc: 04-register.md
+  seq: seq/REG-002.i
+  logs: 10
+  status: gemessen
+- id: REG-003
+  title: Long/Quad-Updates statt Byte/Word-Merges
+  doc: 04-register.md
+  seq: seq/REG-003.i
+  logs: 10
+  status: gemessen
+- id: REG-004
+  title: Adressarithmetik in der EA-Einheit mit LEA
+  doc: 04-register.md
+  seq: seq/REG-004.i
+  logs: 10
+  status: gemessen
+- id: REG-005
+  title: Keine 3-Operanden-Syntax erzwingen
+  doc: 04-register.md
+  seq: seq/REG-005.i
+  logs: 10
+  status: gemessen
+- id: TIM-001
+  title: Division durch eine Zweierpotenz durch Shift ersetzen
+  doc: 05-timing.md
+  seq: seq/TIM-001.i
+  logs: 10
+  status: gemessen
+- id: TIM-002
+  title: Adresse mit LEA erzeugen, nicht über ALU->EA
+  doc: 05-timing.md
+  seq: seq/TIM-002.i
+  logs: 10
+  status: gemessen
+- id: TIM-003
+  title: EA->EA-Ketten haben keine Latenz
+  doc: 05-timing.md
+  seq: seq/TIM-003.i
+  logs: 10
+  status: gemessen
+- id: TIM-004
+  title: Fünf Register mit MOVEM statt fünf MOVE.L
+  doc: 05-timing.md
+  seq: seq/TIM-004.i
+  logs: 10
+  status: gemessen
+- id: TIM-005
+  title: MOVE16 ist vier Takte – nicht automatisch schneller
+  doc: 05-timing.md
+  seq: seq/TIM-005.i
+  logs: 10
+  status: gemessen

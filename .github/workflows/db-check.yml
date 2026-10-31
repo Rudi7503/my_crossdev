@@ -30,6 +30,9 @@ jobs:
       - name: Documentation and link consistency
         working-directory: 68080-db
         run: python3 tools/check_docs.py
+      - name: Manifest consistency
+        working-directory: 68080-db
+        run: python3 tools/check_manifest.py
       - name: Validate all tracked v5 logs
         working-directory: 68080-db
         run: python3 tools/check_log.py cores/core-11350/logs/*.log

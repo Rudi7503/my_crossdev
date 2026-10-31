@@ -21,6 +21,9 @@ add v1–v4 data.
 
 ## 2. Read before changing anything
 
+- [`entries.yaml`](entries.yaml) – maschinenlesbares Manifest
+- [`EXTERNAL-V4.md`](EXTERNAL-V4.md) – Messung auf einer fremden V4
+
 - [`TOOLCHAIN.md`](TOOLCHAIN.md)
 - [`templates/sequence.i`](templates/sequence.i)
 - [`templates/ENTRY.md`](templates/ENTRY.md)
@@ -192,6 +195,7 @@ measurement:
 cd 68080-db
 python3 tools/check_sequences.py seq/
 python3 tools/check_docs.py
+python3 tools/check_manifest.py
 python3 tools/check_log.py measurements/v5-files/<ID>.run01.log
 python3 tools/repeat_report.py measurements/v5-files
 python3 tools/perf_report.py measurements/v5-files

@@ -110,7 +110,7 @@ Jeder Eintrag trennt deshalb sauber:
 
 ## Schnellstart
 
-Toolchain und vasm: [`TOOLCHAIN.md`](TOOLCHAIN.md). Entry-/Sequence-Vorlagen: [`templates/`](templates/).
+Toolchain und vasm: [`TOOLCHAIN.md`](TOOLCHAIN.md). Entry-/Sequence-Vorlagen: [`templates/`](templates/). Maschinenlesbares Manifest: [`entries.yaml`](entries.yaml). Externer V4-Ablauf: [`EXTERNAL-V4.md`](EXTERNAL-V4.md).
 
 Der Zugriff auf die V4 (Windows-ACP, IP, Pfad-Syntax, Troubleshooting) steht
 in [`V4-ACCESS.md`](V4-ACCESS.md). Das Linux-ACP aus WSL erreicht die V4
@@ -206,6 +206,7 @@ Der Guard prüft die Sequenzen statisch. Ein Verstoß ist ein Build-Fehler, kein
 | `tools/repeat_report.py` | 10 Wiederholungen je Eintrag auswerten; optional V4- und Serial-Logs vergleichen |
 | `tools/check_log.py` | Log-Format, `CORE`-Zeile und SUMMARY gegen RES prüfen |
 | `tools/check_docs.py` | Doku-/Zähler-Konsistenz: 77 Entries, 770 Logs, Index, Links |
+| `tools/check_manifest.py` | `entries.yaml` gegen seq/index/core-Logs prüfen |
 | `RUN-ALL` | AmigaDOS-Batch: jedes der 77 Programme 10× (770 Läufe), Dateilog in `Ram Disk:LOGS` |
 | `RUN-ALL-ONCE` | Einzellauf aller 77 Programme (für schnelle Tests) |
 

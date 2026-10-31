@@ -19,7 +19,11 @@ def main() -> int:
     core_log_dir = ROOT / "cores/core-11350/logs"
     log_files = sorted(local_log_dir.glob("*.run??.log"))
     core_logs = sorted(core_log_dir.glob("*.run??.log"))
-    log_dir = local_log_dir if local_log_dir.exists() else core_log_dir
+    # The CI checkout has no local measurements/ directory.  If only a
+    # partial local directory exists (e.g. a stray tracked file), use the
+    # complete core-log mirror instead.
+    log_dir = local_log_dir if len(log_files) == EXPECTED_LOGS else core_log_dir
+    chosen_logs = log_files if log_dir == local_log_dir else core_logs
     index_text = (ROOT / "index.md").read_text()
     index_ids = re.findall(r"^\| \[`([A-Z0-9-]+)`\]", index_text, re.M)
     readme = (ROOT / "README.md").read_text()
@@ -27,8 +31,8 @@ def main() -> int:
 
     if len(seq) != EXPECTED_ENTRIES:
         fail(f"seq count {len(seq)} != {EXPECTED_ENTRIES}", errors)
-    if len(log_files) != EXPECTED_LOGS and local_log_dir.exists():
-        fail(f"v5 log count {len(log_files)} != {EXPECTED_LOGS}", errors)
+    if len(chosen_logs) != EXPECTED_LOGS:
+        fail(f"log count in {log_dir.name} is {len(chosen_logs)} != {EXPECTED_LOGS}", errors)
     if len(core_logs) != EXPECTED_LOGS:
         fail(f"core log count {len(core_logs)} != {EXPECTED_LOGS}", errors)
     if len(index_ids) != EXPECTED_ENTRIES:
