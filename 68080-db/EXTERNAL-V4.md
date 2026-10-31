@@ -99,3 +99,58 @@ Open a PR containing:
 - the comparison/notes for the entries
 
 Attribution/licensing: see [`NOTICE`](NOTICE).
+
+
+## 6. Known constraints (read before starting)
+
+### Exact volume name
+
+The harness and `RUN-ALL` hardcode the AmigaDOS volume name:
+
+```text
+Ram Disk:
+```
+
+A differently named RAM disk makes the harness fail to open
+`Ram Disk:LOGS/<ID>.log` (`FILESTAT;0`) and produces no file log. Use a
+volume named exactly **`Ram Disk:`**, or adapt the harness/batch deliberately
+(not part of the canonical workflow).
+
+### Wait for completion
+
+`RUN-ALL` is a long-running AmigaDOS batch. `C:Execute RAM:RUN-ALL` normally
+returns after the batch finishes, but do not assume it. Verify completion by
+counting the resulting files:
+
+```bash
+"$ACP" -d "$AMIGAHOST:RAM/LOGS" | grep -c '\.run[0-9][0-9]\.log$'
+```
+
+Expected: **770** logs. Only then download and validate.
+
+### Transport and IP
+
+- The tested path is Windows ACP/ASH; ACP from WSL may not reach the V4 LAN.
+- Set `AMIGAHOST` to your own V4 IP; `acp -l` is not reliable on this setup.
+- `CAPTURE-CORE` needs `C:ApolloControl`; `ENV:VCoreRev` may be absent on
+  older systems. Record what the machine actually returns; do not guess.
+
+### Hardware assumptions
+
+The harness uses IEP1/IEP2/IEP3 and AMMX instructions unconditionally. On an
+older 2-pipe or non-AMMX core it can trap or produce invalid counters. Such a
+core needs a separate harness variant; do not present its output as a valid
+11350 measurement.
+
+### Correctness vs. measurement
+
+This corpus is a **measurement** corpus. The harness does not compare every
+sequence against a C reference; only dedicated golden tests (PMULA/RGB565)
+do that. A foreign-core log proves that the sequence ran, not that its result
+is bit-exact.
+
+### Foreign logs are not canonical
+
+`check_docs.py` and `entries.yaml` describe the canonical **11350 / 770-log**
+corpus. Foreign-core logs live only under `cores/core-<ApolloCore>/logs/` and
+are not merged into `measurements/v5-files/` or `entries.yaml`.
