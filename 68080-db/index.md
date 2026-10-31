@@ -1,6 +1,6 @@
 # Index aller Einträge
 
-Alphabetisch nach ID. **Alle 74 Einträge wurden mit Harness v5 auf einer
+Alphabetisch nach ID. **Alle 77 Einträge wurden mit Harness v5 auf einer
 Vampire V4 gemessen** (10 × 100 Läufe). Referenz ist MIN; MAX/AVG sind
 Mediane der 10 Läufe; zusätzlich sind die **IEP-Pipe-Slots** angegeben.
 Die v5-Logs liegen unter `measurements/v5-files/<ID>.runNN.log`; es gibt nur den kanonischen v5-Datensatz. Eine Tabelle aller Werte steht in
@@ -19,7 +19,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`AMX-007`](03-ammx.md) | Vier 16-Bit-Lane-Additionen mit PADDW | `03-ammx.md` | gemessen |
 | [`AMX-008`](03-ammx.md) | 16-Bit-Lane-Max mit PCMPGTW + BSEL | `03-ammx.md` | gemessen |
 | [`AMX-009`](03-ammx.md) | 8-Byte Parallele Mittelwertbildung mit PAVGB (Half-Pel MC) | `03-ammx.md` | gemessen |
-| [`AMX-010`](03-ammx.md) | PACKSSWB-Emulation (Signed Saturation Word zu Byte mit Bias) | `03-ammx.md` | vorbereitet |
+| [`AMX-010`](03-ammx.md) | PACKSSWB-Emulation (Signed Saturation Word zu Byte mit Bias) | `03-ammx.md` | gemessen |
 | [`AMX-011`](03-ammx.md) | BFLYW Core-Kompatibilität & Exception-Status vs. PADDW+PSUBW | `03-ammx.md` | gemessen |
 | [`BLT-001`](19-sprite-blit.md) | 2D Sprite Blitting: 256-Bit Copy (move16) | `19-sprite-blit.md` | gemessen |
 | [`BLT-002`](20-sprite-transparency.md) | Transparent Sprite: Color-Key + storeilm | `20-sprite-transparency.md` | gemessen |
@@ -92,7 +92,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 
 - **Fusing** (5): [`FUS-001`](01-fusing.md), [`FUS-002`](01-fusing.md), [`FUS-003`](01-fusing.md), [`FUS-004`](01-fusing.md), [`FUS-005`](01-fusing.md)
 - **Bonding/Superscalar** (5): [`BND-001`](02-bonding.md), [`BND-002`](02-bonding.md), [`BND-003`](02-bonding.md), [`BND-004`](02-bonding.md), [`BND-005`](02-bonding.md)
-- **AMMX** (6): [`AMX-001`](03-ammx.md), [`AMX-002`](03-ammx.md), [`AMX-003`](03-ammx.md), [`AMX-004`](03-ammx.md), [`AMX-005`](03-ammx.md), [`AMX-006`](03-ammx.md)
+- **AMMX** (11): [`AMX-001`](03-ammx.md), [`AMX-002`](03-ammx.md), [`AMX-003`](03-ammx.md), [`AMX-004`](03-ammx.md), [`AMX-005`](03-ammx.md), [`AMX-006`](03-ammx.md), [`AMX-007`](03-ammx.md), [`AMX-008`](03-ammx.md), [`AMX-009`](03-ammx.md), [`AMX-010`](03-ammx.md), [`AMX-011`](03-ammx.md)
 - **Register** (5): [`REG-001`](04-register.md), [`REG-002`](04-register.md), [`REG-003`](04-register.md), [`REG-004`](04-register.md), [`REG-005`](04-register.md)
 - **Timing** (5): [`TIM-001`](05-timing.md), [`TIM-002`](05-timing.md), [`TIM-003`](05-timing.md), [`TIM-004`](05-timing.md), [`TIM-005`](05-timing.md)
 - **Speicher/Cache** (5): [`MEM-001`](06-memory.md), [`MEM-002`](06-memory.md), [`MEM-003`](06-memory.md), [`MEM-004`](06-memory.md), [`MEM-005`](06-memory.md)
@@ -106,7 +106,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **AMMX Transparent Sprite Blitting & PRM Store Variants** (1): [`BLT-002`](20-sprite-transparency.md)
 - **Sprite Alpha Blending mit PMULA** (1): [`BLT-003`](21-sprite-alpha-pmula.md) – Golden: [`22`](22-sprite-alpha-pmula-golden.md)
 - **PMULA 4×/Memory-VEA** (2): [`BLT-004`](24-pmula-unroll-256.md), [`BLT-005`](24-pmula-unroll-256.md)
-- **Fast Fourier Transform (FFT)** (5): [`FFT-001`](13-fft.md), [`FFT-002`](13-fft.md), [`FFT-003`](13-fft.md), [`FFT-004`](13-fft.md), [`FFT-005`](13-fft.md), [`FFT-006`](13-fft.md)
+- **Fast Fourier Transform (FFT)** (6): [`FFT-001`](13-fft.md), [`FFT-002`](13-fft.md), [`FFT-003`](13-fft.md), [`FFT-004`](13-fft.md), [`FFT-005`](13-fft.md), [`FFT-006`](13-fft.md)
 - **Matrix (FPU)** (3): [`MAT-001`](12-matrix.md), [`MAT-002`](12-matrix.md), [`MAT-003`](12-matrix.md)
 - **Matrix (Fixed-Point AMMX)** (3): [`FIX-001`](12-matrix.md), [`FIX-002`](12-matrix.md), [`FIX-003`](12-matrix.md)
 - **Antipatterns** (7): [`ANTI-001`](08-antipatterns.md), [`ANTI-002`](08-antipatterns.md), [`ANTI-003`](08-antipatterns.md), [`ANTI-004`](08-antipatterns.md), [`ANTI-005`](08-antipatterns.md), [`ANTI-006`](08-antipatterns.md), [`ANTI-007`](08-antipatterns.md)
@@ -114,7 +114,7 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 ## Sequenzen und Logs
 
 - Sequenzen: `seq/<ID>.i`
-- v5-Dateilogs: `measurements/v5-files/<ID>.runNN.log` (740, mit `PERF`)
+- v5-Dateilogs: `measurements/v5-files/<ID>.runNN.log` (770, mit `PERF`)
 - Build-Artefakte: `build-v5/<ID>.asm`, `bin-v5/<ID>`
 
 

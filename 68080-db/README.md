@@ -5,7 +5,7 @@ Kuratierte, quellenbelegte und auf echter Hardware gemessene Optimierungsmuster 
 > **Kanonischer Mess- und Hardware-Stand:**
 > - **Core-Version:** **Apollo 68080 Core 11350** (Vampire V4 Standalone @ **92 MHz**; PCR 1088/1, VCoreRev 0).
 > - **Kanonisches Harness:** **Harness v5** (`harness-v5.asm`). Alle alten Vorab-Versionen (v1–v4) wurden bereinigt.
-> - **Zähler-Vollständigkeit:** Jedes Log erfasst den **Clock Cycle Counter (CCC)** sowie die **Instruction Execution Pipeline Slots (IEP0, IEP1, IEP2)** zur genauen Analyse der internen Doppel-Pipeline-Auslastung.
+> - **Zähler-Vollständigkeit:** Jedes Log erfasst den **Clock Cycle Counter (CCC)** sowie die **Instruction Execution Pipeline Slots (IEP1, IEP2, IEP3)** zur genauen Analyse der internen Doppel-Pipeline-Auslastung.
 > - **Multi-Core-Architektur:** Messungen sind modular nach Cores strukturiert in [`cores/`](cores/). Aktuell validiert: [`cores/core-11350/`](cores/core-11350/).
 > - **Validierung:** 100% aller Einträge wurden auf echter Hardware verifiziert und durch `tools/check_log.py` validiert (`FILESTAT;1;0`).
 
@@ -35,7 +35,7 @@ Details und Einreichungsanleitung stehen in [`cores/README.md`](cores/README.md)
 |---|---|---|
 | [`01-fusing.md`](01-fusing.md) | Instruction Fusing | 5 (3-Operanden ALU-Fusion, Quad-Clear) |
 | [`02-bonding.md`](02-bonding.md) | Instruction Bonding / Superscalar | 5 (Duale Integer-Pipes 0 & 1, Parallel-ALU) |
-| [`03-ammx.md`](03-ammx.md) | AMMX (64-Bit-SIMD) | 8 (PADD, PMULH, VPERM, PACKUSWB, PAVGB, BFLYW-Status) |
+| [`03-ammx.md`](03-ammx.md) | AMMX (64-Bit-SIMD) | 11 (PADD, PMULH, VPERM, PACKUSWB, PAVGB, BFLYW-Status) |
 | [`04-register.md`](04-register.md) | Registermodell & Allokation | 5 (E-Register, Adressarithmetik, 64-Bit Transfers) |
 | [`05-timing.md`](05-timing.md) | Instruktions-Timing & Fallstricke | 5 (Shift vs. Div, LEA-Latenzen, MOVEM-Effizienz) |
 | [`06-memory.md`](06-memory.md) | 64-Bit-Speicherbus, Prefetch, Cache | 5 (Quad-Alignment, TOUCH-Vorlauf, Bursts) |
@@ -49,13 +49,13 @@ Details und Einreichungsanleitung stehen in [`cores/README.md`](cores/README.md)
 | [`16-jpeg.md`](16-jpeg.md) | JPEG End-to-End Decoding Pipeline | 1 (Fused Transpose + Level-Shift + PACKUSWB Direct Store) |
 | [`17-mpeg.md`](17-mpeg.md) | MPEG-1/2 Video Motion Compensation & Fused Residual IDCT | 1 (Fused IDCT+MC, Sparse DC-Only, VCD in 52.7% CPU) |
 | [`18-h264.md`](18-h264.md) | H.264 / AVC 4x4 Core IDCT, Hadamard & Fused MC | 1 (AMMX Hadamard in 27 Netto-Takten, Bit-Exact 4x4 IDCT) |
-| [`19-sprite-blit.md`](19-sprite-blit.md) | 2D Sprite Blitting & 256-Bit Aligned Rectangle Copy / Tiling | 84/84 Tests (Single + Full-Screen Tiled 1920x1080 Aligned & 1-Pixel Offset, move16, Peeling, 219 MB/s) |
+| [`19-sprite-blit.md`](19-sprite-blit.md) | 2D Sprite Blitting & 256-Bit Aligned Rectangle Copy / Tiling | 1 (BLT-001; zusätzlich separate Suite 84/84) |
 | [`20-sprite-transparency.md`](20-sprite-transparency.md) | AMMX Transparent Sprite Blitting & PRM Store Variants | 1 (BLT-002: Color-Key + storeilm; Rawlogs) |
 | [`21-sprite-alpha-pmula.md`](21-sprite-alpha-pmula.md) | Sprite-Alpha-Blending mit PMULA | 1 (BLT-003: premultiplied Alpha, 5 Takte MIN) |
-| [`22-sprite-alpha-pmula-golden.md`](22-sprite-alpha-pmula-golden.md) | PMULA-Alpha-Golden-Test | 256 Alphas + 10k Zufall + 16/32/64 Sprites, diff=0 |
-| [`23-rgb565-alpha.md`](23-rgb565-alpha.md) | RGB565-Alpha (exakter Skalar-Test) | 256 Alphas + 20k Zufall + 16/32/64, diff=0 |
-| [`24-pmula-unroll-256.md`](24-pmula-unroll-256.md) | PMULA 4×/Memory-VEA + 256×256-Alpha | 1× 8,04 / 4× 8,53 / 4×VEA 2,43 Takte/Pixel |
-| [`25-pmula-fullhd.md`](25-pmula-fullhd.md) | PMULA Full-HD-Alpha + Load-Einsparung | 1× 8,65 / 4×VEA 3,10 Takte/Pixel; 43→119 MB/s |
+| [`22-sprite-alpha-pmula-golden.md`](22-sprite-alpha-pmula-golden.md) | PMULA-Alpha-Golden-Test | – (Golden-Test, kein Kanon-Eintrag) |
+| [`23-rgb565-alpha.md`](23-rgb565-alpha.md) | RGB565-Alpha (exakter Skalar-Test) | – (Golden-Test, kein Kanon-Eintrag) |
+| [`24-pmula-unroll-256.md`](24-pmula-unroll-256.md) | PMULA 4×/Memory-VEA + 256×256-Alpha | 2 (BLT-004/005; Projektbenchmark separat) |
+| [`25-pmula-fullhd.md`](25-pmula-fullhd.md) | PMULA Full-HD-Alpha + Load-Einsparung | – (Projektbenchmark, kein Kanon-Eintrag) |
 
 Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-11350/`](cores/core-11350/).
 Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).
@@ -90,10 +90,11 @@ Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).
 
 | Status | Bedeutung |
 |---|---|
-| `VERIFIZIERT (gemessen)` | Ein vollständiges Log `measurements/v5-files/<ID>.runNN.log` mit `BEGIN`, 100×`RES`, `SUMMARY`, `END` liegt vor und wurde mit diesem Harness erzeugt. |
+| `VERIFIZIERT (gemessen)` | Ein vollständiges Log `measurements/v5-files/<ID>.runNN.log` mit `BEGIN`, `FILESTAT`, `CORE`, `BASELINE`, 100×`RES`, `SUMMARY`, `PERF`, `END` liegt vor und wurde mit diesem Harness erzeugt. |
 | `VERIFIZIERT (Literatur)` | Der Mechanismus ist im PRM bzw. in einer offiziellen Apollo-Quelle belegt; die Sequenz baut mit vasm. **Kein** Hardware-Messwert. |
 | `UNVERIFIZIERT (nicht gemessen)` | Wie oben, aber ohne Hardwarelauf. Für künftige neue Einträge; der aktuelle Korpus ist vollständig gemessen. |
-| `UNVERIFIZIERT (Register-Konflikt)` | Sequenz berührt `d5`, `d6`, `d7`, `a5`, `a6` oder `a7`; der Guard `tools/check_sequences.py` lehnt sie ab. |
+| `gemessen` | Kurzform für `VERIFIZIERT (gemessen)` in `index.md`. |
+| `NICHT ZULÄSSIG (Guard)` | Sequenz berührt `d5`, `d6`, `d7`, `a5`, `a6` oder `a7`; `check_sequences.py` lehnt sie ab, es entsteht kein Eintrag. |
 
 Jeder Eintrag trennt deshalb sauber:
 
@@ -169,7 +170,6 @@ E-Register als Task-Zustand behandelt werden (PRM S. 8).
 **Referenzwert ist MIN**, nicht AVG: `Forbid()` verhindert Task-Wechsel, aber
 keine Interrupts. AVG ist nur informativ. Die Baseline wird nach dem Warmup
 gemessen, ist aber weiterhin einmalig; sie geht nicht in die Statistik ein.
-Die Baseline wird nach dem Warmup gemessen; sie geht nicht in die Statistik ein.
 
 ## Register-Konvention
 
@@ -198,6 +198,7 @@ Der Guard prüft die Sequenzen statisch. Ein Verstoß ist ein Build-Fehler, kein
 | `tools/download_logs.sh` | V4-Dateilogs aus `Ram Disk:LOGS` per ACP herunterladen |
 | `tools/repeat_report.py` | 10 Wiederholungen je Eintrag auswerten; optional V4- und Serial-Logs vergleichen |
 | `tools/check_log.py` | Log-Format, `CORE`-Zeile und SUMMARY gegen RES prüfen |
+| `tools/check_docs.py` | Doku-/Zähler-Konsistenz: 77 Entries, 770 Logs, Index, Links |
 | `RUN-ALL` | AmigaDOS-Batch: jedes der 77 Programme 10× (770 Läufe), Dateilog in `Ram Disk:LOGS` |
 | `RUN-ALL-ONCE` | Einzellauf aller 77 Programme (für schnelle Tests) |
 

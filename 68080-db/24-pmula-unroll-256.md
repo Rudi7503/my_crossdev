@@ -1,13 +1,16 @@
 # 24 – PMULA 4×-Unrolling & 256×256-Alpha-Sprite-Last
 
-**Status:** **PASS** (bit-exakt)  
+**Status:** **gemessen** – bit-exakt (`diff=0`)  
 **Hardware:** Vampire V4, Apollo Core **11350**, PCR 1088/1, VCoreRev 0, 92 MHz  
 **Projekt:** [`Projects/Sprite_Alpha_PMULA/`](../Projects/Sprite_Alpha_PMULA/)  
 **Golden-Test:** [`22-sprite-alpha-pmula-golden.md`](22-sprite-alpha-pmula-golden.md)
 
 ## Kanonische Sequenzen
 
-| ID | Variante | Takte / 32 Byte | Takte/Pixel |
+- [`seq/BLT-004.i`](seq/BLT-004.i) – 4× Register
+- [`seq/BLT-005.i`](seq/BLT-005.i) – 4× Memory-VEA
+
+| ID | Variante | Takte je 32-Byte-Block | Takte/Pixel im Block |
 |---|---|---:|---:|
 | BLT-003 | 1× PMULA, 2 Loads | 5 / 8 Byte | 2,50 |
 | BLT-004 | 4× PMULA, 8 Loads + 4 Stores | **16** | 2,00 |
@@ -16,7 +19,10 @@
 **BLT-005 spart pro 32 Byte vier explizite `load`-Instruktionen**, weil der
 A-Operand direkt als Memory-VEA in `pmula (a0)+,e1,e2` steht.
 
-## 256×256 echte Alpha-Sprite-Last
+## 256×256 echte Alpha-Sprite-Last (separater Projektbenchmark)
+
+> Die folgenden `BENCH256`-Werte sind Projektmessungen aus
+> `Projects/Sprite_Alpha_PMULA`, **nicht** Teil der 770 kanonischen v5-Logs.
 
 ```text
 SPRITE;256x256;diff1=0;diff4=0;diffmem=0
@@ -56,3 +62,48 @@ auch vier Issue-Slots pro 32 Byte.
 |---|---|
 | `BLT-004` | [01](cores/core-11350/logs/BLT-004.run01.log) [02](cores/core-11350/logs/BLT-004.run02.log) [03](cores/core-11350/logs/BLT-004.run03.log) [04](cores/core-11350/logs/BLT-004.run04.log) [05](cores/core-11350/logs/BLT-004.run05.log) [06](cores/core-11350/logs/BLT-004.run06.log) [07](cores/core-11350/logs/BLT-004.run07.log) [08](cores/core-11350/logs/BLT-004.run08.log) [09](cores/core-11350/logs/BLT-004.run09.log) [10](cores/core-11350/logs/BLT-004.run10.log) |
 | `BLT-005` | [01](cores/core-11350/logs/BLT-005.run01.log) [02](cores/core-11350/logs/BLT-005.run02.log) [03](cores/core-11350/logs/BLT-005.run03.log) [04](cores/core-11350/logs/BLT-005.run04.log) [05](cores/core-11350/logs/BLT-005.run05.log) [06](cores/core-11350/logs/BLT-005.run06.log) [07](cores/core-11350/logs/BLT-005.run07.log) [08](cores/core-11350/logs/BLT-005.run08.log) [09](cores/core-11350/logs/BLT-005.run09.log) [10](cores/core-11350/logs/BLT-005.run10.log) |
+
+
+### BLT-004 (verbatim)
+
+```asm
+; seq/BLT-004.i - 4x unrolled PMULA with explicit register loads
+; Uses: e0-e11, a0, a1, a2
+; MUST NOT touch: d5, d6, d7, a5, a6, a7
+        load    (a0)+,e0
+        load    (a1)+,e1
+        load    (a0)+,e3
+        load    (a1)+,e4
+        load    (a0)+,e6
+        load    (a1)+,e7
+        load    (a0)+,e9
+        load    (a1)+,e10
+        pmula   e0,e1,e2
+        pmula   e3,e4,e5
+        pmula   e6,e7,e8
+        pmula   e9,e10,e11
+        store   e2,(a2)+
+        store   e5,(a2)+
+        store   e8,(a2)+
+        store   e11,(a2)+
+```
+
+### BLT-005 (verbatim)
+
+```asm
+; seq/BLT-005.i - 4x unrolled PMULA with memory-VEA (one load saved)
+; Uses: e1,e2,e4,e5,e7,e8,e10,e11, a0, a1, a2
+; MUST NOT touch: d5, d6, d7, a5, a6, a7
+        load    (a1)+,e1
+        load    (a1)+,e4
+        load    (a1)+,e7
+        load    (a1)+,e10
+        pmula   (a0)+,e1,e2
+        pmula   (a0)+,e4,e5
+        pmula   (a0)+,e7,e8
+        pmula   (a0)+,e10,e11
+        store   e2,(a2)+
+        store   e5,(a2)+
+        store   e8,(a2)+
+        store   e11,(a2)+
+```

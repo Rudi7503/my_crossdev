@@ -39,8 +39,12 @@ The file must be `seq/<ID>.i`.
 
 ### 3.2 Write the sequence
 
-A sequence is **included 11 times** into the harness and executed 310 times.
-Therefore it must be self-contained and branch-free:
+A sequence is **included 11 times** into the harness: one copy per
+`measure_100` block (warmup, measurement) and one in the PERF pass. The
+harness resets the scratch pointers between those phases; within one phase
+there are 100 consecutive executions. A sequence therefore runs at most
+100 times per phase, 310 times total across the binary. It must be
+self-contained and branch-free:
 
 ```asm
 ; seq/<ID>.i - short title
@@ -55,8 +59,13 @@ Rules:
 - No labels, no `bra`/`bsr`/`dbf`, no `section`, no `include`, no `rts`.
 - `d5`, `d6`, `d7`, `a5`, `a6`, `a7` are reserved by the harness.
 - Only `d0–d4`, `a0–a4`, `e0–e23` are scratch.
-- Inputs are the harness scratch buffers; document any data-dependent
-  assumptions.
+- Inputs are the five harness scratch buffers `scratch_a` … `scratch_e`
+  (4 KiB each, 8-byte aligned); `a0`–`a4` point to them.
+- A sequence that advances `a0` by N bytes must satisfy `100 × N ≤ 4096`
+  within one phase (for example 32 B × 100 = 3200 B). Document the buffer
+  size and any data-dependent assumptions.
+- `load`, `store`, `pmula` and the other AMMX mnemonics are vasm/AMMX
+  instructions, not repository macros.
 - The sequence is a **measurement kernel**, not a complete application.
 
 ### 3.3 Validate and build
@@ -93,7 +102,9 @@ python3 tools/repeat_report.py measurements/v5-files
 python3 tools/perf_report.py measurements/v5-files
 ```
 
-Copy the new logs to **both**:
+`measurements/v5-files/` is the local canonical set. `cores/core-11350/logs/`
+is the tracked mirror used by the documentation links. Copy the new logs to
+**both** and keep them byte-identical:
 
 ```text
 measurements/v5-files/<ID>.runNN.log
@@ -101,8 +112,8 @@ cores/core-11350/logs/<ID>.runNN.log   # tracked, used by docs
 ```
 
 All 10 logs must pass `check_log.py`. Never edit a log or fabricate a cycle
-count. A measured entry needs `FILESTAT;1;0`, `BASELINE`, 100×`RES`,
-`SUMMARY` and `PERF`.
+count. A measured entry needs `BEGIN`, `FILESTAT;1;0`, `CORE`, `BASELINE`,
+100×`RES`, `SUMMARY`, `PERF` and `END`.
 
 ### 3.6 Document and index
 
@@ -148,6 +159,7 @@ measurement:
 ## 6. Review checklist for a foreign AI
 
 - [ ] `check_sequences.py` is green.
+- [ ] `check_docs.py` is green.
 - [ ] `build_all.sh` builds the new entry.
 - [ ] 10 logs exist and all pass `check_log.py`.
 - [ ] The numbers in the doc match the logs (MIN, not AVG).
@@ -160,6 +172,7 @@ measurement:
 ```bash
 cd 68080-db
 python3 tools/check_sequences.py seq/
+python3 tools/check_docs.py
 python3 tools/check_log.py measurements/v5-files/<ID>.run01.log
 python3 tools/repeat_report.py measurements/v5-files
 python3 tools/perf_report.py measurements/v5-files

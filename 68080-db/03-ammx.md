@@ -12,7 +12,7 @@ normalerweise drei Operanden. Die Instruktionen ändern die Condition Codes
 Zielregister. AMMX ist damit besonders für byte-/wortweise Bild-, Audio- und
 String-Verarbeitung geeignet, nicht als Ersatz für Skalar-ALU.
 
-> **Messstatus:** Alle Einträge wurden mit **Harness v5** auf einer Vampire V4
+> **Messstatus:** Alle elf Einträge wurden mit **Harness v5** auf einer Vampire V4
 > gemessen (10 × 100 Läufe). Die v5-Dateilogs enthalten zusätzlich `PERF`
 > (Pipe-Slots). Referenz ist MIN, MAX/AVG sind Mediane der 10 Läufe; die
 > v1-Logs bleiben als Archiv unter `measurements/<ID>.log`.
