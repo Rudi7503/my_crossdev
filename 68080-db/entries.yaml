@@ -1,3 +1,5 @@
+# Canonical 68080-db corpus only (Apollo Core 11350 / 770 logs).
+# Foreign-core datasets are NOT listed here; keep them under cores/core-<ApolloCore>/.
 version: 1
 database: 68080-db
 harness: harness-v5.asm

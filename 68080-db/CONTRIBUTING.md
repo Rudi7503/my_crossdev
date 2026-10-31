@@ -124,9 +124,12 @@ python3 tools/repeat_report.py measurements/v5-files
 python3 tools/perf_report.py measurements/v5-files
 ```
 
-`measurements/v5-files/` is the local canonical set. `cores/core-11350/logs/`
-is the tracked mirror used by the documentation links. Copy the new logs to
-**both** and keep them byte-identical:
+`measurements/v5-files/` is the **canonical 11350** local set.
+`cores/core-11350/logs/` is the tracked mirror used by the documentation links.
+For a canonical entry, copy the new logs to **both** and keep them
+byte-identical. For a **foreign core** (different ApolloControl CORE, or
+different hardware), write **only** to `cores/core-<ApolloCore>/logs/` and do
+not add it to `measurements/v5-files/` or `entries.yaml`:
 
 ```text
 measurements/v5-files/<ID>.runNN.log

@@ -32,6 +32,7 @@ cores/core-<ApolloCore>/CORE-INFO.md
 ```
 
 Use [`templates/CORE-INFO.md`](templates/CORE-INFO.md).
+For ACP/ASH paths and `AMIGAHOST` see [`V4-ACCESS.md`](V4-ACCESS.md).
 
 > The `CORE;...` line in a harness log is the **PCR** identity, not the
 > ApolloControl core build number. Both must be recorded.
@@ -48,6 +49,21 @@ Download `Ram Disk:LOGS` to:
 
 ```text
 cores/core-<ApolloCore>/logs/
+```
+
+Foreign-core logs stay **only** there. Do **not** copy them into
+`measurements/v5-files/` and do **not** add them to `entries.yaml`; that
+manifest is the canonical 11350 corpus. The static CI validates
+`cores/core-11350/` and therefore does not validate foreign-core logs;
+validate them locally with `check_log.py`.
+
+`RUN-ALL` is a tracked file in this repository; `build_all.sh` does not
+generate it. Upload both the binaries and the tracked batch:
+
+```bash
+ACP="/path/to/acp"
+"$ACP" bin-v5/* "$AMIGAHOST:RAM/"
+"$ACP" RUN-ALL "$AMIGAHOST:RAM/"
 ```
 
 ## 4. Validate

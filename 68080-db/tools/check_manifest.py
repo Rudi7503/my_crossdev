@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Validate entries.yaml against seq/, index.md and the core log mirror."""
+"""Validate the canonical entries.yaml against seq/, index.md and core-11350 logs.
+
+Foreign-core datasets are intentionally not part of entries.yaml.
+"""
 from __future__ import annotations
 import re
 import sys
