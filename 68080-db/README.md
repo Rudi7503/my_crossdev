@@ -26,6 +26,11 @@ Wir fordern jeden Entwickler, Apollo-Experten und jede Programmier-KI heraus:
 4. **Multi-Core Aufruf:** Besitzt du einen anderen Core (z. B. Core 11900, Core x89, Vampire V2 oder V4+)? Erstelle ein Verzeichnis `cores/core-<ID>-<REV>/`, lasse die Testsuite laufen und vergleiche die Zyklen und Pipe-Slots!
 
 Details und Einreichungsanleitung stehen in [`cores/README.md`](cores/README.md).
+Für fremde Hardware ist eine **Core-Identität** Pflicht: `ApolloControl CORE`,
+PCR, VCoreRev, Takt und OS als `CORE-INFO.md` plus `CORE-IDENTITY.txt` im
+jeweiligen `cores/core-<ApolloCore>/` ablegen. Die `CORE;…`-Zeile im Log ist
+nur die PCR, nicht die Apollo-Core-Buildnummer. Vorlage:
+[`templates/CORE-INFO.md`](templates/CORE-INFO.md).
 
 ---
 

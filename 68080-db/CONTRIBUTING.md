@@ -24,6 +24,7 @@ add v1–v4 data.
 - [`TOOLCHAIN.md`](TOOLCHAIN.md)
 - [`templates/sequence.i`](templates/sequence.i)
 - [`templates/ENTRY.md`](templates/ENTRY.md)
+- [`templates/CORE-INFO.md`](templates/CORE-INFO.md)
 
 1. `README.md` — rules, status legend, measurement protocol
 2. `index.md` — all IDs and the current count
@@ -97,6 +98,20 @@ Execute "Ram Disk:RUN-ALL"
 ```
 
 Result: `Ram Disk:LOGS/<ID>.run01.log` … `.run10.log`.
+
+Before or immediately after the run, capture the **actual Apollo core**:
+
+```text
+C:ApolloControl CORE
+C:ApolloControl HZ
+C:Version
+C:Type ENV:VCoreRev
+```
+
+Use `tools/CAPTURE-CORE` on the V4, then save the raw output and a filled
+`CORE-INFO.md` under
+`cores/core-<ApolloCore>/`. The `CORE;...` line in the log is only the PCR
+identity. Never claim a core version you did not read from the machine.
 
 ### 3.5 Install and validate the logs
 

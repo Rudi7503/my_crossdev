@@ -11,9 +11,9 @@ Dieses Verzeichnis enthält die Benchmark-Messungen, Performance-Zähler (IEP-Pi
 | [`core-11350/`](core-11350/) | Apollo Core 11350; PCR `CORE;1088;1;0` | Vampire V4 Standalone (92 MHz) | **100% vollständig gemessen & validiert (Harness v5)** |
 
 Jedes Core-Verzeichnis enthält:
-- `logs/`: Sämtliche Rohdaten-Logs (100 Durchläufe pro Test) mit `FILESTAT`, `BASELINE`, `RES` und `PERF`-Zählern.
+- `logs/`: Sämtliche Rohdaten-Logs (10 Läufe je Eintrag, je 100 Messungen) mit `FILESTAT`, `BASELINE`, `RES` und `PERF`-Zählern.
 - `CORE-INFO.md`: Exakte Hardware- und Core-Spezifikation (Frequenz, Revision, unterstützte AMMX-Instruktionen).
-- `PERF-SUMMARY.md`: Vollständige Zyklen- und Pipeline-Auslastungstabelle (IEP0, IEP1, IEP2).
+- `PERF-SUMMARY.md`: Vollständige Zyklen- und Pipeline-Auslastungstabelle (IEP1, IEP2, IEP3).
 - `CYCLE-SUMMARY.md`: Statistische Auswertung (MIN, Median, MAX, AVG, Stdabw., p95).
 
 ---
@@ -46,21 +46,38 @@ Hast du eine andere Vampire (z. B. Vampire V2 für A500/A600/A1200, Vampire V4+,
 **Wir fordern dich auf, die Testsuite auf deinem Core laufen zu lassen und die Ergebnisse zu vergleichen!**
 
 ### Schritt-für-Schritt-Anleitung:
-1. **Core-Verzeichnis anlegen:**
+1. **Core-Verzeichnis anlegen** (ApolloCore aus `ApolloControl CORE`, nicht nur PCR):
    ```bash
-   mkdir -p 68080-db/cores/core-<ID>-<REVISION>/logs
+   mkdir -p 68080-db/cores/core-<ApolloCore>/logs
    ```
-2. **Alle Sequenzen mit Harness v5 bauen:**
+2. **Core-Identität erfassen** – Pflicht:
+   ```text
+   C:ApolloControl CORE
+   C:ApolloControl HZ
+   C:Version
+   C:Type ENV:VCoreRev
+   ```
+   `tools/CAPTURE-CORE` auf die V4 kopieren, ausführen und
+   `RAM:CORE-IDENTITY.txt` herunterladen. Danach
+   `templates/CORE-INFO.md` nach `cores/core-<ApolloCore>/CORE-INFO.md`
+   kopieren und ausfüllen.
+3. **Alle Sequenzen mit Harness v5 bauen:**
    ```bash
    cd 68080-db
-   ./tools/build_all.sh
+   HARNESS=harness-v5.asm BUILD_DIR=build-v5 BIN_DIR=bin-v5 ./tools/build_all.sh
    ```
-3. **Auf der Vampire ausführen:**
-   Übertrage die Binaries aus `bin-v5/` auf deine Vampire und führe die Messungen aus.
-4. **Logs validieren:**
+4. **10× auf der eigenen V4 ausführen:**
+   Übertrage `bin-v5/*` und `RUN-ALL` auf die Vampire und führe
+   `Execute "Ram Disk:RUN-ALL"` aus. Ergebnis:
+   `LOGS/<ID>.run01.log` … `.run10.log`.
+5. **Logs installieren und validieren:**
    ```bash
-   python3 tools/check_log.py cores/core-<ID>-<REVISION>/logs/*.log
+   python3 tools/check_log.py cores/core-<ApolloCore>/logs/*.log
    ```
-5. **Ergebnisse vergleichen:**  
-   Vergleiche, ob neuere Cores andere Fusing-/Bonding-Eigenschaften haben, ob bisher deaktivierte Instruktionen (wie `bflyw`) funktionieren oder ob sich die Pipeline-Auslastung verbessert hat.
-   Reiche einen Pull-Request ein, um deine Core-Ergebnisse mit der Community zu teilen!
+   Alle 10 Logs je Eintrag müssen `BEGIN`, `FILESTAT`, `CORE`, `BASELINE`,
+   100×`RES`, `SUMMARY`, `PERF` und `END` enthalten.
+6. **Ergebnisse vergleichen:**  
+   Fremde Hardware/Core-Logs bleiben in `cores/core-<ApolloCore>/` und werden
+   **nicht** in die kanonischen 770 Logs von `cores/core-11350/` gemischt.
+   Reiche einen Pull-Request mit `CORE-INFO.md`, `CORE-IDENTITY.txt` und den
+   Rohlogs ein.

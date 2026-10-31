@@ -1,0 +1,6 @@
+; CAPTURE-CORE - save Apollo core identity before a measurement
+; Execute on the V4, then download RAM:CORE-IDENTITY.txt
+C:ApolloControl CORE > RAM:CORE-IDENTITY.txt
+C:ApolloControl HZ >> RAM:CORE-IDENTITY.txt
+C:Version >> RAM:CORE-IDENTITY.txt
+C:Type ENV:VCoreRev >> RAM:CORE-IDENTITY.txt

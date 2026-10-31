@@ -72,6 +72,28 @@ Execute "Ram Disk:RUN-ALL"
 python3 tools/check_log.py measurements/v5-files/<ID>.run01.log
 ```
 
+### Core identity is mandatory
+
+Before the measurement, capture the actual Apollo core, not only the PCR
+line in the harness log:
+
+```text
+C:ApolloControl CORE
+C:ApolloControl HZ
+C:Version
+C:Type ENV:VCoreRev
+```
+
+Use `tools/CAPTURE-CORE` on the V4 to capture the raw output, store it as
+`cores/core-<ApolloCore>/CORE-IDENTITY.txt` and fill
+`CORE-INFO.md` (template: `templates/CORE-INFO.md`). The `CORE;...` line in a
+v5 log is the **PCR** identity; it is not a replacement for the ApolloControl
+core build number.
+
+If the contributing AI's core differs from 11350 (or even if the hardware
+differs), use a separate `cores/core-<ApolloCore>/` directory. Do not merge
+foreign hardware logs into the canonical `cores/core-11350/` set.
+
 ## 4. What CI does and does not do
 
 The GitHub workflow `.github/workflows/db-check.yml` performs **static checks
@@ -81,8 +103,9 @@ only**:
 - documentation/count/link consistency
 - validation of all tracked `cores/core-11350/logs` files
 
-It cannot run V4 hardware. Hardware runs remain manual or use a self-hosted
-V4 runner.
+It cannot run V4 hardware. The canonical hardware run is performed by the
+owner or a contributing AI on its own V4; there is no self-hosted CI runner
+in this repository.
 
 ## 5. Common failures
 

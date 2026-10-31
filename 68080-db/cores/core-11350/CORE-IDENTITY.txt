@@ -1,0 +1,6 @@
+11350
+
+AC68080 @ 92 MHz (x13)
+
+Kickstart 51.51, Workbench 40.0
+0
