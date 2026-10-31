@@ -55,6 +55,10 @@ Fill [`templates/CORE-INFO.md`](templates/CORE-INFO.md) as
 
 ## 3. Measure: all 77 programs
 
+No serial cable is required. The canonical result is the file log
+`Ram Disk:LOGS/<ID>.runNN.log`; UART is an optional second diagnostic
+channel. The validated external run used file logs only.
+
 There is exactly one canonical batch: **`RUN-ALL`**. It contains all 77
 entries from `entries.yaml` (AMX, BND, BLT, DCT, …), with **10 runs per
 entry**. Do **not** run individual binaries and do **not** modify the batch.

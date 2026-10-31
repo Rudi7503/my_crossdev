@@ -2,6 +2,10 @@
 
 Kuratierte, quellenbelegte und auf echter Hardware gemessene Optimierungsmuster für den Apollo-Core **68080** (Vampire V4) – mit dem kanonischen **Harness v5**, das jeden Eintrag mit vasm baut, unter `Forbid()` 100-mal misst (nach 100 Warmup-Läufen) und die Rohdaten über stdout, SAGA und die direkte UART (`SERDAT`/`SERPER`, 115200 8N1) ausgibt.
 
+> **Serielle Verbindung ist optional.** Kanonisch sind die Dateilogs unter
+> `Ram Disk:LOGS/<ID>.runNN.log`; die UART ist nur ein zweiter Diagnosekanal.
+> Der externe 770-Log-Test lief ohne serielle Verbindung.
+>
 > **Kanonischer Mess- und Hardware-Stand:**
 > - **Core-Version:** **Apollo 68080 Core 11350** (Vampire V4 Standalone @ **92 MHz**; PCR 1088/1, VCoreRev 0).
 > - **Kanonisches Harness:** **Harness v5** (`harness-v5.asm`). Alle alten Vorab-Versionen (v1–v4) wurden bereinigt.
