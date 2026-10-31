@@ -105,6 +105,8 @@ Jeder Eintrag trennt deshalb sauber:
 
 ## Schnellstart
 
+Toolchain und vasm: [`TOOLCHAIN.md`](TOOLCHAIN.md). Entry-/Sequence-Vorlagen: [`templates/`](templates/).
+
 Der Zugriff auf die V4 (Windows-ACP, IP, Pfad-Syntax, Troubleshooting) steht
 in [`V4-ACCESS.md`](V4-ACCESS.md). Das Linux-ACP aus WSL erreicht die V4
 wegen des WSL-NAT nicht.

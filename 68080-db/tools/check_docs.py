@@ -15,8 +15,11 @@ def fail(msg: str, errors: list[str]) -> None:
 def main() -> int:
     errors: list[str] = []
     seq = sorted(p.stem for p in (ROOT / "seq").glob("*.i"))
-    log_files = sorted((ROOT / "measurements/v5-files").glob("*.run??.log"))
-    core_logs = sorted((ROOT / "cores/core-11350/logs").glob("*.run??.log"))
+    local_log_dir = ROOT / "measurements/v5-files"
+    core_log_dir = ROOT / "cores/core-11350/logs"
+    log_files = sorted(local_log_dir.glob("*.run??.log"))
+    core_logs = sorted(core_log_dir.glob("*.run??.log"))
+    log_dir = local_log_dir if local_log_dir.exists() else core_log_dir
     index_text = (ROOT / "index.md").read_text()
     index_ids = re.findall(r"^\| \[`([A-Z0-9-]+)`\]", index_text, re.M)
     readme = (ROOT / "README.md").read_text()
@@ -24,7 +27,7 @@ def main() -> int:
 
     if len(seq) != EXPECTED_ENTRIES:
         fail(f"seq count {len(seq)} != {EXPECTED_ENTRIES}", errors)
-    if len(log_files) != EXPECTED_LOGS:
+    if len(log_files) != EXPECTED_LOGS and local_log_dir.exists():
         fail(f"v5 log count {len(log_files)} != {EXPECTED_LOGS}", errors)
     if len(core_logs) != EXPECTED_LOGS:
         fail(f"core log count {len(core_logs)} != {EXPECTED_LOGS}", errors)
@@ -33,9 +36,9 @@ def main() -> int:
     if set(index_ids) != set(seq):
         fail(f"index/seq ID mismatch: missing={sorted(set(seq)-set(index_ids))} extra={sorted(set(index_ids)-set(seq))}", errors)
     for ident in seq:
-        n = len(list((ROOT / "measurements/v5-files").glob(f"{ident}.run??.log")))
+        n = len(list(log_dir.glob(f"{ident}.run??.log")))
         if n != 10:
-            fail(f"{ident}: {n} v5 logs, expected 10", errors)
+            fail(f"{ident}: {n} logs in {log_dir.name}, expected 10", errors)
     if f"{EXPECTED_ENTRIES} Einträge" not in readme:
         fail("README missing current entry count", errors)
     if f"{EXPECTED_LOGS}/" not in readme:

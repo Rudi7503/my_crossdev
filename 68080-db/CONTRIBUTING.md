@@ -21,6 +21,10 @@ add v1–v4 data.
 
 ## 2. Read before changing anything
 
+- [`TOOLCHAIN.md`](TOOLCHAIN.md)
+- [`templates/sequence.i`](templates/sequence.i)
+- [`templates/ENTRY.md`](templates/ENTRY.md)
+
 1. `README.md` — rules, status legend, measurement protocol
 2. `index.md` — all IDs and the current count
 3. `09-harness.md` — harness internals (the historical sections are context,

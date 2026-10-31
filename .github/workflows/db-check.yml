@@ -1,0 +1,35 @@
+name: 68080 DB checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '68080-db/**'
+      - '.github/workflows/db-check.yml'
+  pull_request:
+    paths:
+      - '68080-db/**'
+      - '.github/workflows/db-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Python dependencies
+        run: python3 -m pip install -r 68080-db/tools/requirements.txt
+      - name: Sequence guard
+        working-directory: 68080-db
+        run: python3 tools/check_sequences.py seq/
+      - name: Documentation and link consistency
+        working-directory: 68080-db
+        run: python3 tools/check_docs.py
+      - name: Validate all tracked v5 logs
+        working-directory: 68080-db
+        run: python3 tools/check_log.py cores/core-11350/logs/*.log
