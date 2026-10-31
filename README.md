@@ -1,5 +1,12 @@
 # ApolloCrossDev is intended to help (future) Amiga/Apollo developers to setup a Cross Compiler in Ubuntu Linux (x64) or MacOS (Silicon).
 
+## 68080 Best-Practice Database
+
+The measured Apollo 68080 database lives in [`68080-db/`](68080-db/).
+Start with [`68080-db/README.md`](68080-db/README.md); contributors and AI
+agents should read [`68080-db/CONTRIBUTING.md`](68080-db/CONTRIBUTING.md)
+before adding sequences, logs or measurements.
+
 ## Content:
 ApolloCrossDev is based on the excellent Amiga-GCC repositories by Stefan -Bebbo- Franke
 1. BinUtils (ar=archiver | as=GNU ASM | ld=linker | nm=symbols | objdump=objects | ranlib=libindex)

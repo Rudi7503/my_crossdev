@@ -142,7 +142,7 @@ Vor jedem Upload und Ausführen von Assembler-Code auf der echten V4-Hardware mu
 
 ### 4. Instruktions-Restriktionen der 68k / 68080
 - **`BFLYW`-Privilegien-Falle (`0x80000008`):**  
-  Auf Core 1088/1 ist `bflyw` im User-Mode gesperrt oder unvollständig implementiert. Ein Aufruf erzeugt sofort eine *Privilege Violation* (`Software Failure 0x80000008`).  
+  Auf Apollo Core 11350 / PCR 1088/1 ist `bflyw` im User-Mode gesperrt oder unvollständig implementiert. Ein Aufruf erzeugt sofort eine *Privilege Violation* (`Software Failure 0x80000008`).  
   **Regel:** Für Schmetterlinge/Butterflies immer standardkonformes AMMX `paddw` + `psubw` einsetzen!
 - **`TOUCH`-Syntax in vasm:**  
   `touch (An)` ist in vasm syntaktisch ungültig. Es MUSS immer die indizierte Form `touch (An, Dn.w)` oder `touch (An, Dn.l)` verwendet werden (z. B. `moveq #0,d1` gefolgt von `touch (a0,d1.w)`).

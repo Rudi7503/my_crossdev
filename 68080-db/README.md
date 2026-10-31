@@ -11,6 +11,8 @@ Kuratierte, quellenbelegte und auf echter Hardware gemessene Optimierungsmuster 
 
 ---
 
+> **Neu hier oder eine fremde KI?** Der vollständige Einstieg, die Regeln für Beiträge ohne V4-Hardware und die Checkliste stehen in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Die Community- & KI-Challenge: *„Beat Our Cycle Counts!“*
 
 Wir fordern jeden Entwickler, Apollo-Experten und jede Programmier-KI heraus:
@@ -88,7 +90,7 @@ Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).
 
 | Status | Bedeutung |
 |---|---|
-| `VERIFIZIERT (gemessen)` | Ein vollständiges Log `measurements/<ID>.log` mit `BEGIN`, 100×`RES`, `SUMMARY`, `END` liegt vor und wurde mit diesem Harness erzeugt. |
+| `VERIFIZIERT (gemessen)` | Ein vollständiges Log `measurements/v5-files/<ID>.runNN.log` mit `BEGIN`, 100×`RES`, `SUMMARY`, `END` liegt vor und wurde mit diesem Harness erzeugt. |
 | `VERIFIZIERT (Literatur)` | Der Mechanismus ist im PRM bzw. in einer offiziellen Apollo-Quelle belegt; die Sequenz baut mit vasm. **Kein** Hardware-Messwert. |
 | `UNVERIFIZIERT (nicht gemessen)` | Wie oben, aber ohne Hardwarelauf. Für künftige neue Einträge; der aktuelle Korpus ist vollständig gemessen. |
 | `UNVERIFIZIERT (Register-Konflikt)` | Sequenz berührt `d5`, `d6`, `d7`, `a5`, `a6` oder `a7`; der Guard `tools/check_sequences.py` lehnt sie ab. |
@@ -97,7 +99,7 @@ Jeder Eintrag trennt deshalb sauber:
 
 - **Status** – Messstatus,
 - **Beleg** – Literaturquelle,
-- **Messergebnis** – Rohdaten aus `measurements/<ID>.log` (770/770 vorhanden),
+- **Messergebnis** – Rohdaten aus `measurements/v5-files/<ID>.runNN.log` (770/770 vorhanden),
 - **Literaturwert** – was PRM/Wiki aussagen (kein Messwert).
 
 ## Schnellstart
@@ -115,7 +117,7 @@ HARNESS=harness-v5.asm BUILD_DIR=build-v5 BIN_DIR=bin-v5 ./tools/build_all.sh
 # 2. Auf der Vampire starten, z. B. bin-v5/FUS-001, und auf dem PC mitschneiden
 #    Linux:
 python3 -m pip install -r tools/requirements.txt
-python3 tools/serial_capture.py --port /dev/ttyUSB0 --baud 115200 --out measurements/v5
+python3 tools/serial_capture.py --port /dev/ttyUSB0 --baud 115200 --out measurements/v5-serial
 #    Windows (getesteter Fall, CH340 an COM9):
 #    python tools/serial_capture.py --port COM9 --baud 115200 --out measurements/v5-serial
 
@@ -131,7 +133,7 @@ for f in bin-v5/*; do ../Projects/ApolloExplorer/acp/acp "$f" "$AMIGAHOST:Ram Di
 ../Projects/ApolloExplorer/acp/acp RUN-ALL "$AMIGAHOST:Ram Disk/"
 
 # Auf der V4:  Execute "Ram Disk:RUN-ALL"
-#   -> 71 Eintraege x 10 Laeufe, Dateilogs in Ram Disk:LOGS/<ID>.runNN.log
+#   -> 77 Eintraege x 10 Laeufe, Dateilogs in Ram Disk:LOGS/<ID>.runNN.log
 
 # Seriell mitschneiden (zweiter, unabhaengiger Kanal)
 python3 tools/serial_capture.py --port /dev/ttyUSB0 --baud 115200 --out measurements/v5-serial
@@ -196,8 +198,8 @@ Der Guard prüft die Sequenzen statisch. Ein Verstoß ist ein Build-Fehler, kein
 | `tools/download_logs.sh` | V4-Dateilogs aus `Ram Disk:LOGS` per ACP herunterladen |
 | `tools/repeat_report.py` | 10 Wiederholungen je Eintrag auswerten; optional V4- und Serial-Logs vergleichen |
 | `tools/check_log.py` | Log-Format, `CORE`-Zeile und SUMMARY gegen RES prüfen |
-| `RUN-ALL` | AmigaDOS-Batch: jedes der 74 Programme 10× (770 Läufe), Dateilog in `Ram Disk:LOGS` |
-| `RUN-ALL-ONCE` | Einzellauf aller 74 Programme (für schnelle Tests) |
+| `RUN-ALL` | AmigaDOS-Batch: jedes der 77 Programme 10× (770 Läufe), Dateilog in `Ram Disk:LOGS` |
+| `RUN-ALL-ONCE` | Einzellauf aller 77 Programme (für schnelle Tests) |
 
 ## Reproduzierbarkeit und Grenzen
 
