@@ -29,7 +29,13 @@ Upload and run the capture script:
 "$ACP" tools/CAPTURE-CORE "$AMIGAHOST:RAM/"
 "$ASH" "$AMIGAHOST" 'C:Protect RAM:CAPTURE-CORE +e'
 "$ASH" "$AMIGAHOST" 'C:Execute RAM:CAPTURE-CORE'
-"$ACP" "$AMIGAHOST:RAM/CORE-IDENTITY.txt" "cores/core-<ApolloCore>/CORE-IDENTITY.txt"
+mkdir -p "cores/core-<ApolloCore>"
+if [[ "$ACP" == *.exe || "$ACP" == *.EXE ]] && command -v wslpath >/dev/null 2>&1; then
+    CORE_DEST=$(wslpath -w "$PWD/cores/core-<ApolloCore>/CORE-IDENTITY.txt")
+else
+    CORE_DEST="$PWD/cores/core-<ApolloCore>/CORE-IDENTITY.txt"
+fi
+"$ACP" "$AMIGAHOST:RAM/CORE-IDENTITY.txt" "$CORE_DEST"
 ```
 
 The script captures:
@@ -65,14 +71,20 @@ Upload all binaries and the tracked batch:
 `RAM:#?` protects every uploaded binary and the batch. The AmigaDOS side is
 `Ram Disk:`; ACP addresses it as `RAM:`.
 
-Download the logs:
+Download the logs. From WSL with **Windows ACP**, `download_logs.sh`
+automatically converts the POSIX destination to a UNC path. The conversion is
+required because Windows ACP cannot create paths such as `/tmp/...` and may
+still return exit code 0 on that error:
 
 ```bash
-AMIGAHOST="$AMIGAHOST" ACP="$ACP" ./tools/download_logs.sh cores/core-<ApolloCore>/logs
+AMIGAHOST="$AMIGAHOST" ACP="$ACP" \
+  ./tools/download_logs.sh cores/core-<ApolloCore>/logs
 ```
 
-The downloader flattens ACP's optional `LOGS/` subdirectory and reports the
-number of `.log` files.
+If your ACP is older and does not accept UNC paths, download to a Windows
+path (for example `C:\\temp\\v4-logs`) and move the files afterwards. The
+downloader flattens ACP's optional `LOGS/` subdirectory, reports the number of
+`.log` files and fails if none arrived.
 
 Foreign-core logs stay **only** there. Do **not** copy them into
 `measurements/v5-files/` and do **not** add them to `entries.yaml`; that
@@ -119,11 +131,13 @@ volume named exactly **`Ram Disk:`**, or adapt the harness/batch deliberately
 ### Wait for completion
 
 `RUN-ALL` is a long-running AmigaDOS batch. `C:Execute RAM:RUN-ALL` normally
-returns after the batch finishes, but do not assume it. Verify completion by
-counting the resulting files:
+returns after the batch finishes, but do not assume it. The tested behavior: `C:Execute RAM:RUN-ALL` returns after the batch
+(about 130 s for 770 runs), but ACP may be temporarily unreachable during
+the run. Do **not** poll ACP while the batch is running. Wait for the ASH
+command to return (or use its timestamps), then verify the result:
 
 ```bash
-"$ACP" -d "$AMIGAHOST:RAM/LOGS" | grep -c '\.run[0-9][0-9]\.log$'
+"$ACP" -d "$AMIGAHOST:RAM/LOGS" | tr -d '\r' | grep -c '\.run[0-9][0-9]\.log'
 ```
 
 Expected: **770** logs. Only then download and validate.
@@ -134,6 +148,14 @@ Expected: **770** logs. Only then download and validate.
 - Set `AMIGAHOST` to your own V4 IP; `acp -l` is not reliable on this setup.
 - `CAPTURE-CORE` needs `C:ApolloControl`; `ENV:VCoreRev` may be absent on
   older systems. Record what the machine actually returns; do not guess.
+
+### WSL + Windows ACP
+
+`download_logs.sh` preflights `RAM:LOGS` and refuses a volume-root copy.
+The tested ACP/ASH (ApolloExplorer 1.4.0) run from WSL needs UNC destinations
+for downloads. A POSIX destination may fail with “The local path ... doesn't
+exist” while ACP still prints exit code 0. Use `download_logs.sh` (it converts
+the path) or pass a `\wsl.localhost\...`/`C:\...` path explicitly.
 
 ### Hardware assumptions
 
