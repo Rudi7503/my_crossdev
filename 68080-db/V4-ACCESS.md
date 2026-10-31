@@ -16,6 +16,9 @@ Das **Linux-ACP aus WSL funktioniert nicht** für die V4:
 Projects/ApolloExplorer/acp/acp   # aus WSL: keine Route ins LAN
 ```
 
+> **ApolloExplorer-Version:** aktuell halten (getestet: **1.4.0**). Alte
+> ASH-Versionen können `C:Execute`/Batch-Aufrufe nicht ausführen.
+
 Der funktionierende Weg ist das **Windows-ACP**:
 
 ```text

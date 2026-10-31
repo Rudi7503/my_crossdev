@@ -56,6 +56,8 @@ Building and static checks work without a Vampire. A canonical measurement
 needs:
 
 - A Vampire V4 with ApolloOS
+- **current ApolloExplorer** for ACP/ASH (tested: 1.4.0); old ASH builds may
+  not execute `C:Execute` or the batch
 - ACP for upload
 - ASH for execution
 - the V4 reachable on the LAN

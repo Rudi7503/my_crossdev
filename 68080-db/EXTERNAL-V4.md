@@ -1,5 +1,9 @@
 # External V4 measurement hand-off
 
+> **Prerequisite:** use a **current ApolloExplorer** installation (tested:
+> **1.4.0**). Older ASH builds may not execute `C:Execute` / the `RUN-ALL`
+> batch. Do not start with an old ASH.
+
 Use this if you run the corpus on **your own Vampire V4**, not on the
 maintainer's machine. There is deliberately **no self-hosted CI** in this
 repository.
@@ -156,7 +160,7 @@ Expected: **770** logs. Only then download and validate.
 ### WSL + Windows ACP
 
 `download_logs.sh` preflights `RAM:LOGS` and refuses a volume-root copy.
-The tested ACP/ASH (ApolloExplorer 1.4.0) run from WSL needs UNC destinations
+The tested ACP/ASH (ApolloExplorer **1.4.0**, current at test time) run from WSL needs UNC destinations
 for downloads. A POSIX destination may fail with “The local path ... doesn't
 exist” while ACP still prints exit code 0. Use `download_logs.sh` (it converts
 the path) or pass a `\wsl.localhost\...`/`C:\...` path explicitly.

@@ -114,6 +114,10 @@ Jeder Eintrag trennt deshalb sauber:
 
 ## Schnellstart
 
+> **ApolloExplorer:** aktuelle Version verwenden (getestet: **1.4.0**).
+> Alte ASH-Versionen können `C:Execute`/`RUN-ALL` nicht starten.
+
+
 Toolchain und vasm: [`TOOLCHAIN.md`](TOOLCHAIN.md). Entry-/Sequence-Vorlagen: [`templates/`](templates/). Maschinenlesbares Manifest: [`entries.yaml`](entries.yaml). Externer V4-Ablauf: [`EXTERNAL-V4.md`](EXTERNAL-V4.md).
 
 Der Zugriff auf die V4 (Windows-ACP, IP, Pfad-Syntax, Troubleshooting) steht
