@@ -1,0 +1,60 @@
+68080 Best-Practice Database – Licensing Notice
+
+Scope
+-----
+This NOTICE applies only to the contents of 68080-db/.
+
+1. Source code, build tooling, harness, sequences and batch scripts
+   -----------------------------------------------------------------
+   Files including, but not limited to:
+
+     harness-v5.asm
+     seq/*.i
+     tools/*
+     RUN-ALL
+     RUN-ALL-ONCE
+
+   are licensed under the MIT License; see LICENSE.
+
+2. Documentation, tables, measurement logs and summaries
+   ------------------------------------------------------
+   Files including, but not limited to:
+
+     *.md
+     measurements/**
+     cores/**
+
+   are licensed under Creative Commons Attribution 4.0 International
+   (CC BY 4.0); see LICENSE-DOCS.
+
+   Suggested attribution:
+     "68080 Best-Practice Database, Rudi7503 and contributors,
+      CC BY 4.0, https://github.com/Rudi7503/my_crossdev"
+
+3. Third-party material
+   ---------------------
+   The following material is cited, quoted or referenced but is NOT
+   relicensed by the MIT or CC BY 4.0 grants above. It remains under the
+   terms of its respective authors:
+
+   - Apollo 68080 Programmer's Reference Manual (Apollo Team)
+   - Apollo wiki snapshots (Internet Archive)
+   - Henryk Richter, libSDL12_Amiga68k / blitapollo.asm (reference)
+   - External projects under ../Projects/, ../Compilers/, ../Docs/
+   - Toolchain components (vasm, GCC, ApolloExplorer)
+
+   Quotations from the PRM and wiki are included for technical
+   documentation and attribution. If you believe material is
+   misattributed, please open an issue.
+
+4. Contributions
+   ---------------
+   Unless explicitly stated otherwise, contributions to 68080-db/ are
+   accepted under the same split: MIT for code/sequences/tooling and
+   CC BY 4.0 for documentation/data/logs. Contributors must have the
+   right to submit the material and must mark third-party content.
+
+5. No legal advice
+   -----------------
+   This notice describes the project's intended licensing; it is not
+   legal advice. Third-party rights and exceptions apply.

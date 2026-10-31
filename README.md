@@ -7,6 +7,10 @@ Start with [`68080-db/README.md`](68080-db/README.md); contributors and AI
 agents should read [`68080-db/CONTRIBUTING.md`](68080-db/CONTRIBUTING.md)
 before adding sequences, logs or measurements.
 
+Licensing for the DB: **MIT** for code/tools/sequences (`68080-db/LICENSE`),
+**CC BY 4.0** for documentation/data/logs (`68080-db/LICENSE-DOCS`); see
+`68080-db/NOTICE` for third-party exceptions.
+
 ## Content:
 ApolloCrossDev is based on the excellent Amiga-GCC repositories by Stefan -Bebbo- Franke
 1. BinUtils (ar=archiver | as=GNU ASM | ld=linker | nm=symbols | objdump=objects | ranlib=libindex)

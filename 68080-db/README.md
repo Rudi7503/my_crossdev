@@ -225,6 +225,15 @@ Der Guard prüft die Sequenzen statisch. Ein Verstoß ist ein Build-Fehler, kein
   wie „auf dem 68060 wäre das langsamer“ sind in den Einträgen als
   Literatur/Mechanismus begründet, nicht als gemessene Differenz.
 
+## Lizenz
+
+- **Code, Harness, Sequenzen, Tools:** MIT → [`LICENSE`](LICENSE)
+- **Doku, Tabellen, Messlogs, Summaries:** CC BY 4.0 → [`LICENSE-DOCS`](LICENSE-DOCS)
+- **Third-Party-Ausnahmen und Attribution:** [`NOTICE`](NOTICE)
+
+Die Lizenzierung gilt nur für `68080-db/`; `Projects/`, `Compilers/` und
+`Docs/` bleiben unter ihren jeweiligen Bedingungen.
+
 ## Offene Punkte
 
 1. Wiederholungsläufe über mehrere Boots/Core-Revisionen durchführen und

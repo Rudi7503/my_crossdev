@@ -180,3 +180,14 @@ python3 tools/perf_report.py measurements/v5-files
 ```
 
 For V4 access (ACP/ASH, IP, paths) see [`V4-ACCESS.md`](V4-ACCESS.md).
+
+## 8. Licensing
+
+- Code, harness, sequences, tools and batch scripts: **MIT** (`LICENSE`).
+- Documentation, tables, measurement logs and summaries: **CC BY 4.0**
+  (`LICENSE-DOCS`).
+- Third-party citations and exceptions: `NOTICE`.
+- Contributions are accepted under this split unless explicitly marked
+  otherwise. Do not submit code or text you do not have the right to license.
+- The MIT/CC BY grants apply only to `68080-db/`, not to `Projects/`,
+  `Compilers/` or `Docs/`.
