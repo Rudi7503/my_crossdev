@@ -170,3 +170,7 @@ REG-002 sha256: 8f1091cf054f3021abe486dbac36a1a66ca136be53b358b6a3adc8dbba9bffa9
 
 No separate vasm patch is required. The binary is a local toolchain
 installation and is not committed to the repository.
+
+
+Full reproducibility run with 2.0f: [`REPRODUCIBILITY-2.0f.md`](REPRODUCIBILITY-2.0f.md)
+(770/770 logs valid; MIN identical in all 770 runs; only MAX/AVG jitter differs).

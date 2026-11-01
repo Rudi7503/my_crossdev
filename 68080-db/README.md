@@ -68,6 +68,7 @@ nur die PCR, nicht die Apollo-Core-Buildnummer. Vorlage:
 
 Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-11350/`](cores/core-11350/).
 Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).
+2.0d/2.0f-Reproduzierbarkeit: [`REPRODUCIBILITY-2.0f.md`](REPRODUCIBILITY-2.0f.md).
 
 ## Quellenhierarchie
 
