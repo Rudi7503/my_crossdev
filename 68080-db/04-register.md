@@ -72,7 +72,7 @@ Integerpfad sieht D0–D7 und – eingeschränkt – E0–E23.
   - `MIN = 3` Takte (in allen 10 Läufen identisch)
   - `MAX = 3` Takte (Median der 10 Läufe)
   - `AVG = 3` Takte (Median der 10 Läufe)
-  - **Pipe-Slots (v5):** `IEP1 = 4`, `IEP2 = 0`, `IEP3 = 0` pro Lauf (Median); Summe = 4.
+  - **Pipe-Slots (v5):** `IEP1 = 4`, `IEP2 = 1`, `IEP3 = 0` pro Lauf (Median); Summe = 5.
   - 10/10 Läufe mit 100/100 `RES`-Zeilen, `check_log.py` OK.
 - **Warmup:** Die ersten 10 Läufe liegen bei MIN; der v1-Kaltstart ist weg.
 - **Wiederholbarkeit:** MIN 10/10 identisch; MAX/AVG sind Mediane der 10 Läufe.
@@ -100,20 +100,17 @@ Integerpfad sieht D0–D7 und – eingeschränkt – E0–E23.
 ### Problem
 
 Die B-Register sind keine vollwertigen Ersatz-Adressregister. Das PRM listet
-genau, was der Integerpfad mit ihnen darf:
+zwar mehrere Formen, aber **vasm 2.0f** verschärft die Apollo-Regeln:
 
-```asm
-    movea.l <ea>,Bn
-    move.l  Bn,<ea>
-    lea     <ea>,Bn
-    lea     (Bn),An          ; = move.l Bn,An
-    addq.l  #n,Bn
-    subq.l  #n,Bn
-    cmp.l   Bn,Dn
+```text
+move.l Am,Bn   -> nicht erlaubt
+move.l Bm,An   -> nicht erlaubt
 ```
 
-Nicht erlaubt sind unter anderem `move.l Bn,Bm`, `exg` mit Beteiligung eines
-B-Registers und – im Legacy-Pfad – indirekte Adressierung über `(Bn)`.
+Erlaubt bleiben insbesondere die Datenregister-Formen `Dn->Bn` und `Bn->Dn`
+sowie `lea`/`addq`/`subq`/`cmp` im vorgesehenen Rahmen. Nicht erlaubt sind
+unter anderem `move.l Bn,Bm`, `exg` mit Beteiligung eines B-Registers und –
+im Legacy-Pfad – indirekte Adressierung über `(Bn)`.
 
 ### Naiver Ansatz
 
@@ -122,11 +119,16 @@ B-Registers und – im Legacy-Pfad – indirekte Adressierung über `(Bn)`.
     move.l  b0,b1       ; B -> B: nicht erlaubt
 ```
 
-### 68080-Ansatz
+### 68080-Ansatz (vasm 2.0f-kompatibel)
+
+vasm 2.0f erlaubt **kein** `move.l Am,Bn` und **kein** `move.l Bm,An`.
+Die kanonische Sequenz lädt B0 deshalb über ein Datenregister und liest es
+über D1 zurück:
 
 ```asm
-    move.l  a0,b0       ; A -> B ist erlaubt
-    move.l  b0,d0       ; B -> D ist erlaubt
+    move.l  a0,d0       ; A -> D
+    move.l  d0,b0       ; D -> B
+    move.l  b0,d1       ; B -> D
 ```
 
 ### Warum das funktioniert
@@ -144,28 +146,31 @@ Sequenzen bleibt A0–A7 die sichere Wahl.
 ### Messung
 
 - Sequenz: [`seq/REG-002.i`](seq/REG-002.i)
-- Log: [v5 V4-Datei](measurements/v5-files/REG-002.run01.log) · [v1-Archiv](measurements/REG-002.log)
+- Log: [v5 V4-Datei](cores/core-11350/logs/REG-002.run01.log)
 - **Messergebnis (Vampire V4, Harness v5, 10 × 100 Läufe):**
   - `BASELINE = 5` (Median der 10 Läufe)
   - `MIN = 3` Takte (in allen 10 Läufen identisch)
   - `MAX = 3` Takte (Median der 10 Läufe)
   - `AVG = 3` Takte (Median der 10 Läufe)
-  - **Pipe-Slots (v5):** `IEP1 = 4`, `IEP2 = 0`, `IEP3 = 0` pro Lauf (Median); Summe = 4.
+  - **Pipe-Slots (v5):** `IEP1 = 4`, `IEP2 = 1`, `IEP3 = 0` pro Lauf (Median); Summe = 5.
   - 10/10 Läufe mit 100/100 `RES`-Zeilen, `check_log.py` OK.
 - **Warmup:** Die ersten 10 Läufe liegen bei MIN; der v1-Kaltstart ist weg.
 - **Wiederholbarkeit:** MIN 10/10 identisch; MAX/AVG sind Mediane der 10 Läufe.
 - **Baseline-Warnung:** `BASELINE = 5`; `NET = RES − BASELINE` wird negativ und ist kein gültiger Sequenzwert.
 
-- **Register:** `a0`, `b0`, `d0`.
+- **Register:** `a0`, `b0`, `d0`, `d1`.
 
 **Gemessene Sequenz (verbatim aus `seq/REG-002.i`, gebaut als `bin-v5/REG-002`):**
 
 ```asm
-; seq/REG-002.i - B address register: valid move forms only
-; Uses: a0, b0, d0
+; seq/REG-002.i - B address register: vasm-2.0f-compatible Dn<->Bn forms
+; Uses: d0, d1, a0, b0
 ; MUST NOT touch: d5, d6, d7, a5, a6, a7
-        move.l  a0,b0
-        move.l  b0,d0
+; vasm 2.0f intentionally rejects move.l Am,Bn and Bm,An.
+; Load B0 through a data register and read it back through D1.
+        move.l  a0,d0
+        move.l  d0,b0
+        move.l  b0,d1
 ```
 
 ## REG-003: Long/Quad-Updates statt Byte/Word-Merges
@@ -219,7 +224,7 @@ werden.
   - `MIN = 3` Takte (in allen 10 Läufen identisch)
   - `MAX = 3` Takte (Median der 10 Läufe)
   - `AVG = 3` Takte (Median der 10 Läufe)
-  - **Pipe-Slots (v5):** `IEP1 = 4`, `IEP2 = 0`, `IEP3 = 0` pro Lauf (Median); Summe = 4.
+  - **Pipe-Slots (v5):** `IEP1 = 4`, `IEP2 = 1`, `IEP3 = 0` pro Lauf (Median); Summe = 5.
   - 10/10 Läufe mit 100/100 `RES`-Zeilen, `check_log.py` OK.
 - **Warmup:** Die ersten 10 Läufe liegen bei MIN; der v1-Kaltstart ist weg.
 - **Wiederholbarkeit:** MIN 10/10 identisch; MAX/AVG sind Mediane der 10 Läufe.
@@ -351,7 +356,7 @@ nur für den AMMX-Befehlssatz, nicht für `add`/`sub`/`and`/`or` des Integerpfad
   - `MIN = 3` Takte (in allen 10 Läufen identisch)
   - `MAX = 3` Takte (Median der 10 Läufe)
   - `AVG = 3` Takte (Median der 10 Läufe)
-  - **Pipe-Slots (v5):** `IEP1 = 4`, `IEP2 = 0`, `IEP3 = 0` pro Lauf (Median); Summe = 4.
+  - **Pipe-Slots (v5):** `IEP1 = 4`, `IEP2 = 1`, `IEP3 = 0` pro Lauf (Median); Summe = 5.
   - 10/10 Läufe mit 100/100 `RES`-Zeilen, `check_log.py` OK.
 - **Warmup:** Die ersten 10 Läufe liegen bei MIN; der v1-Kaltstart ist weg.
 - **Wiederholbarkeit:** MIN 10/10 identisch; MAX/AVG sind Mediane der 10 Läufe.
@@ -381,6 +386,6 @@ nur für den AMMX-Befehlssatz, nicht für `add`/`sub`/`and`/`or` des Integerpfad
 | Breite | Long/Quad, wenn semantisch erlaubt | vermeidet Partial-Register-Merges |
 
 
-> **Toolchain note:** `move.l a0,b0` is accepted by vasm **2.0d**, but not by
-> vasm **2.0f** (`illegal operand types`). Use 2.0d for the canonical build;
-> see [`TOOLCHAIN.md`](TOOLCHAIN.md) for hashes.
+> **Toolchain note:** vasm **2.0f** deliberately rejects `move.l Am,Bn` and
+> `move.l Bm,An`; use the `Dn <-> Bn` forms above. See
+> [`TOOLCHAIN.md`](TOOLCHAIN.md).

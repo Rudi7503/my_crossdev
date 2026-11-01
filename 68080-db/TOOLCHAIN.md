@@ -125,32 +125,29 @@ in this repository.
 need the cross compiler, but they are outside the 77-entry measurement corpus.
 
 
-## 7. Known vasm issue: REG-002 and vasm 2.0f
+## 7. vasm 2.0f and the B-register change
 
-The canonical build was tested with **vasm 2.0d** (M68k backend 2.8,
-Motorola syntax 3.19d). It accepts the 68080 B-register form:
+**vasm 2.0f is the current release** (12 Jul 2026; M68k backend, motorola
+syntax). It intentionally changed the Apollo B-register rules:
+
+> m68k: Apollo: `move.l Bm,An` and `Am,Bn` should not be allowed.
+
+This is **not a regression**. `seq/REG-002.i` was adapted to the allowed
+`Dn <-> Bn` forms and rebuilt/remeasured:
 
 ```asm
-        move.l  a0,b0
-        move.l  b0,d0
+        move.l  a0,d0
+        move.l  d0,b0
+        move.l  b0,d1
 ```
 
-vasm **2.0f** rejects `move.l a0,b0` with `illegal operand types`. This is a
-vasm-2.0f regression/backend issue, not an error in `seq/REG-002.i`. Use the
-tested 2.0d binary or patch vasm.
-
-Known-good binary used by this repository:
+Tested with the repository's vasm **2.0d** (the local toolchain), which also
+accepts these forms. The canonical REG-002 output is:
 
 ```text
-path:   Compilers/GCC-6.50-Latest/bin/vasmm68k_mot
-sha256: ce81072f06d34987d939d064747d3261ef3d81d8c5655899c9cd8685b2b8768b
+sha256: 8f1091cf054f3021abe486dbac36a1a66ca136be53b358b6a3adc8dbba9bffa9
 ```
 
-Known-good `REG-002` output:
-
-```text
-sha256: bbf295dcd63375e92c27103686b6991553460bfe86f590a123c6de6a8f1293bf
-```
-
-If vasm 2.0f remains necessary, exclude REG-002 temporarily, but do not claim
-a complete 77-entry run.
+No separate vasm patch is required. On vasm 2.0f, do **not** use
+`move.l a0,b0`; it is deliberately rejected. For the full 77-entry run use
+vasm 2.0f or 2.0d with the updated `REG-002`.
