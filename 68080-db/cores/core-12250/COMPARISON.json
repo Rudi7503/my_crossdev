@@ -1,0 +1,180 @@
+{
+  "reference": "Pinned repository cores/core-11350/logs; not a controlled same-board comparison",
+  "same_MIN_cycles": 59,
+  "lower_MIN_cycles": 4,
+  "higher_MIN_cycles": 14,
+  "negative_PERF_logs": 40,
+  "negative_PERF_fields": {
+    "ANTI-004.run01.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "ANTI-004.run02.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "ANTI-004.run03.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "ANTI-004.run04.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "ANTI-004.run05.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "ANTI-004.run06.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "ANTI-004.run07.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "ANTI-004.run08.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "ANTI-004.run09.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "ANTI-004.run10.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "ANTI-005.run01.log": {
+      "IEP1": -50329548,
+      "IEP2": -67108864
+    },
+    "ANTI-005.run02.log": {
+      "IEP1": -50329548,
+      "IEP2": -67108864
+    },
+    "ANTI-005.run03.log": {
+      "IEP1": -50329548,
+      "IEP2": -67108864
+    },
+    "ANTI-005.run04.log": {
+      "IEP1": -50329548,
+      "IEP2": -67108864
+    },
+    "ANTI-005.run05.log": {
+      "IEP1": -50329548,
+      "IEP2": -67108864
+    },
+    "ANTI-005.run06.log": {
+      "IEP1": -50329548,
+      "IEP2": -67108864
+    },
+    "ANTI-005.run07.log": {
+      "IEP1": -50329548,
+      "IEP2": -67108864
+    },
+    "ANTI-005.run08.log": {
+      "IEP1": -50329548,
+      "IEP2": -67108864
+    },
+    "ANTI-005.run09.log": {
+      "IEP1": -50329548,
+      "IEP2": -67108864
+    },
+    "ANTI-005.run10.log": {
+      "IEP1": -50329548,
+      "IEP2": -67108864
+    },
+    "BND-004.run01.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "BND-004.run02.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "BND-004.run03.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "BND-004.run04.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "BND-004.run05.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "BND-004.run06.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "BND-004.run07.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "BND-004.run08.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "BND-004.run09.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "BND-004.run10.log": {
+      "IEP2": -3,
+      "IEP3": -4
+    },
+    "TIM-004.run01.log": {
+      "IEP2": -3,
+      "IEP3": -4,
+      "BPC": -5
+    },
+    "TIM-004.run02.log": {
+      "IEP2": -3,
+      "IEP3": -4,
+      "BPC": -5
+    },
+    "TIM-004.run03.log": {
+      "IEP2": -3,
+      "IEP3": -4,
+      "BPC": -5
+    },
+    "TIM-004.run04.log": {
+      "IEP2": -3,
+      "IEP3": -4,
+      "BPC": -5
+    },
+    "TIM-004.run05.log": {
+      "IEP2": -3,
+      "IEP3": -4,
+      "BPC": -5
+    },
+    "TIM-004.run06.log": {
+      "IEP2": -3,
+      "IEP3": -4,
+      "BPC": -5
+    },
+    "TIM-004.run07.log": {
+      "IEP2": -3,
+      "IEP3": -4,
+      "BPC": -5
+    },
+    "TIM-004.run08.log": {
+      "IEP2": -3,
+      "IEP3": -4,
+      "BPC": -5
+    },
+    "TIM-004.run09.log": {
+      "IEP2": -3,
+      "IEP3": -4,
+      "BPC": -5
+    },
+    "TIM-004.run10.log": {
+      "IEP2": -3,
+      "IEP3": -4,
+      "BPC": -5
+    }
+  },
+  "negative_fields_identical_to_reference": true
+}

@@ -9,6 +9,7 @@ Dieses Verzeichnis enthält die Benchmark-Messungen, Performance-Zähler (IEP-Pi
 | Verzeichnis | Core-Kennung | Plattform | Status |
 |---|---|---|---|
 | [`core-11350/`](core-11350/) | Apollo Core 11350; PCR `CORE;1088;1;0` | Vampire V4 Standalone (92 MHz) | **100% vollständig gemessen & validiert (Harness v5)** |
+| [`core-12250/`](core-12250/) | Apollo Core **12250**; PCR `CORE;1088;1;12250` | Apollo 6000 Unicorn (A6000, 99 MHz) | **Fremd-Core, 770 Logs validiert** |
 
 Jedes Core-Verzeichnis enthält:
 - `logs/`: Sämtliche Rohdaten-Logs (10 Läufe je Eintrag, je 100 Messungen) mit `FILESTAT`, `BASELINE`, `RES` und `PERF`-Zählern.

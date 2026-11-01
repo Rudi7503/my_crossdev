@@ -1,0 +1,9 @@
+{
+  "started_utc": "2026-11-01T09:43:06.956740+00:00",
+  "command": "C:Execute RAM:RUN-ALL",
+  "status": "returned",
+  "no_network_polling_during_measurement": true,
+  "returncode": 0,
+  "finished_utc": "2026-11-01T09:45:08.342309+00:00",
+  "elapsed_seconds": 121.39
+}

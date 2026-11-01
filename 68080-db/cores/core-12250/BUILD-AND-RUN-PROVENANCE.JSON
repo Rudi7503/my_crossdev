@@ -1,0 +1,23 @@
+{
+  "source_commit": "a6a8216f96147808e51f0ed4ca21b2072ab2d682",
+  "build": "Windows-native equivalent of tools/build_all.sh; same include/ID substitution and -quiet -Fhunkexe -m68080 flags",
+  "assembler": "vasm 2.0f, m68k backend 2.8c",
+  "assembler_sha256": "3718dfcf8b928847e562a6f9c79e1b642787f74c1f4103879b6f8f96046e74f0",
+  "binaries": 77,
+  "sequence_guard": "77 sequences OK",
+  "harness_modified": false,
+  "batch_modified": false,
+  "source_hashes": {
+    "harness-v5.asm": "c68b4053e4127a8824cd8281413ce0707e70b0f4e05155c968723854987bfb60",
+    "RUN-ALL": "170437c53d190840b244ff9afd704576a285f821c22cbfd96021b6adaa05bb36",
+    "tools/CAPTURE-CORE": "4f8f59d3abed61423fd32b64fc3a76fcf06ab3f93984ea913d5cce0bc8e464e5",
+    "seq/REG-002.i": "a4b524dcbdb7c2bea62127ccf192463033ed89e9ff055cda43e6884e41393b75"
+  },
+  "core_build": "12250",
+  "clock": "99 MHz (x14)",
+  "board": "Apollo 6000 Unicorn",
+  "firmware_or_driver_updates": false,
+  "remote_software": "ApolloExplorer 1.4.0; amiagent 0.13.2",
+  "upload_transport": "authenticated amiagent; all 78 files verified byte-for-byte",
+  "measurement_transport": "Windows ASH 1.4.0; no polling during batch"
+}

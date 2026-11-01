@@ -1,0 +1,10 @@
+{
+  "core_after": [
+    0,
+    "12250\n"
+  ],
+  "network_after": "amiagent 0.13.2  AmigaOS dos.library 50\n",
+  "temporary_programs_removed": true,
+  "ram_logs_retained": true,
+  "personal_backup": "Personal:A6000-Test-12250-20261101"
+}

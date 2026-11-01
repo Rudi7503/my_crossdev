@@ -1,0 +1,1040 @@
+AMX-001.run01.log: AMX-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-001.run02.log: AMX-001 OK  baseline=5  MIN=3 MAX=17 AVG=3  NET_MIN=-2 NET_AVG=-1.74  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-001.run03.log: AMX-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-001.run04.log: AMX-001 OK  baseline=5  MIN=3 MAX=30 AVG=3  NET_MIN=-2 NET_AVG=-1.71  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-001.run05.log: AMX-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-001.run06.log: AMX-001 OK  baseline=5  MIN=3 MAX=33 AVG=3  NET_MIN=-2 NET_AVG=-1.65  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-001.run07.log: AMX-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-001.run08.log: AMX-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-001.run09.log: AMX-001 OK  baseline=5  MIN=3 MAX=24 AVG=3  NET_MIN=-2 NET_AVG=-1.73  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-001.run10.log: AMX-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-002.run01.log: AMX-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-002.run02.log: AMX-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-002.run03.log: AMX-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-002.run04.log: AMX-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-002.run05.log: AMX-002 OK  baseline=5  MIN=5 MAX=11 AVG=5  NET_MIN=0 NET_AVG=0.06  core=PCR:1088/1 VCoreRev=12250
+AMX-002.run06.log: AMX-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-002.run07.log: AMX-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-002.run08.log: AMX-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-002.run09.log: AMX-002 OK  baseline=5  MIN=5 MAX=18 AVG=5  NET_MIN=0 NET_AVG=0.13  core=PCR:1088/1 VCoreRev=12250
+AMX-002.run10.log: AMX-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-003.run01.log: AMX-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-003.run02.log: AMX-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-003.run03.log: AMX-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-003.run04.log: AMX-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-003.run05.log: AMX-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-003.run06.log: AMX-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-003.run07.log: AMX-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-003.run08.log: AMX-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-003.run09.log: AMX-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-003.run10.log: AMX-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-004.run01.log: AMX-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-004.run02.log: AMX-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-004.run03.log: AMX-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-004.run04.log: AMX-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-004.run05.log: AMX-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-004.run06.log: AMX-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-004.run07.log: AMX-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-004.run08.log: AMX-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-004.run09.log: AMX-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-004.run10.log: AMX-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-005.run01.log: AMX-005 OK  baseline=5  MIN=4 MAX=6 AVG=4  NET_MIN=-1 NET_AVG=-0.98  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-005.run02.log: AMX-005 OK  baseline=5  MIN=4 MAX=4 AVG=4  NET_MIN=-1 NET_AVG=-1.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-005.run03.log: AMX-005 OK  baseline=5  MIN=4 MAX=4 AVG=4  NET_MIN=-1 NET_AVG=-1.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-005.run04.log: AMX-005 OK  baseline=5  MIN=4 MAX=4 AVG=4  NET_MIN=-1 NET_AVG=-1.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-005.run05.log: AMX-005 OK  baseline=5  MIN=4 MAX=38 AVG=4  NET_MIN=-1 NET_AVG=-0.45  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-005.run06.log: AMX-005 OK  baseline=5  MIN=4 MAX=4 AVG=4  NET_MIN=-1 NET_AVG=-1.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-005.run07.log: AMX-005 OK  baseline=5  MIN=4 MAX=26 AVG=4  NET_MIN=-1 NET_AVG=-0.78  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-005.run08.log: AMX-005 OK  baseline=5  MIN=4 MAX=4 AVG=4  NET_MIN=-1 NET_AVG=-1.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-005.run09.log: AMX-005 OK  baseline=5  MIN=4 MAX=4 AVG=4  NET_MIN=-1 NET_AVG=-1.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-005.run10.log: AMX-005 OK  baseline=5  MIN=4 MAX=21 AVG=4  NET_MIN=-1 NET_AVG=-0.83  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+AMX-006.run01.log: AMX-006 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-006.run02.log: AMX-006 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-006.run03.log: AMX-006 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-006.run04.log: AMX-006 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-006.run05.log: AMX-006 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-006.run06.log: AMX-006 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-006.run07.log: AMX-006 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-006.run08.log: AMX-006 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-006.run09.log: AMX-006 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-006.run10.log: AMX-006 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-007.run01.log: AMX-007 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-007.run02.log: AMX-007 OK  baseline=5  MIN=5 MAX=7 AVG=5  NET_MIN=0 NET_AVG=0.02  core=PCR:1088/1 VCoreRev=12250
+AMX-007.run03.log: AMX-007 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-007.run04.log: AMX-007 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-007.run05.log: AMX-007 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-007.run06.log: AMX-007 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-007.run07.log: AMX-007 OK  baseline=5  MIN=5 MAX=13 AVG=5  NET_MIN=0 NET_AVG=0.08  core=PCR:1088/1 VCoreRev=12250
+AMX-007.run08.log: AMX-007 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-007.run09.log: AMX-007 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-007.run10.log: AMX-007 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+AMX-008.run01.log: AMX-008 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-008.run02.log: AMX-008 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-008.run03.log: AMX-008 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-008.run04.log: AMX-008 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-008.run05.log: AMX-008 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-008.run06.log: AMX-008 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-008.run07.log: AMX-008 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-008.run08.log: AMX-008 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-008.run09.log: AMX-008 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-008.run10.log: AMX-008 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-009.run01.log: AMX-009 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+AMX-009.run02.log: AMX-009 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+AMX-009.run03.log: AMX-009 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+AMX-009.run04.log: AMX-009 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+AMX-009.run05.log: AMX-009 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+AMX-009.run06.log: AMX-009 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+AMX-009.run07.log: AMX-009 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+AMX-009.run08.log: AMX-009 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+AMX-009.run09.log: AMX-009 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+AMX-009.run10.log: AMX-009 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+AMX-010.run01.log: AMX-010 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-010.run02.log: AMX-010 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-010.run03.log: AMX-010 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-010.run04.log: AMX-010 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-010.run05.log: AMX-010 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-010.run06.log: AMX-010 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-010.run07.log: AMX-010 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-010.run08.log: AMX-010 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-010.run09.log: AMX-010 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-010.run10.log: AMX-010 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+AMX-011.run01.log: AMX-011 OK  baseline=5  MIN=11 MAX=11 AVG=11  NET_MIN=6 NET_AVG=6.00  core=PCR:1088/1 VCoreRev=12250
+AMX-011.run02.log: AMX-011 OK  baseline=5  MIN=11 MAX=11 AVG=11  NET_MIN=6 NET_AVG=6.00  core=PCR:1088/1 VCoreRev=12250
+AMX-011.run03.log: AMX-011 OK  baseline=5  MIN=11 MAX=11 AVG=11  NET_MIN=6 NET_AVG=6.00  core=PCR:1088/1 VCoreRev=12250
+AMX-011.run04.log: AMX-011 OK  baseline=5  MIN=11 MAX=11 AVG=11  NET_MIN=6 NET_AVG=6.00  core=PCR:1088/1 VCoreRev=12250
+AMX-011.run05.log: AMX-011 OK  baseline=5  MIN=11 MAX=11 AVG=11  NET_MIN=6 NET_AVG=6.00  core=PCR:1088/1 VCoreRev=12250
+AMX-011.run06.log: AMX-011 OK  baseline=5  MIN=11 MAX=11 AVG=11  NET_MIN=6 NET_AVG=6.00  core=PCR:1088/1 VCoreRev=12250
+AMX-011.run07.log: AMX-011 OK  baseline=5  MIN=11 MAX=11 AVG=11  NET_MIN=6 NET_AVG=6.00  core=PCR:1088/1 VCoreRev=12250
+AMX-011.run08.log: AMX-011 OK  baseline=5  MIN=11 MAX=11 AVG=11  NET_MIN=6 NET_AVG=6.00  core=PCR:1088/1 VCoreRev=12250
+AMX-011.run09.log: AMX-011 OK  baseline=5  MIN=11 MAX=11 AVG=11  NET_MIN=6 NET_AVG=6.00  core=PCR:1088/1 VCoreRev=12250
+AMX-011.run10.log: AMX-011 OK  baseline=5  MIN=11 MAX=11 AVG=11  NET_MIN=6 NET_AVG=6.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-001.run01.log: ANTI-001 OK  baseline=5  MIN=10 MAX=10 AVG=10  NET_MIN=5 NET_AVG=5.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-001.run02.log: ANTI-001 OK  baseline=5  MIN=10 MAX=10 AVG=10  NET_MIN=5 NET_AVG=5.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-001.run03.log: ANTI-001 OK  baseline=5  MIN=10 MAX=10 AVG=10  NET_MIN=5 NET_AVG=5.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-001.run04.log: ANTI-001 OK  baseline=5  MIN=10 MAX=10 AVG=10  NET_MIN=5 NET_AVG=5.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-001.run05.log: ANTI-001 OK  baseline=5  MIN=10 MAX=10 AVG=10  NET_MIN=5 NET_AVG=5.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-001.run06.log: ANTI-001 OK  baseline=5  MIN=10 MAX=10 AVG=10  NET_MIN=5 NET_AVG=5.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-001.run07.log: ANTI-001 OK  baseline=5  MIN=10 MAX=10 AVG=10  NET_MIN=5 NET_AVG=5.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-001.run08.log: ANTI-001 OK  baseline=5  MIN=10 MAX=10 AVG=10  NET_MIN=5 NET_AVG=5.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-001.run09.log: ANTI-001 OK  baseline=5  MIN=10 MAX=10 AVG=10  NET_MIN=5 NET_AVG=5.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-001.run10.log: ANTI-001 OK  baseline=5  MIN=10 MAX=10 AVG=10  NET_MIN=5 NET_AVG=5.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-002.run01.log: ANTI-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-002.run02.log: ANTI-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-002.run03.log: ANTI-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-002.run04.log: ANTI-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-002.run05.log: ANTI-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-002.run06.log: ANTI-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-002.run07.log: ANTI-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-002.run08.log: ANTI-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-002.run09.log: ANTI-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-002.run10.log: ANTI-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-003.run01.log: ANTI-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-003.run02.log: ANTI-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-003.run03.log: ANTI-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-003.run04.log: ANTI-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-003.run05.log: ANTI-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-003.run06.log: ANTI-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-003.run07.log: ANTI-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-003.run08.log: ANTI-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-003.run09.log: ANTI-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-003.run10.log: ANTI-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-004.run01.log: ANTI-004 OK  baseline=5  MIN=6 MAX=35 AVG=6  NET_MIN=1 NET_AVG=1.35  core=PCR:1088/1 VCoreRev=12250
+ANTI-004.run02.log: ANTI-004 OK  baseline=5  MIN=6 MAX=15 AVG=6  NET_MIN=1 NET_AVG=1.19  core=PCR:1088/1 VCoreRev=12250
+ANTI-004.run03.log: ANTI-004 OK  baseline=5  MIN=6 MAX=43 AVG=6  NET_MIN=1 NET_AVG=1.59  core=PCR:1088/1 VCoreRev=12250
+ANTI-004.run04.log: ANTI-004 OK  baseline=5  MIN=6 MAX=11 AVG=6  NET_MIN=1 NET_AVG=1.06  core=PCR:1088/1 VCoreRev=12250
+ANTI-004.run05.log: ANTI-004 OK  baseline=5  MIN=6 MAX=42 AVG=6  NET_MIN=1 NET_AVG=1.41  core=PCR:1088/1 VCoreRev=12250
+ANTI-004.run06.log: ANTI-004 OK  baseline=5  MIN=6 MAX=16 AVG=6  NET_MIN=1 NET_AVG=1.12  core=PCR:1088/1 VCoreRev=12250
+ANTI-004.run07.log: ANTI-004 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-004.run08.log: ANTI-004 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-004.run09.log: ANTI-004 OK  baseline=5  MIN=6 MAX=13 AVG=6  NET_MIN=1 NET_AVG=1.08  core=PCR:1088/1 VCoreRev=12250
+ANTI-004.run10.log: ANTI-004 OK  baseline=5  MIN=6 MAX=39 AVG=7  NET_MIN=1 NET_AVG=2.10  core=PCR:1088/1 VCoreRev=12250
+ANTI-005.run01.log: ANTI-005 OK  baseline=5  MIN=3 MAX=24 AVG=3  NET_MIN=-2 NET_AVG=-1.42  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-005.run02.log: ANTI-005 OK  baseline=5  MIN=3 MAX=13438 AVG=138  NET_MIN=-2 NET_AVG=133.25  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-005.run03.log: ANTI-005 OK  baseline=5  MIN=3 MAX=11 AVG=3  NET_MIN=-2 NET_AVG=-1.67  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-005.run04.log: ANTI-005 OK  baseline=5  MIN=3 MAX=24 AVG=3  NET_MIN=-2 NET_AVG=-1.31  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-005.run05.log: ANTI-005 OK  baseline=5  MIN=3 MAX=12 AVG=3  NET_MIN=-2 NET_AVG=-1.43  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-005.run06.log: ANTI-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-005.run07.log: ANTI-005 OK  baseline=5  MIN=3 MAX=19 AVG=3  NET_MIN=-2 NET_AVG=-1.25  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-005.run08.log: ANTI-005 OK  baseline=5  MIN=3 MAX=12 AVG=3  NET_MIN=-2 NET_AVG=-1.65  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-005.run09.log: ANTI-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-005.run10.log: ANTI-005 OK  baseline=5  MIN=3 MAX=22 AVG=3  NET_MIN=-2 NET_AVG=-1.11  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+ANTI-006.run01.log: ANTI-006 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-006.run02.log: ANTI-006 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-006.run03.log: ANTI-006 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-006.run04.log: ANTI-006 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-006.run05.log: ANTI-006 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-006.run06.log: ANTI-006 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-006.run07.log: ANTI-006 OK  baseline=5  MIN=7 MAX=13617 AVG=178  NET_MIN=2 NET_AVG=173.63  core=PCR:1088/1 VCoreRev=12250
+ANTI-006.run08.log: ANTI-006 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-006.run09.log: ANTI-006 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-006.run10.log: ANTI-006 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-007.run01.log: ANTI-007 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-007.run02.log: ANTI-007 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-007.run03.log: ANTI-007 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-007.run04.log: ANTI-007 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-007.run05.log: ANTI-007 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-007.run06.log: ANTI-007 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-007.run07.log: ANTI-007 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-007.run08.log: ANTI-007 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-007.run09.log: ANTI-007 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+ANTI-007.run10.log: ANTI-007 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+BLT-001.run01.log: BLT-001 OK  baseline=5  MIN=9 MAX=12 AVG=9  NET_MIN=4 NET_AVG=4.03  core=PCR:1088/1 VCoreRev=12250
+BLT-001.run02.log: BLT-001 OK  baseline=5  MIN=9 MAX=40 AVG=9  NET_MIN=4 NET_AVG=4.59  core=PCR:1088/1 VCoreRev=12250
+BLT-001.run03.log: BLT-001 OK  baseline=5  MIN=9 MAX=45 AVG=9  NET_MIN=4 NET_AVG=4.55  core=PCR:1088/1 VCoreRev=12250
+BLT-001.run04.log: BLT-001 OK  baseline=5  MIN=9 MAX=24 AVG=9  NET_MIN=4 NET_AVG=4.65  core=PCR:1088/1 VCoreRev=12250
+BLT-001.run05.log: BLT-001 OK  baseline=5  MIN=9 MAX=47 AVG=9  NET_MIN=4 NET_AVG=4.82  core=PCR:1088/1 VCoreRev=12250
+BLT-001.run06.log: BLT-001 OK  baseline=5  MIN=9 MAX=14148 AVG=186  NET_MIN=4 NET_AVG=181.96  core=PCR:1088/1 VCoreRev=12250
+BLT-001.run07.log: BLT-001 OK  baseline=5  MIN=9 MAX=41 AVG=10  NET_MIN=4 NET_AVG=5.17  core=PCR:1088/1 VCoreRev=12250
+BLT-001.run08.log: BLT-001 OK  baseline=5  MIN=9 MAX=41 AVG=9  NET_MIN=4 NET_AVG=4.85  core=PCR:1088/1 VCoreRev=12250
+BLT-001.run09.log: BLT-001 OK  baseline=5  MIN=9 MAX=18 AVG=9  NET_MIN=4 NET_AVG=4.64  core=PCR:1088/1 VCoreRev=12250
+BLT-001.run10.log: BLT-001 OK  baseline=5  MIN=9 MAX=43 AVG=10  NET_MIN=4 NET_AVG=5.98  core=PCR:1088/1 VCoreRev=12250
+BLT-002.run01.log: BLT-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-002.run02.log: BLT-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-002.run03.log: BLT-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-002.run04.log: BLT-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-002.run05.log: BLT-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-002.run06.log: BLT-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-002.run07.log: BLT-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-002.run08.log: BLT-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-002.run09.log: BLT-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-002.run10.log: BLT-002 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-003.run01.log: BLT-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-003.run02.log: BLT-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-003.run03.log: BLT-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-003.run04.log: BLT-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-003.run05.log: BLT-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-003.run06.log: BLT-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-003.run07.log: BLT-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-003.run08.log: BLT-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-003.run09.log: BLT-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-003.run10.log: BLT-003 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+BLT-004.run01.log: BLT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+BLT-004.run02.log: BLT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+BLT-004.run03.log: BLT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+BLT-004.run04.log: BLT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+BLT-004.run05.log: BLT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+BLT-004.run06.log: BLT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+BLT-004.run07.log: BLT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+BLT-004.run08.log: BLT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+BLT-004.run09.log: BLT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+BLT-004.run10.log: BLT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+BLT-005.run01.log: BLT-005 OK  baseline=5  MIN=13 MAX=19 AVG=13  NET_MIN=8 NET_AVG=8.06  core=PCR:1088/1 VCoreRev=12250
+BLT-005.run02.log: BLT-005 OK  baseline=5  MIN=13 MAX=13 AVG=13  NET_MIN=8 NET_AVG=8.00  core=PCR:1088/1 VCoreRev=12250
+BLT-005.run03.log: BLT-005 OK  baseline=5  MIN=13 MAX=37 AVG=13  NET_MIN=8 NET_AVG=8.26  core=PCR:1088/1 VCoreRev=12250
+BLT-005.run04.log: BLT-005 OK  baseline=5  MIN=13 MAX=13 AVG=13  NET_MIN=8 NET_AVG=8.00  core=PCR:1088/1 VCoreRev=12250
+BLT-005.run05.log: BLT-005 OK  baseline=5  MIN=13 MAX=13 AVG=13  NET_MIN=8 NET_AVG=8.00  core=PCR:1088/1 VCoreRev=12250
+BLT-005.run06.log: BLT-005 OK  baseline=5  MIN=13 MAX=29 AVG=13  NET_MIN=8 NET_AVG=8.16  core=PCR:1088/1 VCoreRev=12250
+BLT-005.run07.log: BLT-005 OK  baseline=5  MIN=13 MAX=13 AVG=13  NET_MIN=8 NET_AVG=8.00  core=PCR:1088/1 VCoreRev=12250
+BLT-005.run08.log: BLT-005 OK  baseline=5  MIN=13 MAX=13 AVG=13  NET_MIN=8 NET_AVG=8.00  core=PCR:1088/1 VCoreRev=12250
+BLT-005.run09.log: BLT-005 OK  baseline=5  MIN=13 MAX=13 AVG=13  NET_MIN=8 NET_AVG=8.00  core=PCR:1088/1 VCoreRev=12250
+BLT-005.run10.log: BLT-005 OK  baseline=5  MIN=13 MAX=34 AVG=13  NET_MIN=8 NET_AVG=8.21  core=PCR:1088/1 VCoreRev=12250
+BND-001.run01.log: BND-001 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-001.run02.log: BND-001 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-001.run03.log: BND-001 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-001.run04.log: BND-001 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-001.run05.log: BND-001 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-001.run06.log: BND-001 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-001.run07.log: BND-001 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-001.run08.log: BND-001 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-001.run09.log: BND-001 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-001.run10.log: BND-001 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-002.run01.log: BND-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-002.run02.log: BND-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-002.run03.log: BND-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-002.run04.log: BND-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-002.run05.log: BND-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-002.run06.log: BND-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-002.run07.log: BND-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-002.run08.log: BND-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-002.run09.log: BND-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-002.run10.log: BND-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-003.run01.log: BND-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-003.run02.log: BND-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-003.run03.log: BND-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-003.run04.log: BND-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-003.run05.log: BND-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-003.run06.log: BND-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-003.run07.log: BND-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-003.run08.log: BND-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-003.run09.log: BND-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-003.run10.log: BND-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-004.run01.log: BND-004 OK  baseline=5  MIN=5 MAX=13 AVG=5  NET_MIN=0 NET_AVG=0.38  core=PCR:1088/1 VCoreRev=12250
+BND-004.run02.log: BND-004 OK  baseline=5  MIN=5 MAX=12 AVG=5  NET_MIN=0 NET_AVG=0.16  core=PCR:1088/1 VCoreRev=12250
+BND-004.run03.log: BND-004 OK  baseline=5  MIN=5 MAX=9 AVG=5  NET_MIN=0 NET_AVG=0.04  core=PCR:1088/1 VCoreRev=12250
+BND-004.run04.log: BND-004 OK  baseline=5  MIN=5 MAX=69 AVG=5  NET_MIN=0 NET_AVG=0.92  core=PCR:1088/1 VCoreRev=12250
+BND-004.run05.log: BND-004 OK  baseline=5  MIN=5 MAX=15 AVG=5  NET_MIN=0 NET_AVG=0.40  core=PCR:1088/1 VCoreRev=12250
+BND-004.run06.log: BND-004 OK  baseline=5  MIN=5 MAX=7 AVG=5  NET_MIN=0 NET_AVG=0.02  core=PCR:1088/1 VCoreRev=12250
+BND-004.run07.log: BND-004 OK  baseline=5  MIN=5 MAX=7 AVG=5  NET_MIN=0 NET_AVG=0.02  core=PCR:1088/1 VCoreRev=12250
+BND-004.run08.log: BND-004 OK  baseline=5  MIN=5 MAX=11 AVG=5  NET_MIN=0 NET_AVG=0.12  core=PCR:1088/1 VCoreRev=12250
+BND-004.run09.log: BND-004 OK  baseline=5  MIN=5 MAX=13 AVG=5  NET_MIN=0 NET_AVG=0.27  core=PCR:1088/1 VCoreRev=12250
+BND-004.run10.log: BND-004 OK  baseline=5  MIN=5 MAX=41 AVG=5  NET_MIN=0 NET_AVG=0.47  core=PCR:1088/1 VCoreRev=12250
+BND-005.run01.log: BND-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-005.run02.log: BND-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-005.run03.log: BND-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-005.run04.log: BND-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-005.run05.log: BND-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-005.run06.log: BND-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-005.run07.log: BND-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-005.run08.log: BND-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-005.run09.log: BND-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+BND-005.run10.log: BND-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+DCT-001.run01.log: DCT-001 OK  baseline=5  MIN=58 MAX=58 AVG=58  NET_MIN=53 NET_AVG=53.00  core=PCR:1088/1 VCoreRev=12250
+DCT-001.run02.log: DCT-001 OK  baseline=5  MIN=58 MAX=58 AVG=58  NET_MIN=53 NET_AVG=53.00  core=PCR:1088/1 VCoreRev=12250
+DCT-001.run03.log: DCT-001 OK  baseline=5  MIN=58 MAX=58 AVG=58  NET_MIN=53 NET_AVG=53.00  core=PCR:1088/1 VCoreRev=12250
+DCT-001.run04.log: DCT-001 OK  baseline=5  MIN=58 MAX=58 AVG=58  NET_MIN=53 NET_AVG=53.00  core=PCR:1088/1 VCoreRev=12250
+DCT-001.run05.log: DCT-001 OK  baseline=5  MIN=58 MAX=58 AVG=58  NET_MIN=53 NET_AVG=53.00  core=PCR:1088/1 VCoreRev=12250
+DCT-001.run06.log: DCT-001 OK  baseline=5  MIN=58 MAX=58 AVG=58  NET_MIN=53 NET_AVG=53.00  core=PCR:1088/1 VCoreRev=12250
+DCT-001.run07.log: DCT-001 OK  baseline=5  MIN=58 MAX=58 AVG=58  NET_MIN=53 NET_AVG=53.00  core=PCR:1088/1 VCoreRev=12250
+DCT-001.run08.log: DCT-001 OK  baseline=5  MIN=58 MAX=58 AVG=58  NET_MIN=53 NET_AVG=53.00  core=PCR:1088/1 VCoreRev=12250
+DCT-001.run09.log: DCT-001 OK  baseline=5  MIN=58 MAX=58 AVG=58  NET_MIN=53 NET_AVG=53.00  core=PCR:1088/1 VCoreRev=12250
+DCT-001.run10.log: DCT-001 OK  baseline=5  MIN=58 MAX=58 AVG=58  NET_MIN=53 NET_AVG=53.00  core=PCR:1088/1 VCoreRev=12250
+DCT-002.run01.log: DCT-002 OK  baseline=5  MIN=36 MAX=36 AVG=36  NET_MIN=31 NET_AVG=31.00  core=PCR:1088/1 VCoreRev=12250
+DCT-002.run02.log: DCT-002 OK  baseline=5  MIN=36 MAX=36 AVG=36  NET_MIN=31 NET_AVG=31.00  core=PCR:1088/1 VCoreRev=12250
+DCT-002.run03.log: DCT-002 OK  baseline=5  MIN=36 MAX=36 AVG=36  NET_MIN=31 NET_AVG=31.00  core=PCR:1088/1 VCoreRev=12250
+DCT-002.run04.log: DCT-002 OK  baseline=5  MIN=36 MAX=36 AVG=36  NET_MIN=31 NET_AVG=31.00  core=PCR:1088/1 VCoreRev=12250
+DCT-002.run05.log: DCT-002 OK  baseline=5  MIN=36 MAX=36 AVG=36  NET_MIN=31 NET_AVG=31.00  core=PCR:1088/1 VCoreRev=12250
+DCT-002.run06.log: DCT-002 OK  baseline=5  MIN=36 MAX=36 AVG=36  NET_MIN=31 NET_AVG=31.00  core=PCR:1088/1 VCoreRev=12250
+DCT-002.run07.log: DCT-002 OK  baseline=5  MIN=36 MAX=36 AVG=36  NET_MIN=31 NET_AVG=31.00  core=PCR:1088/1 VCoreRev=12250
+DCT-002.run08.log: DCT-002 OK  baseline=5  MIN=36 MAX=36 AVG=36  NET_MIN=31 NET_AVG=31.00  core=PCR:1088/1 VCoreRev=12250
+DCT-002.run09.log: DCT-002 OK  baseline=5  MIN=36 MAX=36 AVG=36  NET_MIN=31 NET_AVG=31.00  core=PCR:1088/1 VCoreRev=12250
+DCT-002.run10.log: DCT-002 OK  baseline=5  MIN=36 MAX=36 AVG=36  NET_MIN=31 NET_AVG=31.00  core=PCR:1088/1 VCoreRev=12250
+DCT-003.run01.log: DCT-003 OK  baseline=5  MIN=21 MAX=21 AVG=21  NET_MIN=16 NET_AVG=16.00  core=PCR:1088/1 VCoreRev=12250
+DCT-003.run02.log: DCT-003 OK  baseline=5  MIN=21 MAX=21 AVG=21  NET_MIN=16 NET_AVG=16.00  core=PCR:1088/1 VCoreRev=12250
+DCT-003.run03.log: DCT-003 OK  baseline=5  MIN=21 MAX=21 AVG=21  NET_MIN=16 NET_AVG=16.00  core=PCR:1088/1 VCoreRev=12250
+DCT-003.run04.log: DCT-003 OK  baseline=5  MIN=21 MAX=21 AVG=21  NET_MIN=16 NET_AVG=16.00  core=PCR:1088/1 VCoreRev=12250
+DCT-003.run05.log: DCT-003 OK  baseline=5  MIN=21 MAX=21 AVG=21  NET_MIN=16 NET_AVG=16.00  core=PCR:1088/1 VCoreRev=12250
+DCT-003.run06.log: DCT-003 OK  baseline=5  MIN=21 MAX=21 AVG=21  NET_MIN=16 NET_AVG=16.00  core=PCR:1088/1 VCoreRev=12250
+DCT-003.run07.log: DCT-003 OK  baseline=5  MIN=21 MAX=21 AVG=21  NET_MIN=16 NET_AVG=16.00  core=PCR:1088/1 VCoreRev=12250
+DCT-003.run08.log: DCT-003 OK  baseline=5  MIN=21 MAX=21 AVG=21  NET_MIN=16 NET_AVG=16.00  core=PCR:1088/1 VCoreRev=12250
+DCT-003.run09.log: DCT-003 OK  baseline=5  MIN=21 MAX=21 AVG=21  NET_MIN=16 NET_AVG=16.00  core=PCR:1088/1 VCoreRev=12250
+DCT-003.run10.log: DCT-003 OK  baseline=5  MIN=21 MAX=21 AVG=21  NET_MIN=16 NET_AVG=16.00  core=PCR:1088/1 VCoreRev=12250
+DCT-004.run01.log: DCT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+DCT-004.run02.log: DCT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+DCT-004.run03.log: DCT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+DCT-004.run04.log: DCT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+DCT-004.run05.log: DCT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+DCT-004.run06.log: DCT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+DCT-004.run07.log: DCT-004 OK  baseline=5  MIN=17 MAX=29 AVG=17  NET_MIN=12 NET_AVG=12.12  core=PCR:1088/1 VCoreRev=12250
+DCT-004.run08.log: DCT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+DCT-004.run09.log: DCT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+DCT-004.run10.log: DCT-004 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+DCT-005.run01.log: DCT-005 OK  baseline=5  MIN=84 MAX=84 AVG=84  NET_MIN=79 NET_AVG=79.00  core=PCR:1088/1 VCoreRev=12250
+DCT-005.run02.log: DCT-005 OK  baseline=5  MIN=84 MAX=84 AVG=84  NET_MIN=79 NET_AVG=79.00  core=PCR:1088/1 VCoreRev=12250
+DCT-005.run03.log: DCT-005 OK  baseline=5  MIN=84 MAX=84 AVG=84  NET_MIN=79 NET_AVG=79.00  core=PCR:1088/1 VCoreRev=12250
+DCT-005.run04.log: DCT-005 OK  baseline=5  MIN=84 MAX=84 AVG=84  NET_MIN=79 NET_AVG=79.00  core=PCR:1088/1 VCoreRev=12250
+DCT-005.run05.log: DCT-005 OK  baseline=5  MIN=84 MAX=84 AVG=84  NET_MIN=79 NET_AVG=79.00  core=PCR:1088/1 VCoreRev=12250
+DCT-005.run06.log: DCT-005 OK  baseline=5  MIN=84 MAX=84 AVG=84  NET_MIN=79 NET_AVG=79.00  core=PCR:1088/1 VCoreRev=12250
+DCT-005.run07.log: DCT-005 OK  baseline=5  MIN=84 MAX=84 AVG=84  NET_MIN=79 NET_AVG=79.00  core=PCR:1088/1 VCoreRev=12250
+DCT-005.run08.log: DCT-005 OK  baseline=5  MIN=84 MAX=84 AVG=84  NET_MIN=79 NET_AVG=79.00  core=PCR:1088/1 VCoreRev=12250
+DCT-005.run09.log: DCT-005 OK  baseline=5  MIN=84 MAX=84 AVG=84  NET_MIN=79 NET_AVG=79.00  core=PCR:1088/1 VCoreRev=12250
+DCT-005.run10.log: DCT-005 OK  baseline=5  MIN=84 MAX=84 AVG=84  NET_MIN=79 NET_AVG=79.00  core=PCR:1088/1 VCoreRev=12250
+DCT-006.run01.log: DCT-006 OK  baseline=5  MIN=50 MAX=50 AVG=50  NET_MIN=45 NET_AVG=45.00  core=PCR:1088/1 VCoreRev=12250
+DCT-006.run02.log: DCT-006 OK  baseline=5  MIN=50 MAX=50 AVG=50  NET_MIN=45 NET_AVG=45.00  core=PCR:1088/1 VCoreRev=12250
+DCT-006.run03.log: DCT-006 OK  baseline=5  MIN=50 MAX=50 AVG=50  NET_MIN=45 NET_AVG=45.00  core=PCR:1088/1 VCoreRev=12250
+DCT-006.run04.log: DCT-006 OK  baseline=5  MIN=50 MAX=50 AVG=50  NET_MIN=45 NET_AVG=45.00  core=PCR:1088/1 VCoreRev=12250
+DCT-006.run05.log: DCT-006 OK  baseline=5  MIN=50 MAX=50 AVG=50  NET_MIN=45 NET_AVG=45.00  core=PCR:1088/1 VCoreRev=12250
+DCT-006.run06.log: DCT-006 OK  baseline=5  MIN=50 MAX=50 AVG=50  NET_MIN=45 NET_AVG=45.00  core=PCR:1088/1 VCoreRev=12250
+DCT-006.run07.log: DCT-006 OK  baseline=5  MIN=50 MAX=50 AVG=50  NET_MIN=45 NET_AVG=45.00  core=PCR:1088/1 VCoreRev=12250
+DCT-006.run08.log: DCT-006 OK  baseline=5  MIN=50 MAX=50 AVG=50  NET_MIN=45 NET_AVG=45.00  core=PCR:1088/1 VCoreRev=12250
+DCT-006.run09.log: DCT-006 OK  baseline=5  MIN=50 MAX=50 AVG=50  NET_MIN=45 NET_AVG=45.00  core=PCR:1088/1 VCoreRev=12250
+DCT-006.run10.log: DCT-006 OK  baseline=5  MIN=50 MAX=50 AVG=50  NET_MIN=45 NET_AVG=45.00  core=PCR:1088/1 VCoreRev=12250
+DCT-007.run01.log: DCT-007 OK  baseline=5  MIN=65 MAX=65 AVG=65  NET_MIN=60 NET_AVG=60.00  core=PCR:1088/1 VCoreRev=12250
+DCT-007.run02.log: DCT-007 OK  baseline=5  MIN=65 MAX=65 AVG=65  NET_MIN=60 NET_AVG=60.00  core=PCR:1088/1 VCoreRev=12250
+DCT-007.run03.log: DCT-007 OK  baseline=5  MIN=65 MAX=65 AVG=65  NET_MIN=60 NET_AVG=60.00  core=PCR:1088/1 VCoreRev=12250
+DCT-007.run04.log: DCT-007 OK  baseline=5  MIN=65 MAX=65 AVG=65  NET_MIN=60 NET_AVG=60.00  core=PCR:1088/1 VCoreRev=12250
+DCT-007.run05.log: DCT-007 OK  baseline=5  MIN=65 MAX=65 AVG=65  NET_MIN=60 NET_AVG=60.00  core=PCR:1088/1 VCoreRev=12250
+DCT-007.run06.log: DCT-007 OK  baseline=5  MIN=65 MAX=65 AVG=65  NET_MIN=60 NET_AVG=60.00  core=PCR:1088/1 VCoreRev=12250
+DCT-007.run07.log: DCT-007 OK  baseline=5  MIN=65 MAX=65 AVG=65  NET_MIN=60 NET_AVG=60.00  core=PCR:1088/1 VCoreRev=12250
+DCT-007.run08.log: DCT-007 OK  baseline=5  MIN=65 MAX=74 AVG=65  NET_MIN=60 NET_AVG=60.09  core=PCR:1088/1 VCoreRev=12250
+DCT-007.run09.log: DCT-007 OK  baseline=5  MIN=65 MAX=65 AVG=65  NET_MIN=60 NET_AVG=60.00  core=PCR:1088/1 VCoreRev=12250
+DCT-007.run10.log: DCT-007 OK  baseline=5  MIN=65 MAX=65 AVG=65  NET_MIN=60 NET_AVG=60.00  core=PCR:1088/1 VCoreRev=12250
+DCT-008.run01.log: DCT-008 OK  baseline=5  MIN=81 MAX=81 AVG=81  NET_MIN=76 NET_AVG=76.00  core=PCR:1088/1 VCoreRev=12250
+DCT-008.run02.log: DCT-008 OK  baseline=5  MIN=81 MAX=90 AVG=81  NET_MIN=76 NET_AVG=76.09  core=PCR:1088/1 VCoreRev=12250
+DCT-008.run03.log: DCT-008 OK  baseline=5  MIN=81 MAX=81 AVG=81  NET_MIN=76 NET_AVG=76.00  core=PCR:1088/1 VCoreRev=12250
+DCT-008.run04.log: DCT-008 OK  baseline=5  MIN=81 MAX=81 AVG=81  NET_MIN=76 NET_AVG=76.00  core=PCR:1088/1 VCoreRev=12250
+DCT-008.run05.log: DCT-008 OK  baseline=5  MIN=81 MAX=81 AVG=81  NET_MIN=76 NET_AVG=76.00  core=PCR:1088/1 VCoreRev=12250
+DCT-008.run06.log: DCT-008 OK  baseline=5  MIN=81 MAX=81 AVG=81  NET_MIN=76 NET_AVG=76.00  core=PCR:1088/1 VCoreRev=12250
+DCT-008.run07.log: DCT-008 OK  baseline=5  MIN=81 MAX=81 AVG=81  NET_MIN=76 NET_AVG=76.00  core=PCR:1088/1 VCoreRev=12250
+DCT-008.run08.log: DCT-008 OK  baseline=5  MIN=81 MAX=81 AVG=81  NET_MIN=76 NET_AVG=76.00  core=PCR:1088/1 VCoreRev=12250
+DCT-008.run09.log: DCT-008 OK  baseline=5  MIN=81 MAX=81 AVG=81  NET_MIN=76 NET_AVG=76.00  core=PCR:1088/1 VCoreRev=12250
+DCT-008.run10.log: DCT-008 OK  baseline=5  MIN=81 MAX=81 AVG=81  NET_MIN=76 NET_AVG=76.00  core=PCR:1088/1 VCoreRev=12250
+DCT-009.run01.log: DCT-009 OK  baseline=5  MIN=23 MAX=23 AVG=23  NET_MIN=18 NET_AVG=18.00  core=PCR:1088/1 VCoreRev=12250
+DCT-009.run02.log: DCT-009 OK  baseline=5  MIN=23 MAX=30 AVG=23  NET_MIN=18 NET_AVG=18.07  core=PCR:1088/1 VCoreRev=12250
+DCT-009.run03.log: DCT-009 OK  baseline=5  MIN=23 MAX=46 AVG=23  NET_MIN=18 NET_AVG=18.23  core=PCR:1088/1 VCoreRev=12250
+DCT-009.run04.log: DCT-009 OK  baseline=5  MIN=23 MAX=36 AVG=23  NET_MIN=18 NET_AVG=18.13  core=PCR:1088/1 VCoreRev=12250
+DCT-009.run05.log: DCT-009 OK  baseline=5  MIN=23 MAX=23 AVG=23  NET_MIN=18 NET_AVG=18.00  core=PCR:1088/1 VCoreRev=12250
+DCT-009.run06.log: DCT-009 OK  baseline=5  MIN=23 MAX=23 AVG=23  NET_MIN=18 NET_AVG=18.00  core=PCR:1088/1 VCoreRev=12250
+DCT-009.run07.log: DCT-009 OK  baseline=5  MIN=23 MAX=24 AVG=23  NET_MIN=18 NET_AVG=18.01  core=PCR:1088/1 VCoreRev=12250
+DCT-009.run08.log: DCT-009 OK  baseline=5  MIN=23 MAX=23 AVG=23  NET_MIN=18 NET_AVG=18.00  core=PCR:1088/1 VCoreRev=12250
+DCT-009.run09.log: DCT-009 OK  baseline=5  MIN=23 MAX=23 AVG=23  NET_MIN=18 NET_AVG=18.00  core=PCR:1088/1 VCoreRev=12250
+DCT-009.run10.log: DCT-009 OK  baseline=5  MIN=23 MAX=23 AVG=23  NET_MIN=18 NET_AVG=18.00  core=PCR:1088/1 VCoreRev=12250
+DCT-010.run01.log: DCT-010 OK  baseline=5  MIN=103 MAX=103 AVG=103  NET_MIN=98 NET_AVG=98.00  core=PCR:1088/1 VCoreRev=12250
+DCT-010.run02.log: DCT-010 OK  baseline=5  MIN=103 MAX=103 AVG=103  NET_MIN=98 NET_AVG=98.00  core=PCR:1088/1 VCoreRev=12250
+DCT-010.run03.log: DCT-010 OK  baseline=5  MIN=103 MAX=2261 AVG=126  NET_MIN=98 NET_AVG=121.59  core=PCR:1088/1 VCoreRev=12250
+DCT-010.run04.log: DCT-010 OK  baseline=5  MIN=103 MAX=103 AVG=103  NET_MIN=98 NET_AVG=98.00  core=PCR:1088/1 VCoreRev=12250
+DCT-010.run05.log: DCT-010 OK  baseline=5  MIN=103 MAX=103 AVG=103  NET_MIN=98 NET_AVG=98.00  core=PCR:1088/1 VCoreRev=12250
+DCT-010.run06.log: DCT-010 OK  baseline=5  MIN=103 MAX=103 AVG=103  NET_MIN=98 NET_AVG=98.00  core=PCR:1088/1 VCoreRev=12250
+DCT-010.run07.log: DCT-010 OK  baseline=5  MIN=103 MAX=103 AVG=103  NET_MIN=98 NET_AVG=98.00  core=PCR:1088/1 VCoreRev=12250
+DCT-010.run08.log: DCT-010 OK  baseline=5  MIN=103 MAX=103 AVG=103  NET_MIN=98 NET_AVG=98.00  core=PCR:1088/1 VCoreRev=12250
+DCT-010.run09.log: DCT-010 OK  baseline=5  MIN=103 MAX=103 AVG=103  NET_MIN=98 NET_AVG=98.00  core=PCR:1088/1 VCoreRev=12250
+DCT-010.run10.log: DCT-010 OK  baseline=5  MIN=103 MAX=103 AVG=103  NET_MIN=98 NET_AVG=98.00  core=PCR:1088/1 VCoreRev=12250
+DCT-011.run01.log: DCT-011 OK  baseline=5  MIN=127 MAX=127 AVG=127  NET_MIN=122 NET_AVG=122.00  core=PCR:1088/1 VCoreRev=12250
+DCT-011.run02.log: DCT-011 OK  baseline=5  MIN=127 MAX=127 AVG=127  NET_MIN=122 NET_AVG=122.00  core=PCR:1088/1 VCoreRev=12250
+DCT-011.run03.log: DCT-011 OK  baseline=5  MIN=127 MAX=127 AVG=127  NET_MIN=122 NET_AVG=122.00  core=PCR:1088/1 VCoreRev=12250
+DCT-011.run04.log: DCT-011 OK  baseline=5  MIN=127 MAX=127 AVG=127  NET_MIN=122 NET_AVG=122.00  core=PCR:1088/1 VCoreRev=12250
+DCT-011.run05.log: DCT-011 OK  baseline=5  MIN=127 MAX=127 AVG=127  NET_MIN=122 NET_AVG=122.00  core=PCR:1088/1 VCoreRev=12250
+DCT-011.run06.log: DCT-011 OK  baseline=5  MIN=127 MAX=127 AVG=127  NET_MIN=122 NET_AVG=122.00  core=PCR:1088/1 VCoreRev=12250
+DCT-011.run07.log: DCT-011 OK  baseline=5  MIN=127 MAX=127 AVG=127  NET_MIN=122 NET_AVG=122.00  core=PCR:1088/1 VCoreRev=12250
+DCT-011.run08.log: DCT-011 OK  baseline=5  MIN=127 MAX=127 AVG=127  NET_MIN=122 NET_AVG=122.00  core=PCR:1088/1 VCoreRev=12250
+DCT-011.run09.log: DCT-011 OK  baseline=5  MIN=127 MAX=127 AVG=127  NET_MIN=122 NET_AVG=122.00  core=PCR:1088/1 VCoreRev=12250
+DCT-011.run10.log: DCT-011 OK  baseline=5  MIN=127 MAX=127 AVG=127  NET_MIN=122 NET_AVG=122.00  core=PCR:1088/1 VCoreRev=12250
+DCT-012.run01.log: DCT-012 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+DCT-012.run02.log: DCT-012 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+DCT-012.run03.log: DCT-012 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+DCT-012.run04.log: DCT-012 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+DCT-012.run05.log: DCT-012 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+DCT-012.run06.log: DCT-012 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+DCT-012.run07.log: DCT-012 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+DCT-012.run08.log: DCT-012 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+DCT-012.run09.log: DCT-012 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+DCT-012.run10.log: DCT-012 OK  baseline=5  MIN=33 MAX=33 AVG=33  NET_MIN=28 NET_AVG=28.00  core=PCR:1088/1 VCoreRev=12250
+FFT-001.run01.log: FFT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+FFT-001.run02.log: FFT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+FFT-001.run03.log: FFT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+FFT-001.run04.log: FFT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+FFT-001.run05.log: FFT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+FFT-001.run06.log: FFT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+FFT-001.run07.log: FFT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+FFT-001.run08.log: FFT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+FFT-001.run09.log: FFT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+FFT-001.run10.log: FFT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+FFT-002.run01.log: FFT-002 OK  baseline=5  MIN=31 MAX=31 AVG=31  NET_MIN=26 NET_AVG=26.00  core=PCR:1088/1 VCoreRev=12250
+FFT-002.run02.log: FFT-002 OK  baseline=5  MIN=31 MAX=31 AVG=31  NET_MIN=26 NET_AVG=26.00  core=PCR:1088/1 VCoreRev=12250
+FFT-002.run03.log: FFT-002 OK  baseline=5  MIN=31 MAX=31 AVG=31  NET_MIN=26 NET_AVG=26.00  core=PCR:1088/1 VCoreRev=12250
+FFT-002.run04.log: FFT-002 OK  baseline=5  MIN=31 MAX=31 AVG=31  NET_MIN=26 NET_AVG=26.00  core=PCR:1088/1 VCoreRev=12250
+FFT-002.run05.log: FFT-002 OK  baseline=5  MIN=31 MAX=31 AVG=31  NET_MIN=26 NET_AVG=26.00  core=PCR:1088/1 VCoreRev=12250
+FFT-002.run06.log: FFT-002 OK  baseline=5  MIN=31 MAX=31 AVG=31  NET_MIN=26 NET_AVG=26.00  core=PCR:1088/1 VCoreRev=12250
+FFT-002.run07.log: FFT-002 OK  baseline=5  MIN=31 MAX=31 AVG=31  NET_MIN=26 NET_AVG=26.00  core=PCR:1088/1 VCoreRev=12250
+FFT-002.run08.log: FFT-002 OK  baseline=5  MIN=31 MAX=31 AVG=31  NET_MIN=26 NET_AVG=26.00  core=PCR:1088/1 VCoreRev=12250
+FFT-002.run09.log: FFT-002 OK  baseline=5  MIN=31 MAX=31 AVG=31  NET_MIN=26 NET_AVG=26.00  core=PCR:1088/1 VCoreRev=12250
+FFT-002.run10.log: FFT-002 OK  baseline=5  MIN=31 MAX=31 AVG=31  NET_MIN=26 NET_AVG=26.00  core=PCR:1088/1 VCoreRev=12250
+FFT-003.run01.log: FFT-003 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FFT-003.run02.log: FFT-003 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FFT-003.run03.log: FFT-003 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FFT-003.run04.log: FFT-003 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FFT-003.run05.log: FFT-003 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FFT-003.run06.log: FFT-003 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FFT-003.run07.log: FFT-003 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FFT-003.run08.log: FFT-003 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FFT-003.run09.log: FFT-003 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FFT-003.run10.log: FFT-003 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FFT-004.run01.log: FFT-004 OK  baseline=5  MIN=16 MAX=16 AVG=16  NET_MIN=11 NET_AVG=11.00  core=PCR:1088/1 VCoreRev=12250
+FFT-004.run02.log: FFT-004 OK  baseline=5  MIN=16 MAX=16 AVG=16  NET_MIN=11 NET_AVG=11.00  core=PCR:1088/1 VCoreRev=12250
+FFT-004.run03.log: FFT-004 OK  baseline=5  MIN=16 MAX=16 AVG=16  NET_MIN=11 NET_AVG=11.00  core=PCR:1088/1 VCoreRev=12250
+FFT-004.run04.log: FFT-004 OK  baseline=5  MIN=16 MAX=16 AVG=16  NET_MIN=11 NET_AVG=11.00  core=PCR:1088/1 VCoreRev=12250
+FFT-004.run05.log: FFT-004 OK  baseline=5  MIN=16 MAX=16 AVG=16  NET_MIN=11 NET_AVG=11.00  core=PCR:1088/1 VCoreRev=12250
+FFT-004.run06.log: FFT-004 OK  baseline=5  MIN=16 MAX=16 AVG=16  NET_MIN=11 NET_AVG=11.00  core=PCR:1088/1 VCoreRev=12250
+FFT-004.run07.log: FFT-004 OK  baseline=5  MIN=16 MAX=16 AVG=16  NET_MIN=11 NET_AVG=11.00  core=PCR:1088/1 VCoreRev=12250
+FFT-004.run08.log: FFT-004 OK  baseline=5  MIN=16 MAX=16 AVG=16  NET_MIN=11 NET_AVG=11.00  core=PCR:1088/1 VCoreRev=12250
+FFT-004.run09.log: FFT-004 OK  baseline=5  MIN=16 MAX=16 AVG=16  NET_MIN=11 NET_AVG=11.00  core=PCR:1088/1 VCoreRev=12250
+FFT-004.run10.log: FFT-004 OK  baseline=5  MIN=16 MAX=16 AVG=16  NET_MIN=11 NET_AVG=11.00  core=PCR:1088/1 VCoreRev=12250
+FFT-005.run01.log: FFT-005 OK  baseline=5  MIN=9 MAX=9 AVG=9  NET_MIN=4 NET_AVG=4.00  core=PCR:1088/1 VCoreRev=12250
+FFT-005.run02.log: FFT-005 OK  baseline=5  MIN=9 MAX=9 AVG=9  NET_MIN=4 NET_AVG=4.00  core=PCR:1088/1 VCoreRev=12250
+FFT-005.run03.log: FFT-005 OK  baseline=5  MIN=9 MAX=9 AVG=9  NET_MIN=4 NET_AVG=4.00  core=PCR:1088/1 VCoreRev=12250
+FFT-005.run04.log: FFT-005 OK  baseline=5  MIN=9 MAX=9 AVG=9  NET_MIN=4 NET_AVG=4.00  core=PCR:1088/1 VCoreRev=12250
+FFT-005.run05.log: FFT-005 OK  baseline=5  MIN=9 MAX=9 AVG=9  NET_MIN=4 NET_AVG=4.00  core=PCR:1088/1 VCoreRev=12250
+FFT-005.run06.log: FFT-005 OK  baseline=5  MIN=9 MAX=9 AVG=9  NET_MIN=4 NET_AVG=4.00  core=PCR:1088/1 VCoreRev=12250
+FFT-005.run07.log: FFT-005 OK  baseline=5  MIN=9 MAX=9 AVG=9  NET_MIN=4 NET_AVG=4.00  core=PCR:1088/1 VCoreRev=12250
+FFT-005.run08.log: FFT-005 OK  baseline=5  MIN=9 MAX=9 AVG=9  NET_MIN=4 NET_AVG=4.00  core=PCR:1088/1 VCoreRev=12250
+FFT-005.run09.log: FFT-005 OK  baseline=5  MIN=9 MAX=9 AVG=9  NET_MIN=4 NET_AVG=4.00  core=PCR:1088/1 VCoreRev=12250
+FFT-005.run10.log: FFT-005 OK  baseline=5  MIN=9 MAX=9 AVG=9  NET_MIN=4 NET_AVG=4.00  core=PCR:1088/1 VCoreRev=12250
+FFT-006.run01.log: FFT-006 OK  baseline=5  MIN=14 MAX=14 AVG=14  NET_MIN=9 NET_AVG=9.00  core=PCR:1088/1 VCoreRev=12250
+FFT-006.run02.log: FFT-006 OK  baseline=5  MIN=14 MAX=14 AVG=14  NET_MIN=9 NET_AVG=9.00  core=PCR:1088/1 VCoreRev=12250
+FFT-006.run03.log: FFT-006 OK  baseline=5  MIN=14 MAX=14 AVG=14  NET_MIN=9 NET_AVG=9.00  core=PCR:1088/1 VCoreRev=12250
+FFT-006.run04.log: FFT-006 OK  baseline=5  MIN=14 MAX=14 AVG=14  NET_MIN=9 NET_AVG=9.00  core=PCR:1088/1 VCoreRev=12250
+FFT-006.run05.log: FFT-006 OK  baseline=5  MIN=14 MAX=14 AVG=14  NET_MIN=9 NET_AVG=9.00  core=PCR:1088/1 VCoreRev=12250
+FFT-006.run06.log: FFT-006 OK  baseline=5  MIN=14 MAX=14 AVG=14  NET_MIN=9 NET_AVG=9.00  core=PCR:1088/1 VCoreRev=12250
+FFT-006.run07.log: FFT-006 OK  baseline=5  MIN=14 MAX=14 AVG=14  NET_MIN=9 NET_AVG=9.00  core=PCR:1088/1 VCoreRev=12250
+FFT-006.run08.log: FFT-006 OK  baseline=5  MIN=14 MAX=14 AVG=14  NET_MIN=9 NET_AVG=9.00  core=PCR:1088/1 VCoreRev=12250
+FFT-006.run09.log: FFT-006 OK  baseline=5  MIN=14 MAX=14 AVG=14  NET_MIN=9 NET_AVG=9.00  core=PCR:1088/1 VCoreRev=12250
+FFT-006.run10.log: FFT-006 OK  baseline=5  MIN=14 MAX=14 AVG=14  NET_MIN=9 NET_AVG=9.00  core=PCR:1088/1 VCoreRev=12250
+FIX-001.run01.log: FIX-001 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FIX-001.run02.log: FIX-001 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FIX-001.run03.log: FIX-001 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FIX-001.run04.log: FIX-001 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FIX-001.run05.log: FIX-001 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FIX-001.run06.log: FIX-001 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FIX-001.run07.log: FIX-001 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FIX-001.run08.log: FIX-001 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FIX-001.run09.log: FIX-001 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FIX-001.run10.log: FIX-001 OK  baseline=5  MIN=17 MAX=17 AVG=17  NET_MIN=12 NET_AVG=12.00  core=PCR:1088/1 VCoreRev=12250
+FIX-002.run01.log: FIX-002 OK  baseline=5  MIN=34 MAX=34 AVG=34  NET_MIN=29 NET_AVG=29.00  core=PCR:1088/1 VCoreRev=12250
+FIX-002.run02.log: FIX-002 OK  baseline=5  MIN=34 MAX=34 AVG=34  NET_MIN=29 NET_AVG=29.00  core=PCR:1088/1 VCoreRev=12250
+FIX-002.run03.log: FIX-002 OK  baseline=5  MIN=34 MAX=34 AVG=34  NET_MIN=29 NET_AVG=29.00  core=PCR:1088/1 VCoreRev=12250
+FIX-002.run04.log: FIX-002 OK  baseline=5  MIN=34 MAX=34 AVG=34  NET_MIN=29 NET_AVG=29.00  core=PCR:1088/1 VCoreRev=12250
+FIX-002.run05.log: FIX-002 OK  baseline=5  MIN=34 MAX=34 AVG=34  NET_MIN=29 NET_AVG=29.00  core=PCR:1088/1 VCoreRev=12250
+FIX-002.run06.log: FIX-002 OK  baseline=5  MIN=34 MAX=34 AVG=34  NET_MIN=29 NET_AVG=29.00  core=PCR:1088/1 VCoreRev=12250
+FIX-002.run07.log: FIX-002 OK  baseline=5  MIN=34 MAX=34 AVG=34  NET_MIN=29 NET_AVG=29.00  core=PCR:1088/1 VCoreRev=12250
+FIX-002.run08.log: FIX-002 OK  baseline=5  MIN=34 MAX=34 AVG=34  NET_MIN=29 NET_AVG=29.00  core=PCR:1088/1 VCoreRev=12250
+FIX-002.run09.log: FIX-002 OK  baseline=5  MIN=34 MAX=34 AVG=34  NET_MIN=29 NET_AVG=29.00  core=PCR:1088/1 VCoreRev=12250
+FIX-002.run10.log: FIX-002 OK  baseline=5  MIN=34 MAX=34 AVG=34  NET_MIN=29 NET_AVG=29.00  core=PCR:1088/1 VCoreRev=12250
+FIX-003.run01.log: FIX-003 OK  baseline=5  MIN=57 MAX=57 AVG=57  NET_MIN=52 NET_AVG=52.00  core=PCR:1088/1 VCoreRev=12250
+FIX-003.run02.log: FIX-003 OK  baseline=5  MIN=57 MAX=57 AVG=57  NET_MIN=52 NET_AVG=52.00  core=PCR:1088/1 VCoreRev=12250
+FIX-003.run03.log: FIX-003 OK  baseline=5  MIN=57 MAX=57 AVG=57  NET_MIN=52 NET_AVG=52.00  core=PCR:1088/1 VCoreRev=12250
+FIX-003.run04.log: FIX-003 OK  baseline=5  MIN=57 MAX=57 AVG=57  NET_MIN=52 NET_AVG=52.00  core=PCR:1088/1 VCoreRev=12250
+FIX-003.run05.log: FIX-003 OK  baseline=5  MIN=57 MAX=57 AVG=57  NET_MIN=52 NET_AVG=52.00  core=PCR:1088/1 VCoreRev=12250
+FIX-003.run06.log: FIX-003 OK  baseline=5  MIN=57 MAX=57 AVG=57  NET_MIN=52 NET_AVG=52.00  core=PCR:1088/1 VCoreRev=12250
+FIX-003.run07.log: FIX-003 OK  baseline=5  MIN=57 MAX=57 AVG=57  NET_MIN=52 NET_AVG=52.00  core=PCR:1088/1 VCoreRev=12250
+FIX-003.run08.log: FIX-003 OK  baseline=5  MIN=57 MAX=57 AVG=57  NET_MIN=52 NET_AVG=52.00  core=PCR:1088/1 VCoreRev=12250
+FIX-003.run09.log: FIX-003 OK  baseline=5  MIN=57 MAX=57 AVG=57  NET_MIN=52 NET_AVG=52.00  core=PCR:1088/1 VCoreRev=12250
+FIX-003.run10.log: FIX-003 OK  baseline=5  MIN=57 MAX=57 AVG=57  NET_MIN=52 NET_AVG=52.00  core=PCR:1088/1 VCoreRev=12250
+FUS-001.run01.log: FUS-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-001.run02.log: FUS-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-001.run03.log: FUS-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-001.run04.log: FUS-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-001.run05.log: FUS-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-001.run06.log: FUS-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-001.run07.log: FUS-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-001.run08.log: FUS-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-001.run09.log: FUS-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-001.run10.log: FUS-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-002.run01.log: FUS-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-002.run02.log: FUS-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-002.run03.log: FUS-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-002.run04.log: FUS-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-002.run05.log: FUS-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-002.run06.log: FUS-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-002.run07.log: FUS-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-002.run08.log: FUS-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-002.run09.log: FUS-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-002.run10.log: FUS-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-003.run01.log: FUS-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-003.run02.log: FUS-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-003.run03.log: FUS-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-003.run04.log: FUS-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-003.run05.log: FUS-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-003.run06.log: FUS-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-003.run07.log: FUS-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-003.run08.log: FUS-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-003.run09.log: FUS-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-003.run10.log: FUS-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-004.run01.log: FUS-004 OK  baseline=5  MIN=3 MAX=9 AVG=3  NET_MIN=-2 NET_AVG=-1.94  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-004.run02.log: FUS-004 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-004.run03.log: FUS-004 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-004.run04.log: FUS-004 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-004.run05.log: FUS-004 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-004.run06.log: FUS-004 OK  baseline=5  MIN=3 MAX=5 AVG=3  NET_MIN=-2 NET_AVG=-1.98  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-004.run07.log: FUS-004 OK  baseline=5  MIN=3 MAX=13 AVG=3  NET_MIN=-2 NET_AVG=-1.86  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-004.run08.log: FUS-004 OK  baseline=5  MIN=3 MAX=33 AVG=3  NET_MIN=-2 NET_AVG=-1.69  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-004.run09.log: FUS-004 OK  baseline=5  MIN=3 MAX=16 AVG=3  NET_MIN=-2 NET_AVG=-1.87  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-004.run10.log: FUS-004 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-005.run01.log: FUS-005 OK  baseline=5  MIN=2 MAX=34 AVG=2  NET_MIN=-3 NET_AVG=-2.67  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-005.run02.log: FUS-005 OK  baseline=5  MIN=2 MAX=11 AVG=2  NET_MIN=-3 NET_AVG=-2.83  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-005.run03.log: FUS-005 OK  baseline=5  MIN=2 MAX=4 AVG=2  NET_MIN=-3 NET_AVG=-2.96  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-005.run04.log: FUS-005 OK  baseline=5  MIN=2 MAX=9 AVG=2  NET_MIN=-3 NET_AVG=-2.93  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-005.run05.log: FUS-005 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-005.run06.log: FUS-005 OK  baseline=5  MIN=2 MAX=8 AVG=2  NET_MIN=-3 NET_AVG=-2.94  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-005.run07.log: FUS-005 OK  baseline=5  MIN=2 MAX=9 AVG=2  NET_MIN=-3 NET_AVG=-2.91  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-005.run08.log: FUS-005 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-005.run09.log: FUS-005 OK  baseline=5  MIN=2 MAX=6 AVG=2  NET_MIN=-3 NET_AVG=-2.95  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+FUS-005.run10.log: FUS-005 OK  baseline=5  MIN=2 MAX=4 AVG=2  NET_MIN=-3 NET_AVG=-2.98  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MAT-001.run01.log: MAT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+MAT-001.run02.log: MAT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+MAT-001.run03.log: MAT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+MAT-001.run04.log: MAT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+MAT-001.run05.log: MAT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+MAT-001.run06.log: MAT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+MAT-001.run07.log: MAT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+MAT-001.run08.log: MAT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+MAT-001.run09.log: MAT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+MAT-001.run10.log: MAT-001 OK  baseline=5  MIN=28 MAX=28 AVG=28  NET_MIN=23 NET_AVG=23.00  core=PCR:1088/1 VCoreRev=12250
+MAT-002.run01.log: MAT-002 OK  baseline=5  MIN=87 MAX=87 AVG=87  NET_MIN=82 NET_AVG=82.00  core=PCR:1088/1 VCoreRev=12250
+MAT-002.run02.log: MAT-002 OK  baseline=5  MIN=87 MAX=87 AVG=87  NET_MIN=82 NET_AVG=82.00  core=PCR:1088/1 VCoreRev=12250
+MAT-002.run03.log: MAT-002 OK  baseline=5  MIN=87 MAX=87 AVG=87  NET_MIN=82 NET_AVG=82.00  core=PCR:1088/1 VCoreRev=12250
+MAT-002.run04.log: MAT-002 OK  baseline=5  MIN=87 MAX=87 AVG=87  NET_MIN=82 NET_AVG=82.00  core=PCR:1088/1 VCoreRev=12250
+MAT-002.run05.log: MAT-002 OK  baseline=5  MIN=87 MAX=87 AVG=87  NET_MIN=82 NET_AVG=82.00  core=PCR:1088/1 VCoreRev=12250
+MAT-002.run06.log: MAT-002 OK  baseline=5  MIN=87 MAX=87 AVG=87  NET_MIN=82 NET_AVG=82.00  core=PCR:1088/1 VCoreRev=12250
+MAT-002.run07.log: MAT-002 OK  baseline=5  MIN=87 MAX=87 AVG=87  NET_MIN=82 NET_AVG=82.00  core=PCR:1088/1 VCoreRev=12250
+MAT-002.run08.log: MAT-002 OK  baseline=5  MIN=87 MAX=87 AVG=87  NET_MIN=82 NET_AVG=82.00  core=PCR:1088/1 VCoreRev=12250
+MAT-002.run09.log: MAT-002 OK  baseline=5  MIN=87 MAX=87 AVG=87  NET_MIN=82 NET_AVG=82.00  core=PCR:1088/1 VCoreRev=12250
+MAT-002.run10.log: MAT-002 OK  baseline=5  MIN=87 MAX=87 AVG=87  NET_MIN=82 NET_AVG=82.00  core=PCR:1088/1 VCoreRev=12250
+MAT-003.run01.log: MAT-003 OK  baseline=5  MIN=184 MAX=184 AVG=184  NET_MIN=179 NET_AVG=179.00  core=PCR:1088/1 VCoreRev=12250
+MAT-003.run02.log: MAT-003 OK  baseline=5  MIN=184 MAX=184 AVG=184  NET_MIN=179 NET_AVG=179.00  core=PCR:1088/1 VCoreRev=12250
+MAT-003.run03.log: MAT-003 OK  baseline=5  MIN=184 MAX=184 AVG=184  NET_MIN=179 NET_AVG=179.00  core=PCR:1088/1 VCoreRev=12250
+MAT-003.run04.log: MAT-003 OK  baseline=5  MIN=184 MAX=184 AVG=184  NET_MIN=179 NET_AVG=179.00  core=PCR:1088/1 VCoreRev=12250
+MAT-003.run05.log: MAT-003 OK  baseline=5  MIN=184 MAX=184 AVG=184  NET_MIN=179 NET_AVG=179.00  core=PCR:1088/1 VCoreRev=12250
+MAT-003.run06.log: MAT-003 OK  baseline=5  MIN=184 MAX=184 AVG=184  NET_MIN=179 NET_AVG=179.00  core=PCR:1088/1 VCoreRev=12250
+MAT-003.run07.log: MAT-003 OK  baseline=5  MIN=184 MAX=184 AVG=184  NET_MIN=179 NET_AVG=179.00  core=PCR:1088/1 VCoreRev=12250
+MAT-003.run08.log: MAT-003 OK  baseline=5  MIN=184 MAX=184 AVG=184  NET_MIN=179 NET_AVG=179.00  core=PCR:1088/1 VCoreRev=12250
+MAT-003.run09.log: MAT-003 OK  baseline=5  MIN=184 MAX=184 AVG=184  NET_MIN=179 NET_AVG=179.00  core=PCR:1088/1 VCoreRev=12250
+MAT-003.run10.log: MAT-003 OK  baseline=5  MIN=184 MAX=184 AVG=184  NET_MIN=179 NET_AVG=179.00  core=PCR:1088/1 VCoreRev=12250
+MEM-001.run01.log: MEM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-001.run02.log: MEM-001 OK  baseline=5  MIN=3 MAX=16 AVG=3  NET_MIN=-2 NET_AVG=-1.87  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-001.run03.log: MEM-001 OK  baseline=5  MIN=3 MAX=32 AVG=3  NET_MIN=-2 NET_AVG=-1.68  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-001.run04.log: MEM-001 OK  baseline=5  MIN=3 MAX=4 AVG=3  NET_MIN=-2 NET_AVG=-1.99  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-001.run05.log: MEM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-001.run06.log: MEM-001 OK  baseline=5  MIN=3 MAX=9 AVG=3  NET_MIN=-2 NET_AVG=-1.94  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-001.run07.log: MEM-001 OK  baseline=5  MIN=3 MAX=10 AVG=3  NET_MIN=-2 NET_AVG=-1.85  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-001.run08.log: MEM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-001.run09.log: MEM-001 OK  baseline=5  MIN=3 MAX=15 AVG=3  NET_MIN=-2 NET_AVG=-1.88  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-001.run10.log: MEM-001 OK  baseline=5  MIN=3 MAX=6 AVG=3  NET_MIN=-2 NET_AVG=-1.97  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-002.run01.log: MEM-002 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+MEM-002.run02.log: MEM-002 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+MEM-002.run03.log: MEM-002 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+MEM-002.run04.log: MEM-002 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+MEM-002.run05.log: MEM-002 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+MEM-002.run06.log: MEM-002 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+MEM-002.run07.log: MEM-002 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+MEM-002.run08.log: MEM-002 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+MEM-002.run09.log: MEM-002 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+MEM-002.run10.log: MEM-002 OK  baseline=5  MIN=6 MAX=6 AVG=6  NET_MIN=1 NET_AVG=1.00  core=PCR:1088/1 VCoreRev=12250
+MEM-003.run01.log: MEM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-003.run02.log: MEM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-003.run03.log: MEM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-003.run04.log: MEM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-003.run05.log: MEM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-003.run06.log: MEM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-003.run07.log: MEM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-003.run08.log: MEM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-003.run09.log: MEM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-003.run10.log: MEM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-004.run01.log: MEM-004 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+MEM-004.run02.log: MEM-004 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+MEM-004.run03.log: MEM-004 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+MEM-004.run04.log: MEM-004 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+MEM-004.run05.log: MEM-004 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+MEM-004.run06.log: MEM-004 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+MEM-004.run07.log: MEM-004 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+MEM-004.run08.log: MEM-004 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+MEM-004.run09.log: MEM-004 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+MEM-004.run10.log: MEM-004 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+MEM-005.run01.log: MEM-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-005.run02.log: MEM-005 OK  baseline=5  MIN=3 MAX=12 AVG=3  NET_MIN=-2 NET_AVG=-1.91  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-005.run03.log: MEM-005 OK  baseline=5  MIN=3 MAX=38 AVG=3  NET_MIN=-2 NET_AVG=-1.65  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-005.run04.log: MEM-005 OK  baseline=5  MIN=3 MAX=16 AVG=3  NET_MIN=-2 NET_AVG=-1.85  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-005.run05.log: MEM-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-005.run06.log: MEM-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-005.run07.log: MEM-005 OK  baseline=5  MIN=3 MAX=10 AVG=3  NET_MIN=-2 NET_AVG=-1.92  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-005.run08.log: MEM-005 OK  baseline=5  MIN=3 MAX=8 AVG=3  NET_MIN=-2 NET_AVG=-1.95  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-005.run09.log: MEM-005 OK  baseline=5  MIN=3 MAX=7 AVG=3  NET_MIN=-2 NET_AVG=-1.95  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+MEM-005.run10.log: MEM-005 OK  baseline=5  MIN=3 MAX=39 AVG=3  NET_MIN=-2 NET_AVG=-1.62  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-001.run01.log: PAT-001 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+PAT-001.run02.log: PAT-001 OK  baseline=5  MIN=5 MAX=10 AVG=5  NET_MIN=0 NET_AVG=0.07  core=PCR:1088/1 VCoreRev=12250
+PAT-001.run03.log: PAT-001 OK  baseline=5  MIN=5 MAX=6 AVG=5  NET_MIN=0 NET_AVG=0.02  core=PCR:1088/1 VCoreRev=12250
+PAT-001.run04.log: PAT-001 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+PAT-001.run05.log: PAT-001 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+PAT-001.run06.log: PAT-001 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+PAT-001.run07.log: PAT-001 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+PAT-001.run08.log: PAT-001 OK  baseline=5  MIN=5 MAX=9 AVG=5  NET_MIN=0 NET_AVG=0.04  core=PCR:1088/1 VCoreRev=12250
+PAT-001.run09.log: PAT-001 OK  baseline=5  MIN=5 MAX=11 AVG=5  NET_MIN=0 NET_AVG=0.11  core=PCR:1088/1 VCoreRev=12250
+PAT-001.run10.log: PAT-001 OK  baseline=5  MIN=5 MAX=6 AVG=5  NET_MIN=0 NET_AVG=0.01  core=PCR:1088/1 VCoreRev=12250
+PAT-002.run01.log: PAT-002 OK  baseline=5  MIN=2 MAX=7 AVG=2  NET_MIN=-3 NET_AVG=-2.94  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-002.run02.log: PAT-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-002.run03.log: PAT-002 OK  baseline=5  MIN=2 MAX=9 AVG=2  NET_MIN=-3 NET_AVG=-2.86  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-002.run04.log: PAT-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-002.run05.log: PAT-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-002.run06.log: PAT-002 OK  baseline=5  MIN=2 MAX=9 AVG=2  NET_MIN=-3 NET_AVG=-2.93  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-002.run07.log: PAT-002 OK  baseline=5  MIN=2 MAX=9 AVG=2  NET_MIN=-3 NET_AVG=-2.93  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-002.run08.log: PAT-002 OK  baseline=5  MIN=2 MAX=13 AVG=2  NET_MIN=-3 NET_AVG=-2.66  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-002.run09.log: PAT-002 OK  baseline=5  MIN=2 MAX=8 AVG=2  NET_MIN=-3 NET_AVG=-2.94  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-002.run10.log: PAT-002 OK  baseline=5  MIN=2 MAX=24 AVG=2  NET_MIN=-3 NET_AVG=-2.62  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-003.run01.log: PAT-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-003.run02.log: PAT-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-003.run03.log: PAT-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-003.run04.log: PAT-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-003.run05.log: PAT-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-003.run06.log: PAT-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-003.run07.log: PAT-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-003.run08.log: PAT-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-003.run09.log: PAT-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-003.run10.log: PAT-003 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+PAT-004.run01.log: PAT-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+PAT-004.run02.log: PAT-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+PAT-004.run03.log: PAT-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+PAT-004.run04.log: PAT-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+PAT-004.run05.log: PAT-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+PAT-004.run06.log: PAT-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+PAT-004.run07.log: PAT-004 OK  baseline=5  MIN=7 MAX=14 AVG=7  NET_MIN=2 NET_AVG=2.07  core=PCR:1088/1 VCoreRev=12250
+PAT-004.run08.log: PAT-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+PAT-004.run09.log: PAT-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+PAT-004.run10.log: PAT-004 OK  baseline=5  MIN=7 MAX=7 AVG=7  NET_MIN=2 NET_AVG=2.00  core=PCR:1088/1 VCoreRev=12250
+PAT-005.run01.log: PAT-005 OK  baseline=5  MIN=9 MAX=19 AVG=9  NET_MIN=4 NET_AVG=4.18  core=PCR:1088/1 VCoreRev=12250
+PAT-005.run02.log: PAT-005 OK  baseline=5  MIN=9 MAX=14 AVG=9  NET_MIN=4 NET_AVG=4.05  core=PCR:1088/1 VCoreRev=12250
+PAT-005.run03.log: PAT-005 OK  baseline=5  MIN=9 MAX=12 AVG=9  NET_MIN=4 NET_AVG=4.09  core=PCR:1088/1 VCoreRev=12250
+PAT-005.run04.log: PAT-005 OK  baseline=5  MIN=9 MAX=54 AVG=10  NET_MIN=4 NET_AVG=5.05  core=PCR:1088/1 VCoreRev=12250
+PAT-005.run05.log: PAT-005 OK  baseline=5  MIN=9 MAX=9 AVG=9  NET_MIN=4 NET_AVG=4.00  core=PCR:1088/1 VCoreRev=12250
+PAT-005.run06.log: PAT-005 OK  baseline=5  MIN=9 MAX=11 AVG=9  NET_MIN=4 NET_AVG=4.03  core=PCR:1088/1 VCoreRev=12250
+PAT-005.run07.log: PAT-005 OK  baseline=5  MIN=9 MAX=19 AVG=9  NET_MIN=4 NET_AVG=4.16  core=PCR:1088/1 VCoreRev=12250
+PAT-005.run08.log: PAT-005 OK  baseline=5  MIN=9 MAX=39 AVG=9  NET_MIN=4 NET_AVG=4.41  core=PCR:1088/1 VCoreRev=12250
+PAT-005.run09.log: PAT-005 OK  baseline=5  MIN=9 MAX=37 AVG=9  NET_MIN=4 NET_AVG=4.53  core=PCR:1088/1 VCoreRev=12250
+PAT-005.run10.log: PAT-005 OK  baseline=5  MIN=9 MAX=13 AVG=9  NET_MIN=4 NET_AVG=4.07  core=PCR:1088/1 VCoreRev=12250
+REG-001.run01.log: REG-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-001.run02.log: REG-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-001.run03.log: REG-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-001.run04.log: REG-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-001.run05.log: REG-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-001.run06.log: REG-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-001.run07.log: REG-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-001.run08.log: REG-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-001.run09.log: REG-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-001.run10.log: REG-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-002.run01.log: REG-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-002.run02.log: REG-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-002.run03.log: REG-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-002.run04.log: REG-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-002.run05.log: REG-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-002.run06.log: REG-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-002.run07.log: REG-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-002.run08.log: REG-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-002.run09.log: REG-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-002.run10.log: REG-002 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-003.run01.log: REG-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-003.run02.log: REG-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-003.run03.log: REG-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-003.run04.log: REG-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-003.run05.log: REG-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-003.run06.log: REG-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-003.run07.log: REG-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-003.run08.log: REG-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-003.run09.log: REG-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-003.run10.log: REG-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-004.run01.log: REG-004 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-004.run02.log: REG-004 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-004.run03.log: REG-004 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-004.run04.log: REG-004 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-004.run05.log: REG-004 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-004.run06.log: REG-004 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-004.run07.log: REG-004 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-004.run08.log: REG-004 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-004.run09.log: REG-004 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-004.run10.log: REG-004 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-005.run01.log: REG-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-005.run02.log: REG-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-005.run03.log: REG-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-005.run04.log: REG-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-005.run05.log: REG-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-005.run06.log: REG-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-005.run07.log: REG-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-005.run08.log: REG-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-005.run09.log: REG-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+REG-005.run10.log: REG-005 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-001.run01.log: TIM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-001.run02.log: TIM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-001.run03.log: TIM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-001.run04.log: TIM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-001.run05.log: TIM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-001.run06.log: TIM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-001.run07.log: TIM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-001.run08.log: TIM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-001.run09.log: TIM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-001.run10.log: TIM-001 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-002.run01.log: TIM-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-002.run02.log: TIM-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-002.run03.log: TIM-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-002.run04.log: TIM-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-002.run05.log: TIM-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-002.run06.log: TIM-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-002.run07.log: TIM-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-002.run08.log: TIM-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-002.run09.log: TIM-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-002.run10.log: TIM-002 OK  baseline=5  MIN=2 MAX=2 AVG=2  NET_MIN=-3 NET_AVG=-3.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-003.run01.log: TIM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-003.run02.log: TIM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-003.run03.log: TIM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-003.run04.log: TIM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-003.run05.log: TIM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-003.run06.log: TIM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-003.run07.log: TIM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-003.run08.log: TIM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-003.run09.log: TIM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-003.run10.log: TIM-003 OK  baseline=5  MIN=3 MAX=3 AVG=3  NET_MIN=-2 NET_AVG=-2.00  core=PCR:1088/1 VCoreRev=12250
+  warning: negative NET; the baseline is not subtractable
+TIM-004.run01.log: TIM-004 OK  baseline=5  MIN=5 MAX=18 AVG=5  NET_MIN=0 NET_AVG=0.13  core=PCR:1088/1 VCoreRev=12250
+TIM-004.run02.log: TIM-004 OK  baseline=5  MIN=5 MAX=22 AVG=5  NET_MIN=0 NET_AVG=0.86  core=PCR:1088/1 VCoreRev=12250
+TIM-004.run03.log: TIM-004 OK  baseline=5  MIN=5 MAX=49 AVG=5  NET_MIN=0 NET_AVG=0.72  core=PCR:1088/1 VCoreRev=12250
+TIM-004.run04.log: TIM-004 OK  baseline=5  MIN=5 MAX=19 AVG=5  NET_MIN=0 NET_AVG=0.14  core=PCR:1088/1 VCoreRev=12250
+TIM-004.run05.log: TIM-004 OK  baseline=5  MIN=5 MAX=8 AVG=5  NET_MIN=0 NET_AVG=0.03  core=PCR:1088/1 VCoreRev=12250
+TIM-004.run06.log: TIM-004 OK  baseline=5  MIN=5 MAX=15 AVG=5  NET_MIN=0 NET_AVG=0.30  core=PCR:1088/1 VCoreRev=12250
+TIM-004.run07.log: TIM-004 OK  baseline=5  MIN=5 MAX=36 AVG=6  NET_MIN=0 NET_AVG=1.73  core=PCR:1088/1 VCoreRev=12250
+TIM-004.run08.log: TIM-004 OK  baseline=5  MIN=5 MAX=22 AVG=5  NET_MIN=0 NET_AVG=0.42  core=PCR:1088/1 VCoreRev=12250
+TIM-004.run09.log: TIM-004 OK  baseline=5  MIN=5 MAX=21 AVG=6  NET_MIN=0 NET_AVG=1.20  core=PCR:1088/1 VCoreRev=12250
+TIM-004.run10.log: TIM-004 OK  baseline=5  MIN=5 MAX=14 AVG=5  NET_MIN=0 NET_AVG=0.09  core=PCR:1088/1 VCoreRev=12250
+TIM-005.run01.log: TIM-005 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+TIM-005.run02.log: TIM-005 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+TIM-005.run03.log: TIM-005 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+TIM-005.run04.log: TIM-005 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+TIM-005.run05.log: TIM-005 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+TIM-005.run06.log: TIM-005 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+TIM-005.run07.log: TIM-005 OK  baseline=5  MIN=5 MAX=6 AVG=5  NET_MIN=0 NET_AVG=0.01  core=PCR:1088/1 VCoreRev=12250
+TIM-005.run08.log: TIM-005 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+TIM-005.run09.log: TIM-005 OK  baseline=5  MIN=5 MAX=5 AVG=5  NET_MIN=0 NET_AVG=0.00  core=PCR:1088/1 VCoreRev=12250
+TIM-005.run10.log: TIM-005 OK  baseline=5  MIN=5 MAX=42 AVG=5  NET_MIN=0 NET_AVG=0.37  core=PCR:1088/1 VCoreRev=12250

@@ -1,0 +1,13 @@
+{
+  "expected": 770,
+  "received": 770,
+  "valid": 770,
+  "invalid": 0,
+  "check_log_returncode": 0,
+  "core_lines": {
+    "('1088', '1', '12250')": 770
+  },
+  "perf_records": 770,
+  "file_status_failures": [],
+  "source_commit": "a6a8216f96147808e51f0ed4ca21b2072ab2d682"
+}
