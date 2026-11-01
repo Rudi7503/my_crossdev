@@ -127,13 +127,14 @@ need the cross compiler, but they are outside the 77-entry measurement corpus.
 
 ## 7. vasm 2.0f and the B-register change
 
-**vasm 2.0f is the current release** (12 Jul 2026; M68k backend, motorola
-syntax). It intentionally changed the Apollo B-register rules:
+**vasm 2.0f is the current release** (12 Jul 2026; M68k backend **2.8c**,
+motorola syntax **3.19f**). It intentionally changed the Apollo B-register
+rules:
 
 > m68k: Apollo: `move.l Bm,An` and `Am,Bn` should not be allowed.
 
-This is **not a regression**. `seq/REG-002.i` was adapted to the allowed
-`Dn <-> Bn` forms and rebuilt/remeasured:
+This is **not a regression**. `seq/REG-002.i` uses the allowed `Dn <-> Bn`
+forms:
 
 ```asm
         move.l  a0,d0
@@ -141,13 +142,31 @@ This is **not a regression**. `seq/REG-002.i` was adapted to the allowed
         move.l  b0,d1
 ```
 
-Tested with the repository's vasm **2.0d** (the local toolchain), which also
-accepts these forms. The canonical REG-002 output is:
+### Local parallel installation
+
+vasm 2.0f was built from the official source and installed **parallel** to
+the existing 2.0d; 2.0d was not overwritten:
 
 ```text
-sha256: 8f1091cf054f3021abe486dbac36a1a66ca136be53b358b6a3adc8dbba9bffa9
+source:  http://phoenix.owl.de/tags/vasm2_0f.tar.gz
+source sha256: c84b2de1cbb87831795fe64a85c5d9a7002a766e3a7c30b0a2d7d5e99d878f49
+binary:  Compilers/vasm-2.0f/bin/vasmm68k_mot
+binary sha256: e185b25bf76b74351666cf850d28601f4912cd6c92856a6689c1106659f3711a
 ```
 
-No separate vasm patch is required. On vasm 2.0f, do **not** use
-`move.l a0,b0`; it is deliberately rejected. For the full 77-entry run use
-vasm 2.0f or 2.0d with the updated `REG-002`.
+Build:
+
+```bash
+make CPU=m68k SYNTAX=mot
+```
+
+Verification:
+
+```text
+77/77 entries built with vasm 2.0f
+REG-002 output identical to the 2.0d build
+REG-002 sha256: 8f1091cf054f3021abe486dbac36a1a66ca136be53b358b6a3adc8dbba9bffa9
+```
+
+No separate vasm patch is required. The binary is a local toolchain
+installation and is not committed to the repository.
