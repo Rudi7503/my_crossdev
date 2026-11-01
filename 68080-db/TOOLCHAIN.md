@@ -123,3 +123,34 @@ in this repository.
 
 `harness-v5.asm` is self-contained. The C reference tests in `Projects/` may
 need the cross compiler, but they are outside the 77-entry measurement corpus.
+
+
+## 7. Known vasm issue: REG-002 and vasm 2.0f
+
+The canonical build was tested with **vasm 2.0d** (M68k backend 2.8,
+Motorola syntax 3.19d). It accepts the 68080 B-register form:
+
+```asm
+        move.l  a0,b0
+        move.l  b0,d0
+```
+
+vasm **2.0f** rejects `move.l a0,b0` with `illegal operand types`. This is a
+vasm-2.0f regression/backend issue, not an error in `seq/REG-002.i`. Use the
+tested 2.0d binary or patch vasm.
+
+Known-good binary used by this repository:
+
+```text
+path:   Compilers/GCC-6.50-Latest/bin/vasmm68k_mot
+sha256: ce81072f06d34987d939d064747d3261ef3d81d8c5655899c9cd8685b2b8768b
+```
+
+Known-good `REG-002` output:
+
+```text
+sha256: bbf295dcd63375e92c27103686b6991553460bfe86f590a123c6de6a8f1293bf
+```
+
+If vasm 2.0f remains necessary, exclude REG-002 temporarily, but do not claim
+a complete 77-entry run.

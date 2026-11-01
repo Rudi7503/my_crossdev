@@ -379,3 +379,8 @@ nur für den AMMX-Befehlssatz, nicht für `add`/`sub`/`and`/`or` des Integerpfad
 | Spill-Vermeidung | E-Register nur mit `move`/AMMX | BANK-Arithmetik ist laut PRM unvollständig |
 | Adressberechnung | `lea`/`addq` auf An | EA-Einheit, keine ALU->EA-Blase |
 | Breite | Long/Quad, wenn semantisch erlaubt | vermeidet Partial-Register-Merges |
+
+
+> **Toolchain note:** `move.l a0,b0` is accepted by vasm **2.0d**, but not by
+> vasm **2.0f** (`illegal operand types`). Use 2.0d for the canonical build;
+> see [`TOOLCHAIN.md`](TOOLCHAIN.md) for hashes.
