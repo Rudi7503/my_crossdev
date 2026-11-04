@@ -1,0 +1,2 @@
+; NOP calibration sequence
+        nop
