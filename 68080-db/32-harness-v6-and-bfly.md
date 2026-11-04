@@ -33,15 +33,19 @@ AMMX natively implements high-performance butterfly instructions:
 
 ## 2. Complete Harness v6 Suite Results (Core 11350)
 
-### Memory Operations (MEM)
-| ID | Description | RAW_10 | BASE_10 | Net_10 | Cyc / Op |
-|:---|:---|:---:|:---:|:---:|:---:|
-| MEM-010 | Scalar 68000 move.l (a0)+,(a1)+ | 56 | 30 | 26 | **2.6** |
-| MEM-011 | AMMX 64-Byte Blockcopy (8x move.q) | 96 | 30 | 66 | **6.6** |
-| MEM-012 | AMMX 8-Byte Qword Transfer | 46 | 30 | 16 | **1.6** |
-| MEM-013 | AMMX 16-Byte Dual Transfer | 56 | 30 | 26 | **2.6** |
-| MEM-020 | Blockfill 64 Bytes (move.q loop) | 96 | 30 | 66 | **6.6** |
-| MEM-021 | Blockfill 128 Bytes | 176 | 30 | 146 | **14.6** |
+### Memory Operations (MEM) — Durchsatz auf Vampire V4 Standalone (92 MHz)
+| Test ID | Operation | Blockgröße | Netto-Takte | Takte / Byte | Nutzdaten-Rate | Bus-Transfer-Rate |
+|:---|:---|:---:|:---:|:---:|:---:|:---:|
+| **MEM-010** | AMMX Fast MEMSET (Fill) | 32 Bytes | 2.6 Cyc | **0.081 c/B** | **1.132,3 MB/s** | **1.132,3 MB/s** |
+| **MEM-011** | AMMX Fast MEMCPY (Copy) | 32 Bytes | 6.6 Cyc | **0.206 c/B** | **446,1 MB/s** | **892,1 MB/s** |
+| **MEM-012** | AMMX Tail Mask-Store | 8 Bytes | 1.6 Cyc | **0.200 c/B** | **460,0 MB/s** | **920,0 MB/s** |
+| **MEM-013** | AMMX MEMMOVE Streaming | 16 Bytes | 2.6 Cyc | **0.163 c/B** | **566,2 MB/s** | **1.132,3 MB/s** |
+| **MEM-020** | AMMX Cacheline Fill (Burst) | 64 Bytes | 6.6 Cyc | **0.103 c/B** | **892,1 MB/s** | **892,1 MB/s** |
+| **MEM-021** | AMMX Cacheline Copy (Burst) | 64 Bytes | 14.6 Cyc | **0.228 c/B** | **403,3 MB/s** | **806,6 MB/s** |
+
+*Hinweis zur Unterscheidung*:
+- **Nutzdaten-Rate**: Tatsächlich geschriebene bzw. kopierte Nutzlast (z. B. memcpy(dst, src, N) transferiert $ Nutzbytes).
+- **Bus-Transfer-Rate**: Gesamte Bandbreite über den CPU-Speicherbus (bei memcpy werden pro Durchlauf $ Bytes gelesen UND $ Bytes geschrieben, also  	imes N$ Bus-Transfers).
 
 ### String & Text (STR)
 | ID | Description | RAW_10 | BASE_10 | Net_10 | Cyc / Op |
