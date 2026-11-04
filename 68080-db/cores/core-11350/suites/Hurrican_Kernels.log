@@ -4,28 +4,61 @@ Hardware: Vampire V4 Standalone (Apollo 68080 Core 11350, PCR 1088/1, 92 MHz)
 ======================================================================
 
 BLT-006: AMMX Tail-Store (storeilm + lane mask)
-  MIN: 4 cycles
+  Raw: 8 cycles (baseline=5) -> Net: 3 cycles
+  MIN: 4 cycles (rounded/raw ref: 4 net: 3)
   MAX: 4 cycles
   AVG: 4.0 cycles
   IEP: IEP1=5, IEP2=0, IEP3=0
-  Throughput: 1.00 cycles/pixel (4 cycles for 1..3 remaining pixels, branchless)
-  Runs: 10/10 verified (baseline=5, net_min=3)
+  Throughput: 1.00 cycles/pixel (for 1..3 remaining pixels, branchless)
+  Runs: 10/10 verified
 
-BLT-007: Hurrican Flashlight Fast Darkening 3/8 (lsrq + pand + paddw)
+BLT-007: Hurrican Flashlight Fast Darkening 3/8 (Baseline: 1x, 4 Pixels)
+  Raw: 13 cycles (baseline=5) -> Net: 8 cycles
   MIN: 8 cycles
   MAX: 8 cycles
   AVG: 8.0 cycles
   IEP: IEP1=9, IEP2=0, IEP3=0
   Throughput: 2.00 cycles/pixel (8 cycles for 4 RGB565 pixels)
-  Runs: 10/10 verified (baseline=5, net_min=3)
+  Runs: 10/10 verified
 
-BLT-008: Hurrican MSCALE RGB565 4-Pixel Scaling (pmul88 + por)
-  MIN: 21 cycles
-  MAX: 21 cycles
-  AVG: 21.0 cycles
+BLT-008: Hurrican MSCALE RGB565 4-Pixel Scaling (Baseline: 1x, 4 Pixels)
+  Raw: 21 cycles (baseline=5) -> Net: 16 cycles
+  MIN: 16 cycles (raw min: 21)
+  MAX: 16 cycles
+  AVG: 16.0 cycles
   IEP: IEP1=18, IEP2=0, IEP3=0
-  Throughput: 5.25 cycles/pixel (21 cycles for 4 RGB565 pixels full 3-channel 8.8 scaling)
-  Runs: 10/10 verified (baseline=5, net_min=16)
+  Throughput: 4.00 net cycles/pixel (5.25 raw cycles/pixel for 4 RGB565 pixels full 3-channel 8.8 scaling)
+  Runs: 10/10 verified
 
-All 3 kernels measured under Forbid() with Harness v5.
-Logs saved under measurements/v5-files/ and cores/core-11350/logs/.
+BLT-009: Hurrican Flashlight Fast Darkening 3/8 (2x Unrolled & Interleaved Streams, 8 Pixels)
+  Raw: 16 cycles (baseline=5) -> Net: 11 cycles
+  MIN: 11 cycles
+  MAX: 11 cycles
+  AVG: 11.0 cycles
+  IEP: IEP1=15, IEP2=1, IEP3=0 (Dual-Issue active on Pipe 2!)
+  Throughput: 1.375 cycles/pixel (11 cycles for 8 RGB565 pixels)
+  Runs: 10/10 verified
+  Speedup vs BLT-007: +31.25% faster (from 2.00 down to 1.375 cycles/pixel)
+
+BLT-010: Hurrican Flashlight Fast Darkening 3/8 (4x Unrolled Quad-Stream, 16 Pixels)
+  Raw: 28 cycles (baseline=5) -> Net: 23 cycles
+  MIN: 23 cycles
+  MAX: 23 cycles
+  AVG: 23.0 cycles
+  IEP: IEP1=29, IEP2=1, IEP3=0
+  Throughput: 1.4375 cycles/pixel (23 cycles for 16 RGB565 pixels)
+  Runs: 10/10 verified
+  Analysis: 2x unrolling (56 bytes, fits in single 64B cacheline) outperforms 4x unrolling (112 bytes, spans 2 cachelines)
+
+BLT-011: Hurrican MSCALE RGB565 Scaling (2x Unrolled Dual-Stream, 8 Pixels)
+  Raw: 34 cycles (baseline=5) -> Net: 29 cycles
+  MIN: 29 cycles
+  MAX: 29 cycles
+  AVG: 29.0 cycles
+  IEP: IEP1=33, IEP2=1, IEP3=0 (Dual-Issue active on Pipe 2!)
+  Throughput: 3.625 net cycles/pixel (29 cycles for 8 RGB565 pixels)
+  Runs: 10/10 verified
+  Speedup vs BLT-008: +9.4% faster (from 4.00 down to 3.625 cycles/pixel)
+
+All kernels measured under Forbid() with Harness v5 on physical Vampire V4 Standalone (Core 11350).
+Logs saved under cores/core-11350/suites/hurrican_logs/.

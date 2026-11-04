@@ -126,13 +126,68 @@ Der `MSCALE`-Kernel isoliert mit Masken `e10` ($F800), `e13` ($07E0) und `e14` (
 
 ---
 
-## 5. Vergleichstabelle der Blit- & Shading-Kernels (Vampire V4)
+## 5. Optimierung: Load-Parallelisierung, Unrolling & Interleaving
 
-| Test-ID | Kernel / Operation | Befehle | Netto-Takte (MIN) | Takte / Pixel | Status (Harness v5) |
-|---|---|:---:|:---:|:---:|:---:|
-| [`BLT-001`](19-sprite-blit.md) | 2D Sprite Blitting: 256-Bit Copy (`move16`) | 2 | **3 Takte** | **0.19 Takt** | Gemessen (V4) |
-| [`BLT-002`](20-sprite-transparency.md) | Transparent Color-Key (`pcmpeqw` + `storeilm`) | 4 | **5 Takte** | **1.25 Takte** | Gemessen (V4) |
-| [`BLT-006`](27-hurrican-blitting.md) | Tail-Store Zeilenende (`storeilm` + Mask) | 3 | **4 Takte** | **1.00 Takt** | Gemessen (V4) |
-| [`BLT-007`](27-hurrican-blitting.md) | Flashlight $3/8$-Darkening (`lsrq` + `paddw`) | 7 | **8 Takte** | **2.00 Takte** | Gemessen (V4) |
-| [`BLT-003`](21-sprite-alpha-pmula.md) | Alpha Blending Premultiplied (`PMULA`) | 5 | **5 Takte** | **1.25 Takte** | Gemessen (V4) |
-| [`BLT-008`](27-hurrican-blitting.md) | `MSCALE` 3-Kanal RGB565 Scale (`pmul88` + `por`) | 16 | **21 Takte** | **5.25 Takte** | Gemessen (V4) |
+In linearen AMMX-Sequenzen leidet die Pipeline oft unter **RAW-Datenabhängigkeiten** (Read-After-Write Latency): Ein Vektor wird geladen (`load`), und der unmittelbar folgende Rechenbefehl (`lsrq` oder `pand`) muss warten, bis die Daten aus dem Cache/Register eintreffen.
+
+Durch **Loop Unrolling (2× bzw. 4×)** und **verschachteltes Scheduling (Interleaving)** können zwei oder mehr unabhängige Pixelströme (Quadwords) parallel in den Dual-/Triple-Decodern und Ausführungseinheiten des 68080 abgearbeitet werden.
+
+### 5.1 BLT-009: Flashlight 3/8 Darkening 2× Unrolled (8 Pixel)
+* **Strategie:** Laden beider Quadwords (`e4`, `e6`) zu Beginn, anschliessend paarweise unabhängige Shifter, Masken und Additionen.
+* **Code:**
+```asm
+; seq/BLT-009.i - Hurrican Flashlight Fast Darkening 3/8 (2x Unrolled & Interleaved)
+; Uses: e2, e3, e4, e5, e6, e7, d0, d1, a0, a1
+; MUST NOT touch: d5, d6, d7, a5, a6, a7
+        load    (a0)+,e4
+        load    (a0)+,e6
+        lsrq    d0,e4,e5
+        lsrq    d0,e6,e7
+        pand    e2,e5,e5
+        pand    e2,e7,e7
+        lsrq    d1,e4,e4
+        lsrq    d1,e6,e6
+        pand    e3,e4,e4
+        pand    e3,e6,e6
+        paddw   e5,e4,e4
+        paddw   e7,e6,e6
+        store   e4,(a1)+
+        store   e6,(a1)+
+```
+* **Messergebnis (V4 Hardware, 10 Läufe):**
+  * **Netto-Takte:** **11 Takte** für 8 Pixel (Rohwert: 16 Takte, Baseline: 5 Takte)
+  * **Durchsatz:** **1.375 Takte pro Pixel** (vorher 2.000 Takte/Pixel bei BLT-007)
+  * **Speedup:** **+31.25% schneller**!
+  * **Hardware-Counter:** `IEP2 = 1` belegt echte Parallelausführung auf Pipe 2!
+  * **Cache-Effizienz:** Die 14 Befehle (56 Bytes) passen exakt in eine einzige 64-Byte-Cacheline.
+
+### 5.2 BLT-010: Flashlight 3/8 Darkening 4× Unrolled (16 Pixel)
+* **Strategie:** 4 parallele Streams (`e4`, `e6`, `e8`, `e10`).
+* **Messergebnis (V4 Hardware, 10 Läufe):**
+  * **Netto-Takte:** **23 Takte** für 16 Pixel (Rohwert: 28 Takte)
+  * **Durchsatz:** **1.4375 Takte pro Pixel**.
+  * **Erkenntnis:** 4× Unrolling (112 Bytes) überschreitet die 64-Byte Cacheline-Grenze. 2× Unrolling (`BLT-009`, 56 Bytes) ist kompakter und mit **1.375 Takten/Pixel** messbar schneller!
+
+### 5.3 BLT-011: Hurrican MSCALE RGB565 2× Unrolled Dual-Stream (8 Pixel)
+* **Strategie:** 2 Quadwords parallel skalieren, um die Multiplikator-Latenzen (`pmul88`) des R-, G- und B-Kanals zu überlappen.
+* **Messergebnis (V4 Hardware, 10 Läufe):**
+  * **Netto-Takte:** **29 Takte** für 8 Pixel (Rohwert: 34 Takte)
+  * **Durchsatz:** **3.625 Takte pro Pixel** (vorher 4.000 net / 5.25 raw Takte/Pixel bei BLT-008).
+  * **Speedup:** **+9.4% schneller** auf rechenintensivem 3-Kanal 8.8 Scaling.
+
+---
+
+## 6. Gesamte Vergleichstabelle der Blit- & Shading-Kernels (Vampire V4)
+
+| Test-ID | Kernel / Operation | Unroll | Befehle | Netto-Takte (MIN) | Takte / Pixel | Speedup vs. Basis |
+|---|---|:---:|:---:|:---:|:---:|:---:|
+| [`BLT-001`](19-sprite-blit.md) | 2D Sprite Blitting: 256-Bit Copy (`move16`) | 2× | 2 | **3 Takte** | **0.19 Takt** | Basis |
+| [`BLT-002`](20-sprite-transparency.md) | Transparent Color-Key (`pcmpeqw` + `storeilm`) | 1× | 4 | **5 Takte** | **1.25 Takte** | Basis |
+| [`BLT-006`](27-hurrican-blitting.md) | Tail-Store Zeilenende (`storeilm` + Mask) | 1× | 3 | **3-4 Takte** | **1.00 Takt** | Basis |
+| [`BLT-007`](27-hurrican-blitting.md) | Flashlight $3/8$-Darkening (`lsrq` + `paddw`) | 1× | 7 | **8 Takte** | **2.00 Takte** | Basis |
+| **`BLT-009`** | **Flashlight $3/8$-Darkening (Interleaved)** | **2×** | **14** | **11 Takte** | **1.375 Takte** | **+31.25%** |
+| `BLT-010` | Flashlight $3/8$-Darkening (Quad-Stream) | 4× | 28 | **23 Takte** | **1.438 Takte** | +28.1% |
+| [`BLT-003`](21-sprite-alpha-pmula.md) | Alpha Blending Premultiplied (`PMULA`) | 1× | 5 | **5 Takte** | **1.25 Takte** | Basis |
+| [`BLT-008`](27-hurrican-blitting.md) | `MSCALE` 3-Kanal RGB565 Scale (`pmul88`) | 1× | 16 | **16 Takte** | **4.00 Takte** | Basis |
+| **`BLT-011`** | **`MSCALE` 3-Kanal RGB565 Scale (Dual-Stream)** | **2×** | **30** | **29 Takte** | **3.625 Takte** | **+9.4%** |
+
