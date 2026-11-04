@@ -125,3 +125,5 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **Simply 68080 Coding Guidelines (Architekturregeln & 9 goldene Regeln):** [`26`](26-coding-guidelines.md)
 
 - **Hurrican AMMX Blitting & Shading Suite (Harness v5 Suite):** [`27`](27-hurrican-blitting.md)
+
+- **Umfassende Optimierung des 68080-Testkorpus (Hardware-Messungen):** [`28`](28-corpus-optimizations.md)
