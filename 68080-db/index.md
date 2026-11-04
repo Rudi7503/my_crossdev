@@ -129,3 +129,5 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **Umfassende Optimierung des 68080-Testkorpus (Hardware-Messungen):** [`28`](28-corpus-optimizations.md)
 
 - **Diskrete Wavelet-Transformationen (DWT / Haar / CDF 5/3 / CDF 9/7 / Db4):** [`29`](29-wavelet-dwt.md)
+
+- **High-Performance Kernels: Memory, String-SIMD & Branchless Sorting:** [`30`](30-memory-string-sorting.md)
