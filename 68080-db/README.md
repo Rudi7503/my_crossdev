@@ -8,7 +8,8 @@ Kuratierte, quellenbelegte und auf echter Hardware gemessene Optimierungsmuster 
 >
 > **Kanonischer Mess- und Hardware-Stand:**
 > - **Core-Version:** **Apollo 68080 Core 11350** (Vampire V4 Standalone @ **92 MHz**; PCR 1088/1, VCoreRev 0).
-> - **Kanonisches Harness:** **Harness v5** (`harness-v5.asm`). Alle alten Vorab-Versionen (v1–v4) wurden bereinigt.
+> - **Kanonisches Einzeltest-Harness:** **Harness v5** (harness-v5.asm) für 100 isolierte Einzelmessungen.
+> - **Kanonisches Hochpräzisions-Harness:** **Harness v6** (harness-v6.asm) mit 10-fach unrolled innerer Schleife (amortisiert movec-Serialisierung auf 0,5 Zyklen; 100% vorzeichenstabile Netto-Zyklen; vollständige Suiten in [suites_v6/](cores/core-11350/suites_v6/)).
 > - **Zähler-Vollständigkeit:** Jedes Log erfasst den **Clock Cycle Counter (CCC)** sowie die **Instruction Execution Pipeline Slots (IEP1, IEP2, IEP3)** zur genauen Analyse der internen Doppel-Pipeline-Auslastung.
 > - **Multi-Core-Architektur:** Messungen sind modular nach Cores strukturiert in [`cores/`](cores/). Aktuell validiert: [`cores/core-11350/`](cores/core-11350/).
 > - **Validierung:** 100% aller Einträge wurden auf echter Hardware verifiziert und durch `tools/check_log.py` validiert (`FILESTAT;1;0`).
