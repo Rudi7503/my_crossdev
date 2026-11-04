@@ -66,6 +66,7 @@ nur die PCR, nicht die Apollo-Core-Buildnummer. Vorlage:
 | [`24-pmula-unroll-256.md`](24-pmula-unroll-256.md) | PMULA 4×/Memory-VEA + 256×256-Alpha | 2 (BLT-004/005; Projektbenchmark separat) |
 | [`25-pmula-fullhd.md`](25-pmula-fullhd.md) | PMULA Full-HD-Alpha + Load-Einsparung | – (Projektbenchmark, kein Kanon-Eintrag) |
 | [`26-coding-guidelines.md`](26-coding-guidelines.md) | Simply 68080 Coding Guidelines | – (Architekturregeln, Ausführungseinheiten, 9 goldene Regeln) |
+| [`27-hurrican-blitting.md`](27-hurrican-blitting.md) | Hurrican AMMX Blitting & Shading Suite | – (Projektbenchmark: Tail-Store, Flashlight 3/8, MSCALE; Harness v5) |
 
 Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-11350/`](cores/core-11350/).
 Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).

@@ -123,3 +123,5 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **PMULA Full-HD / Load-Einsparung:** [`25`](25-pmula-fullhd.md)
 
 - **Simply 68080 Coding Guidelines (Architekturregeln & 9 goldene Regeln):** [`26`](26-coding-guidelines.md)
+
+- **Hurrican AMMX Blitting & Shading Suite (Harness v5 Suite):** [`27`](27-hurrican-blitting.md)
