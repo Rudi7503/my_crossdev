@@ -71,14 +71,34 @@ Fokus: Eliminierung von Branch-Misprediction-Stalls durch vektorielle Min/Max- u
 
 ---
 
-## 3. Speicherorte & Reproduzierbarkeit
+## 3. Optimierungs-Stufe: 64-Byte Cacheline-Bursts & 2× Interleaving
+
+Aufbauend auf den Basiskernen wurden weiterführende Optimierungen für Cacheline-Bursts, 2× Unrolling und Shifter-Interleaving gemessen:
+
+### 3.1 Vergleichstabelle: Basis vs. Optimierung auf Vampire V4
+
+| Bereich | Basis-Test (1×) | Opt-Test (Burst / 2×) | Strategie | Basis-Rate | Opt-Rate | Gewinn / Effekt |
+|---|---|---|---|:---:|:---:|---|
+| **`memset`** | `MEM-010` (32B) | **`MEM-020` (64B)** | 8× 64-Bit Store Burst (volle Cacheline) | 588.8 MB/s | **654.2 MB/s** | **+11.1% höherer Durchsatz** (sättigt Bus) |
+| **`memcpy`** | `MEM-011` (32B) | `MEM-021` (64B) | 8× Load + 8× Store Burst Interleaved | 327.1 MB/s | **346.4 MB/s** | **+5.9% Speedup** (stößt an I-Cacheline-Limit) |
+| **`strlen`** | `STR-001` (8 Zeichen) | **`STR-011` (16 Zeichen)** | 2× Unrolling + Dual `pcmpeqb` + `por` | 0.500 cyc/ch | **0.438 cyc/ch** | **+12.5% Speedup** (16 Zeichen in 7 Takten) |
+| **`memchr`** | `STR-002` (8 Zeichen) | **`STR-012` (16 Zeichen)** | 2× Unrolling + Dual `pcmpeqb` + `por` | 0.500 cyc/ch | **0.438 cyc/ch** | **+12.5% Speedup** |
+| **`JSON`** | `STR-004` (2 Token) | `STR-014` (4 Token) | Simultaner 4-Zeichen Scanner (`"`, `:`, `{`, `}`) | 2 Tokens / Takt | **4 Tokens in 7T** | Komplexe Vorab-Klassifikation |
+| **`POPCNT`** | `SRT-003` (64 Bit) | **`SRT-013` (128 Bit)** | Interleaved Shifter-Pipes (2 Quadwords) | 12 Takte / 64b | **22 Takte / 128b** | **-2 Takte Overhead** (versteckt Shifter-Latenz) |
+
+---
+
+## 4. Speicherorte & Reproduzierbarkeit
 
 * **ASM-Sourcen:**
-  * `Projects/Memory_AMMX/MEM-010.i` bis `MEM-013.i`
-  * `Projects/String_AMMX/STR-001.i` bis `STR-004.i`
-  * `Projects/Sort_AMMX/SRT-001.i` bis `SRT-003.i`
-* **V4-Messprotokolle (110 Rohlogs):**
+  * `Projects/Memory_AMMX/MEM-010.i` bis `MEM-013.i`, `MEM-020.i`, `MEM-021.i`
+  * `Projects/String_AMMX/STR-001.i` bis `STR-004.i`, `STR-011.i`, `STR-012.i`, `STR-014.i`
+  * `Projects/Sort_AMMX/SRT-001.i` bis `SRT-003.i`, `SRT-013.i`
+* **V4-Messprotokolle (170 Rohlogs):**
   * `cores/core-11350/suites/mem_logs/` (40 Logs)
+  * `cores/core-11350/suites/mem_opt_logs/` (20 Logs)
   * `cores/core-11350/suites/str_logs/` (40 Logs)
+  * `cores/core-11350/suites/str_opt_logs/` (30 Logs)
   * `cores/core-11350/suites/srt_logs/` (30 Logs)
-* **Runner-Script:** `/home/papa/run_opt_suite.py [mem|str|srt]`
+  * `cores/core-11350/suites/srt_opt_logs/` (10 Logs)
+* **Runner-Script:** `/home/papa/run_opt_suite.py [mem|str|srt|mem_opt|str_opt|srt_opt]`
