@@ -68,6 +68,11 @@ nur die PCR, nicht die Apollo-Core-Buildnummer. Vorlage:
 | [`25-pmula-fullhd.md`](25-pmula-fullhd.md) | PMULA Full-HD-Alpha + Load-Einsparung | – (Projektbenchmark, kein Kanon-Eintrag) |
 | [`26-coding-guidelines.md`](26-coding-guidelines.md) | Simply 68080 Coding Guidelines | – (Architekturregeln, Ausführungseinheiten, 9 goldene Regeln) |
 | [`27-hurrican-blitting.md`](27-hurrican-blitting.md) | Hurrican AMMX Blitting & Shading Suite | – (Projektbenchmark: Tail-Store, Flashlight 3/8, MSCALE; Harness v5) |
+| [30-memory-string-sorting.md](30-memory-string-sorting.md) | Memory, String & Sorting AMMX Suiten | 21 (MEM, STR, SRT Suiten unter Harness v5 & v6) |
+| [31-branchless-bst.md](31-branchless-bst.md) | Branchless Binary Search Trees & Eytzinger | 6 (BST-001..006: 3× Speedup via flache Array-Bäume) |
+| [32-harness-v6-and-bfly.md](32-harness-v6-and-bfly.md) | Harness v6 & AMMX Butterfly Benchmarks | 6 (BFLY-001..006: bflyw/bflyb 2.6 Cyc, Memory-VEA Folding) |
+| [33-nop-calibration-and-pipelines.md](33-nop-calibration-and-pipelines.md) | NOP-Kalibrierung (1-9 NOPs) & Pipe 1-3 | 9 (NOP-001..009: 6.0 Cyc/NOP Lineare Hardware-Barriere) |
+| [34-complete-harness-v6-reference.md](34-complete-harness-v6-reference.md) | Gesamtreferenz Harness v6 (10x Loop) | Alle Suiten verifiziert (MEM MByte/s, STR, SRT, DWT, DCT, FFT, BLT) |
 
 Alle Messungen und Detail-Logs sind verlinkt in [`cores/core-11350/`](cores/core-11350/).
 Der alphabetische Index aller Sequenzen steht in [`index.md`](index.md).
