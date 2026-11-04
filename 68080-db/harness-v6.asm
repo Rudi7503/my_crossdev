@@ -101,6 +101,7 @@ _start:
         bsr     init_scratch
 
         ; ---- Baseline v6: Empty 10-iteration loop overhead -> cycle_buffer[0] ---
+        bsr     init_scratch
         move.l  d7,-(sp)
         moveq   #10-1,d7
         movec.l CCC,d5
@@ -152,6 +153,7 @@ measure_100:
 .outer:
         move.l  d7,-(sp)
         ; --- run 1 ---
+        bsr     init_scratch
         moveq   #10-1,d7
         movec.l CCC,d5
 .inner_1:
@@ -161,6 +163,7 @@ measure_100:
         sub.l   d5,d6
         move.l  d6,(a5)+
         ; --- run 2 ---
+        bsr     init_scratch
         moveq   #10-1,d7
         movec.l CCC,d5
 .inner_2:
@@ -170,6 +173,7 @@ measure_100:
         sub.l   d5,d6
         move.l  d6,(a5)+
         ; --- run 3 ---
+        bsr     init_scratch
         moveq   #10-1,d7
         movec.l CCC,d5
 .inner_3:
@@ -179,6 +183,7 @@ measure_100:
         sub.l   d5,d6
         move.l  d6,(a5)+
         ; --- run 4 ---
+        bsr     init_scratch
         moveq   #10-1,d7
         movec.l CCC,d5
 .inner_4:
@@ -188,6 +193,7 @@ measure_100:
         sub.l   d5,d6
         move.l  d6,(a5)+
         ; --- run 5 ---
+        bsr     init_scratch
         moveq   #10-1,d7
         movec.l CCC,d5
 .inner_5:
@@ -197,6 +203,7 @@ measure_100:
         sub.l   d5,d6
         move.l  d6,(a5)+
         ; --- run 6 ---
+        bsr     init_scratch
         moveq   #10-1,d7
         movec.l CCC,d5
 .inner_6:
@@ -206,6 +213,7 @@ measure_100:
         sub.l   d5,d6
         move.l  d6,(a5)+
         ; --- run 7 ---
+        bsr     init_scratch
         moveq   #10-1,d7
         movec.l CCC,d5
 .inner_7:
@@ -215,6 +223,7 @@ measure_100:
         sub.l   d5,d6
         move.l  d6,(a5)+
         ; --- run 8 ---
+        bsr     init_scratch
         moveq   #10-1,d7
         movec.l CCC,d5
 .inner_8:
@@ -224,6 +233,7 @@ measure_100:
         sub.l   d5,d6
         move.l  d6,(a5)+
         ; --- run 9 ---
+        bsr     init_scratch
         moveq   #10-1,d7
         movec.l CCC,d5
 .inner_9:
@@ -233,6 +243,7 @@ measure_100:
         sub.l   d5,d6
         move.l  d6,(a5)+
         ; --- run 10 ---
+        bsr     init_scratch
         moveq   #10-1,d7
         movec.l CCC,d5
 .inner_10:
@@ -267,6 +278,7 @@ perf_baseline:
         move.l  d0,-(sp)
         movem.l 28(sp),d0-d4/a0-a4
 
+        bsr     init_scratch
         move.l  d7,-(sp)
         moveq   #10-1,d7
         movec.l CCC,d5
@@ -980,9 +992,9 @@ perf_delta:     ds.l    8
 perf_cycle_sum: ds.l    1
 line_buf:       ds.b    192
         align   8
-scratch_a:      ds.b    4096
-scratch_b:      ds.b    4096
-scratch_c:      ds.b    4096
-scratch_d:      ds.b    4096
-scratch_e:      ds.b    4096
+scratch_a:      ds.b    65536
+scratch_b:      ds.b    65536
+scratch_c:      ds.b    65536
+scratch_d:      ds.b    65536
+scratch_e:      ds.b    65536
         even
