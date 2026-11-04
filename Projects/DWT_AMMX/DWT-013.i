@@ -1,0 +1,47 @@
+; seq/DWT-013.i - 1D CDF 9/7 Fixed-Point Wavelet (2x Unrolled Interleaved, 16 samples)
+; Uses: e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13, e14, e15, e16, e17, a0, a1, a2
+; MUST NOT touch: d5, d6, d7, a5, a6, a7
+        load    (a0)+,e0
+        load    (a0)+,e1
+        load    (a0)+,e8
+        load    (a0)+,e9
+        vperm   #$014589cd,e0,e1,e2
+        vperm   #$014589cd,e8,e9,e10
+        vperm   #$2367abef,e0,e1,e3
+        vperm   #$2367abef,e8,e9,e11
+        vperm   #$23456701,e2,e2,e4
+        vperm   #$23456701,e10,e10,e16
+        paddw   e2,e4,e5
+        paddw   e10,e16,e17
+        pmulh   e12,e5,e5
+        pmulh   e12,e17,e17
+        paddw   e5,e3,e3
+        paddw   e17,e11,e11
+        vperm   #$67012345,e3,e3,e6
+        vperm   #$67012345,e11,e11,e7
+        paddw   e6,e3,e5
+        paddw   e7,e11,e17
+        pmulh   e13,e5,e5
+        pmulh   e13,e17,e17
+        paddw   e5,e2,e2
+        paddw   e17,e10,e10
+        vperm   #$23456701,e2,e2,e4
+        vperm   #$23456701,e10,e10,e16
+        paddw   e2,e4,e5
+        paddw   e10,e16,e17
+        pmulh   e14,e5,e5
+        pmulh   e14,e17,e17
+        paddw   e5,e3,e3
+        paddw   e17,e11,e11
+        vperm   #$67012345,e3,e3,e6
+        vperm   #$67012345,e11,e11,e7
+        paddw   e6,e3,e5
+        paddw   e7,e11,e17
+        pmulh   e15,e5,e5
+        pmulh   e15,e17,e17
+        paddw   e5,e2,e2
+        paddw   e17,e10,e10
+        store   e2,(a1)+
+        store   e10,(a1)+
+        store   e3,(a2)+
+        store   e11,(a2)+

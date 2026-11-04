@@ -25,13 +25,25 @@ Wavelet-Transformationen zerlegen Signale und Bilder multiskalar in Approximatio
 
 Alle Messungen liefen über 10 Durchgänge mit 100% stabiler Wiederholgenauigkeit:
 
-| Test-ID | Kernel / Operation | Befehle | Netto-Takte (MIN) | Takte / Sample | Durchsatz (92 MHz) |
-|---|---|:---:|:---:|:---:|:---:|
-| **`DWT-001`** | 1D Haar Wavelet Transform (8 Samples) | 12 | **8 Takte** | **1.00 Takt** | **92.0 MSamples / s** |
-| **`DWT-002`** | 1D CDF 5/3 Integer Lifting (8 Samples) | 16 | **17 Takte** | **2.125 Takte** | **43.3 MSamples / s** |
-| **`DWT-003`** | 1D CDF 9/7 Fixed-Point Lifting (8 Samples) | 20 | **18 Takte** | **2.250 Takte** | **40.9 MSamples / s** |
-| **`DWT-004`** | 1D Daubechies-4 (Db4) FIR Filter (8 Samples) | 18 | **16 Takte** | **2.000 Takte** | **46.0 MSamples / s** |
-| **`DWT-005`** | 2D Haar 4×4/8×8 Mallat-Zerlegung (16 Samples) | 24 | **24 Takte** | **1.500 Takte** | **61.3 MSamples / s** |
+### 2.1 Basis-Kerne (1×)
+
+| Test-ID | Wavelet-Verfahren | Typ / Algorithmus | Befehle | Netto-Takte (MIN) | Takte / Sample | Durchsatz (92 MHz) |
+|---|---|---|:---:|:---:|:---:|:---:|
+| **`DWT-001`** | **1D Haar Wavelet** (8 Samples) | 2-Tap Orthogonal | 12 | **8 Takte** | **1.00 Takt** | **92.0 MSamples / s** |
+| **`DWT-002`** | **1D CDF 5/3 Integer Lifting** (8 Samples) | Reversibel (JPEG 2000 Lossless) | 16 | **17 Takte** | **2.125 Takte** | **43.3 MSamples / s** |
+| **`DWT-003`** | **1D CDF 9/7 Fixed-Point Lifting** (8 Samples) | 4 Lifting-Stufen (JPEG 2000 Lossy) | 20 | **18 Takte** | **2.250 Takte** | **40.9 MSamples / s** |
+| **`DWT-004`** | **1D Daubechies-4 (Db4)** (8 Samples) | 4-Tap Orthogonal FIR-Filterbank | 18 | **16 Takte** | **2.000 Takte** | **46.0 MSamples / s** |
+| **`DWT-005`** | **2D Haar Mallat-Zerlegung** (16 Samples) | 4 Subbänder (**LL, LH, HL, HH**) | 24 | **24 Takte** | **1.500 Takte** | **61.3 MSamples / s** |
+
+### 2.2 Optimierte & Unrollte Varianten (DWT-OPT)
+
+| Test-ID | Kernel / Strategie | Samples | Befehle | Netto-Takte (MIN) | Takte / Sample | Vergleich zu 1× |
+|---|---|:---:|:---:|:---:|:---:|:---:|
+| `DWT-011` | 1D Haar (2× Unrolled + Early Store) | 16 | 24 | **20 Takte** | **1.250 Takte** | Basis `DWT-001` (1.00 Takt) gewinnt dank 48-Byte-Cacheline-Fit |
+| **`DWT-012`** | **1D CDF 5/3 (2× Interleaved Lifting)** | **16** | **32** | **33 Takte** | **2.062 Takte** | **Leichter Gewinn** (2.06 vs 2.12 Takte/Sample) |
+| `DWT-013` | 1D CDF 9/7 (2× Interleaved Lifting) | 16 | 40 | **41 Takte** | **2.562 Takte** | Multiplikator-Pipeline bereits bei 1× gesättigt |
+| `DWT-014` | 1D Db4 (Coupled Low/High MACs) | 8 | 18 | **16 Takte** | **2.000 Takte** | Identisch zu `DWT-004` (optimal gesättigt) |
+| **`DWT-015`** | **2D Haar (Dual-Row + Early Stores)** | **16** | **24** | **22 Takte** | **1.375 Takte** | **-2 Takte schneller** (vorher 24 Takte) |
 
 ---
 
