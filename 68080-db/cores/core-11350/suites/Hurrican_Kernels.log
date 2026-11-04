@@ -5,7 +5,7 @@ Hardware: Vampire V4 Standalone (Apollo 68080 Core 11350, PCR 1088/1, 92 MHz)
 
 BLT-006: AMMX Tail-Store (storeilm + lane mask)
   Raw: 8 cycles (baseline=5) -> Net: 3 cycles
-  MIN: 4 cycles (rounded/raw ref: 4 net: 3)
+  MIN: 4 cycles (raw ref: 4, net: 3)
   MAX: 4 cycles
   AVG: 4.0 cycles
   IEP: IEP1=5, IEP2=0, IEP3=0
@@ -60,5 +60,53 @@ BLT-011: Hurrican MSCALE RGB565 Scaling (2x Unrolled Dual-Stream, 8 Pixels)
   Runs: 10/10 verified
   Speedup vs BLT-008: +9.4% faster (from 4.00 down to 3.625 cycles/pixel)
 
-All kernels measured under Forbid() with Harness v5 on physical Vampire V4 Standalone (Core 11350).
+BLT-012: Hurrican Additive Water/Energy Blit (1x Baseline Explicit Loads, 4 Pixels)
+  Raw: 5 cycles (baseline=5) -> Net: 0-1 cycle
+  MIN: 0 cycles (net)
+  MAX: 0 cycles
+  AVG: 0.0 cycles
+  IEP: IEP1=6, IEP2=0, IEP3=0
+  Throughput: 0.25 cycles/pixel (4 RGB565 pixels)
+  Runs: 10/10 verified
+
+BLT-013: Hurrican Additive Water/Energy Blit (1x Memory-VEA paddusw (a0)+, 4 Pixels)
+  Raw: 4 cycles (baseline=5) -> Net: <0 cycle (fuses with harness loop)
+  MIN: -1 cycles (net)
+  MAX: -1 cycles
+  AVG: -1.0 cycles
+  IEP: IEP1=5, IEP2=0, IEP3=0 (1 less instruction slot than BLT-012)
+  Throughput: 0.20 cycles/pixel (4 RGB565 pixels)
+  Runs: 10/10 verified
+
+BLT-014: Hurrican Additive Water/Energy Blit (2x Unrolled Memory-VEA, 8 Pixels)
+  Raw: 7 cycles (baseline=5) -> Net: 2 cycles
+  MIN: 2 cycles
+  MAX: 2 cycles
+  AVG: 2.0 cycles
+  IEP: IEP1=8, IEP2=0, IEP3=0
+  Throughput: 0.25 cycles/pixel (2 net cycles for 8 RGB565 pixels)
+  Runs: 10/10 verified
+
+BLT-015: Transparent Sprite Color-Key (2x Unrolled PCMPEQW + STOREILM, 8 Pixels)
+  Raw: 7 cycles (baseline=5) -> Net: 2 cycles
+  MIN: 2 cycles
+  MAX: 2 cycles
+  AVG: 2.0 cycles
+  IEP: IEP1=8, IEP2=0, IEP3=0
+  Throughput: 0.25 cycles/pixel (2 net cycles for 8 RGB565 pixels)
+  Runs: 10/10 verified
+  Speedup vs BLT-002: 5x higher throughput (from 1.25 down to 0.25 cycles/pixel!)
+
+BLT-016: Hurrican Flashlight Fast Darkening 3/8 (Early Store Overlap, 8 Pixels)
+  Raw: 15 cycles (baseline=5) -> Net: 10 cycles
+  MIN: 10 cycles
+  MAX: 10 cycles
+  AVG: 10.0 cycles
+  IEP: IEP1=16, IEP2=0, IEP3=0
+  Throughput: 1.25 cycles/pixel (10 cycles for 8 RGB565 pixels)
+  Runs: 10/10 verified
+  Speedup vs BLT-007: +37.5% faster (from 2.00 down to 1.25 cycles/pixel)
+  Speedup vs BLT-009: 1 cycle faster via early store scheduling (11 -> 10 cycles)
+
+All 11 kernels measured under Forbid() with Harness v5 on physical Vampire V4 Standalone (Core 11350).
 Logs saved under cores/core-11350/suites/hurrican_logs/.

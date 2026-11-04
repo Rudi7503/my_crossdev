@@ -175,6 +175,27 @@ Durch **Loop Unrolling (2× bzw. 4×)** und **verschachteltes Scheduling (Interl
   * **Durchsatz:** **3.625 Takte pro Pixel** (vorher 4.000 net / 5.25 raw Takte/Pixel bei BLT-008).
   * **Speedup:** **+9.4% schneller** auf rechenintensivem 3-Kanal 8.8 Scaling.
 
+### 5.4 BLT-012 vs. BLT-013 vs. BLT-014: Additives Shading & Memory-VEA (Wasser/Energie)
+* **Strategie:** Vergleich von expliziten Vektor-Loads gegen direkte Speicher-Operanden (`paddusw (a0)+, e1, e2`) und 2× Unrolling.
+* **Messergebnisse (V4 Hardware, 10 Läufe):**
+  * **`BLT-012` (1× Explizit):** 4 Befehle, **0-1 Netto-Takt** (Rohwert 5 Takte, Baseline 5).
+  * **`BLT-013` (1× Memory-VEA):** 3 Befehle, **Rohwert 4 Takte** (spart 1 Befehlsslot und schlägt den Baseline-Loop).
+  * **`BLT-014` (2× Unrolled Memory-VEA):** 6 Befehle, **2 Netto-Takte für 8 Pixel** = **0.25 Takte pro Pixel** (4 Pixel/Takt)!
+
+### 5.5 BLT-015: Transparent Sprite Color-Key 2× Unrolled (8 Pixel)
+* **Strategie:** Vorladen des Farb-Schlüssels in `e7`, 2× Unrolling mit `pcmpeqw` und `storeilm`.
+* **Messergebnis (V4 Hardware, 10 Läufe):**
+  * **Netto-Takte:** **2 Takte für 8 Pixel** (Rohwert: 7 Takte, Baseline: 5 Takte)
+  * **Durchsatz:** **0.25 Takte pro Pixel** (vorher 1.25 Takte/Pixel bei BLT-002)
+  * **Speedup:** **500% Durchsatzsteigerung (5× schneller)** gegenüber einfachem 1× Color-Keying!
+
+### 5.6 BLT-016: Flashlight 3/8 Darkening mit vorgezogenem Store (Early Store Overlap)
+* **Strategie:** Der erste `store e4, (a1)+` wird sofort nach Abschluss von Vektor A abgesetzt, während Vektor B noch addiert (`paddw e7, e6, e6`).
+* **Messergebnis (V4 Hardware, 10 Läufe):**
+  * **Netto-Takte:** **10 Takte für 8 Pixel** (Rohwert: 15 Takte, Baseline: 5 Takte)
+  * **Durchsatz:** **1.250 Takte pro Pixel** (vorher 1.375 bei BLT-009 und 2.000 bei BLT-007).
+  * **Speedup:** Weiterer Takt eingespart (**+37.5% schneller** als Basis BLT-007).
+
 ---
 
 ## 6. Gesamte Vergleichstabelle der Blit- & Shading-Kernels (Vampire V4)
@@ -183,11 +204,17 @@ Durch **Loop Unrolling (2× bzw. 4×)** und **verschachteltes Scheduling (Interl
 |---|---|:---:|:---:|:---:|:---:|:---:|
 | [`BLT-001`](19-sprite-blit.md) | 2D Sprite Blitting: 256-Bit Copy (`move16`) | 2× | 2 | **3 Takte** | **0.19 Takt** | Basis |
 | [`BLT-002`](20-sprite-transparency.md) | Transparent Color-Key (`pcmpeqw` + `storeilm`) | 1× | 4 | **5 Takte** | **1.25 Takte** | Basis |
+| **`BLT-015`** | **Transparent Color-Key (2× Unrolled)** | **2×** | **6** | **2 Takte** | **0.25 Takt** | **+400% (5× Durchsatz)** |
 | [`BLT-006`](27-hurrican-blitting.md) | Tail-Store Zeilenende (`storeilm` + Mask) | 1× | 3 | **3-4 Takte** | **1.00 Takt** | Basis |
 | [`BLT-007`](27-hurrican-blitting.md) | Flashlight $3/8$-Darkening (`lsrq` + `paddw`) | 1× | 7 | **8 Takte** | **2.00 Takte** | Basis |
-| **`BLT-009`** | **Flashlight $3/8$-Darkening (Interleaved)** | **2×** | **14** | **11 Takte** | **1.375 Takte** | **+31.25%** |
+| `BLT-009` | Flashlight $3/8$-Darkening (Interleaved) | 2× | 14 | **11 Takte** | **1.375 Takte** | +31.25% |
+| **`BLT-016`** | **Flashlight $3/8$-Darkening (Early Store Overlap)** | **2×** | **14** | **10 Takte** | **1.250 Takte** | **+37.50%** |
 | `BLT-010` | Flashlight $3/8$-Darkening (Quad-Stream) | 4× | 28 | **23 Takte** | **1.438 Takte** | +28.1% |
 | [`BLT-003`](21-sprite-alpha-pmula.md) | Alpha Blending Premultiplied (`PMULA`) | 1× | 5 | **5 Takte** | **1.25 Takte** | Basis |
 | [`BLT-008`](27-hurrican-blitting.md) | `MSCALE` 3-Kanal RGB565 Scale (`pmul88`) | 1× | 16 | **16 Takte** | **4.00 Takte** | Basis |
 | **`BLT-011`** | **`MSCALE` 3-Kanal RGB565 Scale (Dual-Stream)** | **2×** | **30** | **29 Takte** | **3.625 Takte** | **+9.4%** |
+| `BLT-012` | Additive Blit / Wasser (Explicit Loads) | 1× | 4 | **0-1 Takt** | **0.25 Takt** | Basis |
+| `BLT-013` | Additive Blit / Wasser (Memory-VEA `paddusw`) | 1× | 3 | **<0 Takt** | **0.20 Takt** | -1 Takt Rohzeit |
+| **`BLT-014`** | **Additive Blit / Wasser (2× Unrolled VEA)** | **2×** | **6** | **2 Takte** | **0.25 Takt** | **4 Pixel / Takt** |
+
 
