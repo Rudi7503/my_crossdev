@@ -196,25 +196,49 @@ Durch **Loop Unrolling (2× bzw. 4×)** und **verschachteltes Scheduling (Interl
   * **Durchsatz:** **1.250 Takte pro Pixel** (vorher 1.375 bei BLT-009 und 2.000 bei BLT-007).
   * **Speedup:** Weiterer Takt eingespart (**+37.5% schneller** als Basis BLT-007).
 
+### 5.7 BLT-018: AMMX Tail-Store mit vorab geladener Maske (1..3 Pixel)
+* **Strategie:** Die Maske `e6` für unvollständige Zeilenenden wird einmalig vor der Zeile geladen, im Tail wird nur noch `load (a0)+, e2` gefolgt von `storeilm e2, e6, (a1)+` ausgeführt.
+* **Messergebnis (V4 Hardware, 10 Läufe):**
+  * **Rohwert:** **3 Takte** (vorher 8 Takte bei BLT-006)
+  * **Speedup:** **-62.5% Latenz** (von 8 auf 3 Roh-Takte). 1..3 Restpixel werden branchless in 3 Takten gesichert!
+
+### 5.8 BLT-019: Premultiplied Alpha Blending 2× Unrolled (`PMULA` + Early Store)
+* **Strategie:** 2 Quadwords (8 Pixel) verschränkt berechnen und speichern.
+* **Messergebnis (V4 Hardware, 10 Läufe):**
+  * **Netto-Takte:** **6 Takte für 8 Pixel** (Rohwert: 11 Takte, Baseline: 5 Takte)
+  * **Durchsatz:** **0.750 Takte pro Pixel** (vorher 1.250 Takte/Pixel bei BLT-003).
+  * **Speedup:** **+40.0% schneller**!
+
+### 5.9 BLT-020: Transparent Color-Key 4× Unrolled (16 Pixel)
+* **Messergebnis (V4 Hardware, 10 Läufe):**
+  * **Netto-Takte:** **8 Takte für 16 Pixel** $\rightarrow$ **0.500 Takte pro Pixel**.
+  * **Architektur-Erkenntnis:** 2× Unrolling (`BLT-015`, **0.250 Takte/Pixel**) ist doppelt so schnell wie 4× Unrolling (`BLT-020`, **0.500 Takte/Pixel**), da 2× optimal in die 64-Byte Cacheline passt und keinen Registerüberhang erzeugt.
+
 ---
 
 ## 6. Gesamte Vergleichstabelle der Blit- & Shading-Kernels (Vampire V4)
 
 | Test-ID | Kernel / Operation | Unroll | Befehle | Netto-Takte (MIN) | Takte / Pixel | Speedup vs. Basis |
 |---|---|:---:|:---:|:---:|:---:|:---:|
-| [`BLT-001`](19-sprite-blit.md) | 2D Sprite Blitting: 256-Bit Copy (`move16`) | 2× | 2 | **3 Takte** | **0.19 Takt** | Basis |
-| [`BLT-002`](20-sprite-transparency.md) | Transparent Color-Key (`pcmpeqw` + `storeilm`) | 1× | 4 | **5 Takte** | **1.25 Takte** | Basis |
+| [`BLT-001`](19-sprite-blit.md) | 2D Sprite Blitting: 256-Bit Copy (`move16`) | 2× | 2 | **3 Takte** | **0.19 Takt** | Basis (16 Pixel) |
+| `BLT-021` | 512-Bit Cacheline-Burst Copy (`move16` × 4) | 4× | 4 | **12 Takte** | **0.375 Takt** | 32 Pixel direkt via Bus |
+| [`BLT-002`](20-sprite-transparency.md) | Transparent Color-Key Basis (`pcmpeqw` + `storeilm`) | 1× | 4 | **5 Takte** | **1.25 Takte** | Basis (4 Pixel) |
 | **`BLT-015`** | **Transparent Color-Key (2× Unrolled)** | **2×** | **6** | **2 Takte** | **0.25 Takt** | **+400% (5× Durchsatz)** |
-| [`BLT-006`](27-hurrican-blitting.md) | Tail-Store Zeilenende (`storeilm` + Mask) | 1× | 3 | **3-4 Takte** | **1.00 Takt** | Basis |
-| [`BLT-007`](27-hurrican-blitting.md) | Flashlight $3/8$-Darkening (`lsrq` + `paddw`) | 1× | 7 | **8 Takte** | **2.00 Takte** | Basis |
+| `BLT-020` | Transparent Color-Key (4× Unrolled) | 4× | 12 | **8 Takte** | **0.50 Takt** | +150% (2× Unroll gewinnt) |
+| [`BLT-006`](27-hurrican-blitting.md) | Tail-Store Zeilenende (2 Loads + `storeilm`) | 1× | 3 | **3–4 Takte** | **1.00 Takt** | Basis |
+| **`BLT-018`** | **Tail-Store Zeilenende (Maske vorab geladen)** | **1×** | **2** | **3 Roh-Takte** | **0.75 Takt** | **-62.5% Latenz (3 Takte)** |
+| [`BLT-007`](27-hurrican-blitting.md) | Flashlight $3/8$-Darkening Basis | 1× | 7 | **8 Takte** | **2.00 Takte** | Basis |
 | `BLT-009` | Flashlight $3/8$-Darkening (Interleaved) | 2× | 14 | **11 Takte** | **1.375 Takte** | +31.25% |
 | **`BLT-016`** | **Flashlight $3/8$-Darkening (Early Store Overlap)** | **2×** | **14** | **10 Takte** | **1.250 Takte** | **+37.50%** |
 | `BLT-010` | Flashlight $3/8$-Darkening (Quad-Stream) | 4× | 28 | **23 Takte** | **1.438 Takte** | +28.1% |
-| [`BLT-003`](21-sprite-alpha-pmula.md) | Alpha Blending Premultiplied (`PMULA`) | 1× | 5 | **5 Takte** | **1.25 Takte** | Basis |
-| [`BLT-008`](27-hurrican-blitting.md) | `MSCALE` 3-Kanal RGB565 Scale (`pmul88`) | 1× | 16 | **16 Takte** | **4.00 Takte** | Basis |
-| **`BLT-011`** | **`MSCALE` 3-Kanal RGB565 Scale (Dual-Stream)** | **2×** | **30** | **29 Takte** | **3.625 Takte** | **+9.4%** |
-| `BLT-012` | Additive Blit / Wasser (Explicit Loads) | 1× | 4 | **0-1 Takt** | **0.25 Takt** | Basis |
-| `BLT-013` | Additive Blit / Wasser (Memory-VEA `paddusw`) | 1× | 3 | **<0 Takt** | **0.20 Takt** | -1 Takt Rohzeit |
-| **`BLT-014`** | **Additive Blit / Wasser (2× Unrolled VEA)** | **2×** | **6** | **2 Takte** | **0.25 Takt** | **4 Pixel / Takt** |
+| [`BLT-003`](21-sprite-alpha-pmula.md) | Alpha Blending Premultiplied (`PMULA`) Basis | 1× | 5 | **5 Takte** | **1.25 Takte** | Basis (4 Pixel) |
+| **`BLT-019`** | **Alpha Blending Premultiplied (2× Unrolled Overlap)** | **2×** | **10** | **6 Takte** | **0.75 Takt** | **+40.0% schneller** |
+| [`BLT-008`](27-hurrican-blitting.md) | `MSCALE` 3-Kanal RGB565 Scale (`pmul88`) Basis | 1× | 16 | **16 Takte** | **4.00 Takte** | Basis (4 Pixel) |
+| **`BLT-011`** | **`MSCALE` 3-Kanal Scale (Dual-Stream Interleaved)** | **2×** | **30** | **29 Takte** | **3.625 Takte** | **+9.4% schneller** |
+| `BLT-017` | `MSCALE` 3-Kanal Scale (Early Store Split) | 2× | 30 | **30 Takte** | **3.750 Takte** | Multiplier-Interleave gewinnt |
+| `BLT-012` | Additive Blit / Wasser (Explicit Loads) | 1× | 4 | **0–1 Takt** | **0.25 Takt** | Basis |
+| `BLT-013` | Additive Blit / Wasser (Memory-VEA `paddusw`) | 1× | 3 | **< 0 Takte** | **0.20 Takt** | 1 Befehl gespart |
+| **`BLT-014`** | **Additive Blit / Wasser (2× Unrolled Memory-VEA)** | **2×** | **6** | **2 Takte** | **0.25 Takt** | **4 Pixel pro Takt für 8 Pixel** |
+
 
 
