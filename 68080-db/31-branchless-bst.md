@@ -107,10 +107,26 @@ Auf der 68k-Architektur wird dieser Verzweigungsschritt zu einer einzigen Rechen
 
 ---
 
-## 4. Speicherorte & Reproduzierbarkeit
+## 4. Offizielle Messung unter Harness v6 (10× Loop Standard)
 
-* **ASM-Sourcen:** `Projects/Tree_Branchless/BST-001.i` bis `BST-007.i`
-* **V4-Messprotokolle (70 Rohlogs):**
-  * `cores/core-11350/suites/bst_logs/` (40 Logs: `BST-001..004`)
-  * `cores/core-11350/suites/bst_opt_logs/` (30 Logs: `BST-005..007`)
-* **Runner-Script:** `/home/papa/run_opt_suite.py [bst|bst_opt]`
+Um den 5-Takte-Mess-Overhead von `movec` restlos zu eliminieren und den echten Durchsatz in einer realen Schleife ohne künstliches Entrollen zu messen, wurde **Harness v6** (`harness-v6.asm`) eingeführt. Jeder Testfall wird in einer echten 10er-Schleife (`dbra`) gemessen und gegen die leere 10er-Schleife (Baseline = 30 Takte) bereinigt.
+
+### Ergebnisse auf physischer Vampire V4 Standalone (Harness v6, 10 × 100 Läufe)
+
+| Test-ID | Implementierung / Strategie | Befehle | Rohzeit (10×) | Baseline (10×) | Netto (10×) | **Takte / Schritt (CYC/OP)** | Speedup vs. Basis |
+|---|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **`BST-001`** | **Dein Entwurf (Referenz-Pointer)**<br>`slt` + `extb` + `andi` + `addi` + `0(a0, d2.l)` | 7 | 105 Takte | 30 Takte | 75 Takte | **7.5 Takte** | Basis (Branchless) |
+| **`BST-002`** | **Base-Displacement Trick**<br>`slt` + `andi.w #4` + `4(a0, d2.w)` | 5 | 85 Takte | 30 Takte | 55 Takte | **5.5 Takte** | 🔥 **-2.0 Takte schneller (-26.7%)** |
+| **`BST-003`** | **Dual-EA Parallel Load**<br>Dual `move.l` + Bitmask-Selection | 9 | 126 Takte | 30 Takte | 96 Takte | **9.6 Takte** | Langsamer (zu viele Bit-Befehle) |
+| **`BST-004`** | **AMMX 4-Way SIMD Node (B-Tree)**<br>64-Bit Quadword Key-Fetch + `pcmpgtw` | 3 | 46 Takte | 30 Takte | 16 Takte | **1.6 Takte** | 🚀 **4 Vergleiche in 1.6 Takten (0.4 T/Key)** |
+| **`BST-005`** | **Ultra-Kompakt: `subx.w` + EA-Scale**<br>`sub.l` + `subx.w` + `8(a0, d2.w*4)` | 4 | 85 Takte | 30 Takte | 55 Takte | **5.5 Takte** | 🔥 **5.5 Takte** in nur 4 Befehlen (14 Bytes) |
+| **`BST-006`** | **Eytzinger Implicit Array-Tree**<br>`move.l (a0, d2.l*4)` + `sub.l` + `addx.l d2, d2` | 3 | 55 Takte | 30 Takte | 25 Takte | **2.5 Takte** | 👑 **3.0× schneller (nur 2.5 Takte / Ebene!)** |
+
+---
+
+## 5. Speicherorte & Reproduzierbarkeit
+
+* **ASM-Sourcen:** `Projects/Tree_Branchless/BST-001.i` bis `BST-007.i`, `BST-016.i`
+* **V4-Messprotokolle (Harness v6):** `cores/core-11350/suites_v6/bst_v6_logs/` (60 Rohlogs)
+* **Runner-Script:** `/home/papa/run_v6_suite.py bst`
+* **Harness v6 Source:** `68080-db/harness-v6.asm`
