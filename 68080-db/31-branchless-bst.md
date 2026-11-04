@@ -38,9 +38,12 @@ Da reale Suchdaten in einem Binärbaum annähernd pseudozufällig nach links ode
 | Test-ID | Strategie / Implementierung | Befehle | Netto-Takte (MIN) | Roh-Takte (MIN) | Speedup / Architektur-Effekt |
 |---|---|:---:|:---:|:---:|---|
 | **`BST-001`** | **Basis Branchless (User-Vorschlag)**<br>`slt` + `extb.l` + `andi.l #4` + `addi.l #4` + `0(a0, d2.l)` | 7 | **4 Takte** | **9 Takte** | Vollkommen branchless, 0 Mispredictions |
-| **`BST-002`** | **Optimiert Skalar: Base-Displacement Trick**<br>`slt` + `andi.w #4` + `4(a0, d2.w)` (kein `addi`!) | **5** | **2 Takte** | **7 Takte** | 🔥 **50% Netto-Einsparung (2 Takte schneller)** |
+| **`BST-002`** | **Optimiert Skalar: Base-Displacement Trick**<br>`slt` + `andi.w #4` + `4(a0, d2.w)` (kein `addi`!) | 5 | **2 Takte** | **7 Takte** | 🔥 **50% Netto-Einsparung (2 Takte schneller)** |
 | **`BST-003`** | **Dual-EA Parallel Load + Bitwise Selection**<br>Dual `move.l` mit statischen Offsets + Bitmaske | 9 | **7 Takte** | **12 Takte** | Verhindert ALU-to-EA, aber zu viele Bit-Operationen |
-| **`BST-004`** | **AMMX 4-Way SIMD Tree Node (B-Tree)**<br>64-Bit Quadword Key-Fetch + `pcmpgtw` | **3** | **-1 Takt** | **4 Takte** | 🚀 **4 Schlüssel parallel in 4 Takten (1 Takt/Vergleich)** |
+| **`BST-004`** | **AMMX 4-Way SIMD Tree Node (B-Tree)**<br>64-Bit Quadword Key-Fetch + `pcmpgtw` | 3 | **-1 Takt** | **4 Takte** | 🚀 **4 Schlüssel parallel in 4 Takten (1 Takt/Vergleich)** |
+| **`BST-005`** | **Ultra-Kompakt: `subx.w` + Hardware EA-Scaler**<br>`move.l` + `sub.l` + `subx.w` + `8(a0, d2.w*4)` | **4** | **2 Takte** | **7 Takte** | 🔥 **Nur 4 Befehle!** Kein `slt`, kein `ext`, kein `and`, kein `add` |
+| **`BST-006`** | **Eytzinger Implicit Array-Tree (`addx.l`)**<br>`move.l (a0, d2.l*4)` + `sub.l` + `addx.l d2, d2` | **3** | **-1 Takt** | **4 Takte** | 👑 **Absoluter Rekord:** 3 Befehle, kompletter Verzweigungsschritt in 4 Roh-Takten! |
+| **`BST-007`** | **2-Level Unrolled Pipeline-Interleaved BST**<br>Traversiert 2 vollständige Ebenen am Stück | 8 | **10 Takte** | **15 Takte** | 5 Netto-Takte / Ebene bei fortlaufender Zeigerkette |
 
 ---
 
@@ -67,21 +70,47 @@ Wir können die Addition von `4` direkt in die Adressberechnung der Hardware ver
 * **Effekt:** `extb.l` und `addi.l #4` fallen komplett weg.
 * **Ergebnis auf V4:** Die Nettozeit sinkt von 4 Takten auf **2 Takte**!
 
-### 3.2 Warum `BST-003` (Dual Load) langsamer war
-In `BST-003` wurden beide Zeiger parallel geladen (`move.l 4(a0), d2` und `move.l 8(a0), d3`), um den 2-Takte-Stall zwischen `andi` und `(a0, d2)` zu umgehen. 
-Allerdings erfordert die anschließende bitweise Maskenauswahl (`extb`, `and`, `not`, `and`, `or`) vier zusätzliche Takte, was den Vorteil des parallelen Ladevorgangs wieder aufzehrt.
+### 3.2 Die Perfektionierung des Zeiger-Baums: `BST-005` mit `subx.w` und Hardware-Skalierung (`*4`)
+Kann man `BST-002` noch weiter verdichten?
+Ja, indem man das 68k Extend-Flag ($X$) und die Hardware-Indexskalierung nutzt:
+```asm
+; seq/BST-005.i - Nur noch 4 Befehle (14 Bytes Code!)
+        move.l  (a0),d0         ; Lade Schlüssel
+        sub.l   d1,d0           ; Vergleiche Ziel d1 mit Schlüssel d0 (setzt X-Flag)
+        subx.w  d2,d2           ; d2.w = -X (-1 oder 0), unbeeinflusst vom Vorinhalt!
+        move.l  8(a0,d2.w*4),a0 ; Hardware EA-Scaler: 8 + (-1)*4 = 4 oder 8 + 0*4 = 8!
+```
+* `sub.l d1, d0` setzt das Extend-Flag $X=1$ (wenn $d_0 < d_1$) oder $X=0$ (wenn $d_0 \ge d_1$).
+* `subx.w d2, d2` subtrahiert $d_2$ von sich selbst plus $X$: Das ergibt **garantiert $-1$ oder $0$ in 1 Takt**, egal was vorher in $d_2$ stand!
+* `8(a0, d2.w*4)` nutzt den Hardware-Multiplizierer der Adressgenerierung:
+  * Für $d_2 = -1$: $8 + (-1 \times 4) = 4$ (Linker Zeiger bei Offset 4).
+  * Für $d_2 = 0$: $8 + (0 \times 4) = 8$ (Rechter Zeiger bei Offset 8).
+* **Ergebnis:** Kein `slt`, kein `extb`, kein `andi`, kein `addi` – der gesamte Zeigerwechsel benötigt **nur noch 4 Befehle**!
 
-### 3.3 Der nächste Schritt: AMMX 4-Way SIMD B-Tree (`BST-004`)
-Wenn die Baumstruktur an die Hardware angepasst werden darf (B-Tree statt binärer Baum):
-* Ein 64-Bit-Knoten enthält **4 Schlüssel gleichzeitig** (`load (a0), e1`).
-* `pcmpgtw e0, e1, e2` vergleicht den Suchschlüssel in `e0` simultan mit allen 4 Schlüsseln in **einem einzigen Takt**!
-* Die resultierende Maske liefert direkt die Ziel-Kante (Index 0 bis 4).
-* **Ergebnis:** Anstatt 4 sequentielle Baum-Ebenen abzuarbeiten, erledigt der 68080 vier Vergleiche in nur **4 Roh-Takten** (Netto: -1 Takt, schlägt die Baseline).
+### 3.3 Der algorithmische Durchbruch: Eytzinger Array-Tree (`BST-006`)
+In der modernen Algorithmik (Khuong & Morin) werden binäre Suchbäume in einem flachen Array ohne Zeiger gespeichert (analog zu einem Binary Heap):
+* Wurzel bei Index $k = 1$.
+* Linkes Kind von $k$ bei Index $2k$.
+* Rechtes Kind von $k$ bei Index $2k + 1$.
+
+Auf der 68k-Architektur wird dieser Verzweigungsschritt zu einer einzigen Rechenoperation:
+```asm
+; seq/BST-006.i - Nur 3 Befehle für den kompletten Verzweigungsschritt!
+        move.l  (a0,d2.l*4),d0  ; Lade Schlüssel A[k] aus flachem Array
+        sub.l   d1,d0           ; Vergleiche Ziel d1 mit Schlüssel d0 (setzt X-Flag)
+        addx.l  d2,d2           ; d2 = 2*k + X !
+```
+* `addx.l d2, d2` berechnet $d_2 + d_2 + X$:
+  * Ist $X = 0$ (gehe links): $d_2 \leftarrow 2k$.
+  * Ist $X = 1$ (gehe rechts): $d_2 \leftarrow 2k + 1$.
+* **Ergebnis auf V4:** Mit **3 Befehlen** und **Rohzeit 4 Takten (Netto: -1 Takt)** schlägt dieser Kern sogar die Baseline-Schleife der Hardware! Keine Zeiger-Dereferenzierung, keine Sprünge, maximale Cache-Lokalität.
 
 ---
 
 ## 4. Speicherorte & Reproduzierbarkeit
 
-* **ASM-Sourcen:** `Projects/Tree_Branchless/BST-001.i` bis `BST-004.i`
-* **V4-Messprotokolle (40 Rohlogs):** `cores/core-11350/suites/bst_logs/BST-001.run01.log` bis `BST-004.run10.log`
-* **Runner-Script:** `/home/papa/run_opt_suite.py bst`
+* **ASM-Sourcen:** `Projects/Tree_Branchless/BST-001.i` bis `BST-007.i`
+* **V4-Messprotokolle (70 Rohlogs):**
+  * `cores/core-11350/suites/bst_logs/` (40 Logs: `BST-001..004`)
+  * `cores/core-11350/suites/bst_opt_logs/` (30 Logs: `BST-005..007`)
+* **Runner-Script:** `/home/papa/run_opt_suite.py [bst|bst_opt]`
