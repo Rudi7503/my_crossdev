@@ -131,3 +131,5 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **Diskrete Wavelet-Transformationen (DWT / Haar / CDF 5/3 / CDF 9/7 / Db4):** [`29`](29-wavelet-dwt.md)
 
 - **High-Performance Kernels: Memory, String-SIMD & Branchless Sorting:** [`30`](30-memory-string-sorting.md)
+
+- **Branchless Binary Search Tree (BST) & SIMD B-Tree:** [`31`](31-branchless-bst.md)
