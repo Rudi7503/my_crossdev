@@ -127,3 +127,5 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **Hurrican AMMX Blitting & Shading Suite (Harness v5 Suite):** [`27`](27-hurrican-blitting.md)
 
 - **Umfassende Optimierung des 68080-Testkorpus (Hardware-Messungen):** [`28`](28-corpus-optimizations.md)
+
+- **Diskrete Wavelet-Transformationen (DWT / Haar / CDF 5/3 / CDF 9/7 / Db4):** [`29`](29-wavelet-dwt.md)
