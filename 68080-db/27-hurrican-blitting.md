@@ -240,5 +240,73 @@ Durch **Loop Unrolling (2× bzw. 4×)** und **verschachteltes Scheduling (Interl
 | `BLT-013` | Additive Blit / Wasser (Memory-VEA `paddusw`) | 1× | 3 | **< 0 Takte** | **0.20 Takt** | 1 Befehl gespart |
 | **`BLT-014`** | **Additive Blit / Wasser (2× Unrolled Memory-VEA)** | **2×** | **6** | **2 Takte** | **0.25 Takt** | **4 Pixel pro Takt für 8 Pixel** |
 
+---
+
+## 7. Direkter Abgleich mit dem Original-Source `Hurrican/src/blit.s` (Harness v6)
+
+Nach Vorliegen des vollständigen *Hurrican*-V4-Sources (`D:\downloads\Hurrican\Hurrican\src\blit.s`) wurden dessen innere Schleifen direkt gegen die bestehenden DB-Kernels unter **Harness v6** (`BASE_10 = 30`, 10× Loop, 10 Läufe auf Vampire V4 Standalone) vermessen:
+
+### 7.1 Vergleich: Bestehende DB-Routinen vs. `blit.s`
+| Kategorie | DB-Routine (v6) | `blit.s`-Routine | Netto-Takte (v6) | Takte / Pixel | Ergebnis |
+|---|---|---|---:|---:|---|
+| **Copy (32 B / 16 px)** | `BLT-001` (`2× move16`) | — | 7.6 Cyc | 0.475 | Basis `move16` |
+| **Copy (64 B / 32 px)** | `BLT-021` (`4× move16`) | — | 15.6 Cyc | 0.488 | 7.8 Cyc / 32 B |
+| **Copy (32 B / 16 px)** | `MEM-011` (`4× load + 4× store`) | `_BlitCopy` (`.q4`) | **6.6 Cyc** | **0.413** | **`blit.s` ~13% schneller als `move16`** |
+| **Fill (32 B / 16 px)** | `MEM-010` (`4× store`) | `_FillRect` (`.f4`) | **2.6 Cyc** | **0.163** | Identisch |
+| **Color-Key (4 px)** | `BLT-002` (Key-Load/Step) | — | 2.6 Cyc | 0.650 | Basis |
+| **Color-Key (8 px)** | `BLT-015` (2× Unrolled) | `_BlitKey` (`.k2`) | **4.6 Cyc** | **0.575** | **`blit.s` ~12% schneller/px als `BLT-002` & ~13% schneller als `BLT-020` (10.6 Cyc / 16 px)** |
+
+### 7.2 Neu aufgenommene `blit.s`-Kernels (`BLT-022` bis `BLT-028`, Harness v6)
+Diese Routinen waren bislang nicht in `68080-db` enthalten. Insbesondere nutzt `_BlitAdd` / `_BlitKeyAdd` / `_BlitKeyTint` korrekt **`unpack1632` + `paddusb` + `pack3216`** für echtes kanalweises RGB565-Sättigungs-Addieren (während `BLT-012..014` zuvor `paddusw` nutzten, was bei Überlauf in den Nachbarkanal blutet):
+
+| Test-ID | `blit.s`-Routine | Pixel | RAW_10 | BASE_10 | Netto-Takte (v6) | Takte / Pixel |
+|---|---|:---:|---:|---:|---:|---:|
+| **`BLT-022`** | `_BlitAdd` 1× (`unpack1632`+`paddusb`+`pack3216`) | 4 | 96 | 30 | **6.6 Cyc** | **1.65** |
+| **`BLT-023`** | `_BlitAdd` 2× Unrolled & Interleaved | 8 | 166 | 30 | **13.6 Cyc** | **1.70** |
+| **`BLT-024`** | `_BlitKeyAdd` 1× (Color-Key + sat. Add) | 4 | 106 | 30 | **7.6 Cyc** | **1.90** |
+| **`BLT-025`** | `_BlitKeyAdd` 2× Unrolled & Interleaved | 8 | 196 | 30 | **16.6 Cyc** | **2.08** |
+| **`BLT-026`** | `_BlitKeyTint` (Color-Key + konstanter Tint) | 4 | 96 | 30 | **6.6 Cyc** | **1.65** |
+| **`BLT-027`** | `_BlitCross` (256-Stufen Crossfade mit `pmul88`) | 4 | 356 | 30 | **32.6 Cyc** | **8.15** |
+| **`BLT-028`** | `KeyMulA` (Color-Key + `MSCALE` + `storeilm`) | 4 | 226 | 30 | **19.6 Cyc** | **4.90** |
+
+---
+
+## 8. Bittiefen-Vergleich: 16-Bit RGB565 vs. 24-Bit RGB888 vs. 32-Bit ARGB8888 (Harness v6)
+
+Für den neuen 2D-Shooter wurden analoge Kernels für **32-Bit ARGB8888** (`BLT-029`..`BLT-036`) und **24-Bit RGB888** (`BLT-037`..`BLT-038`) auf der Vampire V4 vermessen:
+
+| Operation | 16-Bit RGB565 (Cyc/Px) | 24-Bit RGB888 (Cyc/Px) | 32-Bit ARGB8888 (Cyc/Px) | Erkenntnis |
+|---|---:|---:|---:|---|
+| **Copy** | **0,413** (`MEM-011`, 6,6/16px) | **0,575** (`BLT-037`, 4,6/8px) | **0,825** (`BLT-029`, 6,6/8px) | Bandbreiten-skaliert (2:3:4 Bpp) |
+| **Fill** | **0,163** (`MEM-010`, 2,6/16px) | **0,200** (`BLT-038`, 1,6/8px) | **0,325** (`BLT-030`, 2,6/8px) | Bandbreiten-skaliert |
+| **Color-Key (sym./0)** | **0,575** (`BLT-015`, 4,6/8px) | *nicht SIMD-aligned* | **1,150** (`BLT-031`, 4,6/4px) | 2× so viele Bytes/px |
+| **Color-Key (exakt 32b)** | — | *nicht SIMD-aligned* | **2,150** (`BLT-032`, 8,6/4px) | `pcmpeqw` + `vperm` + `pand` |
+| **Additive Blit 1×** | **1,650** (`BLT-022`, 6,6/4px) | **2,700** (`BLT-043`, `vperm` 8px) | **1,300** (`BLT-033`, 2,6/2px) | **32-Bit ist 21 % schneller** als 16-Bit & **2,1× schneller** als 24-Bit |
+| **Additive Blit 2×** | **1,700** (`BLT-023`, 13,6/8px) | **3,300** (`BLT-041`, `storec` 2px) | **1,900** (`BLT-034`, 7,6/4px) | 24-Bit 8px-Block schlägt 2px-`storec` |
+| **Key + Additive 2×** | **2,075** (`BLT-025`, 16,6/8px) | *via `vperm`* | **2,150** (`BLT-035`, 8,6/4px) | Nahezu gleichauf trotz 2× Bandbreite! |
+| **Key + Tint** | **1,650** (`BLT-026`, 6,6/4px) | *via `vperm`* | **1,800** (`BLT-036`, 3,6/2px) | Nahezu gleichauf |
+| **Alpha (PMULA)** | **1,650** (`BLT-039`, `unpack1632+pmula+pack3216`) | **2,325** (`BLT-044`, `vperm+pmula` 8px) | **1,300** (`BLT-003`, `PMULA` nativ) | **16-Bit+PMULA schlägt `MSCALE` (4,90) um 2,97×!** 32-Bit bleibt absolut am schnellsten (1,30 Cyc/Px) |
+
+---
+
+## 9. Memory-VEA, 2× Streaming & Parallele ALU+AMMX-Optimierung (`BLT-045`–`BLT-050`)
+
+Durch Anwendung der 68080-Architekturregeln (Kapitel 26 & 28) – **Memory-VEA `(a0)+`**, **2× Streaming (`MEM-013`-Prinzip)** und **ALU/EA-Interleaving** – konnten alle kritischen Blitter-Kernels noch einmal massiv beschleunigt werden:
+
+| ID | Optimierter Kernel | Vorher | Nachher (v6) | Takte / Pixel | Gewinn |
+|---|---|---:|---:|---:|---|
+| **`BLT-045`** | Copy 2× Streaming (16 B) | 6,6 / 32 B (`BLT-029`) | **2,6 Cyc / 16 B** | **0,325 (16b) / 0,650 (32b)** | **+21 % schneller** als 4× Copy, **+32 %** vs. `move16` |
+| **`BLT-046`** | 32-Bit Additive 1× (`paddusb (a0)+`) | 2,6 / 2 px (`BLT-033`) | **1,6 Cyc / 2 px** | **0,800** | **+38,5 % schneller** (Source-Load eliminiert) |
+| **`BLT-047`** | 32-Bit Additive 2× (`paddusb (a0)+`) | 7,6 / 4 px (`BLT-034`) | **4,6 Cyc / 4 px** | **1,150** | **+39,5 % schneller** |
+| **`BLT-048`** | 16-Bit Alpha (`pmula (a0)+`) | 6,6 / 4 px (`BLT-039`) | **4,6 Cyc / 4 px** | **1,150** | **+30,3 % schneller** – **schlägt sogar 32-Bit `BLT-003` (1,30 Cyc/Px)!** |
+| **`BLT-049`** | `BLT-048` + 4× ALU/EA-Befehle | 4,6 Cyc | **4,6 Cyc / 4 px** | **1,150** | **0,0 Takte Zusatzkosten** für ALU/EA parallel zu AMMX! |
+| **`BLT-050`** | 16-Bit Additive (`unpack1632 (a0)+`) | 6,6 / 4 px (`BLT-022`) | **4,6 Cyc / 4 px** | **1,150** | **+30,3 % schneller** als Original-`blit.s` `_BlitAdd` |
+| **`BLT-051`** | `_BlitKeyAdd` (`unpack1632 (a1)`) | 7,6 / 4 px (`BLT-024`) | **6,6 Cyc / 4 px** | **1,650** | **+13,2 % schneller** als Original-`blit.s` `_BlitKeyAdd` |
+| **`BLT-052`** | `_BlitKeyTint` (`unpack1632 (a1)`) | 6,6 / 4 px (`BLT-026`) | **5,6 Cyc / 4 px** | **1,400** | **+15,2 % schneller** (dst-Load gespart) |
+| **`BLT-053`** | `_BlitKeyTint` Dual-VEA (`pcmpeqw (a0)+` + `unpack1632 (a1)`) | 6,6 / 4 px (`BLT-026`) | **4,6 Cyc / 4 px** | **1,150** | **+30,3 % schneller** (beide Loads gespart, `diff=0`) |
+
+
+
+
 
 

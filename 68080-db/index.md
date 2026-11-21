@@ -26,6 +26,38 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 | [`BLT-003`](21-sprite-alpha-pmula.md) | Premultiplied-Alpha-Blending mit PMULA | `21-sprite-alpha-pmula.md` | gemessen |
 | [`BLT-004`](24-pmula-unroll-256.md) | PMULA 4× (Register-Loads) | `24-pmula-unroll-256.md` | gemessen |
 | [`BLT-005`](24-pmula-unroll-256.md) | PMULA 4× Memory-VEA (Load gespart) | `24-pmula-unroll-256.md` | gemessen |
+| [`BLT-022`](27-hurrican-blitting.md) | Hurrican blit.s: BlitAdd 1× (4px RGB565 `unpack1632`+`paddusb`+`pack3216`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-023`](27-hurrican-blitting.md) | Hurrican blit.s: BlitAdd 2× Unrolled (8px RGB565 sat add) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-024`](27-hurrican-blitting.md) | Hurrican blit.s: BlitKeyAdd 1× (4px Color-Key + sat add) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-025`](27-hurrican-blitting.md) | Hurrican blit.s: BlitKeyAdd 2× Unrolled (8px Color-Key + sat add) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-026`](27-hurrican-blitting.md) | Hurrican blit.s: BlitKeyTint (4px Color-Key + Farb-Tint) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-027`](27-hurrican-blitting.md) | Hurrican blit.s: BlitCross (4px 256-Stufen Crossfade `pmul88`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-028`](27-hurrican-blitting.md) | Hurrican blit.s: KeyMulA (4px Color-Key + MSCALE + `storeilm`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-029`](27-hurrican-blitting.md) | 32-Bit ARGB8888 Copy (8px / 32B, `4× load + 4× store`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-030`](27-hurrican-blitting.md) | 32-Bit ARGB8888 Fill (8px / 32B, `4× store`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-031`](27-hurrican-blitting.md) | 32-Bit ARGB8888 Color-Key 2× (4px, `pcmpeqw + storeilm`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-032`](27-hurrican-blitting.md) | 32-Bit ARGB8888 Exact 32-Bit Color-Key 2× (4px, `vperm + pand`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-033`](27-hurrican-blitting.md) | 32-Bit ARGB8888 Additive Blit 1× (2px, natives `paddusb`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-034`](27-hurrican-blitting.md) | 32-Bit ARGB8888 Additive Blit 2× Unrolled (4px, `paddusb`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-035`](27-hurrican-blitting.md) | 32-Bit ARGB8888 Color-Key + Additive Blit 2× (4px) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-036`](27-hurrican-blitting.md) | 32-Bit ARGB8888 Color-Key + Tint Add (2px) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-037`](27-hurrican-blitting.md) | 24-Bit RGB888 Copy (8px / 24B, `3× load + 3× store`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-038`](27-hurrican-blitting.md) | 24-Bit RGB888 Fill (8px / 24B, `3× store` rotiert) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-039`](27-hurrican-blitting.md) | 16-Bit RGB565 Alpha 1× (4px, `unpack1632 + pmula + pack3216`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-040`](27-hurrican-blitting.md) | 16-Bit RGB565 Alpha 2× (8px, `unpack1632 + pmula + pack3216`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-041`](27-hurrican-blitting.md) | 24-Bit RGB888 Additive 2px (`vperm + paddusb + storec`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-042`](27-hurrican-blitting.md) | 24-Bit RGB888 Alpha 2px (`vperm + pmula + storec`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-043`](27-hurrican-blitting.md) | 24-Bit RGB888 Additive 8px (`vperm + paddusb + 3× store`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-044`](27-hurrican-blitting.md) | 24-Bit RGB888 Alpha 8px (`vperm + pmula + 3× store`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-045`](27-hurrican-blitting.md) | Copy 2× Streaming (16B, `2× load + 2× store`, schlägt 4× & `move16`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-046`](27-hurrican-blitting.md) | 32-Bit ARGB8888 Additive 1× Memory-VEA (`paddusb (a0)+`, 0,80 Cyc/Px) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-047`](27-hurrican-blitting.md) | 32-Bit ARGB8888 Additive 2× Memory-VEA (`paddusb (a0)+`) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-048`](27-hurrican-blitting.md) | 16-Bit RGB565 Alpha Memory-VEA (`pmula (a0)+`, 1,15 Cyc/Px) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-049`](27-hurrican-blitting.md) | 16-Bit Alpha Memory-VEA + 4× ALU/EA parallel (0 Takte Overhead) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-050`](27-hurrican-blitting.md) | 16-Bit RGB565 Additive Memory-VEA (`unpack1632 (a0)+`, 1,15 Cyc/Px) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-051`](27-hurrican-blitting.md) | 16-Bit RGB565 BlitKeyAdd Memory-VEA (`unpack1632 (a1)`, 1,65 Cyc/Px) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-052`](27-hurrican-blitting.md) | 16-Bit RGB565 BlitKeyTint Memory-VEA dst (`unpack1632 (a1)`, 1,40 Cyc/Px) | `27-hurrican-blitting.md` | gemessen |
+| [`BLT-053`](27-hurrican-blitting.md) | 16-Bit RGB565 BlitKeyTint Dual-VEA (`pcmpeqw (a0)+`, 1,15 Cyc/Px) | `27-hurrican-blitting.md` | gemessen |
 | [`ANTI-001`](08-antipatterns.md) | NOP zwischen MOVE und abhängigem ADD | `08-antipatterns.md` | gemessen |
 | [`ANTI-002`](08-antipatterns.md) | 68060-Scheduling durch Einschub einer unabhängigen Instruktion | `08-antipatterns.md` | gemessen |
 | [`ANTI-003`](08-antipatterns.md) | Word-Updates statt Long-Updates | `08-antipatterns.md` | gemessen |
