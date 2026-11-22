@@ -1,54 +1,46 @@
 # HANDOFF – 68080 Best-Practice-Datenbank
 
-**Stand:** 2026-10-31  
+**Stand:** 2026-11-22  
 **Einstieg für Menschen und fremde KIs:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 ## Aktueller kanonischer Zustand
 
-- **77 Einträge**, **770 v5-Logs** (`77 × 10`), ausschließlich Harness v5
-- **Core:** Apollo 68080 **11350**, PCR **1088/1**, VCoreRev **0**, **92 MHz**
-- **Sequenzen:** `seq/<ID>.i`
-- **Lokale Logs:** `measurements/v5-files/<ID>.runNN.log`
-- **Getrackte Logs für Doku-Links:** `cores/core-11350/logs/<ID>.runNN.log`
-- **Summaries:** `cores/core-11350/CYCLE-SUMMARY.md`, `PERF-SUMMARY.md`
+- **Kanonischer Harness:** **Harness v6** (`harness-v6.asm`, `BASE_10 = 30`, 10×10 Messläufe mit Warmup + separatem `PERF`-Pass unter `Disable()`/`Enable()` — ersetzt den älteren Harness v5; historische v5-Baselines bleiben in `cores/core-11350/logs/` archiviert).
+- **Core:** Apollo 68080 **11350**, PCR **1088/1**, ~**85–92 MHz** (reale V4-Taktfrequenz je Core-Build)
+- **Sequenzen:** `seq/<ID>.i` (inkl. `HUR-001`–`HUR-074` für Hurrican-V4-Optimierungen)
+- **v6-Logs:** `log-v6/<ID>.log` (Hurrican & neue Benchmarks), `build-v6/`, `bin-v6/`
+- **Historische v5-Logs:** `cores/core-11350/logs/<ID>.runNN.log` (77 × 10 Baselines)
+- **Summaries:** `cores/core-11350/CYCLE-SUMMARY.md`, `PERF-SUMMARY.md`, `34-complete-harness-v6-reference.md`
 - **Golden-/Suite-Logs:** `cores/core-11350/golden/`, `cores/core-11350/suites/`
-- **Batch:** `RUN-ALL` (77 × 10) und `RUN-ALL-ONCE` (77 × 1)
-- **Validierung:** `tools/check_log.py` für alle 770 Logs; `PERF` ohne `nan`
+- **Validierung:** `tools/check_log.py`, `tools/build_hur_v6.py`
 
-## Kanonische Befehle
+## Kanonische Befehle (Harness v6)
 
 ```bash
 cd 68080-db
 python3 tools/check_sequences.py seq/
-HARNESS=harness-v5.asm BUILD_DIR=build-v5 BIN_DIR=bin-v5 ./tools/build_all.sh
-python3 tools/check_log.py measurements/v5-files/<ID>.run01.log
-python3 tools/repeat_report.py measurements/v5-files
-python3 tools/perf_report.py measurements/v5-files
+python3 tools/build_hur_v6.py HUR-067 HUR-068
 ```
 
 ## Wichtige Regeln
 
-1. Nur **v5** ist kanonisch; keine v1–v4-Logs oder alten Harnesse hinzufügen.
-2. Ein Eintrag braucht **10** valide v5-Logs und `CORE;1088;1;0` (PCR).
-3. Messwert ist **MIN**, nicht AVG.
-4. Jede Zahl im Dokument muss aus dem verlinkten Rohlog stammen.
-5. Kanonische Mikrobenchmarks und separate Suite-/Golden-Tests klar trennen.
+1. **Harness v6** (`harness-v6.asm`) ist für alle neuen Messungen kanonisch (v5-Logs sind nur noch historisches Archiv).
+2. Messwert ist **MIN** (bei deterministischen L1-Kernels) bzw. **MIN / AVG / MAX** bei DDR3-/FastRAM-Messungen; Baseline (`BASE_10 = 30`) wird für Netto-Zyklen abgezogen.
+3. Jede Zahl im Dokument muss aus dem verlinkten Rohlog stammen.
+4. Jede Code-Optimierung wird vor Übernahme auf echter V4-Hardware **100 % bit-gleich** (`0 Mismatches`) verifiziert.
+5. Kanonische Mikrobenchmarks und separate Suite-/Golden-/Cold-FastRAM-Tests klar trennen.
 6. Keine erfundenen Werte, keine handeditieren Summaries.
-7. Änderungen an `harness-v5.asm` erfordern einen vollständigen Neulauf aller
-   Einträge.
 
 ## Aktuelle Schwerpunkte
 
-- `24-pmula-unroll-256.md`: 4×-Register vs. Memory-VEA, 256×256
-- `25-pmula-fullhd.md`: Full-HD-Alpha, 3,103 Takte/Pixel, 119 MB/s
-- `22-sprite-alpha-pmula-golden.md`: 256 Alphas + 10k Zufall + 16/32/64, `diff=0`
-- `23-rgb565-alpha.md`: RGB565-Alpha, skalar, `diff=0`
-- `19`/`20`: kanonische BLT-001/002 plus separate 28/28-/56/56-Suite-Logs
+- `27-hurrican-blitting.md`: Hurrican V4-Optimierungen `HUR-001`–`HUR-074` + Cold-FastRAM DDR3-Burst-Analyse (64 B Copy, 32 B Key, 2-Quad Add)
+- `34-complete-harness-v6-reference.md`: Vollständige Harness-v6-Referenz
+- `35-saga-display-and-bandwidth.md`: SAGA-Bildausgabe (VBL, `$DFF1EC`, `VPOSR`, Double- vs. Triple-Buffering) & Speicherbandbreite unter SAGA-Display-DMA (`640×480×16` vs. `960×540×16`)
+- `24-pmula-unroll-256.md` / `25-pmula-fullhd.md`: AMMX `pmula`-Alpha-Blending
+- `22-sprite-alpha-pmula-golden.md` / `23-rgb565-alpha.md`: Bit-exakte Alpha-Verifikation (`diff=0`)
 
-## Offene Punkte
+## Offene Punkte (Roadmap)
 
-1. Weitere Core-/Boot-Reproduktion (Streuung zwischen Boots).
-2. CCC-Breite/Überlauf experimentell prüfen.
-3. 68060-Vergleichsmessungen.
-4. AMMX-Laufzeitdetektion im Harness.
-5. Neue Kandidaten nur mit vollständigem 10×-Lauf und Rohlogs aufnehmen.
+1. **GCC-68080 C-Muster (OpenSWOS):** Schlechte GCC-Patterns (u. a. 64-Bit-Mul/Div-Libcalls `__muldi3`/`__divdi3`), FPU vs. Integer auf 68080, Abgleich mit `ApolloTeam-dev/ApolloKnowledgeBase`.
+2. **AmigaOS-Jitter / Hintergrund-Tasks:** Messung der 20–30 ms Ausreißer durch laufende Workbench-Tools/Uhren vs. Task-Priorität / `Forbid()`.
+3. Weitere Core-/Boot-Reproduktion & 68060-Vergleichsmessungen.
