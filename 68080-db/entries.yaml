@@ -472,3 +472,447 @@ entries:
   seq: seq/TIM-005.i
   logs: 10
   status: gemessen
+- id: HUR-001
+  title: Hurrican _DrawTextTint Original (3x divu.w #255)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-001.i
+  logs: 1
+  status: gemessen
+- id: HUR-002
+  title: Hurrican _DrawTextTint Reziprok ((n*257+257)>>16, bit-exakt)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-002.i
+  logs: 1
+  status: gemessen
+- id: HUR-003
+  title: Hurrican _DrawTextTint Channel-LUT (3x Indexed Read, langsamer)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-003.i
+  logs: 1
+  status: gemessen
+- id: HUR-004
+  title: Hurrican CompFall Original (1 Pixel, MASK565 + 3x mulu.l)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-004.i
+  logs: 1
+  status: gemessen
+- id: HUR-005
+  title: Hurrican CompFall AMMX 4-Pixel SIMD (pmull/paddw/lsrq/por, bit-exakt)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-005.i
+  logs: 1
+  status: gemessen
+- id: HUR-006
+  title: Hurrican AudHandler .sm Original (1 Byte, ext.w + Branch-Clamp)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-006.i
+  logs: 1
+  status: gemessen
+- id: HUR-007
+  title: Hurrican AudHandler AMMX 8-Byte Sättigung (pmaxsb/paddusb/psubusb, bit-exakt)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-007.i
+  logs: 1
+  status: gemessen
+- id: HUR-008
+  title: Hurrican AudHandler AMMX 2x Unrolled 16-Byte Sättigung
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-008.i
+  logs: 1
+  status: gemessen
+- id: HUR-009
+  title: Hurrican _BlitKeyRed Mode 0 Original (1 Pixel, Branch-Clamp)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-009.i
+  logs: 1
+  status: gemessen
+- id: HUR-010
+  title: Hurrican _BlitKeyRed Mode 0 AMMX 4-Pixel SIMD (pminuw/storeilm, bit-exakt)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-010.i
+  logs: 1
+  status: gemessen
+- id: HUR-011
+  title: Hurrican _BlitAlpha32 Original (1 Pixel, cmp + 2x mulu.l)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-011.i
+  logs: 1
+  status: gemessen
+- id: HUR-012
+  title: Hurrican _BlitAlpha32 AMMX 4-Pixel SIMD (pcmpeqw/pmull/storeilm, bit-exakt)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-012.i
+  logs: 1
+  status: gemessen
+- id: HUR-013
+  title: Hurrican GetTinted Original (1 Pixel, 3x LUT + KEYCOL-Guard)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-013.i
+  logs: 1
+  status: gemessen
+- id: HUR-014
+  title: Hurrican GetTinted AMMX 4-Pixel SIMD (pmull/lsrq, ohne LUT, bit-exakt)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-014.i
+  logs: 1
+  status: gemessen
+- id: HUR-015
+  title: Hurrican SlopeCheck Original (divul.l #20 + 2x divu.l #20)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-015.i
+  logs: 1
+  status: gemessen
+- id: HUR-016
+  title: Hurrican SlopeCheck Reziprok /20 ((x*52429)>>20 + Rest, bit-exakt)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-016.i
+  logs: 1
+  status: gemessen
+- id: HUR-017
+  title: Hurrican _DrawLevelLayer Original (Stack-RMW + mulu.l #800)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-017.i
+  logs: 1
+  status: gemessen
+- id: HUR-018
+  title: Hurrican _DrawLevelLayer Register-Cached (ohne Stack-RMW + mulu.l #800)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-018.i
+  logs: 1
+  status: gemessen
+- id: HUR-019
+  title: Hurrican _DrawLevelLayer Shift-Add *800 (langsamer als mulu.l #800)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-019.i
+  logs: 1
+  status: gemessen
+- id: HUR-020
+  title: Hurrican MhNeck Original (muls.l + divs.l #24)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-020.i
+  logs: 1
+  status: gemessen
+- id: HUR-021
+  title: Hurrican MhNeck Signed Reziprok /24 (muls.l #43691 + asr.l #20 + addx, bit-exakt)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-021.i
+  logs: 1
+  status: gemessen
+- id: HUR-022
+  title: Hurrican DrawWater .row Original (divu.l #20 + mulu.l je Zeile)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-022.i
+  logs: 1
+  status: gemessen
+- id: HUR-023
+  title: Hurrican DrawWater .row Hoisted CamX/20 + Inkrement-Zeiger (52x netto)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-023.i
+  logs: 1
+  status: gemessen
+- id: HUR-024
+  title: Hurrican UpdateShots Original (2-Pass 160-Slot Scan)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-024.i
+  logs: 1
+  status: gemessen
+- id: HUR-025
+  title: Hurrican UpdateShots Single-Pass (Update + ActList in 1 Scan)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-025.i
+  logs: 1
+  status: gemessen
+- id: HUR-026
+  title: Hurrican _BlitKeyRed Mode 1 Original (1 Pixel, Additives Rot-Flash)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-026.i
+  logs: 1
+  status: gemessen
+- id: HUR-027
+  title: Hurrican _BlitKeyRed Mode 1 AMMX 4-Pixel SIMD (pminuw/storeilm, bit-exakt)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-027.i
+  logs: 1
+  status: gemessen
+- id: HUR-028
+  title: Hurrican _BlitAlpha .l1p Original (2 Pixel, cmp/swap + 3x avg)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-028.i
+  logs: 1
+  status: gemessen
+- id: HUR-029
+  title: Hurrican _BlitAlpha Safe AMMX 4-Pixel (ohne pavgb/unpack1632, bit-exakt)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-029.i
+  logs: 1
+  status: gemessen
+- id: HUR-030
+  title: Hurrican .f6p Original (8 Pixel skalar, 3/4*dst + src)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-030.i
+  logs: 1
+  status: gemessen
+- id: HUR-031
+  title: Hurrican .f6p AMMX 8-Pixel SIMD (psubw + paddw Memory-VEA, bit-exakt)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-031.i
+  logs: 1
+  status: gemessen
+- id: HUR-032
+  title: Hurrican BlockAt Original (warme Div20-LUT, gewinnt gegen mulu)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-032.i
+  logs: 1
+  status: gemessen
+- id: HUR-033
+  title: Hurrican BlockAt ohne LUT (cmp #81919 + mulu.l #52429, langsamer bei warmem Cache)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-033.i
+  logs: 1
+  status: gemessen
+- id: HUR-034
+  title: Hurrican Boxes Original (2x FIXINT + movem + 2x lsl.l #5)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-034.i
+  logs: 1
+  status: gemessen
+- id: HUR-035
+  title: Hurrican Boxes Hoisted 32*dir + 1x FIXINT + ohne movem (3.88x)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-035.i
+  logs: 1
+  status: gemessen
+- id: HUR-036
+  title: Hurrican _WeaponsDraw Original (move.l + swap + ext.l x3)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-036.i
+  logs: 1
+  status: gemessen
+- id: HUR-037
+  title: Hurrican _WeaponsDraw move.w + ext.l + hoisted WAnim (1.45x + ActList)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-037.i
+  logs: 1
+  status: gemessen
+- id: HUR-038
+  title: Hurrican TcFill Original (10x move.l d3,(a1)+, 40 Bytes)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-038.i
+  logs: 1
+  status: gemessen
+- id: HUR-039
+  title: Hurrican TcFill AMMX (5x store e0,(a1)+, bandbreitenlimitiert)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-039.i
+  logs: 1
+  status: gemessen
+- id: HUR-040
+  title: Hurrican WheelUpdate Original (divs.l #3, 32-bit signed)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-040.i
+  logs: 1
+  status: gemessen
+- id: HUR-041
+  title: Hurrican WheelUpdate Reziprok /3 (muls.l #$55555556 + addx, 2.60x)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-041.i
+  logs: 1
+  status: gemessen
+- id: HUR-042
+  title: Hurrican _BlitCopy Original (4x20 px, d6=5, d7=0)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-042.i
+  logs: 1
+  status: gemessen
+- id: HUR-043
+  title: Hurrican _BlitCopy Opt (Stride, dbra, TailMask-Skip, -1.0 cyc/row)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-043.i
+  logs: 1
+  status: gemessen
+- id: HUR-044
+  title: Hurrican _BlitKey Original (4x20 px, d6=5, d7=0)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-044.i
+  logs: 1
+  status: gemessen
+- id: HUR-045
+  title: Hurrican _BlitKey Opt (Stride, dbra, TailMask-Skip, -2.25 cyc/row)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-045.i
+  logs: 1
+  status: gemessen
+- id: HUR-046
+  title: Hurrican _BlitAdd Original (4x20 px, d6=5, d7=0)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-046.i
+  logs: 1
+  status: gemessen
+- id: HUR-047
+  title: Hurrican _BlitAdd Opt (Stride, dbra, TailMask-Skip, -3.55 cyc/row)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-047.i
+  logs: 1
+  status: gemessen
+- id: HUR-048
+  title: Hurrican MSCALE Original (14 ops / 5x mul, 4 px RGB565)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-048.i
+  logs: 1
+  status: gemessen
+- id: HUR-049
+  title: Hurrican MSCALE Opt (lsrq/lslq d1, 12 ops / 3x mul, 1.37x)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-049.i
+  logs: 1
+  status: gemessen
+- id: HUR-050
+  title: Hurrican KeyMulA Original (4x20 px, per-row MCONST + old MSCALE)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-050.i
+  logs: 1
+  status: gemessen
+- id: HUR-051
+  title: Hurrican KeyMulA Opt (hoisted MCONST, new MSCALE, stride, dbra, 1.27x)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-051.i
+  logs: 1
+  status: gemessen
+- id: HUR-052
+  title: Hurrican _TileCache Pass 1 Original (divul.l #34 + mulu.l #34, 825x/Frame)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-052.i
+  logs: 1
+  status: gemessen
+- id: HUR-053
+  title: Hurrican _TileCache Pass 1 Opt (inkr. sx/slot-Wrap, 0 Div/Mul, 6.43x)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-053.i
+  logs: 1
+  status: gemessen
+- id: HUR-054
+  title: Hurrican _TileCache Pass 2 Original (divul.l #34 + 4x mulu.l pro Run)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-054.i
+  logs: 1
+  status: gemessen
+- id: HUR-055
+  title: Hurrican _TileCache Pass 2 Opt (hoisted TcBufRow & TcRowY, 0 Div, 3.64x)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-055.i
+  logs: 1
+  status: gemessen
+- id: HUR-056
+  title: Hurrican _BlitAdd 8-px Original (ohne Zero-Skip)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-056.i
+  logs: 1
+  status: gemessen
+- id: HUR-057
+  title: Hurrican _BlitAdd 8-px Zero-Skip (alles $0000, 2.06x + 0 dst RMW)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-057.i
+  logs: 1
+  status: gemessen
+- id: HUR-058
+  title: Hurrican _BlitAdd 8-px Zero-Skip (nicht-Null, +6 cyc Overhead)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-058.i
+  logs: 1
+  status: gemessen
+- id: HUR-059
+  title: Hurrican _BlitKey 8-px Original (2x storeilm, 4.60 cyc/8px)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-059.i
+  logs: 1
+  status: gemessen
+- id: HUR-060
+  title: Hurrican _BlitKey 8-px All-Key-Skip (9.60 cyc/8px, langsamer - verworfen)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-060.i
+  logs: 1
+  status: gemessen
+- id: HUR-061
+  title: Hurrican _BlitAdd 8-px tst.l Early-Exit (alles $0000, 9.60 cyc/8px)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-061.i
+  logs: 1
+  status: gemessen
+- id: HUR-062
+  title: Hurrican _BlitAdd 8-px tst.l Early-Exit (nicht-Null, ~16.5 cyc/8px vs 19.6)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-062.i
+  logs: 1
+  status: gemessen
+- id: HUR-063
+  title: Hurrican DrawParts Original (divs.l #$168000, 20.60 cyc)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-063.i
+  logs: 1
+  status: gemessen
+- id: HUR-064
+  title: Hurrican DrawParts Reziprok / $168000 (muls.l #$5B05B05C, 2.71x)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-064.i
+  logs: 1
+  status: gemessen
+- id: HUR-065
+  title: Hurrican _BlitFallF .f5p Original (Skalar 8 px, 18.60 cyc/8px)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-065.i
+  logs: 1
+  status: gemessen
+- id: HUR-066
+  title: Hurrican _BlitFallF .f5p AMMX 8-px SIMD (14.60 cyc/8px, 1.27x, -57% Ops)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-066.i
+  logs: 1
+  status: gemessen
+- id: HUR-067
+  title: Hurrican DkAB Original (64 px black fill, 1-quad subq/bne, 336 Min / 392 Avg)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-067.i
+  logs: 1
+  status: gemessen
+- id: HUR-068
+  title: Hurrican DkABF 8-Quad 64-Byte Burst (64 px, hoisted e0=0, dbra, -52% Ops)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-068.i
+  logs: 1
+  status: gemessen
+- id: HUR-069
+  title: Hurrican DkA4 Original (32 px, DkAPre 3-load + 1-quad subq/bne, 536)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-069.i
+  logs: 1
+  status: gemessen
+- id: HUR-070
+  title: Hurrican DkA4F Opt (32 px, 2-quad interleaved, hoisted, dbra, 486, -29% Ops)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-070.i
+  logs: 1
+  status: gemessen
+- id: HUR-071
+  title: Hurrican DkA5 Original (32 px, DkAPre 3-load + 1-quad subq/bne, 836)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-071.i
+  logs: 1
+  status: gemessen
+- id: HUR-072
+  title: Hurrican DkA5F Opt (32 px, 2-quad interleaved, hoisted, dbra, 806, -22% Ops)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-072.i
+  logs: 1
+  status: gemessen
+- id: HUR-073
+  title: Hurrican DkABF 1-Quad dbra (64 px, store+dbra L1 stall, 466 Min, verworfen)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-073.i
+  logs: 1
+  status: gemessen
+- id: HUR-074
+  title: Hurrican DkABF 4-Quad dbra (64 px, hoisted e0=0, 396 Min)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-074.i
+  logs: 1
+  status: gemessen

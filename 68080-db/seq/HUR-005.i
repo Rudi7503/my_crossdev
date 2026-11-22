@@ -1,0 +1,44 @@
+; seq/HUR-005.i - Hurrican CompFall AMMX 4-pixel SIMD blend (bit-exact, 4 pixels)
+; Uses: d0, d1, d2, a0, a2, a3, e0..e14
+; MUST NOT touch: d5, d6, d7, a5, a6, a7
+        load    (a0)+,e0
+        load    (a2)+,e1
+        lsrq    d0,e0,e2
+        pand    e10,e2,e2
+        lsrq    d1,e0,e3
+        pand    e11,e3,e3
+        pand    e10,e0,e4
+        lsrq    d0,e1,e5
+        pand    e10,e5,e5
+        lsrq    d1,e1,e6
+        pand    e11,e6,e6
+        pand    e10,e1,e7
+        pmull   e12,e2,e2
+        pmull   e13,e5,e5
+        paddw   e5,e2,e2
+        lsrq    d1,e2,e2
+        pand    e10,e2,e2
+        pmull   e12,e3,e3
+        pmull   e13,e6,e6
+        paddw   e6,e3,e3
+        lsrq    d1,e3,e3
+        pand    e11,e3,e3
+        pmull   e12,e4,e4
+        pmull   e13,e7,e7
+        paddw   e7,e4,e4
+        lsrq    d1,e4,e4
+        pand    e10,e4,e4
+        pmull   e14,e2,e2
+        lsrq    d2,e2,e2
+        pand    e10,e2,e2
+        pmull   e14,e3,e3
+        lsrq    d2,e3,e3
+        pand    e11,e3,e3
+        pmull   e14,e4,e4
+        lsrq    d2,e4,e4
+        pand    e10,e4,e4
+        lslq    d0,e2,e2
+        lslq    d1,e3,e3
+        por     e3,e2,e2
+        por     e4,e2,e2
+        store   e2,(a3)+

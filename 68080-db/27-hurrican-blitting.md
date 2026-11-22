@@ -305,6 +305,401 @@ Durch Anwendung der 68080-Architekturregeln (Kapitel 26 & 28) – **Memory-VEA `
 | **`BLT-052`** | `_BlitKeyTint` (`unpack1632 (a1)`) | 6,6 / 4 px (`BLT-026`) | **5,6 Cyc / 4 px** | **1,400** | **+15,2 % schneller** (dst-Load gespart) |
 | **`BLT-053`** | `_BlitKeyTint` Dual-VEA (`pcmpeqw (a0)+` + `unpack1632 (a1)`) | 6,6 / 4 px (`BLT-026`) | **4,6 Cyc / 4 px** | **1,150** | **+30,3 % schneller** (beide Loads gespart, `diff=0`) |
 
+---
+
+## 8. Hurrican-Code-Optimierung (Harness v6, Bit-exakt verifiziert)
+
+### 7.1 `HUR-001` / `HUR-002` / `HUR-003`: `_DrawTextTint` (`hud.s` Z. 364–386) — `3× divu.w #255` eliminieren
+
+**Ausgangslage (`hud.s`, `_DrawTextTint`):**  
+Pro sichtbarem Text-Pixel führt die Originalroutine 3× `mulu.w` + 3× `divu.w #255` aus.
+
+#### 3 Agenten-Vorschläge & Hardware-Ergebnis (Harness v6, Core 11350, `BASELINE = 30`)
+
+| Test-ID | Variante | Roh (10×) | Netto / Pixel | `IEP1 / IEP2` | Bit-Gleichheit (`327.680` Pixel) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-001` | **Original** (`3× mulu.w` + `3× divu.w #255`) | `806` (Min/Max `806/806`) | **77,6 Takte** | `20600 / 2600` | Referenz | Baseline |
+| **`HUR-002`** | **Reziprok-Mul** (`mulu.w #257` + `add.l #257` + `swap`) | **`326`** (Min/Max `326/326`) | **29,6 Takte** | **`23600 / 5600`** | **0 Mismatches (100 % exakt)** | **2,62× schneller (netto)** |
+| `HUR-003` | **3× Channel-LUT** (`move.w (a2/a3/a4, dX.w*2)`) | `967` (Min `854`, Max `1059`) | 93,7 Takte | `15600 / 7600` | identisch | **Langsamer** durch 3× Indexed-Read-Stalls |
+
+* **Rohlogs:** `log-v6/HUR-001.log`, `log-v6/HUR-002.log`, `log-v6/HUR-003.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur002` prüfte alle `65.536` RGB565-Farben × 5 Tint-Kombinationen (`327.680 / 327.680` Pixel, `mismatches=0`).
+* **Erkenntnis:** Auf dem 68080 ist die **registerbasierte Reziprok-Multiplikation `(n * 257 + 257) >> 16`** (`HUR-002`) nicht nur **2,62× schneller** als `divu.w #255`, sondern auch **3,17× schneller** als drei skalar indizierte LUT-Zugriffe (`HUR-003`).
+
+### 7.2 `HUR-004` / `HUR-005`: `CompFall` (`hurrican.s` Z. 9498–9529) — Wasserfall-Blending mit AMMX (4 Pixel/Loop)
+
+**Ausgangslage (`hurrican.s`, `CompFall`):**  
+Mischt pro Frame $60 \times 60 = 3.600$ Pixel zweier Wasserfall-Schichten skalar per `MASK565` (`$07E0F81F`) und `3× mulu.l`. Durch Loop-Split in `40 px + 20 px` entfällt die `cmp #19`-Verzweigung komplett und beide Teile sind exakt durch 4 teilbar.
+
+| Test-ID | Variante | Roh (10×) | Netto / Pixel | `IEP1 / IEP2` | Bit-Gleichheit (`2.293.760` Pixel) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-004` | **Original** (1 Pixel, `MASK565` + `3× mulu.l`) | `296` (`296/296`) | **26,6 Takte** | `20600 / 4600` | Referenz | Baseline |
+| **`HUR-005`** | **AMMX 4-Pixel** (`pmull` + `paddw` + `lsrq` + `por`) | **`546` / 4 px** (`546/546`) | **12,9 Takte** | `39600 / 500` | **0 Mismatches (100 % exakt)** | **2,06× schneller pro Pixel** |
+
+* **Rohlogs:** `log-v6/HUR-004.log`, `log-v6/HUR-005.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur005` prüfte `2.293.760` Pixel-Paare über `(w ∈ {0,1,7,16,25,31,32}, k ∈ {0,1,4,7,8})` — `mismatches=0`.
+
+### 7.3 `HUR-006` / `HUR-007` / `HUR-008`: `AudHandler` `.sm` (`sound.s` Z. 706–717) — 8-Bit Signed Audio-Mixing mit Sättigung
+
+**Ausgangslage (`sound.s`, `AudHandler` `.sm`):**  
+Mischt im Audio-Interrupt pro aktivem SFX-Slot (`NSLOT = 4`) jeweils `CHUNK = 512` 8-Bit-Signed-Samples mit manuellem Clamping auf `-128..+127`.  
+*(Wichtige ISA-Erkenntnis: `vasmm68k_mot -m68080` kennt kein `PADDSB`, wohl aber `PMAXSB`/`PMINSB`/`PSUBB`/`PEOR`/`PADDUSB`/`PSUBUSB`, womit sich vorzeichenbehaftete 8-Bit-Sättigung exakt für 8 Samples parallel abbilden lässt.)*
+
+| Test-ID | Variante | Roh (10×) | Netto / Sample | `IEP1 / IEP2` | Bit-Gleichheit (`65.536` Paare) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-006` | **Original** (1 Byte, `ext.w` + `add.w` + 2× Branch-Clamp) | `116` (`116/116`) | **8,60 Takte** | `7600 / 1600` | Referenz | Baseline |
+| `HUR-007` | **AMMX 8-Byte** (`pmaxsb`/`pminsb`/`paddusb`/`psubusb`) | `136` / 8 B (`136/136`) | **1,325 Takte** | `8600 / 500` | **0 Mismatches (100 % exakt)** | **6,49× schneller** |
+| **`HUR-008`** | **AMMX 2× Unrolled 16-Byte** | **`216` / 16 B** (`216/216`) | **1,163 Takte** | `17600 / 1500` | identisch | **7,40× schneller** |
+
+* **Rohlogs:** `log-v6/HUR-006.log`, `log-v6/HUR-007.log`, `log-v6/HUR-008.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur007` prüfte alle `256 × 256 = 65.536` `(buf, sfx)`-Byte-Paare (`-128..+127`) — `mismatches=0`.
+
+### 7.4 `HUR-009` / `HUR-010`: `_BlitKeyRed` Mode 0 (`blit.s` Z. 4020–4053) — Skeletor Treffer-Flash mit AMMX (4 Pixel/Loop)
+
+**Ausgangslage (`blit.s`, `_BlitKeyRed`):**  
+Pro Pixel: Colorkey-Check (`$F81F`), 3× Kanal-Extraktion, `mulu.l`, 3× Branch-Clamping (`cmp/ble`) und `move.w`.
+
+| Test-ID | Variante | Roh (10×) | Netto / Pixel | `IEP1 / IEP2` | Bit-Gleichheit (`262.144` Pixel) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-009` | **Original** (1 Pixel, `cmp` + `3× mulu.l` + Branch-Clamp) | `336` (`336/337`) | **30,60 Takte** | `24600 / 4600` | Referenz | Baseline |
+| **`HUR-010`** | **AMMX 4-Pixel** (`pcmpeqw` + `pmull` + `pminuw` + `storeilm`) | **`276` / 4 px** (`276/276`) | **6,15 Takte** | `20600 / 500` | **0 Mismatches (100 % exakt)** | **4,98× schneller pro Pixel** |
+
+* **Rohlogs:** `log-v6/HUR-009.log`, `log-v6/HUR-010.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur010` prüfte alle `65.536` RGB565-Farben (inkl. Colorkey `$F81F`) × 4 `RedP`-Stufen (`0, 64, 128, 255`) — `mismatches=0`.
+
+### 7.5 `HUR-011` / `HUR-012`: `_BlitAlpha32` (`blit.s` Z. 887–910) — 32-Stufen Alpha-Blending mit AMMX (4 Pixel/Loop)
+
+**Ausgangslage (`blit.s`, `_BlitAlpha32`):**  
+Skalarer Loop pro Pixel: Colorkey-Branch (`$F81F`), zweimaliges 32-Bit RGB565-Aufspreizen (`$07E0F81F`), `2× mulu.l`, `lsr.l #5`, Zurückfalten.
+
+| Test-ID | Variante | Roh (10×) | Netto / Pixel | `IEP1 / IEP2` | Bit-Gleichheit (`524.288` Pixel) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-011` | **Original** (1 Pixel, `cmp` + `2× mulu.l` + `MASK565`) | `246` (`246/246`, Base `30`) | **21,60 Takte** | `17600 / 3600` | Referenz | Baseline |
+| **`HUR-012`** | **AMMX 4-Pixel** (`pcmpeqw` + `pmull` + `paddw` + `storeilm`) | **`406` / 4 px** (`406/406`, Base `32`) | **9,35 Takte** | `31600 / 500` | **0 Mismatches (100 % exakt)** | **2,31× schneller (branchless)** |
+
+* **Rohlogs:** `log-v6/HUR-011.log`, `log-v6/HUR-012.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur012` prüfte `8` Alpha-Stufen (`1, 4, 8, 12, 16, 20, 27, 31`) × alle `65.536` RGB565-Farben (inkl. `$F81F`) = `524.288` Pixel-Checks — `mismatches=0`.
+
+### 7.6 `HUR-013` / `HUR-014`: `GetTinted` (`tilemap.s` Z. 1023–1042) — Tile-Einfärbung mit AMMX (4 Pixel/Loop, ohne LUT)
+
+**Ausgangslage (`tilemap.s`, `GetTinted`):**  
+Pro 20×20-Tile (`400` Pixel): Colorkey-Check (`$F81F`), 3× LUT-Zugriff (`TintT`), Keycol-Kollisionsschutz (`out == $F81F` → `subq #1`), plus Vorberechnung der LUT (`.tr`/`.tg`).
+
+| Test-ID | Variante | Roh (10×) | Netto / Pixel | `IEP1 / IEP2` | Bit-Gleichheit (`524.288` Pixel) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-013` | **Original** (1 Pixel, 3× LUT + 2× Branch) | `226` (`226/226`) | **19,60 Takte** | `19600 / 7600` | Referenz | Baseline |
+| **`HUR-014`** | **AMMX 4-Pixel** (`pmull` + `lsrq #8` + `paddw` `$FFFF` Guard) | **`346` / 4 px** (`346/346`) | **7,90 Takte** | `24600 / 500` | **0 Mismatches (100 % exakt)** | **2,48× schneller (ohne LUT)** |
+
+* **Rohlogs:** `log-v6/HUR-013.log`, `log-v6/HUR-014.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur014` prüfte `8` Tint-Kombinationen (inkl. `{255,255,255}` und `{255,0,255}` für `out == $F81F -> $F81E`) × alle `65.536` RGB565-Farben = `524.288` Pixel-Checks — `mismatches=0`.
+
+### 7.7 `HUR-015` / `HUR-016`: `SlopeCheck` (`player.s` Z. 1209–1245) — `/ 20` & `% 20` ohne `DIVU`/`DIVUL`
+
+**Ausgangslage (`player.s`, `SlopeCheck`):**  
+`divul.l #20, d0:d5` (Quotient + Rest) sowie `2× divu.l #20, d7` pro Aufruf.
+
+| Test-ID | Variante | Roh (10×) | Netto / Aufruf | `IEP1 / IEP2` | Bit-Gleichheit (`81.920` Werte) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-015` | **Original** (`divul.l #20` + `2× divu.l #20`) | `656` (`656/656`, Base `40`) | **61,60 Takte** | `8600 / 500` | Referenz | Baseline |
+| **`HUR-016`** | **Reziprok `(x * 52429) >> 20`** + Rest `x - q*20` | **`226`** (`226/226`, Base `37`) | **18,90 Takte** | **`11600 / 5600`** | **0 Mismatches (100 % exakt)** | **3,26× schneller** |
+
+* **Rohlogs:** `log-v6/HUR-015.log`, `log-v6/HUR-016.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur016` prüfte alle Koordinaten `x ∈ [0, 81919]` (Quotient und Rest) — `mismatches=0`.
+
+### 7.8 `HUR-017` / `HUR-018` / `HUR-019`: `_DrawLevelLayer` (`.col`, `tilemap.s` Z. 304–371) — Stack-RMW vs. Register-Caching & `mulu.l #800`
+
+**Ausgangslage (`tilemap.s`, `_DrawLevelLayer`):**  
+In jeder Tile-Spalte (`.col`/`.skip`) werden 3 Stack-Variablen per Read-Modify-Write aktualisiert (`w_cp(a5)`, `w_bp(a5)`, `w_px(a5)`) und `mulu.l #800, d5` berechnet.
+
+| Test-ID | Variante | Roh (10×) Min/Max/Avg | `IEP1 / IEP2` | Bit-Gleichheit (`65.536` Tiles) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-017` | **Original** (Stack-RMW + `mulu.l #800`) | `126 / 257 / 176` (Base `30`) | `7600 / 3500` | Referenz | Baseline |
+| **`HUR-018`** | **Register-Cached** (ohne Stack-RMW + `mulu.l #800`) | **`116 / 116 / 116`** (Base `49`) | **`6600 / 4500`** | identisch | **1,52× schneller (AVG), 0 Varianz** |
+| `HUR-019` | **Register-Cached + Shift-Add `*800`** | `126 / 5190 / 178` (Base `30`) | `9600 / 6600` | **0 Mismatches** (`verify_hur018`) | **Langsamer:** `mulu.l #800` schlägt 5× Shift-Add |
+
+* **Rohlogs:** `log-v6/HUR-017.log`, `log-v6/HUR-018.log`, `log-v6/HUR-019.log`
+* **Erkenntnis:** Auf dem 68080 ist `mulu.l #800` schneller als ein 5-stufiges Shift-Add; der Hauptgewinn in `_DrawLevelLayer` kommt aus dem Eliminieren der Stack-RMW-Zugriffe (`w_cp`/`w_bp`/`w_px` in Register halten) und dem Herausziehen der Modus-`btst #16..#19` vor die Schleife.
+
+### 7.9 `HUR-020` / `HUR-021`: `MhNeck` (`.p`, `enemies.s` Z. 28777–28779) — Vorzeichenbehaftete `/ 24` ohne `DIVS`
+
+**Ausgangslage (`enemies.s`, `MhNeck`):**  
+25× pro Frame: `muls.l d7, d0` + `divs.l #24, d0` (Truncation toward zero für positive und negative Werte).
+
+| Test-ID | Variante | Roh (10×) | Netto / Iteration | `IEP1 / IEP2` | Bit-Gleichheit (`98.303` Werte) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-020` | **Original** (`muls.l` + `divs.l #24`) | `256` (`256/256`) | **22,60 Takte** | `3700 / 500` | Referenz | Baseline |
+| **`HUR-021`** | **Signed Reziprok** (`muls.l #43691` + `asr.l #20` + `addx.l`) | **`136`** (`136/136`) | **10,60 Takte** | **`7700 / 2500`** | **0 Mismatches (100 % exakt)** | **2,13× schneller (branchless)** |
+
+* **Rohlogs:** `log-v6/HUR-020.log`, `log-v6/HUR-021.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur021` prüfte alle `98.303` vorzeichenbehafteten Werte `n ∈ [-49151, +49151]` — `mismatches=0` (wichtig: `asr.l` vor `add.l d1, d1` + `addx.l`, da `asr.l` sonst das `X`-Flag überschreibt!).
+
+### 7.10 `HUR-022` / `HUR-023`: `DrawWater` (`.row`, `hurrican.s` Z. 9396–9407) — Schleifeninvariante `CamX/20` & Zeilen-Offset herausziehen
+
+**Ausgangslage (`hurrican.s`, `DrawWater`):**  
+Pro sichtbarer Kachelzeile (25× je Frame) berechnet `.row` erneut `CamX / 20` (`divu.l #20, d2`) sowie `PBlock + row * PMapW * 2` (`mulu.l d4, d0`).
+
+| Test-ID | Variante | Roh (10×) Min/Max/Avg | Netto / Zeile | `IEP1 / IEP2` | Bit-Gleichheit (`11.800` Fälle) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-022` | **Original** (`divu.l #20` + `mulu.l` je Zeile) | `346 / 346 / 346` | **31,60 Takte** | `11600 / 4500` | Referenz | Baseline |
+| **`HUR-023`** | **Hoisted `CamX/20` + Inkrement `add.l stride, a2`** | **`36 / 83 / 36`** | **0,60 Takte** | `600 / 1700` | **0 Mismatches (100 % exakt)** | **52,7× schneller (netto)** |
+
+* **Rohlogs:** `log-v6/HUR-022.log`, `log-v6/HUR-023.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur023` prüfte `11.800` Kombinationen über `PMapW`, `CamX` und `row 0..24` — `mismatches=0`.
+
+### 7.11 `HUR-024` / `HUR-025`: `UpdateShots` (`weapons.s` Z. 1244–1351) — 2-Pass vs. Single-Pass `ActList`-Aufbau
+
+**Ausgangslage (`weapons.s`, `UpdateShots`):**  
+`.go` durchläuft alle `MAXP = 160` Slots; danach durchläuft `.al` nochmals alle `160` Slots, um `ActList` aufzubauen.
+
+| Test-ID | Variante | Roh (10×) | `IEP1 / IEP2` | Bit-Gleichheit (`256` Seeds × `160` Slots) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-024` | **Original** (2-Pass: Update + separater `ActList`-Scan) | `66` (`66/66`, Base `30`) | `3996 / 1698` | Referenz | Baseline |
+| **`HUR-025`** | **Single-Pass** (Update + `ActList` in 1 Durchlauf) | **`46`** (`46/46`) | `1897 / 698` | **0 Mismatches (100 % exakt)** | **1,43× schneller roh (-30 % Scan-Overhead)** |
+
+* **Rohlogs:** `log-v6/HUR-024.log`, `log-v6/HUR-025.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur025` prüfte `256` zufällige Belegungen über `160` Slots inkl. Abschüssen — `mismatches=0`.
+
+### 7.12 `HUR-026` / `HUR-027`: `_BlitKeyRed` Mode 1 (`blit.s` Z. 4055–4073) — Additives Rot-Flash mit AMMX (4 Pixel/Loop)
+
+**Ausgangslage (`blit.s`, `_BlitKeyRed` `.add`):**  
+Pro Pixel: Colorkey-Check (`$F81F`), `Src_R * RedP >> 8`, `Dst_R` addieren, Branch-Clamping auf `31` und Zurückpacken mit `Dst & $07FF`.
+
+| Test-ID | Variante | Roh (10×) | Netto / Pixel | `IEP1 / IEP2` | Bit-Gleichheit (`262.144` Pixel) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-026` | **Original** (1 Pixel, `cmp` + `mulu.l` + Branch-Clamp) | `206` (`206/206`) | **17,60 Takte** | `15600 / 5600` | Referenz | Baseline |
+| **`HUR-027`** | **AMMX 4-Pixel** (`pcmpeqw` + `pmull` + `pminuw` + `storeilm`) | **`216` / 4 px** (`216/216`) | **4,65 Takte** | `14600 / 500` | **0 Mismatches (100 % exakt)** | **3,78× schneller pro Pixel** |
+
+* **Rohlogs:** `log-v6/HUR-026.log`, `log-v6/HUR-027.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur027` prüfte alle `65.536` RGB565-Farben (inkl. `$F81F`) × 4 `RedP`-Stufen (`0, 64, 180, 510`) = `262.144` Pixel-Checks — `mismatches=0`.
+
+### 7.13 `HUR-028` / `HUR-029`: `_BlitAlpha` `.l1p` (`blit.s` Z. 1009–1040) — Safe AMMX 4-Pixel ohne `unpack1632`/`pavgb`/`pack3216`
+
+**Ausgangslage (`blit.s`, `_BlitAlpha`):**  
+Die frühere AMMX-Fassung `AlphaKA` wurde wegen einer Line-F-Ausnahme (`unpack1632` / `pavgb` / `pack3216`) deaktiviert; aktiv war die 2-Pixel-Skalarschleife `.l1p` mit `cmp.w` + `swap` + 3× `avg(a,b)`.
+
+| Test-ID | Variante | Roh (10×) | Netto / Pixel | `IEP1 / IEP2` | Bit-Gleichheit (`65.536` Pixel) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-028` | **Original** (2 Pixel, `cmp/swap` + 3× `avg`) | `246` (`246/246`) | **10,80 Takte** | `21600 / 7600` | Referenz | Baseline |
+| **`HUR-029`** | **Safe AMMX 4-Pixel** (`peor/pand/lsrq/paddw` + `storeilm`) | **`206`** / 4 px (`206/206`) | **4,40 Takte** | `17600 / 500` | **0 Mismatches (100 % exakt)** | **2,45× schneller (kein Line-F)** |
+
+* **Rohlogs:** `log-v6/HUR-028.log`, `log-v6/HUR-029.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur029` prüfte alle `65.536` RGB565-Pixelpaare inkl. Colorkey `$F81F` — `mismatches=0`.
+
+### 7.14 `HUR-030` / `HUR-031`: `.f6p` (`blit.s` Z. 2434–2463) — `3/4 * dst + src` Darkening mit AMMX (8 Pixel/Loop)
+
+**Ausgangslage (`blit.s`, `.f6p` / `.f7p`):**  
+Verarbeitet 8 Pixel (16 Bytes) in 4× 32-Bit-Skalarregistern (`lsr.l #2`, `and.l #$39E739E7`, `sub.l`, `add.l`).
+
+| Test-ID | Variante | Roh (10×) | Netto / Pixel | `IEP1 / IEP2` | Bit-Gleichheit (`65.536` Pixel) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-030` | **Original** (8 Pixel skalar, `sub.l`/`add.l`) | `176` (`176/176`, Base `30`) | **1,825 Takte** | `16600 / 10600` | Referenz | Baseline |
+| **`HUR-031`** | **AMMX 8-Pixel** (`lsrq`/`pand`/`psubw`/`paddw (a0)+`) | **`136`** / 8 px (`136/136`, Base `40`) | **1,200 Takte** | `10600 / 500` | **0 Mismatches (100 % exakt)** | **1,52× schneller** |
+
+* **Rohlogs:** `log-v6/HUR-030.log`, `log-v6/HUR-031.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur031` prüfte alle `65.536` RGB565-Zielpixel mit gültigen 1/4-Lichtquellen — `mismatches=0`.
+
+### 7.15 `HUR-032` / `HUR-033`: `BlockAt` (`player.s` Z. 1098–1136) — Warme `Div20`-LUT vs. `mulu.l #52429`
+
+**Ausgangslage (`player.s`, `BlockAt`):**  
+Prüft `x, y` auf `< 0` / `>= DIVMAX`, schlägt bis `16383` in der `Div20`-LUT nach und nutzt ab `16384` `.sx`/`.sy` (`mulu.l #52429`).
+
+| Test-ID | Variante | Roh (10×) | Netto / Aufruf | `IEP1 / IEP2` | Bit-Gleichheit (`82.020` Werte) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| **`HUR-032`** | **Original (`Div20`-LUT, wenn im Cache)** | **`166`** (`166/166`) | **13,60 Takte** | **`14648 / 2487`** | Referenz | **Original-LUT gewinnt (bei warmem Cache)** |
+| `HUR-033` | **Ohne LUT (`cmp #81919` + `mulu.l #52429`)** | `196` (`196/196`) | **16,60 Takte** | `13899 / 500` | **0 Mismatches** (`verify_hur033`) | Langsamer gegen warme LUT |
+
+* **Rohlogs:** `log-v6/HUR-032.log`, `log-v6/HUR-033.log`
+* **Erkenntnis:** Im Gegensatz zu 3× RGB-LUTs (`HUR-003`) ist eine einzelne kompakte `Div20`-LUT bei warmem D-Cache auf dem 68080 schneller als zwei `mulu.l #52429` (`13,6` vs. `16,6` Takte). `BlockAt` ist im Hauptpfad bereits optimal; sinnvoll ist nur das Zusammenfassen von `tst.l/bmi` + `cmp.l #81919; bhi` sowie `lsr.l dX` im `.sx`/`.sy`-Pfad.
+
+### 7.16 `HUR-034` / `HUR-035`: `Boxes` (`beam.s` Z. 229–257) — Strahl-Segmente ohne `movem`-Spill & doppeltes `FIXINT`
+
+**Ausgangslage (`beam.s`, `Boxes`):**  
+Pro Segment (bis 17×): 2× `FIXINT`, `movem.l d2-d3` um `BlockAt` (obwohl `BlockAt` `d2/d3` gar nicht nutzt) und `2× lsl.l #5` in der Schleife.
+
+| Test-ID | Variante | Roh (10×) | Netto / Segment | `IEP1 / IEP2` | Bit-Gleichheit (`68` Segmente) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-034` | **Original** (2× `FIXINT` + `movem` + `2× lsl.l #5`) | `286` (`286/286`) | **25,60 Takte** | `20600 / 6500` | Referenz | Baseline |
+| **`HUR-035`** | **Hoisted `32*dir` + 1× `FIXINT` + ohne `movem`** | **`96`** (`96/116/96`) | **6,60 Takte** | `6600 / 4500` | **0 Mismatches (100 % exakt)** | **3,88× schneller** |
+
+* **Rohlogs:** `log-v6/HUR-034.log`, `log-v6/HUR-035.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur035` prüfte `4` Richtungen × `17` Segmente = `68` Segmente — `mismatches=0` (wichtig: Start-Shift per `asr.l #1` für negative Richtungen).
+
+### 7.17 `HUR-036` / `HUR-037`: `_WeaponsDraw` (`weapons.s` Z. 1781–1828) — `ActList` + `move.w/ext.l` statt `FIXINT`
+
+**Ausgangslage (`weapons.s`, `_WeaponsDraw`):**  
+Iteriert über alle `MAXP = 160` Slots (obwohl `ActList`/`ActN` bereits alle aktiven `Shot*`-Zeiger enthält) und entpackt pro Schuss `P_X`, `P_Y` und `WAnim` per `move.l + swap + ext.l`.
+
+| Test-ID | Variante | Roh (10×) | Netto / Schuss | `IEP1 / IEP2` | Bit-Gleichheit (`65.536` Werte) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-036` | **Original** (`move.l + swap + ext.l` ×3) | `126` (`126/126`) | **9,60 Takte** | `9600 / 3500` | Referenz | Baseline |
+| **`HUR-037`** | **`move.w + ext.l` ×2 + hoisted `WAnim`** | **`96`** (`96/96`) | **6,60 Takte** | `6600 / 2500` | **0 Mismatches (100 % exakt)** | **1,45× schneller (+ `ActList`-Skip)** |
+
+* **Rohlogs:** `log-v6/HUR-036.log`, `log-v6/HUR-037.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur037` prüfte alle `65.536` 16.16-High-Words (`move.w + ext.l` vs. `move.l + swap + ext.l`) — `mismatches=0`.
+
+### 7.18 `HUR-038` / `HUR-039`: `TcFill` (`.kr`, `tilemap.s` Z. 628–638) — `10× move.l` vs. `5× store` (Speicherbandbreite)
+
+**Ausgangslage (`tilemap.s`, `TcFill`):**  
+Füllt pro Kachel 20 Zeilen à 40 Bytes mit `KEYCOL` (`10× move.l d3, (a1)+`).
+
+| Test-ID | Variante | Roh (10×) Min/Max/Avg | `IEP1 / IEP2` | Bit-Gleichheit (`20` Words) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-038` | **Original** (`10× move.l d3, (a1)+`) | `66 / 192 / 82` | `8800 / 500` | Referenz | FastRAM-Write-Bandwidth-limitiert |
+| `HUR-039` | **AMMX `5× store e0, (a1)+`** | `66 / 230 / 83` | **`3600 / 500`** | **0 Mismatches** (`verify_hur039`) | Gleich schnell (spart nur `IEP1`-Slots) |
+
+* **Rohlogs:** `log-v6/HUR-038.log`, `log-v6/HUR-039.log`
+* **Erkenntnis:** Reines Memory-Fill ist bei 40 Bytes/Zeile bereits durch den FastRAM-Write-Bus gesättigt (`5,2`–`5,3` Takte netto für 40 Bytes); der Tausch lohnt sich geschwindigkeitsmäßig nicht.
+
+### 7.19 `HUR-040` / `HUR-041`: `WheelUpdate` (`player.s` Z. 355, 363) — 32-Bit `DIVS.L #3` ohne Division
+
+**Ausgangslage (`player.s`, `WheelUpdate`):**  
+Teilt 16.16-Geschwindigkeiten (`YSpd`) per `divs.l #3, d0` (Truncation toward zero für volle 32-Bit signed Zahlen).
+
+| Test-ID | Variante | Roh (10×) | Netto / Aufruf | `IEP1 / IEP2` | Bit-Gleichheit (`201.002` Werte) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-040` | **Original** (`divs.l #3, d0`) | `226` (`226/226`, Base `31`) | **19,50 Takte** | `1600 / 500` | Referenz | Baseline |
+| **`HUR-041`** | **64-Bit Signed Reziprok** (`muls.l #$55555556, d1:d0` + `addx.l`) | **`106`** (`106/106`, Base `31`) | **7,50 Takte** | `5600 / 500` | **0 Mismatches (100 % exakt)** | **2,60× schneller (voller 32-Bit-Bereich)** |
+
+* **Rohlogs:** `log-v6/HUR-040.log`, `log-v6/HUR-041.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur041` prüfte `201.002` vorzeichenbehaftete 32-Bit-Werte (inkl. 16.16-Fixkomma-Geschwindigkeiten) — `mismatches=0`.
+
+### 7.20 `HUR-042`–`HUR-047`: `_BlitCopy`, `_BlitKey`, `_BlitAdd` (`blit.s` Z. 184–458) — Stride-Hoisting, `dbra` & `TailMask`-Skip
+
+**Ausgangslage (`blit.s`):**  
+Alle drei Kern-Blitter-Routinen laden pro Zeile `TailMask(pc)` auch bei `d7 = 0` (trifft auf 20×20-Tiles und 640×480-Hintergrund zu), kopieren pro Zeile `a0/a1` nach `a2/a3`, berechnen die Quad-Zähler (`lsr.l`/`and.l`) jede Zeile neu und nutzen `subq.l #1; bne.s` statt `dbra`.  
+**Testsetup:** 4-Zeilen-Slice × 20 Pixel (`d6 = 5`, `d7 = 0`, `srcPitch = 40`, `dstPitch = 1280`), 10× im Harness (= 40 Zeilen = 800 Pixel, `BASELINE = 30`).
+
+| Test-ID | Routine & Variante | Roh (40 Zeilen) | Netto / Zeile | `IEP1 / IEP2` | Bit-Gleichheit (`w=1..65`, `8.450` px) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-042` | `_BlitCopy` **Original** | `1496` (`1496/1511`) | `36,65` Takte | `111600 / 39700` | Referenz | Baseline |
+| **`HUR-043`** | `_BlitCopy` **Opt** (Stride, `dbra`, `TailMask` nur bei `d7!=0`) | **`1456`** (`1456/1471`) | **`35,65` Takte** | `103600 / 25700` | **0 Mismatches** | **-1,00 Takt/Zeile (-14,5 % Ops)** |
+| `HUR-044` | `_BlitKey` **Original** | `1496` (`1496/1496`) | `36,65` Takte | `127600 / 38600` | Referenz | Baseline |
+| **`HUR-045`** | `_BlitKey` **Opt** (Stride, `dbra`, `TailMask` nur bei `d7!=0`) | **`1406`** (`1406/1407`) | **`34,40` Takte** | `110600 / 29700` | **0 Mismatches** | **-2,25 Takte/Zeile (1,065×, -15,6 % Ops)** |
+| `HUR-046` | `_BlitAdd` **Original** | `2468` (`2461/2513`) | `60,95` Takte | `219600 / 43700` | Referenz | Baseline |
+| **`HUR-047`** | `_BlitAdd` **Opt** (Stride, `dbra`, `TailMask` nur bei `d7!=0`) | **`2326`** (`2326/2326`) | **`57,40` Takte** | `202600 / 32700` | **0 Mismatches** | **-3,55 Takte/Zeile (1,062×, -10,6 % Ops)** |
+
+* **Rohlogs:** `log-v6/HUR-042.log` .. `log-v6/HUR-047.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_blit_core` prüfte alle Breiten `w = 1..65` (alle Restfälle `d7 = 0..3`, gerade/ungerade `d6`, Guard-Wörter) — `mm_copy=0`, `mm_key=0`, `mm_add=0`.
+
+### 7.21 `HUR-048`–`HUR-051`: `MSCALE` & `LightA`/`KeyMulA`/`KeyShadeA`/`AddAA` (`blit.s` Z. 4512–4740)
+
+**Ausgangslage (`blit.s`):**  
+Das Shader-Makro `MSCALE` (genutzt in `LightA`, `KeyMulA`, `KeyShadeA`, `AddAA`) verschiebt den Rot-Kanal mit zwei teuren Multiplikationen (`pmul88 e11` + `pand e12` für `>>8` und `pmull e8` für `<<8`) — 14 Instruktionen / 5 Multiplikationen je 4 Pixel. Zusätzlich lädt jede der 4 Routinen per `MCONST` + `TailMask` **9× 64-Bit-Konstanten pro Zeile** (obwohl `DrawFrame` in `Forbid()..Permit()` läuft).
+
+| Test-ID | Kernel & Variante | Roh | Netto | `IEP1 / IEP2` | Bit-Gleichheit (V4) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-048` | `MSCALE` **Original** (14 Ops / 5× Mul, 4 px) | `216` (`216/216`, Base `30`) | `18,60` Takte / 4 px | `14600 / 500` | Referenz | Baseline |
+| **`HUR-049`** | `MSCALE` **Opt** (`lsrq d1` + `lslq d1`, 12 Ops / 3× Mul) | **`166`** (`166/166`, Base `30`) | **`13,60` Takte / 4 px** | `13600 / 500` | **0 Mismatches (`2.162.688` Fälle)** | **1,37× schneller** |
+| `HUR-050` | `KeyMulA` **Original** (40 Zeilen × 20 px, `MCONST`/Zeile) | `5216` Min / `5424` Avg | `129,65` Takte / Zeile | `419600 / 52600` | Referenz | Baseline |
+| **`HUR-051`** | `KeyMulA` **Opt** (hoisted 5-Load `MCONST`, `MSCALE`, Stride, `dbra`) | **`4116`** Min / `4191` Avg | **`102,15` Takte / Zeile** | `369600 / 33600` | **0 Mismatches (`2.162.688` Fälle)** | **1,27×–1,29× schneller** |
+
+* **Rohlogs:** `log-v6/HUR-048.log` .. `log-v6/HUR-051.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_mscale` prüfte erschöpfend alle `65.536` RGB565-Farben × alle `33` Faktoren (`f = 0..32`) = `2.162.688` Kombinationen — `mismatches=0`.
+* **68080/vasm-Befund:** `lsrq`/`lslq` benötigen den Shift-Count im Datenregister (`d1 = 8`), und AMMX-`load`-Konstanten müssen im `data`-Segment (absolute Adressierung) liegen, da `vasm`-PC-relatives `fe7a` gegenüber Core 11350 um 2 Bytes versetzt ist.
+
+### 7.22 `HUR-052`–`HUR-055`: `_TileCache` Pass 1 & Pass 2 (`tilemap.s` Z. 477–588) — Eliminierung von ~975 `DIVUL.L`/Frame
+
+**Ausgangslage (`tilemap.s`, `_TileCache`):**  
+`_TileCache` läuft auf **jedem** Frame über alle `33×25 = 825` sichtbaren Kacheln:
+- **Pass 1 (`.pc`, 825×/Frame):** führt pro Kachel ein 32-Bit-`divul.l #34` (`sx = tx % 34`) und ein zeileninvariantes `mulu.l #34` (`TcSY * 34`) aus, baut den Key `(tx<<16)|ty` neu und lädt `SlKey`/`SlAnim`/`SlPh` neu.
+- **Pass 2 (`.cr`/`.re`, ~50–150 Runs/Frame):** teilt `TcRowS` in `.re` per `divul.l #34` wieder durch `34` zurück auf `sy`, um `TcBuf + sy*27200` und `r*20 - TcOY` pro Run neu zu berechnen.
+
+| Test-ID | Abschnitt & Variante | Roh (10×, Base `30`) | Netto / Iteration | `IEP1 / IEP2` | Bit-Gleichheit (`412.500` Kacheln) | Speedup |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-052` | Pass 1 `.pc` **Original** (`divul.l #34` + `mulu.l #34` + Key) | `326` (`326/326`) | `29,60` Takte / Kachel | `9600 / 1500` | Referenz | Baseline |
+| **`HUR-053`** | Pass 1 `.pc` **Opt** (inkr. `sx`/`slot`-Wrap + `key += $10000`) | **`76`** (`76/76`) | **`4,60` Takte / Kachel** | `4600 / 1600` | **0 Mismatches** | **6,43× schneller (-20.625 Takte/Frame)** |
+| `HUR-054` | Pass 2 `.re` **Original** (`divul.l #34` + 4× `mulu.l`) | `416` (`416/416`) | `38,60` Takte / Run | `12600 / 6500` | Referenz | Baseline |
+| **`HUR-055`** | Pass 2 `.re` **Opt** (hoisted `TcBufRow` & `TcRowY`, 0 Div) | **`136`** (`136/136`) | **`10,60` Takte / Run** | `6600 / 3500` | **0 Mismatches** | **3,64× schneller (-28 Takte/Run)** |
+
+* **Rohlogs:** `log-v6/HUR-052.log` .. `log-v6/HUR-055.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_tilecache` prüfte 500 Kamerapositionen × 25 Zeilen × 33 Spalten = `412.500` Kacheln (`sy`, `sx`, `slot`, `key`, `TcBufRow`, `TcRowY`) — `mismatches=0`.
+
+### 7.23 `HUR-056`–`HUR-060`: `_BlitAdd` Zero-Skip (Wolken) & `_BlitKey` All-Key-Skip (Negativbefund)
+
+**Ausgangslage (`blit.s`, `hintergrund = 14,5 ms` im `F1`-Profiler):**  
+Geprüft wurden Software-Early-Outs für 8-Pixel-Blöcke (16 Bytes) in `_BlitAdd` (schwarze Wolken-Quads `$0000`) und `_BlitKey` (transparente Key-Quads `$F81F`).
+
+| Test-ID | Kernel & Variante | Roh (10×, Base `30`) | Netto / 8 px | `IEP1 / IEP2` | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-056` | `_BlitAdd` **Original** (8 px `.a2`, ohne Skip) | `166` (`166/166`) | `13,60` Takte | `13600 / 1500` | Baseline (plus FastRAM-RMW auf `dst`) |
+| **`HUR-057`** | `_BlitAdd` **Zero-Skip (alles `$0000`)** | **`96`** (`96/96`) | **`6,60` Takte** | `9588 / 895` | **2,06× schneller + 0 FastRAM-RMW auf `dst`!** |
+| `HUR-058` | `_BlitAdd` **Zero-Skip (nicht-Null, Worst Case)** | `226` (`226/226`) | `19,60` Takte | `19600 / 1500` | `+6,0` Takte Overhead; lohnt sich bei Wolken/Explosionen |
+| `HUR-059` | `_BlitKey` **Original** (8 px `.k2`, `2× storeilm`) | **`76`** (`76/76`) | **`4,60` Takte** | `4600 / 500` | **Gewinner** (`storeilm` in HW schneller als SW-Check) |
+| `HUR-060` | `_BlitKey` **All-Key-Skip (alles Key)** | `126` (`126/126`) | `9,60` Takte | `9801 / 1599` | **2,09× langsamer → verworfen!** |
+
+* **Rohlogs:** `log-v6/HUR-056.log` .. `log-v6/HUR-060.log`
+* **Erkenntnis:** Auf 68080 Core 11350 ist `storeilm` in `_BlitKey` so schnell (`0,575` Takte/px in L1), dass ein Software-All-Key-Check langsamer ist (`HUR-060` verworfen). In `_BlitAdd` dagegen halbiert der 8-px-Zero-Skip (`HUR-057`) die L1-Zeit (`2,06×`) und eliminiert in kaltem FastRAM (Wolken-Ebene) komplette Ziel-Lese-/Schreibtransaktionen.
+
+### 7.24 `HUR-061` / `HUR-062`: `_BlitAdd` `tst.l`-Early-Exit vs. `4× or.l`
+
+| Test-ID | Variante | Roh (10×) | Netto / 8 px | `IEP1 / IEP2` | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-061` | `_BlitAdd` `tst.l`-Early-Exit (**alles `$0000`**) | `126` (Base `30`) | `9,60` Takte | `11594 / 696` | **1,42× schneller** als Original + 0 FastRAM-RMW |
+| **`HUR-062`** | `_BlitAdd` `tst.l`-Early-Exit (**nicht-Null**, inkl. `move.l`-Setup) | **`206`** (Base `31`) | **`~16,5` Takte** | `16600 / 1500` | **~3 Takte/8 px schneller** als `4× or.l` (`HUR-058`: `19,60`) auf sichtbaren Wolken! |
+
+* **Rohlogs:** `log-v6/HUR-061.log`, `log-v6/HUR-062.log`
+
+### 7.25 `HUR-063`–`HUR-066`: `DrawParts` `DIVS.L #$168000` & `_BlitFallF` `.f1p..f7p` AMMX
+
+| Test-ID | Kernel & Variante | Roh (10×, Base `30`) | Netto | `IEP1 / IEP2` | Bit-Gleichheit (V4) | Speedup |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-063` | `DrawParts` **Original** (`divs.l #$168000`) | `236` (`236/236`) | `20,60` Takte / Partikel | `2600 / 500` | Referenz | Baseline |
+| **`HUR-064`** | `DrawParts` **Reziprok** (`muls.l #$5B05B05C` + `asr #19` + `addx`) | **`106`** (`106/106`) | **`7,60` Takte / Partikel** | `5600 / 3600` | **0 Mismatches (`201.000+` Winkel)** | **2,71× schneller** |
+| `HUR-065` | `_BlitFallF` `.f5p` **Original** (Skalar 8 px, `5/8*dst + src`) | `216` (`216/216`) | `18,60` Takte / 8 px | `20600 / 14600` | Referenz | Baseline |
+| **`HUR-066`** | `_BlitFallF` `.f5p` **AMMX 8-px SIMD** (`lsrq`/`pand`/`paddw`) | **`176`** (`176/176`) | **`14,60` Takte / 8 px** | `14600 / 500` | **0 Mismatches (`196.608` px)** | **1,27× schneller (-57 % Ops)** |
+
+* **Rohlogs:** `log-v6/HUR-063.log` .. `log-v6/HUR-066.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_hur064_066` prüfte `201.000+` vorzeichenbehaftete 16.16-Winkel (`mm_rot=0`) sowie `3 × 65.536 = 196.608` RGB565-Pixel für `.f3p`/`.f5p`/`.f7p` (`mm_f=0`).
+
+### 7.26 Cold-FastRAM-Messung (`640×480 = 614 KB`, außerhalb 32 KB L1-Cache): DDR3-Burst-Unrolling
+
+**Messprogramm (`bench_fastram_v2`, `CCC` unter `Forbid()` auf V4 `Core 11350`, ~85 MHz):**
+
+| Routine & Variante | Takte (640×480 = 614 KB) | Zeit (`ms`) | Bewertung |
+|:---|:---:|:---:|:---|
+| `_BlitCopy` `4-Quad` (`32 B`/Iter) | `351.309` | `4,13 ms` | Baseline |
+| **`_BlitCopy` `8-Quad` (`64 B` DDR3-Burst)** | **`330.008`** | **`3,88 ms`** | **`-6,5 %` (-21.301 Takte/Screen) → übernommen (`.q8`)** |
+| `_BlitKey` `2-Quad` (`16 B`, 0 % Key) | `346.225` | `4,07 ms` | Baseline |
+| **`_BlitKey` `4-Quad` (`32 B` DDR3-Burst, 0 % Key)** | **`317.705`** | **`3,73 ms`** | **`-9,0 %` (-28.520 Takte/Screen) → übernommen (`.k4`)** |
+| **`_BlitAdd` `2-Quad` ohne Zero-Skip (100 % nicht-Null)** | **`625.264`** | **`7,35 ms`** | **`-21 %` (`-1,96 ms`!) schneller als `4× or.l`-Skip (`791.644` / `9,31 ms`) auf dichten Wolken → übernommen** |
+| `_BlitAdd` `4-Quad` ohne Zero-Skip (100 % nicht-Null) | `627.607` | `7,38 ms` | Gleich schnell wie `2-Quad` (Bandbreite gesättigt) |
+
+### 7.27 `HUR-067`–`HUR-074`: `DrawLamp` / `DkAB` & `DkA1..DkA7` (Cave-Taschenlampe, `blit.s` Z. 4765–4945, `hurrican.s` Z. 4052–4195)
+
+**Ausgangslage (Cave-Level, `F1`-Profiler `hurrican_v11`):**
+`VORDERGRUND = 10,4 ms` (davon ~`10,1 ms` in `DrawLamp`). Pro Frame erfolgen ~`7.200` `LmSpan`-Aufrufe; jedes `DkA1..DkA7` ruft `bsr DkAPre` auf (3× 64-Bit-`load` für `DkMasks` + `moveq #1/#2/#3` + `lea TailMask`) und verarbeitet nur 1 Quad (4 px) je Iteration mit `subq.l #1,d0; bne.s`.
+
+| Test-ID | Kernel & Variante | Roh (10×, Base `30`) | Netto / Span | `IEP1 / IEP2` | Bit-Gleichheit (V4) | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| `HUR-067` | `DkAB` **Original** (64 px, `load 0` + 1-Quad `subq/bne`) | `336` Min / `392` Avg | `30,6` Min / `36,2` Avg | `26599 / 42598` | Referenz | `subq/bne` paart kostenlos in IEP2 während 2-cyc L1-Store |
+| `HUR-068` | `DkABF` **8-Quad 64-Byte-Burst** (`e0=0` gehoistet, `dbra`) | `376` Min / `420` Avg | `34,6` Min / `39,0` Avg | `29600 / 3600` | **0 Mismatches** | `-52 %` Ops; in kaltem FastRAM (volle Zeilen/Ränder) ideal |
+| `HUR-073` | `DkABF` **1-Quad `dbra`** (`e0=0` gehoistet) | `466` Min / `501` Avg | `43,6` Min / `47,1` Avg | `23600 / 18600` | — | `store + dbra` stallt in L1 → verworfen |
+| `HUR-074` | `DkABF` **4-Quad `dbra`** (`e0=0` gehoistet) | `396` Min / `441` Avg | `36,6` Min / `41,1` Avg | `29600 / 5600` | — | Langsamer als `8-Quad` (`376`) |
+| `HUR-069` | `DkA4` **Original** (32 px, `DkAPre`-Loads + 1-Quad `subq/bne`, ohne `bsr/rts`) | `536` (`536/536`) | `50,60` Takte (~`62` mit `bsr/rts`) | `46600 / 21600` | Referenz | Baseline |
+| **`HUR-070`** | **`DkA4F` Opt** (32 px, 2-Quad Interleaved, gehoistete Konst., `dbra`) | **`486`** (`486/486`) | **`45,60` Takte** | `38600 / 9600` | **0 Mismatches (`1.056` Fälle)** | **`-29 %` Ops; ~`1,36×` schneller inkl. gespartem `bsr/rts`** |
+| `HUR-071` | `DkA5` **Original** (32 px, `DkAPre`-Loads + 1-Quad `subq/bne`, ohne `bsr/rts`) | `836` (`836/836`) | `80,60` Takte (~`92` mit `bsr/rts`) | `70600 / 21600` | Referenz | Baseline |
+| **`HUR-072`** | **`DkA5F` Opt** (32 px, 2-Quad Interleaved, gehoistete Konst., `dbra`) | **`806`** (`806/806`) | **`77,60` Takte** | `62600 / 9600` | **0 Mismatches (`1.056` Fälle)** | **`-22 %` Ops; ~`1,19×` schneller inkl. gespartem `bsr/rts`** |
+
+* **Rohlogs:** `log-v6/HUR-067.log` .. `log-v6/HUR-074.log`
+* **Bit-Gleichheits-Nachweis (V4 Hardware):** `verify_dka` prüfte alle 8 Stufen (`DkA1F..DkA7F`, `DkABF`) × Breiten `0..65` × Alignments `0/2` Bytes = `1.056` Testfälle (`34.320` Pixel + Vor-/Nach-Sentinels) gegen `DkRef` — **`0 Mismatches`**.
+* **Integration (`hurrican_v12`):** `DkAInit` einmalig vor der 480-Zeilen-Schleife in `DrawLamp` (`e0=0, e1..e3, d5=1, d6=2, d7=3, a2=TailMask`, `d4=LmX`), direkter 20×64-Byte-Burst für komplett schwarze Zeilen (`.blk`), `d3==0`-Skip vor `LmSpan`, sowie Aktivierung von `_TileCache` im Cave-Level (Entfernung von `tst.l CovLOn; bne.s .tl` in `hurrican.s`).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
