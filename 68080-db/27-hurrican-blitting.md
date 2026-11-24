@@ -738,3 +738,21 @@ Basierend auf der systematischen 5-Subagenten-Codebase-Analyse und Rücksprache 
 
 3. **LmSpan Streamlining (hurrican.s):**
    * lea LmJmp, a0; move.l (a0, d3.l*4), d2 gestrafft zu move.l (LmJmp, d3.l*4), d2; beq.s .x; move.l d2, a0.
+
+
+---
+
+## 9. Coverage- und Hintergrund-Hotspots: Hurrican v15 (HUR-079 .. HUR-084)
+
+Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v6 (100 Durchläufe, 10x innere Schleife, Baseline kompensiert):
+
+| Sequenz | Kernel / Beschreibung | Min (Raw) | Netto (Zyklen/Iter) | IEP1 / IEP2 | Speedup / Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-079` | `_BuildCover` Zelle **Original** (`bsr.s .op` + Memory `CovPh`) | 916 | 88,60 Takte | 32602 / 11096 | Baseline |
+| **`HUR-080`** | **`_BuildCover` Zelle Inlined** (Register `CovPh` + kein Subroutine-Call) | **767** | **73,70 Takte** | **15300 / 11000** | **-53,1 % Instruktionen**, -16,3 % Takte |
+| `HUR-081` | Puffer-Nullen 64B **Paired `clr.l (a2)+`** (8 Paare = 16 Stores) | 96 | 6,60 Takte | 14800 / 500 | Dual-Issue Superskalar füllt Write-Buffer (~0.4 Takte/Store) |
+| **`HUR-082`** | Puffer-Nullen 64B **AMMX `store e0,(a2)+`** (8 native 64-Bit Stores) | **96** | **6,60 Takte** | **6600 / 500** | **-55,4 % Instruktionen** bei gleicher Bus-Sättigung! |
+| `HUR-083` | `BlkCov` Blockabdeckung **Original** (7-Reg `movem`, 2× `mulu.w #3277`) | 366 | 33,60 Takte | 22600 / 2500 | Baseline |
+| **`HUR-084`** | **`BlkCov` Blockabdeckung Optimiert** (Verschlankter Reg-Save + Fast-Div) | **306** | **27,60 Takte** | **22600 / -500** | **-16,4 % Takte pro Block** (bis zu 600 Blöcke/Frame) |
+
+* **Rohlogs:** `log-v6/HUR-079.log`, `log-v6/HUR-080.log`, `log-v6/HUR-081.log`, `log-v6/HUR-082.log`, `log-v6/HUR-083.log`, `log-v6/HUR-084.log`

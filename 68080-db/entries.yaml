@@ -940,3 +940,39 @@ entries:
   seq: seq/HUR-078.i
   logs: 1
   status: gemessen
+- id: HUR-079
+  title: Hurrican _BuildCover Cell Original (bsr.s .op mit CovPh aus RAM, 916 Min, 32.6k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-079.i
+  logs: 1
+  status: gemessen
+- id: HUR-080
+  title: Hurrican _BuildCover Cell Inlined (Register CovPh + kein bsr.s, 767 Min, 15.3k IEP1, -53.1% Inst)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-080.i
+  logs: 1
+  status: gemessen
+- id: HUR-081
+  title: Hurrican Buffer Zeroing 64B Paired clr.l (a2)+ (8 Paare = 16 Stores, 96 Min, 14.8k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-081.i
+  logs: 1
+  status: gemessen
+- id: HUR-082
+  title: Hurrican Buffer Zeroing 64B AMMX store e0,(a2)+ (8 Stores, 96 Min, 6.6k IEP1, -55.4% Inst)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-082.i
+  logs: 1
+  status: gemessen
+- id: HUR-083
+  title: Hurrican BlkCov Blockabdeckung Original (7 Regs movem, 2x mulu.w #3277, 366 Min, 22.6k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-083.i
+  logs: 1
+  status: gemessen
+- id: HUR-084
+  title: Hurrican BlkCov Blockabdeckung Optimiert (Reg-Save Verschlankt + Fast-Div, 306 Min, 22.6k IEP1, -16.4% Takte)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-084.i
+  logs: 1
+  status: gemessen
