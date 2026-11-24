@@ -133,3 +133,8 @@ steht in [`HANDOFF.md`](HANDOFF.md).
 - **High-Performance Kernels: Memory, String-SIMD & Branchless Sorting:** [`30`](30-memory-string-sorting.md)
 
 - **Branchless Binary Search Tree (BST) & SIMD B-Tree:** [`31`](31-branchless-bst.md)
+
+- **SAGA Display & Speicherbandbreite unter Display-DMA:** [`35`](35-saga-display-and-bandwidth.md)
+
+- **SAGA GFXMODE VBL-Frequenzen & Ruckelfreies Triple-Buffering:** [`36`](36-vbl-frequencies-and-triple-buffering.md)
+
