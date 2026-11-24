@@ -1090,3 +1090,15 @@ entries:
   seq: seq/HUR-103.i
   logs: 1
   status: gemessen
+- id: HUR-104
+  title: Hurrican BlockAt Original (8 Lookups, redundante Tests & 2x lea Div20, 66957 Min, 6.47M IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-104.i
+  logs: 1
+  status: gemessen
+- id: HUR-105
+  title: Hurrican BlockAt Kombinierte Pruefung (8 Lookups, vorzeichenlose Bounds & 1x lea Div20, 66446 Min, -511 cyc)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-105.i
+  logs: 1
+  status: gemessen

@@ -872,3 +872,28 @@ Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v
 | **`HUR-103`** | **`beam.s` `Frame` Reziproke Multiplikation `mulu.w #6554`** (`clr.w`, `swap`) | **5346** | **531,60 Takte** | **428600 / 42700** | **2,07× schneller (`-51,9 %` Takte)**, bitgleich! |
 
 * **Rohlogs:** `log-v6/HUR-102.log`, `log-v6/HUR-103.log`
+
+### 9.7 Spieler-Physik & Kollision: Hurrican v21 (HUR-104 .. HUR-105)
+
+Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v6 (100 Durchläufe, 10x innere Schleife, Baseline kompensiert):
+
+| Sequenz | Kernel / Beschreibung | Min (Raw) | Netto (Zyklen/Iter) | IEP1 / IEP2 | Speedup / Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-104` | `player.s` `BlockAt` Tile-Lookup **Original** (8 Lookups: getrennte `tst.l`/`cmp.l`, 2× `lea Div20, a0`) | 66957 | 6692,70 Takte | 6475600 / 1145700 | Baseline (inkl. Tabellen-Setup) |
+| **`HUR-105`** | **`player.s` `BlockAt` Kombinierte Bereichsprüfung** (vorzeichenlose `cmp.l #DIVMAX-1`, nur 1× `lea Div20`, eliminierte Verzweigungen) | **66446** | **6641,60 Takte** | **6427600 / 1153700** | **-511 Takte (-64 Takte/Abfrage)**, bitgleich! |
+
+* **Rohlogs:** `log-v6/HUR-104.log`, `log-v6/HUR-105.log`
+
+#### Technische Details der Optimierungen in Hurrican v21:
+1. **`BlockAt` Vorzeichenlose Bereichsprüfung (`cmp.l #DIVMAX-1`):**
+   - In `player.s` führte `BlockAt` für $x$ und $y$ bisher jeweils getrennte Tests durch (`tst.l d1; bmi.s .air; tst.l d0; bmi.s .wall; cmp.l #DIVMAX-1, d0; bhi.s ...`).
+   - Da im Zweierkomplement negative Werte `$80000000..$FFFFFFFF` bei vorzeichenlosem Vergleich (`bhi.s`) immer größer als `DIVMAX-1` ($16383$) sind, fasst ein einziges `cmp.l #DIVMAX-1, d0; bhi.s .wall` sowohl $x < 0$ als auch $x \ge 16384$ zusammen!
+   - Da Koordinaten $\ge 16384$ außerhalb jeder existierenden Spielkarte liegen, verzweigen sie sofort direkt zu `.wall` (horizontal) bzw. `.air` (vertikal).
+   - `lea Div20, a0` wird nur noch genau **einmal** geladen und bedient sowohl $x$ als auch $y$.
+
+2. **`SolidBelow` Register-Bereinigung:**
+   - Unnötiges Sichern und Wiederherstellen von Adressregister `a1` auf dem Stack eliminiert.
+
+3. **`SlopeCheck` Zeilenzeiger Hoisting (`RowTab`):**
+   - In `SlopeCheck` konvertierte die Schleife bisher die bereits bekannte Block-Zeile $d_5$ per `mulu.l #20` zurück in Pixel, um dann `BlockAt` aufzurufen (welches die Koordinate wiederum per `Div20` dividierte und `RowTab` las).
+   - Dies wurde durch ein einmaliges Vorab-Laden des Zeilenzeigers `a0 = RowTab[d5]` pro Zeile ersetzt. Die Spalten-Schleifen greifen nun direkt in 1 Takt über `move.w (a0, d7.l*2), d0` auf die Kacheldaten zu – ohne Stack-Frame, Multiplikation oder Subroutinenaufruf.
