@@ -768,3 +768,16 @@ Vergleich kompakter Schleifen (kein Unrolling, 64 Bytes Nullen):
 | `HUR-087` | AMMX `store e0,(a2)+; dbra.l d0,.l` (8 Iterationen) | **246** | **21,60 Takte** | **9600 / 8600** | Exakt gleiche Takte wie HUR-085 bei halber Instruktionsdekodierung |
 
 * **Rohlogs:** `log-v6/HUR-085.log`, `log-v6/HUR-086.log`, `log-v6/HUR-087.log`
+
+### 9.2 Partikel- und Projektil-Hotspots: Hurrican v16 (HUR-088 .. HUR-091)
+
+Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v6:
+
+| Sequenz | Kernel / Beschreibung | Min (Raw) | Netto (Zyklen/Iter) | IEP1 / IEP2 | Speedup / Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-088` | `DrawParts` Partikel-Setup **Original** (`mulu.l #64` + `PtTopMode`-Verzweigung) | 556 | 52,60 Takte | 44600 / 11600 | Baseline |
+| **`HUR-089`** | **`DrawParts` Partikel-Setup Optimiert** (`lsl.l #6` + direktes `btst #19`) | **356** | **32,60 Takte** | **32600 / 7500** | **-36,0 % Takte**, bitgleich (0 Mismatches) |
+| `HUR-090` | `_WeaponsDraw` Sprite-Info **Original** (`bsr SprInfo` mit Stack-Push/Pop) | 686 | 65,60 Takte | 56600 / 8700 | Baseline |
+| **`HUR-091`** | **`_WeaponsDraw` Sprite-Info Inlined** (kein Subroutine-Call, kein Stack-Spill) | **346** | **31,60 Takte** | **31600 / 7600** | **1,98× schneller (`-49,6 %` Takte)**, bitgleich |
+
+* **Rohlogs:** `log-v6/HUR-088.log`, `log-v6/HUR-089.log`, `log-v6/HUR-090.log`, `log-v6/HUR-091.log`

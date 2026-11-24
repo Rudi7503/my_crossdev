@@ -994,3 +994,27 @@ entries:
   seq: seq/HUR-087.i
   logs: 1
   status: gemessen
+- id: HUR-088
+  title: Hurrican DrawParts Setup Original (mulu.l #64 + multi-insn PtTopMode, 556 Min, 44.6k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-088.i
+  logs: 1
+  status: gemessen
+- id: HUR-089
+  title: Hurrican DrawParts Setup Optimiert (lsl.l #6 + direct btst #19, 356 Min, 32.6k IEP1, -36.0% Takte)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-089.i
+  logs: 1
+  status: gemessen
+- id: HUR-090
+  title: Hurrican WeaponsDraw SprInfo Original (bsr SprInfo mit Stack-Push/Pop, 686 Min, 56.6k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-090.i
+  logs: 1
+  status: gemessen
+- id: HUR-091
+  title: Hurrican WeaponsDraw SprInfo Inlined (Inlined ohne Stack-Push/Pop, 346 Min, 31.6k IEP1, 1.98x schneller)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-091.i
+  logs: 1
+  status: gemessen
