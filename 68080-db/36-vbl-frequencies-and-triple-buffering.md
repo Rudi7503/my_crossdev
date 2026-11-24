@@ -131,8 +131,30 @@ Die professionelle Alternative (bekannt aus Konsolen-Engines) ist **feste VBL-Qu
 * **Modus 60 FPS:** Genau **1 VBL** pro Frame ($16{,}67\text{ ms}$).
 * **Modus 30 FPS:** Genau **2 VBLs** pro Frame ($33{,}33\text{ ms}$).
 
-### Hysterese-Regel (Schutz vor Umschalt-Flackern):
-1. **60 FPS $\rightarrow$ 30 FPS:** Wird der VBL in 3 aufeinanderfolgenden Frames verfehlt (`VblSincePoke >= 2`), schaltet das System sofort auf `TargetVBL = 2` (30 FPS).
-2. **Spiellogik:** Bei 30 FPS werden pro Bild **2 Logik-Ticks** gerechnet, damit das Spieltempo identisch bleibt.
-3. **30 FPS $\rightarrow$ 60 FPS:** Erst wenn die Renderzeit für 60 aufeinanderfolgende Frames (ca. 2 Sekunden) stabil unter der Sicherheitsgrenze ($< 14{,}0\text{ ms}$) liegt, schaltet das System sauber zurück auf 60 FPS.
+---
+
+## 5. Hardware-Verifikation auf der Vampire V4: CCC-Timestamp & Time-Borrowing
+
+Mit dem Testprogramm [`ccc_vbl_test.s`](ccc_vbl_test.s) wurden die mathematischen und hardwaretechnischen Eigenschaften direkt auf der echten Vampire V4 (Apollo Core 11350) gemessen:
+
+### 5.1 Verifikation des 32-Bit-Überlaufs (Counter Overflow)
+* Bei 92,09 MHz läuft der 32-Bit-`CCC` alle **46,64 Sekunden** ($2^{32} / 92{,}09\text{ MHz}$) über.
+* Getesteter synthetischer Sprung: $t_{\text{start}} = \text{\$FFFFFF00} \rightarrow t_{\text{now}} = \text{\$00000100}$.
+* Ergebnis: `sub.l d1, d0` liefert exakt **512 Takte**. Der vorzeichenlose Vergleich (`cmp.l #1534873, d0` gefolgt von `blo.s`) verzweigt fehlerfrei durch die Nullgrenze!
+
+### 5.2 Gemessene 60-Hz-VBL-Zyklenabstände
+* Reale gemessene Taktintervalle zwischen konsekutiven SAGA-60-Hz-VBLs:
+  $$\mathbf{1.534.093\text{ Takte}} \quad \text{und} \quad \mathbf{1.533.869\text{ Takte}}$$
+* Umgerechnet bei $92{,}09\text{ MHz}$:
+  $$\frac{1.534.093}{92.090.000\text{ Hz}} = \mathbf{16{,}658\text{ ms}} \quad (\mathbf{60{,}03\text{ Hz}})$$
+
+### 5.3 Live-Test: Time-Borrowing (19 ms Spike + 13 ms Erholung)
+* **Frame 1 Lastspitze:** Berechnungszeit **1.753.689 Takte** (**`19,04 ms`** > 16,67 ms Budget).
+  * VBL feuert während des Zeichnens $\rightarrow$ `VblSincePoke` springt auf `1`.
+  * SAGA zeigt währenddessen den vorherigen Puffer aus der Triple-Buffer-Queue.
+* **Frame 2 Erholung:** Berechnungszeit **1.200.000 Takte** (**`13,03 ms`** < 16,67 ms Budget).
+  * Bei Fertigstellung von Frame 2: `VblSincePoke` ist noch **`0`**!
+  * Frame 2 ist **vor** dem 2. VBL fertig geworden!
+* **Hardware-Ergebnis:** **Beide Frames erreichen ihren jeweiligen VBL pünktlich auf dem HDMI-Schirm — 0 Frames gedroppt, 60 FPS voll erhalten!**
+
 
