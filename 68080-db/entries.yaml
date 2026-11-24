@@ -1018,3 +1018,15 @@ entries:
   seq: seq/HUR-091.i
   logs: 1
   status: gemessen
+- id: HUR-092
+  title: Hurrican DrawWater CovCell Original (bsr CovCell + mulu.l #34 je Zelle, 836 Min, 72.6k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-092.i
+  logs: 1
+  status: gemessen
+- id: HUR-093
+  title: Hurrican DrawWater CovCell Inlined Zeilen-Zeiger (216 Min, 16.6k IEP1, 3.87x schneller, -74.2% Takte)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-093.i
+  logs: 1
+  status: gemessen

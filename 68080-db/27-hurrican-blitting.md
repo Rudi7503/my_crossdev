@@ -781,3 +781,14 @@ Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v
 | **`HUR-091`** | **`_WeaponsDraw` Sprite-Info Inlined** (kein Subroutine-Call, kein Stack-Spill) | **346** | **31,60 Takte** | **31600 / 7600** | **1,98× schneller (`-49,6 %` Takte)**, bitgleich |
 
 * **Rohlogs:** `log-v6/HUR-088.log`, `log-v6/HUR-089.log`, `log-v6/HUR-090.log`, `log-v6/HUR-091.log`
+
+### 9.3 Wasser- und Deckungs-Hotspots: Hurrican v17 (HUR-092 .. HUR-093)
+
+Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v6:
+
+| Sequenz | Kernel / Beschreibung | Min (Raw) | Netto (Zyklen/Iter) | IEP1 / IEP2 | Speedup / Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-092` | `DrawWater` `CovCell` **Original** (`bsr CovCell` + `mulu.l #34` je Zelle) | 836 | 80,60 Takte | 72600 / 20600 | Baseline |
+| **`HUR-093`** | **`DrawWater` `CovCell` Inlined Zeilenzeiger** (Zeile einmal vorberechnet) | **216** | **18,60 Takte** | **16600 / 12500** | **3,87× schneller (`-74,2 %` Takte)**, bitgleich! |
+
+* **Rohlogs:** `log-v6/HUR-092.log`, `log-v6/HUR-093.log`
