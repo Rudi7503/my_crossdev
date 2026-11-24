@@ -1054,3 +1054,15 @@ entries:
   seq: seq/HUR-097.i
   logs: 1
   status: gemessen
+- id: HUR-098
+  title: Hurrican Parallax ParBCov Original (per-block y-clipping, asr.l #4, mulu.w #20, 7-reg movem, 4242 Min, 390.8k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-098.i
+  logs: 1
+  status: gemessen
+- id: HUR-099
+  title: Hurrican Parallax ParBCov Inlined Zeilen-Zeiger (ParBCovRow vorberechnet, 1876 Min, 158.6k IEP1, 2.26x schneller, -55.8% Takte)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-099.i
+  logs: 1
+  status: gemessen

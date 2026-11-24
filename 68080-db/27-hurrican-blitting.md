@@ -819,3 +819,26 @@ Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v
    - Die Kachelprüfung wurde direkt in `.col:` und `.re:` geinlined: Kacheln ohne `WAND` (1) oder `VERDECKEN` (64) werden in 2 Befehlen (`and.w #65, d0; beq.s`) direkt als sichtbar erkannt, ohne Funktionsaufruf oder Puffertest.
    - In `FallRun` wurde die teure 64-Bit-Ganzzahldivision `divul.l #3, d1:d0` für den Blockversatz vor die Schleife verlegt, da alle nachfolgenden Chunks garantiert an 3-Kachel-Blöcken ausgerichtet sind (`d1 = 0`).
    - Ergebnis auf V4: **1416 statt 1912 Takte (-25.9 % Takte, -32.0 % IEP1)** bei 100 % bitgleicher Ausgabe.
+
+### 9.5 Parallax-Culling und Hintergrund-Optimierung: Hurrican v19 (HUR-098 .. HUR-099)
+
+Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v6 (100 Durchläufe, 10x innere Schleife, Baseline kompensiert):
+
+| Sequenz | Kernel / Beschreibung | Min (Raw) | Netto (Zyklen/Iter) | IEP1 / IEP2 | Speedup / Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-098` | `tilemap.s` `ParBCov` **Original** (pro Block: y-Clipping, `asr.l #4`, `mulu.w #20`, 7-Reg `movem`) | 4242 | 421,20 Takte | 390800 / 57500 | Baseline (8 Parallax-Blöcke) |
+| **`HUR-099`** | **`tilemap.s` `ParBCov` mit `ParBCovRow`** (Zeilenzeiger `ParBPtr` 1× vorberechnet) | **1876** | **184,60 Takte** | **158600 / 30500** | **2,26× schneller (`-55,8 %` Takte)**, **-59,4 % Instruktionen**, bitgleich! |
+
+* **Rohlogs:** `log-v6/HUR-098.log`, `log-v6/HUR-099.log`
+
+#### Technische Details der Optimierungen in Hurrican v19:
+1. **`ParBCov` Zeilen-Invarianten Hoisting (`ParBCovRow`):**
+   - In `_DrawParallaxBlocks` / `PBGo` prüfte `ParBCov` für jeden einzelnen 32×16-Block (bis zu 20 pro Zeile × 30 Zeilen = 600 Blöcke pro Frame) die Verdeckung durch darüberliegende Parallax-B-Blöcke.
+   - Dabei sicherte `ParBCov` 7 Register auf dem Stack (28 Bytes), clippte $y_0 = \max(y, 0)$ und $y_1 = \min(y+15, 479)$ jedes Mal neu, berechnete $by_0 = (y_0 - parBY) \gg 4$ und $by_1 = (y_1 - parBY) \gg 4$ via arithmetischem Shift und führte eine 32-Bit-Hardware-Multiplikation `mulu.w #20, d3` für den Zeilenstart in `ParBMap` aus.
+   - Da die vertikale Koordinate $y$ für alle 20 Blöcke einer Zeile identisch ist, wurde die neue Routine `ParBCovRow` eingeführt, die diese Invarianten genau 1× pro Blockzeile berechnet und den Zeilenzeiger `ParBPtr` sowie `ParBRows` ablegt.
+   - `ParBCov` sichert nun nur noch 3 Register, testet `ParBPtr` (bei Deaktivierung oder wenn außerhalb des Bildschirms: sofortiger Return in 4 Takten) und führt pro Block nur noch das $x$-Clipping und den Speichertest durch.
+   - Ergebnis auf V4: **1876 statt 4242 Takte (2.26× Speedup, -59.4 % Instruction Fetch)** bei 100 % bitgleichem Culling-Ergebnis.
+
+2. **`_DrawParallax` Blit-Funktionszeiger Hoisting:**
+   - In `_DrawParallax` wurde die Fallunterscheidung für den Kachelmodus (Modus 0 = `_BlitCopy`, Modus 1 = `_BlitKey`, Modus 2 = `_BlitAdd`) bisher in der horizontalen Bildschirmschleife `.loop:` für jede Kachel neu ausgeführt.
+   - Der Funktionszeiger wird nun einmalig vor der Schleife in Adressregister `a4` aufgelöst (`lea _BlitCopy, a4` / `_BlitKey` / `_BlitAdd`), und in der Schleife direkt via `jsr (a4)` aufgerufen.
