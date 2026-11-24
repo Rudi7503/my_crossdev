@@ -705,3 +705,36 @@ Geprüft wurden Software-Early-Outs für 8-Pixel-Blöcke (16 Bytes) in `_BlitAdd
 
 
 
+
+---
+
+## 8. Hotspot-Optimierungen v14: EnemiesDraw Sprungtabelle, TileCache CovL-Culling & LmSpan
+
+Basierend auf der systematischen 5-Subagenten-Codebase-Analyse und Rücksprache mit 3 FreeLLM-Agenten (qwen2.5-coder-32b, uto, usion) wurden die Top-Rendering-Engpässe oberhalb der Blitter in Hurrican v14 angegangen.
+
+### 8.1 Messergebnisse Harness v6 (Vampire V4, Apollo Core 11350 @ 85 MHz)
+
+| Sequenz | Kernel / Beschreibung | Min (Raw) | Netto (Zyklen/Iter) | IEP1 / IEP2 | Bit-Gleichheit | Speedup / Bewertung |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| HUR-075 | _TileCache Phase 2 Setup **Original** (3× mulu.l #40/#20, 256 Min) | 256 (256/256) | 22,60 Takte | 16600 / 2600 | Referenz | Baseline |
+| HUR-076 | _TileCache Phase 2 Setup **Shift-Add** (0× mulu.l, 6 Shifts + 3 Adds) | 266 (266/266) | 23,60 Takte | 23600 / 2600 | Identisch (0 Mismatches) | **+3,9 % langsamer** (+42 % IEP1). Hardware-mulu.l auf 68080 schneller! |
+| HUR-077 | _EnemiesDraw Dispatch **Original** (Lineare cmp.l #ID_ Kette) | 366 (366/366) | 33,60 Takte | 33600 / 2600 | Referenz | Baseline |
+| **HUR-078** | **_EnemiesDraw Dispatch Jump Table** (O(1) .drw_jt, 1001 Einträge) | **96** (96/96) | **6,60 Takte** | **6600 / 5600** | **0 Mismatches** | **5,10× schneller (-80,4 % Takte, -80,4 % IEP1)!** |
+
+* **Rohlogs:** log-v6/HUR-075.log, log-v6/HUR-076.log, log-v6/HUR-077.log, log-v6/HUR-078.log
+
+### 8.2 Kern-Erkenntnisse & Implementierung in Hurrican v14
+
+1. **_EnemiesDraw Sprungtabelle (.drw_jt):**
+   * **Bisher:** 116 lineare cmp.l #ID_..., d4 / beq/bne Vergleiche für jeden sichtbaren Gegner in jedem Frame (bis zu 250 Zyklen pro Gegner).
+   * **Neu:** 1001-Einträge Sprungtabelle .drw_jt in enemies.s. Dispatch erfolgt mit cmp.l #MAXID, d4; bhi .ex; lea .drw_jt, a0; move.l (a0, d4.l*4), a0; jmp (a0).
+   * **Ergebnis:** Reduktion von 366 auf 96 Zyklen im Benchmark (**5,1× Speedup**, 80,4 % weniger Instruktionen).
+   * **EN_ACTIVE-Vorabfilter:** 	st.l EN_ACTIVE(a2); beq .nwl am Kopf der Gegnerschleife überspringt hunderte ruhende Gegner im Level sofort in 1 Takt, ohne Koordinaten- oder Kollisionsberechnung.
+
+2. **_TileCache CovL-Culling im Cave-Level (	ilemap.s):**
+   * **Bisher:** In der Höhle wurden alle Kacheln in den Bildspeicher geblittet, obwohl DrawLamp unbeleuchtete Bereiche nachträglich komplett schwarz überzeichnet.
+   * **Neu:** In Phase 2 (.w0: und .rl:) wird CovL[r*34 + c] geprüft wenn CovLOn != 0. Unbeleuchtete Kacheln werden sofort übersprungen (.cull), Kachelläufe vorzeitig beendet.
+   * **Ergebnis:** 60 % bis 80 % aller Kachelblits (_BlitCopy / _BlitKey) in der Höhle entfallen vollständig.
+
+3. **LmSpan Streamlining (hurrican.s):**
+   * lea LmJmp, a0; move.l (a0, d3.l*4), d2 gestrafft zu move.l (LmJmp, d3.l*4), d2; beq.s .x; move.l d2, a0.

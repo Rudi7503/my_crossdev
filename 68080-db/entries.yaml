@@ -916,3 +916,27 @@ entries:
   seq: seq/HUR-074.i
   logs: 1
   status: gemessen
+- id: HUR-075
+  title: Hurrican _TileCache Phase 2 .re Setup Original (3x mulu.l, 256 Min, 16.6k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-075.i
+  logs: 1
+  status: gemessen
+- id: HUR-076
+  title: Hurrican _TileCache Phase 2 .re Setup Shift-Add (0 mulu.l, 266 Min, 23.6k IEP1, HW mulu schneller)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-076.i
+  logs: 1
+  status: gemessen
+- id: HUR-077
+  title: Hurrican _EnemiesDraw Dispatch Original (Lineare cmp.l #ID_ Kette, 366 Min, 33.6k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-077.i
+  logs: 1
+  status: gemessen
+- id: HUR-078
+  title: Hurrican _EnemiesDraw Dispatch Jump Table (O(1) Sprungtabelle .drw_jt, 96 Min, 6.6k IEP1, 5.1x schneller)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-078.i
+  logs: 1
+  status: gemessen
