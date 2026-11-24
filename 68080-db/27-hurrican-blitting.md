@@ -970,3 +970,36 @@ Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v
 3. **Behandlung des CCC-Counter-Overflows:**
    Der 68080 Clock Cycle Counter (`MOVEC CCC, Dn`) zählt mit Prozessortakt (~92 MHz) und läuft alle ~46,7 Sekunden über ($FFFFFFFF -> $00000000). Da 32-Bit-Zweierkomplement-Subtraktionen modulo $2^{32}$ rechnen, ergibt `current_ccc - vbl_timestamp` auch bei Überlauf über Null exakt die verstrichene Zyklendauer.
 
+### 9.10 Bugfix: Schuss-Schleifen-Register & Division (Hurrican v25)
+
+#### 1. Schuss-Schleife `_WeaponsDraw` (`weapons.s` Zeile 1815–1825):
+- **Ursache des Freezes bei Schuss / Powerline / Smartbomb:**
+  In `_WeaponsDraw` dient Register `d5` als Schleifenzähler über alle aktiven Schüsse in `ActList`:
+  ```m68k
+      move.l  ActN,d5
+      beq     .s_done
+      subq.l  #1,d5
+  .sl:
+      move.l  (a3)+,a2
+      ...
+      cmp.l   #5,P_TYPE(a2)
+      beq.s   .spl
+      ; Direkter Blit
+      move.l  #KEY,d5          ; <--- FATAL: Überschreibt d5 mit $F81F (63.519)!
+      jsr     _BlitKey
+      bra     .sn
+  .sn:
+      dbra    d5,.sl
+  ```
+  Da `_BlitKey` den Farbwert `d5 = #KEY` ($F81F) erwartet, wurde `d5` vor dem Sprung zu `.sn` mit 63.519 überschrieben. Beim ersten gezeichneten Standardschuss zählte `dbra d5, .sl` von 63.519 herunter und las 63.519 mal über `ActList` hinaus in den BSS-Speicher und Effects-Puffer.
+- **Behebung:** `d5` wird vor dem Laden von `#KEY` auf dem Stack gesichert und unmittelbar nach `jsr _BlitKey` restauriert:
+  ```m68k
+      move.l  d5,-(sp)
+      move.l  #KEY,d5
+      jsr     _BlitKey
+      move.l  (sp)+,d5
+      bra     .sn
+  ```
+
+#### 2. Zufalls-Wackeln `ShakeOn` (`hurrican.s` Zeile 11285):
+- **Korrektur:** In `vasm` Motorola-Syntax `divul.l <ea>, Dr:Dq` ist der erste Operand `Dr` der Rest und der zweite Operand `Dq` der 32-Bit-Dividend/Quotient. Die Anweisung wurde auf `divul.l #10, d1:d0` korrigiert, sodass der Rest (0..9) direkt in `d0` landet und mit `addq.l #5, d0` den Bereich 5..14 Pixel/Frame liefert.
