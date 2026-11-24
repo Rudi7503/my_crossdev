@@ -929,3 +929,44 @@ Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v
    - Dies wurde durch vorzeichenlose reziproke 64-Bit-Multiplikation mit $M = \$CCCCCCCD$ ($q = (N \times M) \gg 35$) ersetzt.
    - Ergebnis auf V4: **1936 statt 3126 Takte (1.61× schneller, -38.1 % Takte)**.
    - Zudem wurden in `_HudDraw` die Divisionen durch 100 (Energiekugel) und 200 (Radkugel) durch exakte Festkomma-Multiplikationen `mulu.w #45220` ($69/100$) bzw. `mulu.w #22610` ($69/200$) ersetzt.
+
+### 9.9 SAGA 60 Hz Triple-Buffering Pacer & CCC-Timing: Hurrican v24
+
+#### 1. Problemstellung (v22/v23 Post-Mortem)
+- **v22 (Ungebremst):** Hurrican lief auf V4 mit 100–140 FPS, da `WaitPace` nur `rts` war. Bei schnellen Renderzeiten (< 7 ms) überschrieb die CPU `BPLHPT` mehrfach innerhalb desselben 60-Hz-HDMI-Rasters -> Mikroruckler und Tearing.
+- **v23 (Deadlock nach ~8s):** Der Versuch, mit `_LVOWaitTOF()` auf den VBL zu synchronisieren, fror das Spiel nach ca. 8 Sekunden (~480 Aufrufe) ein (Sound lief per DMA weiter). Unter `Forbid()` (Task-Pri 19) im Direct-SAGA-Modus verliert AROS/ApolloOS `WaitTOF()` gelegentlich Signale oder deadlockt im `Wait()`.
+
+#### 2. Die v24-Lösung: Hardware-VBL-Server + Zero-Latency Spin-Wait & Time-Borrowing
+1. **Hardware-VBL-Server (`INTB_VERTB` = 5 via `_LVOAddIntServer`):**
+   ```asm
+   VblServer:
+       addq.l  #1,(a1)             ; VblCount erhöhen
+       addq.l  #1,VblSincePoke     ; Delta-Zähler seit letztem BPLHPT-Poke
+       movec.l ccc,d0              ; 68080 Clock Cycle Counter
+       move.l  d0,VblTimestamp     ; Exakter VBL-Startzyklus
+       moveq   #0,d0               ; Z-Flag = 1 -> Interrupt-Kette fortführen
+       rts
+   ```
+2. **Zero-Latency Spin-Wait & Time-Borrowing (in `HwFrame`):**
+   ```asm
+   .wait_vbl:
+       move.l  VblSincePoke,d1
+       cmp.l   d0,d1
+       bhs.s   .vbl_ready
+       bra.s   .wait_vbl
+
+   .vbl_ready:
+       sub.l   d0,VblSincePoke     ; 1 VBL abziehen (Time-Borrowing)
+       ble.s   .clr
+       cmp.l   #1,VblSincePoke     ; Maximal 1 Frame Vorlauf (Triple-Buffer-Tiefe)
+       ble.s   .poke
+       move.l  #1,VblSincePoke
+       bra.s   .poke
+   .clr:
+       clr.l   VblSincePoke
+   .poke:
+       move.l  Back,BPLHPT         ; Hardware-Latch beim nächsten Vertical Blank
+   ```
+3. **Behandlung des CCC-Counter-Overflows:**
+   Der 68080 Clock Cycle Counter (`MOVEC CCC, Dn`) zählt mit Prozessortakt (~92 MHz) und läuft alle ~46,7 Sekunden über ($FFFFFFFF -> $00000000). Da 32-Bit-Zweierkomplement-Subtraktionen modulo $2^{32}$ rechnen, ergibt `current_ccc - vbl_timestamp` auch bei Überlauf über Null exakt die verstrichene Zyklendauer.
+
