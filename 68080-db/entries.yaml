@@ -976,3 +976,21 @@ entries:
   seq: seq/HUR-084.i
   logs: 1
   status: gemessen
+- id: HUR-085
+  title: Hurrican Buffer Zeroing 64B Paired clr.l + dbra.l Pipe 2 (8B Loop Body, 246 Min, 17.6k IEP1, 9.7k IEP2)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-085.i
+  logs: 1
+  status: gemessen
+- id: HUR-086
+  title: Hurrican Buffer Zeroing 64B Single clr.l + dbra.l (16 Iter, 406 Min, 17.6k IEP1, 16.6k IEP2)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-086.i
+  logs: 1
+  status: gemessen
+- id: HUR-087
+  title: Hurrican Buffer Zeroing 64B AMMX store + dbra.l Pipe 2 (8 Iter, 246 Min, 9.6k IEP1, 8.6k IEP2)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-087.i
+  logs: 1
+  status: gemessen

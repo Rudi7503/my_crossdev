@@ -756,3 +756,15 @@ Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v
 | **`HUR-084`** | **`BlkCov` Blockabdeckung Optimiert** (Verschlankter Reg-Save + Fast-Div) | **306** | **27,60 Takte** | **22600 / -500** | **-16,4 % Takte pro Block** (bis zu 600 Blöcke/Frame) |
 
 * **Rohlogs:** `log-v6/HUR-079.log`, `log-v6/HUR-080.log`, `log-v6/HUR-081.log`, `log-v6/HUR-082.log`, `log-v6/HUR-083.log`, `log-v6/HUR-084.log`
+
+### 9.1 Vertiefung Puffer-Löschen: Paired `clr.l` + `dbra.l` auf Pipe 2 (HUR-085 .. HUR-087)
+
+Vergleich kompakter Schleifen (kein Unrolling, 64 Bytes Nullen):
+
+| Sequenz | Kernel / Beschreibung | Min (Raw) | Netto (Zyklen/Iter) | IEP1 / IEP2 | Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-086` | Single `clr.l (a2)+; dbra.l d0,.l` (16 Iterationen) | 406 | 37,60 Takte | 17600 / 16600 | 1 Store pro Branch, hohe Pipeline-Kosten |
+| **`HUR-085`** | **Paired `clr.l (a2)+; clr.l (a2)+; dbra.l d0,.l`** (8 Iterationen) | **246** | **21,60 Takte** | **17600 / 9700** | **-39,4 % Takte!** Schleifenkörper exakt 8 Bytes (1 Quadword im I-Cache) |
+| `HUR-087` | AMMX `store e0,(a2)+; dbra.l d0,.l` (8 Iterationen) | **246** | **21,60 Takte** | **9600 / 8600** | Exakt gleiche Takte wie HUR-085 bei halber Instruktionsdekodierung |
+
+* **Rohlogs:** `log-v6/HUR-085.log`, `log-v6/HUR-086.log`, `log-v6/HUR-087.log`

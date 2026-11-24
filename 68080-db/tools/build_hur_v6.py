@@ -8,7 +8,7 @@ root = pathlib.Path("/mnt/d/programmier_ordner/my_crossdev/68080-db")
 h = (root / "harness-v6.asm").read_text()
 vasm = "/home/papa/Vampire_V4/ApolloCrossDev/Compilers/GCC-6.50-Dev/bin/vasmm68k_mot"
 
-ALL_IDS = [f"HUR-{n:03d}" for n in range(1, 85)]
+ALL_IDS = [f"HUR-{n:03d}" for n in range(1, 88)]
 ids = sys.argv[1:] if len(sys.argv) > 1 else ALL_IDS
 for i in ids:
     asm = root / "build-v6" / f"{i}.asm"
