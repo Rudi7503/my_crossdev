@@ -792,3 +792,30 @@ Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v
 | **`HUR-093`** | **`DrawWater` `CovCell` Inlined Zeilenzeiger** (Zeile einmal vorberechnet) | **216** | **18,60 Takte** | **16600 / 12500** | **3,87× schneller (`-74,2 %` Takte)**, bitgleich! |
 
 * **Rohlogs:** `log-v6/HUR-092.log`, `log-v6/HUR-093.log`
+
+### 9.4 Wellensimulation und Wasserfall-Rendering: Hurrican v18 (HUR-094 .. HUR-097)
+
+Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v6 (100 Durchläufe, 10x innere Schleife, Baseline kompensiert):
+
+| Sequenz | Kernel / Beschreibung | Min (Raw) | Netto (Zyklen/Iter) | IEP1 / IEP2 | Speedup / Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-094` | `WaterSurf` Wellen-Indexierung **Original** (`mulu.l #3`, `lsl.l #4`, `swap/ext`, per-tile `lea`) | 1456 | 142,60 Takte | 123600 / 26600 | Baseline (8 Oberflächenkacheln) |
+| **`HUR-095`** | **`WaterSurf` Wellen-Indexierung Invariant Hoisting** (`+3 mod 64`, `extb.l`, Shift-Add) | **686** | **65,60 Takte** | **54600 / 20600** | **2,12× schneller (`-52,9 %` Takte)**, **-55,8 % Instruktionen**, bitgleich! |
+| `HUR-096` | `DrawFalls` `FallCov` **Original** (`bsr FallCov` + `CovCell` `mulu.l #34` je Kachel) | 1912 | 188,20 Takte | 150800 / 37500 | Baseline (8 Kacheln Zeilenscan) |
+| **`HUR-097`** | **`DrawFalls` Coverage Inlined Zeilen-Zeiger** (Zeile einmal vorberechnet, kein `bsr/mulu`) | **1416** | **138,60 Takte** | **102600 / 15500** | **-25,9 % Takte (`-496` Zyklen)**, **-32,0 % Instruktionen**, bitgleich! |
+
+* **Rohlogs:** `log-v6/HUR-094.log`, `log-v6/HUR-095.log`, `log-v6/HUR-096.log`, `log-v6/HUR-097.log`
+
+#### Technische Details der Optimierungen in Hurrican v18:
+1. **`WaterSurf` Wellenberechnung:**
+   - In der Originalfassung berechnete die innere Kachelschleife `.t:` für jede Kachel den Index der Sinustabelle mit `swap/ext.l`, `mulu.l #3, d1`, `lsl.l #4, d1`, `and.l #63, d0` und lud die Tabelle jedes Mal neu via `lea WaveTab(pc), a0`.
+   - Da sich $x$ pro Durchlauf genau um 1 erhöht, erhöht sich der Sinus-Tabellenindex exakt um 3 (modulo 64). Der Basisindex wird einmalig vor der Schleife mittels Shift-Add (`add.l d1, d1; add.l d4, d1`) berechnet. In der Schleife genügt `addq.l #3, d3; and.l #63, d3`.
+   - Das Vorzeichen der Tabellenwerte wird mit dem nativen 68080-Befehl `extb.l` in 1 Takt erweitert (spart `ext.w` + `ext.l`).
+   - Die Kachelanzahl-Division `divu.l #20, d6` wurde durch eine reziproke Festkomma-Multiplikation (`mulu.l #52429, d6; lsr.l #20, d6`) ersetzt.
+   - Ergebnis auf V4: **686 statt 1456 Takte (2.12× Speedup)**.
+
+2. **`DrawFalls` und `FallCov` Wasserfall-Rendering:**
+   - Analog zu `DrawWater` (`HUR-093`) wurde die Berechnung des Zeilenzeigers für den Deckungspuffer `CovF` aus der Spaltenschleife herausgezogen (`mulu.l #34, d0` nur noch 1× pro Kachelzeile statt für jede Wasserfall-Kachel).
+   - Die Kachelprüfung wurde direkt in `.col:` und `.re:` geinlined: Kacheln ohne `WAND` (1) oder `VERDECKEN` (64) werden in 2 Befehlen (`and.w #65, d0; beq.s`) direkt als sichtbar erkannt, ohne Funktionsaufruf oder Puffertest.
+   - In `FallRun` wurde die teure 64-Bit-Ganzzahldivision `divul.l #3, d1:d0` für den Blockversatz vor die Schleife verlegt, da alle nachfolgenden Chunks garantiert an 3-Kachel-Blöcken ausgerichtet sind (`d1 = 0`).
+   - Ergebnis auf V4: **1416 statt 1912 Takte (-25.9 % Takte, -32.0 % IEP1)** bei 100 % bitgleicher Ausgabe.

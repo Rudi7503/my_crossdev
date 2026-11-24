@@ -1030,3 +1030,27 @@ entries:
   seq: seq/HUR-093.i
   logs: 1
   status: gemessen
+- id: HUR-094
+  title: Hurrican WaterSurf Wave Indexing Original (mulu.l #3, lsl.l #4, swap/ext, per-tile lea, 1456 Min, 123.6k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-094.i
+  logs: 1
+  status: gemessen
+- id: HUR-095
+  title: Hurrican WaterSurf Wave Indexing Hoisted Shift-Add (686 Min, 54.6k IEP1, 2.12x schneller, -52.9% Takte)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-095.i
+  logs: 1
+  status: gemessen
+- id: HUR-096
+  title: Hurrican DrawFalls FallCov Original (bsr FallCov + CovCell mulu.l #34 je Zelle, 1912 Min, 150.8k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-096.i
+  logs: 1
+  status: gemessen
+- id: HUR-097
+  title: Hurrican DrawFalls Coverage Inlined Zeilen-Zeiger (1416 Min, 102.6k IEP1, -25.9% Takte, -32.0% IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-097.i
+  logs: 1
+  status: gemessen
