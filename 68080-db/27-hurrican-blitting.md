@@ -867,3 +867,8 @@ Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v
 
 3. **`_BeamDraw` Inlined `AddSpr`:**
    - In `_BeamDraw` rief die Schleife `.sg:` für jedes Segment `bsr AddSpr` auf, welches redundanterweise `d5-d7` auf dem Stack sicherte. Da `_BlitAdd` diese Register ohnehin hardwareseitig erhält, wurde `AddSpr` direkt inlined.
+
+| `HUR-102` | `beam.s` `Frame` Phasenberechnung mit `divu.w #10` (36 Winkel) | 11106 | 1107,60 Takte | 392600 / 42700 | Baseline (16-Bit-Division) |
+| **`HUR-103`** | **`beam.s` `Frame` Reziproke Multiplikation `mulu.w #6554`** (`clr.w`, `swap`) | **5346** | **531,60 Takte** | **428600 / 42700** | **2,07× schneller (`-51,9 %` Takte)**, bitgleich! |
+
+* **Rohlogs:** `log-v6/HUR-102.log`, `log-v6/HUR-103.log`

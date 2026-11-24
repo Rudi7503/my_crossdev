@@ -1078,3 +1078,15 @@ entries:
   seq: seq/HUR-101.i
   logs: 1
   status: gemessen
+- id: HUR-102
+  title: Hurrican Beam Frame Phase mit divu.w #10 (11106 Min, 392.6k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-102.i
+  logs: 1
+  status: gemessen
+- id: HUR-103
+  title: Hurrican Beam Frame Phase Reziprok mulu.w #6554 (5346 Min, 428.6k IEP1, 2.07x schneller, -51.9% Takte)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-103.i
+  logs: 1
+  status: gemessen
