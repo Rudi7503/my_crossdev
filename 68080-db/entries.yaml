@@ -1102,3 +1102,39 @@ entries:
   seq: seq/HUR-105.i
   logs: 1
   status: gemessen
+- id: HUR-106
+  title: Hurrican ShotHits Original (10 Schuesse: movem.l d2-d5, jsr SprInfo, movem.l d2-d5, 6590 Min, 483.6k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-106.i
+  logs: 1
+  status: gemessen
+- id: HUR-107
+  title: Hurrican ShotHits Zero-Stack & Early-X (10 Schuesse: kein Stack, SprInfo inline, 5426 Min, -17.7% Takte)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-107.i
+  logs: 1
+  status: gemessen
+- id: HUR-108
+  title: Hurrican WeaponsDraw Blit-Schleife Original (10 Schuesse: 5 Push, 5 Pop, bsr/rts je Schuss, 4236 Min)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-108.i
+  logs: 1
+  status: gemessen
+- id: HUR-109
+  title: Hurrican WeaponsDraw Direkter Blit-Call (10 Schuesse: Zero Stack Traffic, 3436 Min, -18.9% Takte)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-109.i
+  logs: 1
+  status: gemessen
+- id: HUR-110
+  title: Hurrican HUD Number Original (4 Zahlen: Lives, Score, Time, Diamonds mit divul.l #10, 3126 Min)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-110.i
+  logs: 1
+  status: gemessen
+- id: HUR-111
+  title: Hurrican HUD Number Reziprok 1/10 (4 Zahlen: mulu.l #$CCCCCCCD, 1936 Min, 1.61x schneller, -38.1% Takte)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-111.i
+  logs: 1
+  status: gemessen

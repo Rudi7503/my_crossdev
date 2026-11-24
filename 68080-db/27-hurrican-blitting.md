@@ -897,3 +897,35 @@ Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v
 3. **`SlopeCheck` Zeilenzeiger Hoisting (`RowTab`):**
    - In `SlopeCheck` konvertierte die Schleife bisher die bereits bekannte Block-Zeile $d_5$ per `mulu.l #20` zurück in Pixel, um dann `BlockAt` aufzurufen (welches die Koordinate wiederum per `Div20` dividierte und `RowTab` las).
    - Dies wurde durch ein einmaliges Vorab-Laden des Zeilenzeigers `a0 = RowTab[d5]` pro Zeile ersetzt. Die Spalten-Schleifen greifen nun direkt in 1 Takt über `move.w (a0, d7.l*2), d0` auf die Kacheldaten zu – ohne Stack-Frame, Multiplikation oder Subroutinenaufruf.
+
+### 9.8 Gegner-Kollision, Waffen-Draw & HUD: Hurrican v22 (HUR-106 .. HUR-111)
+
+Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v6 (100 Durchläufe, 10x innere Schleife, Baseline kompensiert):
+
+| Sequenz | Kernel / Beschreibung | Min (Raw) | Netto (Zyklen/Iter) | IEP1 / IEP2 | Speedup / Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-106` | `enemies.s` `ShotHits` Schleife **Original** (10 Schüsse: `movem.l d2-d5,-(sp)`, `jsr SprInfo`, `movem.l (sp)+,d2-d5`) | 6590 | 656,00 Takte | 483600 / 126600 | Baseline (10 Schüsse × Gegner) |
+| **`HUR-107`** | **`enemies.s` `ShotHits` Zero-Stack & Early-X** (kein Stack-Spill, `SprInfo` inlined, Early-Reject auf X) | **5426** | **539,60 Takte** | **438600 / 111600** | **-1164 Takte (`-17,7 %` Takte)**, **-45.000 Instruktionen**, bitgleich! |
+| `HUR-108` | `weapons.s` `_WeaponsDraw` Blit-Schleife **Original** (10 Schüsse: 5 Push, 5 Pop, `bsr`/`rts` je Schuss) | 4236 | 420,60 Takte | 346600 / 105700 | Baseline (Stack-Saves vor `DrawKeyed`) |
+| **`HUR-109`** | **`weapons.s` `_WeaponsDraw` Direkter Blit-Call** (Zero Stack Traffic: `_BlitKey` erhält `d2-d7/a2-a4` hardwareseitig) | **3436** | **340,60 Takte** | **306600 / 125700** | **1,23× schneller (`-18,9 %` Takte)**, **-40.000 Instruktionen**, bitgleich! |
+| `HUR-110` | `hud.s` `Number` Dezimalausgabe **Original** (4 Zahlen: Lives, Score, Time, Diamonds mit `divul.l #10, d1:d0`) | 3126 | 309,60 Takte | 73500 / 32500 | Baseline (12× 64-Bit-Hardware-Division) |
+| **`HUR-111`** | **`hud.s` `Number` Reziproke Multiplikation** (4 Zahlen: `mulu.l #$CCCCCCCD` mit 3-Bit Shift, kein `divul.l`) | **1936** | **190,60 Takte** | **146500 / 32500** | **1,61× schneller (`-38,1 %` Takte)**, bitgleich! |
+
+* **Rohlogs:** `log-v6/HUR-106.log` .. `log-v6/HUR-111.log`
+
+#### Technische Details der Optimierungen in Hurrican v22:
+1. **`ShotHits` Kollisionsschleife mit Zero-Stack und Early-X-Reject (`enemies.s`):**
+   - In `ShotHits` prüfte die Schleife für jeden aktiven Schuss die Kollision mit dem Gegner. Dabei sicherte die Schleife bisher in jeder Iteration die Gegnerkoordinaten $d_2-d_5$ per `movem.l d2-d5, -(sp)` (16 Bytes), rief `SprInfo` per Subroutine auf, berechnete Schussmitte $x$ und $y$ und stellte $d_2-d_5$ wieder her – nur um danach festzustellen, dass der Schuss weit links oder rechts am Gegner vorbeifliegt.
+   - Neu: `SprInfo` wurde inlined (5 Instruktionen), Schussmitte $x$ wird direkt ohne Stack-Spill berechnet. Liegt $x$ außerhalb des Gegners ($x < d_2$ oder $x \ge d_4$, was in >90 % aller Tests zutrifft), springt die Schleife **sofort** zur nächsten Iteration, ohne $y$ überhaupt anzufassen!
+   - Ergebnis auf V4: **5426 statt 6590 Takte (-17.7 % Takte, -45.000 IEP1)** bei 100 % bitgleichem Trefferverhalten.
+
+2. **`_WeaponsDraw` Direkter Blit-Call (`weapons.s`):**
+   - Vor dem Blitten jedes Schusses rief `_WeaponsDraw` bisher `bsr DrawKeyed` auf und sicherte zuvor $a_3$ und $d_4$ auf dem Stack; `DrawKeyed` sicherte nochmals $d_5-d_7$ (insgesamt 48 Bytes Stack-Traffic pro Schuss).
+   - Da `_BlitKey` und `_BlitAdd` in `blit.s` sämtliche Register $d_2-d_7$ und $a_2-a_4$ hardwareseitig vollständig sichern und restaurieren, wurden `DrawKeyed` inlined und sämtliche Stack-Operationen eliminiert.
+   - Ergebnis auf V4: **3436 statt 4236 Takte (-18.9 % Takte, -40.000 IEP1)**.
+
+3. **`hud.s` Reziproke Dezimalausgabe & Energie-Skalierung:**
+   - In `Number` wurden pro Frame für Leben, Punkte, Zeit und Diamanten bis zu 12× 64-Bit-Ganzzahldivisionen `divul.l #10, d1:d0` (22 Takte je Division) aufgerufen.
+   - Dies wurde durch vorzeichenlose reziproke 64-Bit-Multiplikation mit $M = \$CCCCCCCD$ ($q = (N \times M) \gg 35$) ersetzt.
+   - Ergebnis auf V4: **1936 statt 3126 Takte (1.61× schneller, -38.1 % Takte)**.
+   - Zudem wurden in `_HudDraw` die Divisionen durch 100 (Energiekugel) und 200 (Radkugel) durch exakte Festkomma-Multiplikationen `mulu.w #45220` ($69/100$) bzw. `mulu.w #22610` ($69/200$) ersetzt.
