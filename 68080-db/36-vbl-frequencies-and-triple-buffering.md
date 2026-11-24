@@ -120,3 +120,19 @@ Im Idealfall (60 Hz) dauert ein Frame $\le 16{,}67\text{ ms}$. Was passiert bei 
 3. **Absolut kein Tearing:** SAGA schaltet Puffer *ausschließlich* im Vertikalblank um.
 4. **Kein Stottern:** Im Gegensatz zu Double-Buffering (das bei 17 ms sofort hart auf 30 FPS einbricht) sinkt die effektive Framerate bei Triple-Buffering kontinuierlich mit dem Rechenaufwand.
 5. **Keine Schwebung:** Da kein künstlicher E-Clock-Timer verwendet wird, gibt es keine Frequenzüberlagerung (Beating) gegen das HDMI-Display.
+
+---
+
+## 4. Alternative: Feste 30 / 60 FPS Quantisierung mit Hysterese
+
+Wenn eine rechenintensive Phase z. B. **10 Sekunden lang 25 ms** pro Frame benötigt, führt unbeschränktes Triple-Buffering zu $40\text{ FPS}$ mit alternierender 2-1-2-1-VBL-Kadenz ($16{,}7\text{ ms} / 33{,}3\text{ ms}$). Dies kann bei horizontalem Scrolling als leichter Rhythmus-Judder wahrgenommen werden.
+
+Die professionelle Alternative (bekannt aus Konsolen-Engines) ist **feste VBL-Quantisierung**:
+* **Modus 60 FPS:** Genau **1 VBL** pro Frame ($16{,}67\text{ ms}$).
+* **Modus 30 FPS:** Genau **2 VBLs** pro Frame ($33{,}33\text{ ms}$).
+
+### Hysterese-Regel (Schutz vor Umschalt-Flackern):
+1. **60 FPS $\rightarrow$ 30 FPS:** Wird der VBL in 3 aufeinanderfolgenden Frames verfehlt (`VblSincePoke >= 2`), schaltet das System sofort auf `TargetVBL = 2` (30 FPS).
+2. **Spiellogik:** Bei 30 FPS werden pro Bild **2 Logik-Ticks** gerechnet, damit das Spieltempo identisch bleibt.
+3. **30 FPS $\rightarrow$ 60 FPS:** Erst wenn die Renderzeit für 60 aufeinanderfolgende Frames (ca. 2 Sekunden) stabil unter der Sicherheitsgrenze ($< 14{,}0\text{ ms}$) liegt, schaltet das System sauber zurück auf 60 FPS.
+
