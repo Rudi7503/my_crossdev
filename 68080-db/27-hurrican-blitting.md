@@ -842,3 +842,28 @@ Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v
 2. **`_DrawParallax` Blit-Funktionszeiger Hoisting:**
    - In `_DrawParallax` wurde die Fallunterscheidung für den Kachelmodus (Modus 0 = `_BlitCopy`, Modus 1 = `_BlitKey`, Modus 2 = `_BlitAdd`) bisher in der horizontalen Bildschirmschleife `.loop:` für jede Kachel neu ausgeführt.
    - Der Funktionszeiger wird nun einmalig vor der Schleife in Adressregister `a4` aufgelöst (`lea _BlitCopy, a4` / `_BlitKey` / `_BlitAdd`), und in der Schleife direkt via `jsr (a4)` aufgerufen.
+
+### 9.6 Strahl-Waffen und Segment-Berechnung: Hurrican v20 (HUR-100 .. HUR-101)
+
+Messungen auf echter Apollo 68080 Vampire V4 Hardware (Core 11350) mit Harness v6 (100 Durchläufe, 10x innere Schleife, Baseline kompensiert):
+
+| Sequenz | Kernel / Beschreibung | Min (Raw) | Netto (Zyklen/Iter) | IEP1 / IEP2 | Speedup / Bewertung |
+|:---|:---|:---:|:---:|:---:|:---|
+| `HUR-100` | `beam.s` `Boxes` Segment-Schleife **Original** (pro Segment: 3× Push, 1× Pop, 2× Read, `addq.l #8,sp`) | 1466 | 143,60 Takte | 116600 / 59700 | Baseline (8 Segmente) |
+| **`HUR-101`** | **`beam.s` `Boxes` Spekulativer Store** (Zero-Stack Segment-Commit via `addq.l #8,a2`) | **1066** | **103,60 Takte** | **92600 / 51700** | **1,38× schneller (`-27,3 %` Takte)**, **-20,6 % Instruktionen**, bitgleich! |
+
+* **Rohlogs:** `log-v6/HUR-100.log`, `log-v6/HUR-101.log`
+
+#### Technische Details der Optimierungen in Hurrican v20:
+1. **`Boxes` Spekulativer Puffer-Store (Zero-Stack-Architektur):**
+   - In der Originalfassung sicherte die Segment-Schleife `.lp:` für jedes einzelne Strahlsegment (bis zu 17 Segmente) $x_{int}$ und $y_{int}$ auf dem Stack (3x Push, 1x Pop, 2x Read, 1x Stack-Bereinigung).
+   - In `HUR-101` werden $x_{int}$ und $y_{int}$ direkt und spekulativ in den Zielpuffer `(a2)` bzw. `4(a2)` geschrieben. Trifft der Strahl eine Wand, beendet ein einfacher Sprung `bne.s .end` die Schleife, ohne dass Daten korrumpiert werden oder der Stack bereinigt werden muss. Ist das Segment frei, genügt ein einziger Befehl `addq.l #8, a2`, um das Segment zu bestätigen.
+   - Ergebnis auf V4: **1066 statt 1466 Takte (-27.3 % Takte, -20.6 % IEP1)** bei 100 % bitgleichem Ergebnis.
+
+2. **`Frame` Division-Eliminierung (Winkelpose):**
+   - In `Frame` wurde zur Berechnung der 36 Spieler-Blickrichtungen bisher zweimal hintereinander eine 64-Bit-Ganzzahldivision `divul.l #10, d1:d0` und `divul.l #36, d1:d0` aufgerufen.
+   - Da der dividierte Winkel maximal den Wert 53 annehmen kann ($53 < 2 \times 36$), wurde die zweite 64-Bit-Division vollständig durch einen simplen Vergleich `cmp.l #36, d0; blt.s ... sub.l #36, d0` ersetzt. Die Division durch 10 erfolgt über ein schnelles `divu.w #10, d0`.
+   - Spart über 35 Takte pro Frame.
+
+3. **`_BeamDraw` Inlined `AddSpr`:**
+   - In `_BeamDraw` rief die Schleife `.sg:` für jedes Segment `bsr AddSpr` auf, welches redundanterweise `d5-d7` auf dem Stack sicherte. Da `_BlitAdd` diese Register ohnehin hardwareseitig erhält, wurde `AddSpr` direkt inlined.

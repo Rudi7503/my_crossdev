@@ -1066,3 +1066,15 @@ entries:
   seq: seq/HUR-099.i
   logs: 1
   status: gemessen
+- id: HUR-100
+  title: Hurrican Beam Boxes Original (3x stack push, 1x pop, 2x stack read je Segment, 1466 Min, 116.6k IEP1)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-100.i
+  logs: 1
+  status: gemessen
+- id: HUR-101
+  title: Hurrican Beam Boxes Spekulativer Store (Zero-Stack Segment-Commit, 1066 Min, 92.6k IEP1, 1.38x schneller, -27.3% Takte)
+  doc: 27-hurrican-blitting.md
+  seq: seq/HUR-101.i
+  logs: 1
+  status: gemessen
